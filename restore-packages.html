@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restore Premium Detail Package</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #dc2626;
+        }
+        h1 {
+            color: #dc2626;
+        }
+        button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #b91c1c;
+        }
+        .success {
+            background: #16a34a;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        .info {
+            background: #3b82f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Restore Premium Detail Package</h1>
+        
+        <div class="info">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Make sure your PDS app is running (npm run dev)</li>
+                <li>Click the button below to restore the Premium Detail package</li>
+                <li>Refresh your PDS app to see the restored package</li>
+            </ol>
+        </div>
+
+        <button onclick="restorePremiumPackage()">Restore Premium Detail Package</button>
+        <button onclick="restoreAllPackages()">Restore ALL 6 Packages</button>
+        <button onclick="checkCurrentState()">Check Current State</button>
+
+        <div id="success" class="success"></div>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function restorePremiumPackage() {
+            try {
+                // Get current packageMeta
+                const packageMeta = JSON.parse(localStorage.getItem('packageMeta') || '{}');
+                
+                // Restore Premium Detail package
+                if (packageMeta['premium-detail']) {
+                    delete packageMeta['premium-detail'].deleted;
+                    packageMeta['premium-detail'].visible = true;
+                } else {
+                    packageMeta['premium-detail'] = { id: 'premium-detail', visible: true };
+                }
+                
+                // Save back to localStorage
+                localStorage.setItem('packageMeta', JSON.stringify(packageMeta));
+                
+                showSuccess('✅ Premium Detail package restored! Please refresh your PDS app.');
+            } catch (error) {
+                showSuccess('❌ Error: ' + error.message);
+            }
+        }
+
+        function restoreAllPackages() {
+            try {
+                const allPackageIds = [
+                    'basic-exterior',
+                    'express-wax',
+                    'full-exterior',
+                    'interior-cleaning',
+                    'full-detail',
+                    'premium-detail'
+                ];
+
+                // Get current packageMeta
+                const packageMeta = JSON.parse(localStorage.getItem('packageMeta') || '{}');
+                
+                // Restore all packages
+                allPackageIds.forEach(pkgId => {
+                    if (packageMeta[pkgId]) {
+                        delete packageMeta[pkgId].deleted;
+                        packageMeta[pkgId].visible = true;
+                    } else {
+                        packageMeta[pkgId] = { id: pkgId, visible: true };
+                    }
+                });
+                
+                // Save back to localStorage
+                localStorage.setItem('packageMeta', JSON.stringify(packageMeta));
+                
+                showSuccess('✅ All 6 packages restored! Please refresh your PDS app.');
+            } catch (error) {
+                showSuccess('❌ Error: ' + error.message);
+            }
+        }
+
+        function checkCurrentState() {
+            try {
+                const packageMeta = JSON.parse(localStorage.getItem('packageMeta') || '{}');
+                const allPackageIds = [
+                    'basic-exterior',
+                    'express-wax',
+                    'full-exterior',
+                    'interior-cleaning',
+                    'full-detail',
+                    'premium-detail'
+                ];
+
+                let output = '<h3>Current Package Status:</h3><pre>';
+                allPackageIds.forEach(pkgId => {
+                    const meta = packageMeta[pkgId];
+                    const status = meta ? 
+                        `Visible: ${meta.visible !== false}, Deleted: ${!!meta.deleted}` : 
+                        'Not in metadata (will use defaults)';
+                    output += `${pkgId}: ${status}\n`;
+                });
+                output += '</pre>';
+
+                document.getElementById('output').innerHTML = output;
+            } catch (error) {
+                document.getElementById('output').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Auto-check state on load
+        window.onload = checkCurrentState;
+    </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+{
+    "Toyota": {
+        "Camry": "Midsize / Sedan",
+        "Corolla": "Compact",
+        "RAV4": "SUV / Crossover",
+        "4Runner": "SUV / Crossover",
+        "Highlander": "SUV / Crossover",
+        "Tundra": "Truck / Oversized",
+        "Tacoma": "Truck / Oversized",
+        "Prius": "Compact",
+        "Avalon": "Midsize / Sedan",
+        "Sienna": "SUV / Crossover",
+        "Sequoia": "SUV / Crossover",
+        "Land Cruiser": "SUV / Crossover"
+    },
+    "Honda": {
+        "Civic": "Compact",
+        "Accord": "Midsize / Sedan",
+        "CR-V": "SUV / Crossover",
+        "Pilot": "SUV / Crossover",
+        "Ridgeline": "Truck / Oversized",
+        "Odyssey": "SUV / Crossover",
+        "HR-V": "Compact",
+        "Passport": "SUV / Crossover",
+        "Insight": "Compact",
+        "Fit": "Compact"
+    },
+    "Ford": {
+        "F-150": "Truck / Oversized",
+        "F-250": "Truck / Oversized",
+        "F-350": "Truck / Oversized",
+        "Escape": "SUV / Crossover",
+        "Explorer": "SUV / Crossover",
+        "Fusion": "Midsize / Sedan",
+        "Mustang": "Midsize / Sedan",
+        "Edge": "SUV / Crossover",
+        "Expedition": "SUV / Crossover",
+        "Bronco": "SUV / Crossover",
+        "Ranger": "Truck / Oversized",
+        "Maverick": "Truck / Oversized",
+        "EcoSport": "Compact"
+    },
+    "Chevrolet": {
+        "Silverado 1500": "Truck / Oversized",
+        "Silverado 2500": "Truck / Oversized",
+        "Silverado 3500": "Truck / Oversized",
+        "Malibu": "Midsize / Sedan",
+        "Equinox": "SUV / Crossover",
+        "Traverse": "SUV / Crossover",
+        "Tahoe": "SUV / Crossover",
+        "Suburban": "SUV / Crossover",
+        "Colorado": "Truck / Oversized",
+        "Blazer": "SUV / Crossover",
+        "Trailblazer": "Compact",
+        "Camaro": "Midsize / Sedan",
+        "Corvette": "Midsize / Sedan"
+    },
+    "Nissan": {
+        "Altima": "Midsize / Sedan",
+        "Sentra": "Compact",
+        "Maxima": "Midsize / Sedan",
+        "Rogue": "SUV / Crossover",
+        "Pathfinder": "SUV / Crossover",
+        "Armada": "SUV / Crossover",
+        "Frontier": "Truck / Oversized",
+        "Titan": "Truck / Oversized",
+        "Kicks": "Compact",
+        "Murano": "SUV / Crossover",
+        "Versa": "Compact"
+    },
+    "BMW": {
+        "3 Series": "Midsize / Sedan",
+        "5 Series": "Midsize / Sedan",
+        "7 Series": "Midsize / Sedan",
+        "X1": "SUV / Crossover",
+        "X3": "SUV / Crossover",
+        "X5": "SUV / Crossover",
+        "X7": "SUV / Crossover",
+        "M3": "Midsize / Sedan",
+        "M5": "Midsize / Sedan",
+        "i4": "Midsize / Sedan",
+        "iX": "SUV / Crossover"
+    },
+    "Mercedes-Benz": {
+        "C-Class": "Midsize / Sedan",
+        "E-Class": "Midsize / Sedan",
+        "S-Class": "Midsize / Sedan",
+        "GLA": "SUV / Crossover",
+        "GLC": "SUV / Crossover",
+        "GLE": "SUV / Crossover",
+        "GLS": "SUV / Crossover",
+        "A-Class": "Compact",
+        "CLA": "Compact",
+        "EQS": "Midsize / Sedan",
+        "EQE": "Midsize / Sedan"
+    },
+    "Tesla": {
+        "Model 3": "Midsize / Sedan",
+        "Model S": "Midsize / Sedan",
+        "Model X": "SUV / Crossover",
+        "Model Y": "SUV / Crossover",
+        "Cybertruck": "Truck / Oversized"
+    },
+    "Jeep": {
+        "Wrangler": "SUV / Crossover",
+        "Grand Cherokee": "SUV / Crossover",
+        "Cherokee": "SUV / Crossover",
+        "Compass": "Compact",
+        "Renegade": "Compact",
+        "Gladiator": "Truck / Oversized",
+        "Wagoneer": "SUV / Crossover",
+        "Grand Wagoneer": "SUV / Crossover"
+    },
+    "Ram": {
+        "1500": "Truck / Oversized",
+        "2500": "Truck / Oversized",
+        "3500": "Truck / Oversized",
+        "ProMaster": "Oversized Specialty"
+    },
+    "Subaru": {
+        "Outback": "SUV / Crossover",
+        "Forester": "SUV / Crossover",
+        "Crosstrek": "Compact",
+        "Ascent": "SUV / Crossover",
+        "Impreza": "Compact",
+        "Legacy": "Midsize / Sedan",
+        "WRX": "Midsize / Sedan",
+        "BRZ": "Midsize / Sedan"
+    },
+    "Mazda": {
+        "Mazda3": "Compact",
+        "Mazda6": "Midsize / Sedan",
+        "CX-5": "SUV / Crossover",
+        "CX-9": "SUV / Crossover",
+        "CX-30": "Compact",
+        "CX-50": "SUV / Crossover",
+        "MX-5 Miata": "Compact"
+    },
+    "Volkswagen": {
+        "Jetta": "Compact",
+        "Passat": "Midsize / Sedan",
+        "Tiguan": "SUV / Crossover",
+        "Atlas": "SUV / Crossover",
+        "Taos": "Compact",
+        "Golf": "Compact",
+        "ID.4": "SUV / Crossover"
+    },
+    "Hyundai": {
+        "Elantra": "Compact",
+        "Sonata": "Midsize / Sedan",
+        "Tucson": "SUV / Crossover",
+        "Santa Fe": "SUV / Crossover",
+        "Palisade": "SUV / Crossover",
+        "Kona": "Compact",
+        "Venue": "Compact",
+        "Ioniq 5": "SUV / Crossover"
+    },
+    "Kia": {
+        "Forte": "Compact",
+        "K5": "Midsize / Sedan",
+        "Sportage": "SUV / Crossover",
+        "Sorento": "SUV / Crossover",
+        "Telluride": "SUV / Crossover",
+        "Soul": "Compact",
+        "Seltos": "Compact",
+        "EV6": "SUV / Crossover",
+        "Carnival": "SUV / Crossover"
+    },
+    "Audi": {
+        "A3": "Compact",
+        "A4": "Midsize / Sedan",
+        "A6": "Midsize / Sedan",
+        "A8": "Midsize / Sedan",
+        "Q3": "Compact",
+        "Q5": "SUV / Crossover",
+        "Q7": "SUV / Crossover",
+        "Q8": "SUV / Crossover",
+        "e-tron": "SUV / Crossover"
+    },
+    "Lexus": {
+        "IS": "Midsize / Sedan",
+        "ES": "Midsize / Sedan",
+        "LS": "Midsize / Sedan",
+        "UX": "Compact",
+        "NX": "SUV / Crossover",
+        "RX": "SUV / Crossover",
+        "GX": "SUV / Crossover",
+        "LX": "SUV / Crossover"
+    },
+    "Acura": {
+        "ILX": "Compact",
+        "TLX": "Midsize / Sedan",
+        "RDX": "SUV / Crossover",
+        "MDX": "SUV / Crossover",
+        "Integra": "Compact"
+    },
+    "Dodge": {
+        "Charger": "Midsize / Sedan",
+        "Challenger": "Midsize / Sedan",
+        "Durango": "SUV / Crossover",
+        "Hornet": "Compact"
+    },
+    "GMC": {
+        "Sierra 1500": "Truck / Oversized",
+        "Sierra 2500": "Truck / Oversized",
+        "Sierra 3500": "Truck / Oversized",
+        "Terrain": "SUV / Crossover",
+        "Acadia": "SUV / Crossover",
+        "Yukon": "SUV / Crossover",
+        "Canyon": "Truck / Oversized"
+    }
+}
