@@ -18,12 +18,19 @@ export interface Booking {
   notes?: string;
   price?: number;
   addons?: string[];
+  bookedBy?: string; // Newly added field
 }
 
 const STORAGE_KEY = "bookings";
 
 function load(): Booking[] {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch (error) {
+    console.warn("Failed to load bookings from localStorage, resetting.", error);
+    localStorage.removeItem(STORAGE_KEY);
+    return [];
+  }
 }
 
 function save(items: Booking[]) {

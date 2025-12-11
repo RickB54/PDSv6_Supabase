@@ -12,7 +12,8 @@ import vehicleDatabase from "@/data/vehicle_db.json";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
-import { getCustomers } from "@/lib/db";
+
+import { getSupabaseCustomers } from "@/lib/supa-data";
 
 type ClassificationType = "Compact" | "Midsize / Sedan" | "SUV / Crossover" | "Truck / Oversized" | "Oversized Specialty";
 
@@ -70,7 +71,7 @@ export default function VehicleClassification() {
 
     const loadCustomers = async () => {
         try {
-            const custs = await getCustomers<Customer>();
+            const custs = await getSupabaseCustomers();
             setCustomers(Array.isArray(custs) ? custs : []);
         } catch (error) {
             console.error("Failed to load customers:", error);

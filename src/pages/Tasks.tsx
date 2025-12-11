@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
 import { useTasksStore, parseTaskInput, Task, TaskPriority, TaskStatus } from "@/store/tasks";
 import api from "@/lib/api";
+import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
@@ -49,7 +50,7 @@ export default function Tasks() {
   useEffect(() => {
     (async () => {
       try {
-        const list = await api('/api/users/employees', { method: 'GET' });
+        const list = await getSupabaseEmployees();
         setEmployees(Array.isArray(list) ? list : []);
       } catch { setEmployees([]); }
     })();

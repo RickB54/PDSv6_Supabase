@@ -18,6 +18,7 @@ import UnifiedInventoryModal from "@/components/inventory/UnifiedInventoryModal"
 import ImportWizardModal from "@/components/inventory/ImportWizardModal";
 import jsPDF from "jspdf";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
+import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 
 interface Chemical {
   id: string;
@@ -101,7 +102,7 @@ const InventoryControl = () => {
     const saved = localStorage.getItem('inventory-date-filter');
     if (saved) setDateFilter(saved as any);
     (async () => {
-      const emps = (await localforage.getItem('company-employees')) || [];
+      const emps = await getSupabaseEmployees();
       setEmployees(emps as any[]);
     })();
   }, []);

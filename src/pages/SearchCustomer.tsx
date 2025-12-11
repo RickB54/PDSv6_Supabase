@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, purgeTestCustomers, getInvoices, upsertCustomer } from "@/lib/db";
-import { getUnifiedCustomers } from "@/lib/customers";
+import { getSupabaseCustomers } from "@/lib/supa-data"; // NEW IMPORT
+import { useBookingsStore } from "@/store/bookings"; // NEW IMPORT
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Printer, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, Eye, Edit, MapPin, CalendarPlus } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Printer, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, Eye, Edit, MapPin, CalendarPlus, History, Calendar } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -57,6 +58,7 @@ const SearchCustomer = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const { items: allBookings } = useBookingsStore(); // Access bookings
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -67,7 +69,7 @@ const SearchCustomer = () => {
   useEffect(() => {
     (async () => {
       try {
-        const list = await getUnifiedCustomers();
+        const list = await getSupabaseCustomers();
         setCustomers(Array.isArray(list) ? (list as Customer[]) : []);
       } catch (err: any) {
         console.error('Failed to load customers:', err);
@@ -85,7 +87,7 @@ const SearchCustomer = () => {
 
   const refresh = async () => {
     try {
-      const list = await getUnifiedCustomers();
+      const list = await getSupabaseCustomers();
       setCustomers(Array.isArray(list) ? (list as Customer[]) : []);
     } catch (err: any) {
       console.error('Refresh customers failed:', err);
@@ -401,8 +403,8 @@ const SearchCustomer = () => {
                   >
                     <Collapsible open={isExpanded} onOpenChange={() => toggleCustomer(customer.id!)}>
                       <div className="p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <CollapsibleTrigger className="flex-1 text-left">
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                          <CollapsibleTrigger className="flex-1 text-left w-full">
                             <div className="flex items-center gap-2">
                               {isExpanded ? (
                                 <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -415,7 +417,7 @@ const SearchCustomer = () => {
                               </div>
                             </div>
                           </CollapsibleTrigger>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0 overflow-x-auto pb-1 md:pb-0">
                             <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -550,6 +552,59 @@ const SearchCustomer = () => {
                                 <p className="text-foreground">{customer.notes}</p>
                               </div>
                             )}
+
+                            {/* Booking History Section */}
+                            <div className="pt-4 border-t border-border">
+                              <h4 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                                <History className="h-5 w-5 text-primary" />
+                                Booking History
+                              </h4>
+                              {allBookings.filter(b =>
+                                (b.customer || '').toLowerCase() === (customer.name || '').toLowerCase() ||
+                                (customer.id && b.customer === customer.id) // Fallback if ID is stored in customer field
+                              ).length > 0 ? (
+                                <div className="space-y-3">
+                                  {allBookings
+                                    .filter(b => (b.customer || '').toLowerCase() === (customer.name || '').toLowerCase())
+                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                    .map(booking => (
+                                      <div key={booking.id} className="p-3 bg-zinc-900/50 rounded-md border border-zinc-800 flex items-center justify-between">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-zinc-400" />
+                                            <span className="text-sm font-medium text-zinc-200">
+                                              {new Date(booking.date).toLocaleDateString()}
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${booking.status === 'done' ? 'bg-emerald-500/20 text-emerald-400' :
+                                              booking.status === 'confirmed' ? 'bg-blue-500/20 text-blue-400' :
+                                                'bg-zinc-700 text-zinc-400'
+                                              }`}>
+                                              {booking.title}
+                                            </span>
+                                          </div>
+                                          {booking.bookedBy && (
+                                            <p className="text-xs text-zinc-500 mt-1 ml-6">
+                                              Booked by: {booking.bookedBy}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <p className={`text-sm font-bold ${booking.status === 'done' ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                                            {booking.status === 'done' ? 'Completed' : booking.status}
+                                          </p>
+                                          {booking.createdAt && (
+                                            <p className="text-[10px] text-zinc-600">
+                                              Created: {new Date(booking.createdAt).toLocaleDateString()}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground italic pl-2">No bookings found for this customer.</p>
+                              )}
+                            </div>
                           </div>
                         </CollapsibleContent>
                       </div>

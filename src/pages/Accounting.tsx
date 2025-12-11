@@ -5,7 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Pencil, Trash2, Printer, Save } from "lucide-react";
+import {
+  Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
+  Download, Upload, RefreshCw, TrendingUp, Search,
+  Printer, TrendingDown, DollarSign // Added missing imports
+} from "lucide-react";
+import { getSupabaseCustomers } from "@/lib/supa-data"; // NEW IMPORT
 import {
   AlertDialog,
   AlertDialogAction,
@@ -104,7 +109,8 @@ const Accounting = () => {
   const [incomeDescription, setIncomeDescription] = useState<string>("");
   const [incomeDate, setIncomeDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [incomeCustomer, setIncomeCustomer] = useState<string>("");
-  const [incomeMethod, setIncomeMethod] = useState<string>("");
+  const [incomeMethod, setIncomeMethod] = useState<string>("cash");
+  const [customers, setCustomers] = useState<any[]>([]); // New state
 
   // New category creation
   const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
@@ -114,6 +120,7 @@ const Accounting = () => {
   useEffect(() => {
     loadData();
     loadCustomCategories();
+    getSupabaseCustomers().then(setCustomers); // Load customers
   }, [dateFilter]);
 
   const loadCustomCategories = async () => {
@@ -576,7 +583,15 @@ const Accounting = () => {
                       </div>
                       <div>
                         <Label>Customer (optional)</Label>
-                        <Input value={incomeCustomer} onChange={(e) => setIncomeCustomer(e.target.value)} placeholder="Customer name" />
+                        <Select value={incomeCustomer} onValueChange={setIncomeCustomer}>
+                          <SelectTrigger><SelectValue placeholder="Select Customer" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value=" ">None</SelectItem>
+                            {customers.map(c => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Payment Method (optional)</Label>

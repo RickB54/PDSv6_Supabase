@@ -191,9 +191,10 @@ export function AppSidebar() {
       ]
     },
     {
-      title: "System", icon: Settings,
+      title: "Settings", icon: Settings,
       items: [
-        { title: "Settings", url: "/settings", key: "settings", icon: Settings }
+        { title: "User Settings", url: "/user-settings", key: "user-settings", icon: Users },
+        { title: "System Settings", url: "/settings", key: "settings", icon: Settings }
       ]
     }
   ];
@@ -291,6 +292,9 @@ export function AppSidebar() {
                 // We use CONTROLLED open state
                 const isOpen = !!openGroups[group.title];
 
+                // Calculate group badge count for closed state
+                const groupBadgeCount = validItems.reduce((acc, item) => acc + (item.badge || 0), 0);
+
                 return (
                   <Collapsible
                     key={group.title}
@@ -303,6 +307,12 @@ export function AppSidebar() {
                         <SidebarMenuButton tooltip={group.title}>
                           <group.icon className="h-4 w-4" />
                           <span>{group.title}</span>
+                          {/* Show badge on parent if closed and count > 0 */}
+                          {!isOpen && groupBadgeCount > 0 && (
+                            <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
+                              {groupBadgeCount}
+                            </span>
+                          )}
                           <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>

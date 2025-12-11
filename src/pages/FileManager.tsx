@@ -317,7 +317,8 @@ const FileManager = () => {
 
           {/* File List */}
           <Card className="bg-gradient-card border-border">
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -432,6 +433,108 @@ const FileManager = () => {
                   )}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4 p-4">
+              {filteredRecords.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No files found</p>
+                </div>
+              ) : (
+                [...filteredRecords]
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                  .map((record) => (
+                    <div key={record.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-base truncate flex items-center gap-2">
+                            {record.fileName}
+                            {isViewed("file", record.id) && <span className="text-xs text-zinc-500 font-normal shrink-0">• viewed</span>}
+                          </div>
+                          <div className="text-sm text-zinc-400 mt-1">{record.customerName}</div>
+                        </div>
+                        <span className="shrink-0 px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
+                          {record.recordType}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-zinc-500">
+                        {new Date(record.timestamp).toLocaleString()}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+                        <div className="flex gap-1">
+                          {/* Viewer Toggle */}
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
+                            setSelectedRecord(record);
+                            setViewerLoading(true);
+                            setViewerError(null);
+                            markViewed("file", record.id);
+                            // Prefer local data/blob URL first, then backend URL
+                            const isInline = record.pdfData?.startsWith('data:application/pdf') || record.pdfData?.startsWith('blob:');
+                            if (isInline) {
+                              setViewerSrc(record.pdfData);
+                              setViewerLoading(false);
+                            } else {
+                              const backendUrl = buildBackendUrl(record);
+                              if (backendUrl) {
+                                setViewerSrc(backendUrl);
+                                setViewerLoading(false);
+                              } else {
+                                setViewerSrc(null);
+                                const msg = record.pdfData?.startsWith('blob:')
+                                  ? 'This PDF was saved as a temporary blob URL and cannot be displayed after reload. Please re-generate this document.'
+                                  : 'Unable to display PDF.';
+                                setViewerError(msg);
+                                setViewerLoading(false);
+                              }
+                            }
+                          }}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {/* Download */}
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          {/* Print */}
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }}>
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="flex gap-1">
+                          {/* Alert Toggle */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              try {
+                                const viewed = isViewed("file", record.id);
+                                if (viewed) unmarkViewed("file", record.id);
+                                else markViewed("file", record.id);
+                                try { dismissAlertsForRecord(record.recordType, record.id); } catch { }
+                                setRecords(prev => [...prev]);
+                              } catch { }
+                            }}
+                          >
+                            {!isViewed("file", record.id) ? (
+                              <Bell className="h-4 w-4 text-yellow-400" />
+                            ) : (
+                              <Bell className="h-4 w-4 text-zinc-600" />
+                            )}
+                          </Button>
+                          {/* Delete */}
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(record.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </Card>
         </div>
@@ -574,10 +677,10 @@ const FileManager = () => {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* PDF Preview Dialog */}
-      <Dialog open={!!selectedRecord} onOpenChange={(open) => {
+      < Dialog open={!!selectedRecord} onOpenChange={(open) => {
         if (!open) {
           setSelectedRecord(null);
           setViewerSrc(null);
@@ -619,8 +722,8 @@ const FileManager = () => {
             </div>
           )}
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 };
 

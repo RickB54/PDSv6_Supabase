@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import localforage from "localforage";
 import api from "@/lib/api";
+import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import { upsertExpense } from "@/lib/db";
 import { servicePackages, addOns } from "@/lib/services";
 import DateRangeFilter from "@/components/filters/DateRangeFilter";
@@ -90,41 +91,8 @@ const CompanyEmployees = () => {
   }, [user]);
 
   const loadEmployees = async () => {
-    // Pull unified employees via API and enrich with local company-specific details
-    const apiEmployees = (await api("/api/users/employees", { method: "GET" })) || [];
-    const lf = (await localforage.getItem<Employee[]>("company-employees")) || [];
-    const ls = (() => { try { return JSON.parse(localStorage.getItem('company-employees') || '[]'); } catch { return []; } })() as Employee[];
-    const localAll: Employee[] = [];
-    const addLocal = (e: Employee) => { if (!localAll.find(x => x.email === e.email)) localAll.push(e); };
-    lf.forEach(addLocal); ls.forEach(addLocal);
-
-    const localByEmail: Record<string, Employee> = Object.fromEntries(localAll.map(e => [e.email, e]));
-    const normRole = (r: any) => String(r || '').toLowerCase() === 'admin' ? 'Admin' : 'Employee';
-
-    const merged: Employee[] = [];
-    const seen = new Set<string>();
-    (Array.isArray(apiEmployees) ? apiEmployees : []).forEach((u: any) => {
-      const email = String(u.email || '').toLowerCase();
-      const local = localByEmail[email] || localByEmail[String(u.email || '')] || undefined;
-      const emp: Employee = {
-        email: u.email,
-        name: u.name || local?.name || u.email,
-        role: normRole(u.role || local?.role),
-        flatRate: local?.flatRate,
-        bonuses: local?.bonuses,
-        paymentByJob: local?.paymentByJob,
-        jobRates: local?.jobRates,
-      };
-      merged.push(emp);
-      seen.add(email);
-    });
-    // Include local-only employees not present in API list
-    localAll.forEach((e) => {
-      const emailKey = String(e.email || '').toLowerCase();
-      if (!seen.has(emailKey)) {
-        merged.push({ ...e, role: normRole(e.role) });
-      }
-    });
+    // Pull unified employees via Supabase Helper (Centralized Logic)
+    const merged = await getSupabaseEmployees();
     setEmployees(merged);
   };
 

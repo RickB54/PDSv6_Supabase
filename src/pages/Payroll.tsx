@@ -15,6 +15,7 @@ import { getCurrentUser } from "@/lib/auth";
 import localforage from "localforage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import api from "@/lib/api";
+import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import {
   Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
   Briefcase, Clock, DollarSign, Wallet, CreditCard,
@@ -75,7 +76,7 @@ const Payroll = () => {
 
   useEffect(() => {
     const load = async () => {
-      const list = (await localforage.getItem<any[]>("company-employees")) || [];
+      const list = await getSupabaseEmployees();
       setEmployees(list);
       const jobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
       setCompletedJobs(jobs);
@@ -115,7 +116,7 @@ const Payroll = () => {
     if (overdueToastShown) return;
     (async () => {
       try {
-        const list = (await localforage.getItem<any[]>('company-employees')) || [];
+        const list = await getSupabaseEmployees();
         const now = Date.now();
         const overdue = list.filter((e: any) => e.lastPaid && (now - new Date(e.lastPaid).getTime()) > 7 * 24 * 60 * 60 * 1000);
         overdue.slice(0, 3).forEach((e: any) => {
@@ -673,10 +674,10 @@ const Payroll = () => {
                             category: 'Payroll',
                             paymentMethod: checkType,
                             createdAt: new Date(checkDate).toISOString(),
-                          });
+                          } as any);
                         } catch { }
                         try {
-                          const list = (await localforage.getItem<any[]>('company-employees')) || [];
+                          const list = await getSupabaseEmployees();
                           const today = new Date().toISOString().slice(0, 10);
                           const next = list.map((e: any) => e.name === checkEmployee ? { ...e, lastPaid: today } : e);
                           await localforage.setItem('company-employees', next);

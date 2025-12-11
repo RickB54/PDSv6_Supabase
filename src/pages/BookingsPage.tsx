@@ -27,6 +27,7 @@ import { useBookingsStore, type Booking } from "@/store/bookings";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import { servicePackages, addOns } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
@@ -35,6 +36,7 @@ import { upsertCustomer } from "@/lib/db";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 
 // --- Types ---
 type ViewMode = "day" | "week" | "month" | "year";
@@ -63,9 +65,29 @@ export default function BookingsPage() {
     address: "",
     time: "09:00",
     assignedEmployee: "",
+    bookedBy: "", // NEW FIELD
     notes: "",
     addons: [] as string[]
   });
+
+  const handleVehicleSelect = (data: { make: string; model: string; category: string }) => {
+    let mappedType = "";
+    const cat = data.category;
+
+    // Map ClassificationTool categories
+    if (cat === "Compact") mappedType = "Compact/Sedan";
+    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan";
+    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV";
+    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV";
+    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV";
+
+    setFormData(prev => ({
+      ...prev,
+      vehicleMake: data.make,
+      vehicleModel: data.model,
+      vehicle: mappedType || prev.vehicle
+    }));
+  };
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -80,7 +102,7 @@ export default function BookingsPage() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const emps = (await localforage.getItem<any[]>('company-employees')) || [];
+        const emps = await getSupabaseEmployees(); // Use Supabase
         setEmployees(emps);
       } catch (err) {
         console.error('Failed to fetch employees:', err);
@@ -193,6 +215,7 @@ export default function BookingsPage() {
       address: booking.address || "",
       time: format(parseISO(booking.date), "HH:mm"),
       assignedEmployee: booking.assignedEmployee || "",
+      bookedBy: booking.bookedBy || "", // Load bookedBy
       notes: booking.notes || "",
       addons: booking.addons || []
     });
@@ -238,6 +261,7 @@ export default function BookingsPage() {
         vehicleModel: formData.vehicleModel,
         address: formData.address,
         assignedEmployee: formData.assignedEmployee,
+        bookedBy: formData.bookedBy, // Save bookedBy
         notes: formData.notes,
         addons: formData.addons
       });
@@ -256,16 +280,20 @@ export default function BookingsPage() {
         vehicleModel: formData.vehicleModel,
         address: formData.address,
         assignedEmployee: formData.assignedEmployee,
+        bookedBy: formData.bookedBy, // Save bookedBy
         notes: formData.notes,
         addons: formData.addons,
         createdAt: new Date().toISOString()
       });
       toast.success("Booking created");
     }
+    // Generate and Save PDF automatically
+    handleSavePDF();
+
     setIsAddModalOpen(false);
     setSelectedBooking(null);
     setSelectedCustomer(null);
-    setFormData({ customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", assignedEmployee: "", notes: "", addons: [] });
+    setFormData({ customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [] });
   };
 
   const handleDelete = () => {
@@ -740,6 +768,36 @@ export default function BookingsPage() {
               </div>
             </div>
 
+            {/* Booked By Field */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label className="text-right text-sm font-medium text-gray-400">Booked By</label>
+              <div className="col-span-3 relative">
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                <select
+                  className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={formData.bookedBy}
+                  onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
+                >
+                  <option value="" className="text-gray-400">Unknown</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id || emp.email} value={emp.name} className="text-gray-300">
+                      {emp.name} ({emp.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Creation Timestamp in History */}
+            {selectedBooking && selectedBooking.createdAt && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm font-medium text-gray-400">Created On</label>
+                <div className="col-span-3 text-sm text-gray-400">
+                  {new Date(selectedBooking.createdAt).toLocaleString()}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-4 items-start gap-4">
               <label className="text-right text-sm font-medium text-gray-400 mt-2">Notes</label>
               <div className="col-span-3">
@@ -760,9 +818,6 @@ export default function BookingsPage() {
               </Button>
             ) : <div></div>}
             <div className="flex gap-2">
-              <Button type="button" variant="secondary" onClick={handleSavePDF} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200">
-                Save PDF
-              </Button>
               <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
               <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">Save Booking</Button>
             </div>
@@ -770,93 +825,13 @@ export default function BookingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Vehicle Classification Quick Selector Modal */}
-      <Dialog open={vehicleClassModalOpen} onOpenChange={setVehicleClassModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-zinc-950 border-zinc-800">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Vehicle Classification</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <p className="text-sm text-muted-foreground">Select the vehicle type to auto-fill pricing and service details:</p>
+      <VehicleSelectorModal
+        open={vehicleClassModalOpen}
+        onOpenChange={setVehicleClassModalOpen}
+        onSelect={handleVehicleSelect}
+      />
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col gap-1 hover:bg-blue-600/10 hover:border-blue-600"
-                onClick={() => {
-                  setFormData(prev => ({ ...prev, vehicle: prev.vehicle || 'Compact Sedan' }));
-                  setVehicleClassModalOpen(false);
-                  toast.success('Vehicle class: Compact/Sedan');
-                }}
-              >
-                <Car className="h-5 w-5" />
-                <span className="font-semibold">Compact/Sedan</span>
-                <span className="text-xs text-muted-foreground">Small cars</span>
-              </Button>
 
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col gap-1 hover:bg-blue-600/10 hover:border-blue-600"
-                onClick={() => {
-                  setFormData(prev => ({ ...prev, vehicle: prev.vehicle || 'Mid-Size SUV' }));
-                  setVehicleClassModalOpen(false);
-                  toast.success('Vehicle class: Mid-Size/SUV');
-                }}
-              >
-                <Car className="h-5 w-5" />
-                <span className="font-semibold">Mid-Size/SUV</span>
-                <span className="text-xs text-muted-foreground">Medium vehicles</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col gap-1 hover:bg-blue-600/10 hover:border-blue-600"
-                onClick={() => {
-                  setFormData(prev => ({ ...prev, vehicle: prev.vehicle || 'Truck/Van' }));
-                  setVehicleClassModalOpen(false);
-                  toast.success('Vehicle class: Truck/Van');
-                }}
-              >
-                <Car className="h-5 w-5" />
-                <span className="font-semibold">Truck/Van</span>
-                <span className="text-xs text-muted-foreground">Large vehicles</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col gap-1 hover:bg-blue-600/10 hover:border-blue-600"
-                onClick={() => {
-                  setFormData(prev => ({ ...prev, vehicle: prev.vehicle || 'Luxury/High-End' }));
-                  setVehicleClassModalOpen(false);
-                  toast.success('Vehicle class: Luxury/High-End');
-                }}
-              >
-                <Car className="h-5 w-5" />
-                <span className="font-semibold">Luxury/High-End</span>
-                <span className="text-xs text-muted-foreground">Premium vehicles</span>
-              </Button>
-            </div>
-
-            <div className="pt-4 border-t border-zinc-800">
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  // Link to full Vehicle Classification page if needed
-                  window.open('/vehicle-classification', '_blank');
-                }}
-              >
-                Open Full Vehicle Classification Page →
-              </Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVehicleClassModalOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Booking History Section */}
       <Card className="mt-6 p-6 bg-zinc-950/50 border-zinc-800">

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileText, Printer, Save, Trash2, FileBarChart, DollarSign, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getInvoices, upsertInvoice, getCustomers, deleteInvoice, getEstimates, addEstimate } from "@/lib/db";
+import { getInvoices, upsertInvoice, deleteInvoice, getEstimates, addEstimate } from "@/lib/db";
+import { getSupabaseCustomers } from "@/lib/supa-data"; // NEW IMPORT
 import { Customer } from "@/components/customers/CustomerModal";
 import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
@@ -73,7 +74,7 @@ const Invoicing = () => {
   }, []);
 
   const loadData = async () => {
-    const [invs, custs, ests] = await Promise.all([getInvoices(), getCustomers(), getEstimates()]);
+    const [invs, custs, ests] = await Promise.all([getInvoices(), getSupabaseCustomers(), getEstimates()]);
 
     // Assign invoice numbers starting from 100
     const invoicesWithNumbers = (invs as Invoice[]).map((inv, idx) => ({

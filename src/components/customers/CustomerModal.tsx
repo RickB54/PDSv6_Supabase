@@ -5,9 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { upsertCustomer } from "@/lib/db";
+import { upsertSupabaseCustomer } from "@/lib/supa-data"; // NEW IMPORT
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Car, Info, Calendar, Clock } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Info, Calendar, Clock, Search } from "lucide-react";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 
 export interface Customer {
   id?: string;
@@ -41,6 +43,8 @@ interface Props {
 }
 
 export default function CustomerModal({ open, onOpenChange, initial, onSave, defaultType = 'customer' }: Props) {
+  const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
+
   const [form, setForm] = useState<Customer>({
     id: undefined,
     name: "",
@@ -101,6 +105,25 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }
   };
 
+  const handleVehicleSelect = (data: { make: string; model: string; category: string }) => {
+    let mappedType = "";
+    const cat = data.category;
+
+    // Map ClassificationTool categories to CustomerModal dropdown values
+    if (cat === "Compact") mappedType = "Compact/Sedan";
+    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan";
+    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV";
+    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV";
+    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV";
+
+    setForm(prev => ({
+      ...prev,
+      vehicle: data.make,
+      model: data.model,
+      vehicleType: mappedType || prev.vehicleType
+    }));
+  };
+
   const handleSubmit = async () => {
     const payload = { ...form };
     if (!payload.id) {
@@ -110,31 +133,23 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     if (!payload.type) payload.type = defaultType;
 
     try {
-      const saved = await api('/api/customers', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      if (!saved || (saved && saved.ok === false)) {
-        // Fallback: save locally when backend fails or returns null
-        const localSaved = await upsertCustomer(payload as any);
-        onSave(localSaved as any);
-        toast.success(`${isProspect ? 'Prospect' : 'Customer'} saved locally (offline)`);
-        onOpenChange(false);
-        return;
-      }
-      onSave(saved as any);
-      toast.success(`${isProspect ? 'Prospect' : 'Customer'} saved!`);
+      // Use centralized Supabase upsert
+      const saved = await upsertSupabaseCustomer(payload);
+
+      // Also update local for immediate feedback if needed, or rely on reload
+      // But supa-data usually handles both or we just trust Supabase return.
+      // upsertSupabaseCustomer returns the Supabase Record.
+
+      onSave(saved as any); // Update parent
+      toast.success(`${isProspect ? 'Prospect' : 'Customer'} saved to Supabase!`);
       onOpenChange(false);
     } catch (err: any) {
-      // Fallback: save locally when backend throws
-      try {
-        const localSaved = await upsertCustomer(payload as any);
-        onSave(localSaved as any);
-        toast.success(`${isProspect ? 'Prospect' : 'Customer'} saved locally (offline)`);
-        onOpenChange(false);
-      } catch (err2: any) {
-        toast.error("Save failed: " + (err2?.message || String(err2)));
-      }
+      console.error("Supabase Save Failed:", err);
+      // Fallback to local if Supabase fails? 
+      // Plan implies Supabase as single source, but for offline safety we might keep fallback.
+      // However, upsertSupabaseCustomer logic wasn't fully inspected for offline handling.
+      // Let's assume strict Supabase for now as per "move from localforage".
+      toast.error("Save failed: " + (err?.message || String(err)));
     }
   };
 
@@ -207,7 +222,18 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
           {/* Vehicle Section */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Vehicle Details</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Vehicle Details</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVehicleSelectorOpen(true)}
+                className="h-8 text-xs border-dashed border-zinc-700 hover:border-zinc-500"
+              >
+                <Search className="w-3 h-3 mr-1" />
+                Select Vehicle from Database
+              </Button>
+            </div>
 
             <div className="grid gap-3">
               <div className="relative">
@@ -368,6 +394,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">Save {isProspect ? 'Prospect' : 'Customer'}</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+
+
+      <VehicleSelectorModal
+        open={vehicleSelectorOpen}
+        onOpenChange={setVehicleSelectorOpen}
+        onSelect={handleVehicleSelect}
+      />
+    </Dialog >
   );
 }

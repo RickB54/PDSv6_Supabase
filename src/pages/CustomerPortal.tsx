@@ -37,7 +37,7 @@ const CustomerPortal = () => {
     truck: "Truck/Van/Large SUV",
     luxury: "Luxury/High-End",
   });
-  const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact','midsize','truck','luxury']);
+  const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact', 'midsize', 'truck', 'luxury']);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [distance, setDistance] = useState(0);
@@ -45,36 +45,17 @@ const CustomerPortal = () => {
   const [learnMorePackage, setLearnMorePackage] = useState<any | null>(null);
 
   // Live data pulled from backend
-  const [savedPricesLive, setSavedPricesLive] = useState<Record<string,string>>({});
+  const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [packageMetaLive, setPackageMetaLive] = useState<Record<string, any>>({});
   const [addOnMetaLive, setAddOnMetaLive] = useState<Record<string, any>>({});
   const [customPackagesLive, setCustomPackagesLive] = useState<any[]>([]);
   const [customAddOnsLive, setCustomAddOnsLive] = useState<any[]>([]);
   const [lastSyncTs, setLastSyncTs] = useState<number | null>(null);
 
-  const getKey = (type: 'package'|'addon', id: string, size: string) => `${type}:${id}:${size}`;
+  const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
   const fetchLive = async () => {
-    try {
-      const res = await fetch(`http://localhost:6061/api/packages/live?v=${Date.now()}` , {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      if (res.ok) {
-        const contentType = res.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          setSavedPricesLive(data.savedPrices || {});
-          setPackageMetaLive(data.packageMeta || {});
-          setAddOnMetaLive(data.addOnMeta || {});
-          setCustomPackagesLive(data.customPackages || []);
-          setCustomAddOnsLive(data.customAddOns || []);
-          setLastSyncTs(Date.now());
-          return;
-        }
-        // Fall through to local snapshot if server returned HTML due to SPA redirects
-      }
-    } catch {}
-    // Local fallback snapshot when backend is unavailable or returns non-JSON
+    // Rely on local snapshot since backend API is not running on port 6061
     try {
       const snapshot = await buildFullSyncPayload();
       setSavedPricesLive(snapshot.savedPrices || {});
@@ -83,29 +64,15 @@ const CustomerPortal = () => {
       setCustomPackagesLive(snapshot.customPackages || []);
       setCustomAddOnsLive(snapshot.customAddOns || []);
       setLastSyncTs(Date.now());
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
     const loadVehicleTypes = async () => {
-      try {
-        const res = await fetch(`http://localhost:6061/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            const map: Record<string, string> = { ...vehicleLabels };
-            const opts: string[] = [];
-            data.forEach((vt: any) => {
-              const id = String(vt.id || vt.key || '').trim();
-              const name = String(vt.name || '').trim();
-              if (id && name) { map[id] = name; opts.push(id); }
-            });
-            setVehicleLabels(map);
-            setVehicleOptions(opts.length ? opts : ['compact','midsize','truck','luxury']);
-            if (!opts.includes(vehicleType)) setVehicleType(opts[0] || 'compact');
-          }
-        }
-      } catch {}
+      // Fallback to default types if no API
+      setVehicleOptions(['compact', 'midsize', 'truck', 'luxury']);
+      // Should we check local storage for custom types?
+      // For now, rely on defaults or what `buildFullSyncPayload` might eventually provide if updated.
     };
     loadVehicleTypes();
     const onChanged = (e: any) => {
@@ -218,17 +185,17 @@ const CustomerPortal = () => {
         </div>
 
         {/* Premium 6-Box Service Grid */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {livePackages.map((pkg: any, index: number) => {
             const isSelected = selectedService === pkg.id;
             const isBestValue = pkg.name.includes("BEST VALUE");
-            
+
             return (
               <Card
                 key={pkg.id}
                 className={`relative overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 group
-                  ${isSelected 
-                    ? 'border-primary ring-4 ring-primary/50 shadow-[0_0_40px_rgba(220,38,38,0.3)]' 
+                  ${isSelected
+                    ? 'border-primary ring-4 ring-primary/50 shadow-[0_0_40px_rgba(220,38,38,0.3)]'
                     : 'border-border hover:border-primary/50 shadow-card'
                   }
                   ${isBestValue ? 'border-primary/70' : ''}
@@ -243,18 +210,18 @@ const CustomerPortal = () => {
                     <span className="text-xs font-bold text-white tracking-wider">★ BEST VALUE ★</span>
                   </div>
                 )}
-                
+
                 {/* Package Image (prefer live uploaded image if available) */}
                 {(packageMetaLive[pkg.id]?.imageDataUrl || packageImages[pkg.id]) && (
                   <div className="relative h-48 overflow-hidden">
-                    <img 
-                      src={packageMetaLive[pkg.id]?.imageDataUrl || packageImages[pkg.id]} 
+                    <img
+                      src={packageMetaLive[pkg.id]?.imageDataUrl || packageImages[pkg.id]}
                       alt={pkg.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
                 )}
-                
+
                 <div className={`p-6 space-y-5 ${isBestValue ? 'pt-8' : ''}`}>
                   {/* Service Name & Check */}
                   <div className="flex items-start justify-between min-h-[60px]">
@@ -287,8 +254,8 @@ const CustomerPortal = () => {
                   <div className="flex gap-2">
                     <Button
                       className={`flex-1 h-12 font-semibold transition-all duration-300 
-                        ${isSelected 
-                          ? 'bg-gradient-hero text-white shadow-glow' 
+                        ${isSelected
+                          ? 'bg-gradient-hero text-white shadow-glow'
                           : 'bg-secondary text-secondary-foreground hover:bg-gradient-hero hover:text-white'
                         }`}
                     >
@@ -329,10 +296,10 @@ const CustomerPortal = () => {
               )}
             </div>
           </button>
-          
+
           {addOnsExpanded && (
             <div className="px-6 pb-6">
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {liveAddOns.map((addon: any) => {
                   const isSelected = selectedAddOns.includes(addon.id);
                   return (
@@ -399,7 +366,7 @@ const CustomerPortal = () => {
                   <div className="text-primary font-bold">${servicePrice}</div>
                 </span>
               </div>
-              
+
               <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-foreground font-medium">Vehicle:</span>
                 <span className="text-foreground capitalize">{vehicleType === 'compact' ? 'Compact/Sedan' : vehicleType === 'midsize' ? 'Mid-Size/SUV' : vehicleType === 'truck' ? 'Truck/Van/Large SUV' : 'Luxury/High-End'}</span>
@@ -411,7 +378,7 @@ const CustomerPortal = () => {
                   <span className="text-primary font-bold">${addOnsTotal}</span>
                 </div>
               )}
-              
+
               <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-foreground font-medium">
                   Destination: <span className="text-muted-foreground text-sm">{distance} mi</span>
@@ -428,9 +395,9 @@ const CustomerPortal = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-3">
-              <Button 
+              <Button
                 className="w-full h-12 bg-gradient-hero text-white font-semibold text-lg shadow-glow hover:shadow-[0_0_40px_rgba(220,38,38,0.4)]"
                 onClick={() => {
                   const selectedPkg = livePackages.find(s => s.id === selectedService);
@@ -460,7 +427,7 @@ const CustomerPortal = () => {
             <p>• We do <strong>NOT</strong> offer: → Biological Cleanup → Emergency Services</p>
             <p>• We focus on <strong>premium cosmetic and protective detailing</strong>.</p>
             <p className="font-semibold mt-4 text-foreground border-t border-border pt-3">
-              Important: Final price may vary based on vehicle condition, size, or additional work required. 
+              Important: Final price may vary based on vehicle condition, size, or additional work required.
               All quotes are estimates until vehicle is inspected.
             </p>
           </div>
@@ -483,7 +450,7 @@ const CustomerPortal = () => {
               <h4 className="font-semibold mb-2 text-foreground">Why Choose This Package?</h4>
               <p className="text-muted-foreground">{learnMorePackage?.description}</p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-2 text-foreground">What's Included:</h4>
               <ul className="space-y-2">
@@ -497,7 +464,7 @@ const CustomerPortal = () => {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button 
+              <Button
                 className="flex-1 bg-gradient-hero"
                 onClick={() => {
                   if (learnMorePackage) {
