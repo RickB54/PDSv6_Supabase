@@ -7,9 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import localforage from "localforage";
+import { UserCheck, ShieldAlert, User, WifiOff } from "lucide-react";
 
 type Role = "admin" | "employee" | "customer";
-type AppUser = { id: string; role: Role; name?: string | null; email?: string | null; updated_at?: string | null };
+type AppUser = {
+  id: string;
+  role: Role;
+  name?: string | null;
+  email?: string | null;
+  updated_at?: string | null;
+  isPending?: boolean;
+  isLocalOnly?: boolean;
+};
 
 const roles: Role[] = ["admin", "employee", "customer"];
 
@@ -32,33 +42,84 @@ export default function AdminUsers() {
 
   const [newAdminName, setNewAdminName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
-  // Passwords removed in favor of Supabase Auth Invite flow
 
   const fetchUsers = async () => {
     setLoading(true);
-    // Fetch profiles and invites
-    const { data: profiles } = await supabase.from("app_users").select("id, role, name, email, updated_at");
-    const { data: invites } = await supabase.from("authorized_users").select("*");
+    try {
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out")), 10000)
+      );
 
-    const activeMap = new Map((profiles || []).map(p => [p.email, p]));
+      // Wrap the actual fetch logic
+      const fetchData = async () => {
+        // 1. Fetch Supabase Data (Profiles & Invites)
+        const { data: profiles, error: pError } = await supabase.from("app_users").select("id, role, name, email, updated_at");
+        if (pError) console.error("Error fetching app_users:", pError);
 
-    // Combine
-    const combined: any[] = [...(profiles || [])];
+        const { data: invites, error: iError } = await supabase.from("authorized_users").select("*");
+        if (iError) console.error("Error fetching authorized_users:", iError);
 
-    (invites || []).forEach((inv: any) => {
-      if (!activeMap.has(inv.email)) {
-        combined.push({
-          id: 'pending_' + inv.email,
-          role: inv.role,
-          name: inv.name || inv.email,
-          email: inv.email,
-          updated_at: inv.created_at
+        // 2. Fetch Local Employees (for "Ghosts" or unsynced data)
+        const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
+
+        const activeMap = new Map((profiles || []).map(p => [p.email?.toLowerCase(), p]));
+
+        // Combine all sources
+        const combined: AppUser[] = [...(profiles || [])];
+        const seenEmails = new Set(combined.map(u => u.email?.toLowerCase()).filter(Boolean));
+
+        // Add Pending Invites (Authorized but no profile yet)
+        (invites || []).forEach((inv: any) => {
+          const email = inv.email?.toLowerCase();
+          if (!activeMap.has(email)) {
+            if (seenEmails.has(email)) return;
+
+            combined.push({
+              id: 'pending_' + inv.email,
+              role: inv.role,
+              name: inv.name || inv.email,
+              email: inv.email,
+              updated_at: inv.created_at,
+              isPending: true
+            });
+            seenEmails.add(email);
+          }
         });
-      }
-    });
 
-    setUsers(combined.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')));
-    setLoading(false);
+        // Add Local Employees missing from Supabase (Sync gap)
+        localEmployees.forEach(emp => {
+          const email = emp.email?.toLowerCase();
+          if (!email) return;
+          if (!seenEmails.has(email)) {
+            combined.push({
+              id: emp.id || `local_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+              role: emp.role || 'employee',
+              name: emp.name,
+              email: emp.email,
+              updated_at: new Date().toISOString(),
+              isLocalOnly: true
+            });
+            seenEmails.add(email);
+          }
+        });
+
+        return combined.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+      };
+
+      // Race against timeout
+      const result = await Promise.race([fetchData(), timeoutPromise]) as any[];
+      setUsers(result);
+    } catch (err: any) {
+      console.error("fetchUsers failed:", err);
+      if (err.message === "Request timed out") {
+        toast({ title: "Connection slow", description: "Taking longer than expected...", variant: "default" });
+      } else {
+        toast({ title: "Refresh failed", description: "Could not fetch users.", variant: "destructive" });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -77,7 +138,7 @@ export default function AdminUsers() {
       }
 
       // Also update profile if exists
-      if (!id.startsWith('pending_')) {
+      if (!id.startsWith('pending_') && !id.startsWith('local_')) {
         const { error } = await supabase.from("app_users").update({ role }).eq("id", id);
         if (error) throw error;
       }
@@ -93,8 +154,17 @@ export default function AdminUsers() {
   const saveName = async () => {
     if (!editId) return;
     try {
-      const { error } = await supabase.from("app_users").update({ name: editName }).eq("id", editId);
-      if (error) throw error;
+      if (editId.startsWith('local_')) {
+        // Update local only
+        const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
+        const updated = localEmployees.map(e => e.id === editId || e.name === editName ? { ...e, name: editName } : e);
+        await localforage.setItem('company-employees', updated);
+      } else {
+        // Update Supabase
+        const { error } = await supabase.from("app_users").update({ name: editName }).eq("id", editId);
+        if (error) throw error;
+      }
+
       toast({ title: "User updated" });
       setEditId(null);
       setEditName("");
@@ -107,11 +177,20 @@ export default function AdminUsers() {
   const deleteUser = async (id: string, role: Role) => {
     if (!confirm("Delete this user?")) return;
     try {
-      const { error } = await supabase.from("app_users").delete().eq("id", id);
-      if (error) throw error;
-      if (role === "customer") {
-        try { await supabase.from("customers").delete().eq("id", id); } catch { }
+      if (id.startsWith('local_')) {
+        // Delete from local
+        const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
+        const updated = localEmployees.filter(e => e.id !== id);
+        await localforage.setItem('company-employees', updated);
+      } else {
+        // Delete from Supabase
+        const { error } = await supabase.from("app_users").delete().eq("id", id);
+        if (error) throw error;
+        if (role === "customer") {
+          try { await supabase.from("customers").delete().eq("id", id); } catch { }
+        }
       }
+
       await fetchUsers();
       toast({ title: "User deleted" });
     } catch (e: any) {
@@ -119,13 +198,9 @@ export default function AdminUsers() {
     }
   };
 
-  const impersonate = async (_id: string) => {
-    toast({ title: "Impersonation disabled", description: "Use role-based login instead." });
-  };
-
   const roleCounts = useMemo(() => {
     const map: Record<Role, number> = { admin: 0, employee: 0, customer: 0 };
-    users.forEach((u) => { map[u.role] += 1; });
+    users.forEach((u) => { map[u.role] = (map[u.role] || 0) + 1; });
     return map;
   }, [users]);
 
@@ -167,7 +242,7 @@ export default function AdminUsers() {
 
       toast({ title: "User Authorized", description: `${name} can now sign up as ${role}.` });
 
-      // Clear the specific form on success
+      // Clear form
       if (role === 'employee') {
         setNewEmpName(""); setNewEmpEmail("");
       } else if (role === 'customer') {
@@ -220,7 +295,7 @@ export default function AdminUsers() {
                 <TableHead className="text-zinc-300">Name</TableHead>
                 <TableHead className="text-zinc-300">Email</TableHead>
                 <TableHead className="text-zinc-300">Role</TableHead>
-                <TableHead className="text-zinc-300">Last Login</TableHead>
+                <TableHead className="text-zinc-300">Status</TableHead>
                 <TableHead className="text-zinc-300">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -231,12 +306,16 @@ export default function AdminUsers() {
                     {editId === u.id ? (
                       <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
                     ) : (
-                      u.name
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{u.name}</span>
+                        {u.isPending && <span className="text-[10px] bg-yellow-900/40 text-yellow-500 border border-yellow-700/50 px-1.5 py-0.5 rounded">Pending Invite</span>}
+                        {u.isLocalOnly && <span className="text-[10px] bg-purple-900/40 text-purple-400 border border-purple-700/50 px-1.5 py-0.5 rounded flex items-center gap-1"><WifiOff className="w-3 h-3" /> Local Only</span>}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-white">{u.email}</TableCell>
                   <TableCell className="text-white">
-                    <Select value={u.role} onValueChange={(val) => onChangeRole(u.id, val as Role)}>
+                    <Select value={u.role} onValueChange={(val) => onChangeRole(u.id, val as Role)} disabled={u.isLocalOnly}>
                       <SelectTrigger className="w-[180px] bg-zinc-800 border-zinc-700 text-white">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
@@ -247,7 +326,11 @@ export default function AdminUsers() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-zinc-300">{u.updated_at ? new Date(u.updated_at).toLocaleString() : "—"}</TableCell>
+                  <TableCell className="text-zinc-300">
+                    <span className="text-xs font-mono">
+                      {u.isPending ? 'Waiting for signup' : u.isLocalOnly ? 'Device Only' : 'Active'}
+                    </span>
+                  </TableCell>
                   <TableCell className="space-x-2">
                     {editId === u.id ? (
                       <>

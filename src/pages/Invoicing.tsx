@@ -4,15 +4,16 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, FileBarChart, DollarSign, Plus } from "lucide-react";
+import { FileText, Printer, Save, Trash2, FileBarChart, DollarSign, Plus, Car } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getInvoices, upsertInvoice, deleteInvoice, getEstimates, addEstimate } from "@/lib/db";
-import { getSupabaseCustomers } from "@/lib/supa-data"; // NEW IMPORT
+import { getSupabaseCustomers } from "@/lib/supa-data";
 import { Customer } from "@/components/customers/CustomerModal";
 import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import {
   Select,
   SelectContent,
@@ -68,6 +69,8 @@ const Invoicing = () => {
   const [selectedPackage, setSelectedPackage] = useState("");
   const [selectedVehicleType, setSelectedVehicleType] = useState<"compact" | "midsize" | "truck" | "luxury">("midsize");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
+  const [selectedVehicleDetails, setSelectedVehicleDetails] = useState<{ make: string; model: string; category: string } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -112,11 +115,16 @@ const Invoicing = () => {
     // Get next invoice number
     const maxInvoiceNum = invoices.reduce((max, inv) => Math.max(max, inv.invoiceNumber || 99), 99);
 
+    // Use selected vehicle details if available, otherwise fallback to customer vehicle
+    const vehicleDesc = selectedVehicleDetails
+      ? `${selectedVehicleDetails.make} ${selectedVehicleDetails.model}`
+      : `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
+
     const invoice: Invoice = {
       invoiceNumber: maxInvoiceNum + 1,
       customerId: selectedCustomer,
       customerName: customer.name,
-      vehicle: `${customer.year} ${customer.vehicle} ${customer.model}`,
+      vehicle: vehicleDesc.trim() || "Unknown Vehicle",
       services,
       total: calculateTotal(),
       date: new Date().toLocaleDateString(),
@@ -137,7 +145,32 @@ const Invoicing = () => {
     setSelectedCustomer("");
     setServices([]);
     setShowCreateForm(false);
+    setSelectedVehicleDetails(null);
     loadData();
+  };
+
+  const handleVehicleSelect = (data: { make: string; model: string; category: string }) => {
+    setSelectedVehicleDetails(data);
+
+    // Map complicated categories to our 4 pricing tiers
+    let mappedType: "compact" | "midsize" | "truck" | "luxury" = "midsize"; // default
+
+    const cat = data.category.toLowerCase();
+    if (cat.includes("compact")) mappedType = "compact";
+    else if (cat.includes("midsize") || cat.includes("sedan")) mappedType = "midsize";
+    else if (cat.includes("suv") || cat.includes("crossover") || cat.includes("truck") || cat.includes("oversized")) mappedType = "truck";
+    else if (cat.includes("luxury") || cat.includes("exotic")) mappedType = "luxury";
+
+    setSelectedVehicleType(mappedType);
+
+    // Recalculate price if package is selected
+    if (selectedPackage) {
+      const pkg = servicePackages.find(p => p.id === selectedPackage);
+      if (pkg) {
+        const price = pkg.pricing[mappedType] || 0;
+        setServices([{ name: pkg.name, price }]);
+      }
+    }
   };
 
   const generatePDF = (invoice: Invoice, download = false) => {
@@ -414,8 +447,27 @@ const Invoicing = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
 
+                      <div className="mt-2 text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary/90 p-0 h-auto"
+                          onClick={() => setVehicleModalOpen(true)}
+                        >
+                          <Car className="w-4 h-4 mr-1" />
+                          Need help classifying? Open Vehicle Database
+                        </Button>
+                        {selectedVehicleDetails && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Selected: <span className="font-medium text-foreground">{selectedVehicleDetails.make} {selectedVehicleDetails.model}</span>
+                            <span className="mx-1">•</span>
+                            Classified as: <span className="font-medium text-foreground">{selectedVehicleDetails.category}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -631,6 +683,11 @@ const Invoicing = () => {
           </Card>
         </div>
       )}
+      <VehicleSelectorModal
+        open={vehicleModalOpen}
+        onOpenChange={setVehicleModalOpen}
+        onSelect={handleVehicleSelect}
+      />
     </div>
   );
 };

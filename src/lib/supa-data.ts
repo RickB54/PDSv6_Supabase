@@ -72,19 +72,16 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
         const mergedEmployees: Employee[] = [];
         const seenEmails = new Set<string>();
 
+        // A. Add Supabase Users
         for (const supaUser of safeSupaUsers) {
             const email = (supaUser.email || '').toLowerCase();
             if (!email) continue;
             if (seenEmails.has(email)) continue; // Deduplicate
 
             // Check if this user is actually an employee or admin
-            // logic from AdminUsers.tsx implies app_users has 'role'.
             const role = (supaUser.role || '').toLowerCase();
             // Assuming we want all potential assignees which includes employees and admins
-            if (role !== 'employee' && role !== 'admin' && role !== 'owner') {
-                // If strict filtering is needed: continue;
-                // But for now, let's include them if they are in the system.
-            }
+            // We include them if they are in the system.
 
             const normalizedRole = role === 'admin' || role === 'owner' ? 'Admin' : 'Employee';
 
@@ -106,6 +103,22 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
 
             seenEmails.add(email);
         }
+
+        // B. Add Local-Only Employees (Fallback for when Supabase is out of sync or offline)
+        localEmployees.forEach(localEmp => {
+            const email = (localEmp.email || '').toLowerCase();
+            if (!email) return;
+            if (seenEmails.has(email)) return; // Already added from Supabase
+
+            // Add local-only employee
+            mergedEmployees.push({
+                ...localEmp,
+                id: localEmp.id || `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // ensure ID
+                name: localEmp.name || localEmp.email,
+                role: localEmp.role || 'Employee'
+            });
+            seenEmails.add(email);
+        });
 
         // Sort by name
         return mergedEmployees.sort((a, b) => a.name.localeCompare(b.name));

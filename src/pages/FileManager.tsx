@@ -153,6 +153,21 @@ const FileManager = () => {
     }
   };
 
+  // Helper to shorten filenames for display
+  const formatDisplayName = (name: string) => {
+    // 1. Remove extension
+    let clean = name.replace(/\.pdf$/i, '');
+    // 2. Try to remove standard 13-digit timestamp suffix often used in this app
+    // e.g. "Name_1765431441643" -> "Name"
+    clean = clean.replace(/[-_]\d{10,13}$/, '');
+
+    // 3. Truncate if still too long (e.g. > 30 chars)
+    if (clean.length > 30) {
+      return clean.substring(0, 27) + '...';
+    }
+    return clean;
+  };
+
   const filteredRecords = records.filter(record => {
     const matchesSearch = record.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.customerName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -343,11 +358,13 @@ const FileManager = () => {
                       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                       .map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-medium flex items-center gap-2">
-                            {record.fileName}
-                            {isViewed("file", record.id) ? (
-                              <span className="text-xs text-zinc-500">• viewed</span>
-                            ) : null}
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2" title={record.fileName}>
+                              <span className="truncate max-w-[200px]">{formatDisplayName(record.fileName)}</span>
+                              {isViewed("file", record.id) ? (
+                                <span className="text-xs text-zinc-500 shrink-0">• viewed</span>
+                              ) : null}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <span className="px-2 py-1 bg-primary/20 text-primary text-xs rounded-full">
@@ -449,8 +466,8 @@ const FileManager = () => {
                     <div key={record.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-base truncate flex items-center gap-2">
-                            {record.fileName}
+                          <div className="font-semibold text-base truncate flex items-center gap-2" title={record.fileName}>
+                            {formatDisplayName(record.fileName)}
                             {isViewed("file", record.id) && <span className="text-xs text-zinc-500 font-normal shrink-0">• viewed</span>}
                           </div>
                           <div className="text-sm text-zinc-400 mt-1">{record.customerName}</div>

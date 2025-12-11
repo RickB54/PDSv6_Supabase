@@ -325,7 +325,7 @@ const InventoryControl = () => {
                   <Button size="sm" variant="outline" onClick={() => { setImportWizardTab("chemicals"); setImportWizardOpen(true); }}><Package className="h-3 w-3 mr-1" /> Import</Button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-yellow-500/20">
@@ -356,6 +356,32 @@ const InventoryControl = () => {
                     {chemicals.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No chemicals tracked.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile Card View (Chemicals) */}
+              <div className="md:hidden space-y-3">
+                {chemicals.map(c => (
+                  <div key={c.id} className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-yellow-100">{c.name}</div>
+                        <div className="text-sm text-zinc-400">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock <= c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                        {c.currentStock} left
+                      </span>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2 border-t border-yellow-500/10">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8">
+                        <FileText className="h-4 w-4 mr-2" /> Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, 'chemical', c.name)} className="h-8 text-red-500">
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {chemicals.length === 0 && <div className="text-center py-6 text-muted-foreground">No chemicals tracked.</div>}
               </div>
             </div>
           )}
@@ -394,36 +420,64 @@ const InventoryControl = () => {
                   <Button size="sm" variant="outline" onClick={() => { setImportWizardTab("materials"); setImportWizardOpen(true); }}><Package className="h-3 w-3 mr-1" /> Import</Button>
                 </div>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-blue-500/20">
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Cost/Item</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {materials.map(m => (
-                    <TableRow key={m.id} className="border-blue-500/10 hover:bg-blue-500/5">
-                      <TableCell className="font-medium">{m.name}</TableCell>
-                      <TableCell>{m.category}</TableCell>
-                      <TableCell>${(m.costPerItem || 0).toFixed(2)}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                          {m.quantity} units
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(m, 'material')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id, 'material', m.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
-                      </TableCell>
+              <div className="overflow-x-auto hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-blue-500/20">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Cost/Item</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                  {materials.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No materials tracked.</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {materials.map(m => (
+                      <TableRow key={m.id} className="border-blue-500/10 hover:bg-blue-500/5">
+                        <TableCell className="font-medium">{m.name}</TableCell>
+                        <TableCell>{m.category}</TableCell>
+                        <TableCell>${(m.costPerItem || 0).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                            {m.quantity} units
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(m, 'material')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id, 'material', m.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {materials.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No materials tracked.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View (Materials) */}
+              <div className="md:hidden space-y-3 mt-4">
+                {materials.map(m => (
+                  <div key={m.id} className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-blue-100">{m.name}</div>
+                        <div className="text-sm text-zinc-400">{m.category} • ${(m.costPerItem || 0).toFixed(2)}</div>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                        {m.quantity} units
+                      </span>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2 border-t border-blue-500/10">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(m, 'material')} className="h-8">
+                        <FileText className="h-4 w-4 mr-2" /> Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id, 'material', m.name)} className="h-8 text-red-500">
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {materials.length === 0 && <div className="text-center py-6 text-muted-foreground">No materials tracked.</div>}
+              </div>
             </div>
           )}
         </div>
@@ -456,32 +510,58 @@ const InventoryControl = () => {
                   <Button size="sm" variant="outline" onClick={() => { setImportWizardTab("tools"); setImportWizardOpen(true); }}><Package className="h-3 w-3 mr-1" /> Import</Button>
                 </div>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-purple-500/20">
-                    <TableHead>Name</TableHead>
-                    <TableHead>Purchase Date</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tools.map(t => (
-                    <TableRow key={t.id} className="border-purple-500/10 hover:bg-purple-500/5">
-                      <TableCell className="font-medium">{t.name}</TableCell>
-                      <TableCell>{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
-                      <TableCell>${(t.price || 0).toFixed(2)}</TableCell>
-                      <TableCell><span className="text-xs text-muted-foreground truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id, 'tool', t.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
-                      </TableCell>
+              <div className="overflow-x-auto hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-purple-500/20">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Purchase Date</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                  {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No tools tracked.</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {tools.map(t => (
+                      <TableRow key={t.id} className="border-purple-500/10 hover:bg-purple-500/5">
+                        <TableCell className="font-medium">{t.name}</TableCell>
+                        <TableCell>{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell>${(t.price || 0).toFixed(2)}</TableCell>
+                        <TableCell><span className="text-xs text-muted-foreground truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id, 'tool', t.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No tools tracked.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View (Tools) */}
+              <div className="md:hidden space-y-3 mt-4">
+                {tools.map(t => (
+                  <div key={t.id} className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-purple-100">{t.name}</div>
+                        <div className="text-sm text-zinc-400">${(t.price || 0).toFixed(2)} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
+                      </div>
+                    </div>
+                    {t.notes && <div className="text-xs text-zinc-500">{t.notes}</div>}
+                    <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8">
+                        <FileText className="h-4 w-4 mr-2" /> Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id, 'tool', t.name)} className="h-8 text-red-500">
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {tools.length === 0 && <div className="text-center py-6 text-muted-foreground">No tools tracked.</div>}
+              </div>
             </div>
           )}
         </div>

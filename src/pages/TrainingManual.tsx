@@ -2,8 +2,109 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState, useEffect } from "react";
+import localforage from "localforage";
+import { getCurrentUser } from "@/lib/auth";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2, Lightbulb, UserCheck } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface ProTip {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: number;
+}
 
 const TrainingManual = () => {
+  const { toast } = useToast();
+  const [tipsOpen, setTipsOpen] = useState(false);
+  const [tips, setTips] = useState<ProTip[]>([]);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin';
+
+  const [editingTip, setEditingTip] = useState<ProTip | null>(null);
+
+  useEffect(() => {
+    loadTips();
+  }, []);
+
+  const loadTips = async () => {
+    const saved = await localforage.getItem<ProTip[]>("rick_pro_tips");
+    if (saved && saved.length > 2) {
+      setTips(saved);
+    } else {
+      // Seed default tips if none exist (or if old small list exists)
+      const defaults: ProTip[] = [
+        { id: '1', title: 'Always Verify Water Source', content: 'Before hooking up, run the customer\'s spigot for 10 seconds to clear rust/sediment.', createdAt: Date.now() },
+        { id: '2', title: 'Emblem Cleaning', content: 'Use a soft boar\'s hair brush on emblems while the foam cannon soap is dwelling. Rinse thoroughly from multiple angles.', createdAt: Date.now() },
+        { id: '3', title: 'The Two-Bucket Method', content: 'Always keep your rinse bucket clean. If it gets dark, change the water. A dirty MITT creates swirls.', createdAt: Date.now() },
+        { id: '4', title: 'Door Jamb Protocol', content: 'Don\'t blast door jambs with high pressure. Mist them with APC, agitate with a detailing brush, and use a gentle stream or damp microfiber to wipe clean.', createdAt: Date.now() },
+        { id: '5', title: 'Glass Streak Prevention', content: 'Use two towels. One wet (with glass cleaner) to clean, one bone dry to buff. Clean interior glass horizontally and exterior vertically to trace streaks.', createdAt: Date.now() },
+        { id: '6', title: 'Generator Safety', content: 'Face the generator exhaust AWAY from the customer\'s garage or windows. Carbon monoxide is dangerous and smells bad.', createdAt: Date.now() }
+      ];
+      // Merge with existing if any, avoiding duplicates by ID
+      const existing = saved || [];
+      const combined = [...defaults, ...existing.filter(e => !defaults.some(d => d.id === e.id))];
+
+      setTips(combined);
+      localforage.setItem("rick_pro_tips", combined);
+    }
+  };
+
+  const saveTip = async () => {
+    if (!newTitle.trim() || !newContent.trim()) return;
+
+    let updated: ProTip[];
+
+    if (editingTip) {
+      // Update existing
+      updated = tips.map(t => t.id === editingTip.id ? { ...t, title: newTitle.trim(), content: newContent.trim() } : t);
+      toast({ title: "Tip Updated", description: "Changes saved." });
+    } else {
+      // Create new
+      const tip: ProTip = {
+        id: Date.now().toString(),
+        title: newTitle.trim(),
+        content: newContent.trim(),
+        createdAt: Date.now()
+      };
+      updated = [tip, ...tips];
+      toast({ title: "Tip Added", description: "Pro tip saved successfully." });
+    }
+
+    setTips(updated);
+    await localforage.setItem("rick_pro_tips", updated);
+    setNewTitle("");
+    setNewContent("");
+    setEditingTip(null);
+  };
+
+  const startEdit = (tip: ProTip) => {
+    setEditingTip(tip);
+    setNewTitle(tip.title);
+    setNewContent(tip.content);
+  };
+
+  const cancelEdit = () => {
+    setEditingTip(null);
+    setNewTitle("");
+    setNewContent("");
+  };
+
+  const deleteTip = async (id: string) => {
+    if (!confirm("Delete this tip?")) return;
+    const updated = tips.filter(t => t.id !== id);
+    setTips(updated);
+    await localforage.setItem("rick_pro_tips", updated);
+    if (editingTip?.id === id) cancelEdit();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Quick Detailing Manual" />
@@ -15,7 +116,11 @@ const TrainingManual = () => {
               <h1 className="text-3xl font-bold text-foreground mb-2">Quick Detailing Manual</h1>
               <p className="text-muted-foreground">Complete Interior & Exterior Process + Product & Equipment Guides</p>
             </div>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow-lg transition-transform hover:scale-105 active:scale-95">
+            <button
+              onClick={() => setTipsOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+            >
+              <Lightbulb className="w-5 h-5" />
               Rick's Pro Tips
             </button>
           </div>
@@ -290,6 +395,84 @@ const TrainingManual = () => {
           </Tabs>
         </Card>
       </main>
+      <Dialog open={tipsOpen} onOpenChange={setTipsOpen}>
+        <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-purple-400">
+              <Lightbulb className="w-6 h-6 text-yellow-400" />
+              Rick's Pro Tips from the Field
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="h-[60vh] flex flex-col gap-4">
+            {/* Admin Add/Edit Section */}
+            {isAdmin && (
+              <div className={`border p-4 rounded-lg space-y-3 shrink-0 ${editingTip ? 'bg-orange-900/20 border-orange-500/30' : 'bg-purple-900/20 border-purple-500/30'}`}>
+                <div className={`flex items-center gap-2 font-semibold mb-1 ${editingTip ? 'text-orange-300' : 'text-purple-300'}`}>
+                  <UserCheck className="w-4 h-4" /> {editingTip ? 'Admin: Edit Tip' : 'Admin: Add New Tip'}
+                </div>
+                <Input
+                  placeholder="Tip Title (e.g., 'Windshield Cleaning')"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="bg-black/40 border-white/10 text-white placeholder:text-zinc-500 focus:border-purple-500"
+                />
+                <Textarea
+                  placeholder="Tip Content..."
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  className="bg-black/40 border-white/10 text-white placeholder:text-zinc-500 min-h-[80px] focus:border-purple-500"
+                />
+                <div className="flex justify-end gap-2">
+                  {editingTip && (
+                    <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-zinc-400 hover:text-white">
+                      Cancel
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={saveTip} className={editingTip ? "bg-orange-600 hover:bg-orange-500" : "bg-purple-600 hover:bg-purple-500"}>
+                    {editingTip ? "Save Changes" : <> <Plus className="w-4 h-4 mr-1" /> Add Tip </>}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Tips List */}
+            <ScrollArea className="flex-1 pr-2">
+              <div className="space-y-4">
+                {tips.length === 0 ? (
+                  <div className="text-center text-zinc-500 py-8">No tips added yet.</div>
+                ) : (
+                  tips.map((tip) => (
+                    <div key={tip.id} className={`relative bg-zinc-900 border p-4 rounded-lg transition-all group ${editingTip?.id === tip.id ? 'border-orange-500/50 ring-1 ring-orange-500/20' : 'border-zinc-800 hover:border-purple-500/40'}`}>
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-bold text-lg text-purple-200 mb-1">{tip.title}</h4>
+                        {isAdmin && (
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-2">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-orange-400" onClick={() => startEdit(tip)} title="Edit">
+                              <Lightbulb className="w-3 h-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-red-400" onClick={() => deleteTip(tip.id)} title="Delete">
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-zinc-300 leading-relaxed text-sm">{tip.content}</p>
+                      <div className="mt-2 text-[10px] text-zinc-600 font-mono">
+                        {tip.createdAt > 0 ? new Date(tip.createdAt).toLocaleDateString() : 'Standard'}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTipsOpen(false)} className="border-zinc-700 text-zinc-300">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
