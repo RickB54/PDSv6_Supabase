@@ -67,6 +67,8 @@ import AppManual from "./pages/AppManual";
 import UserSettings from "./pages/UserSettings";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
+import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
+import { ChatAudioAlert } from "@/components/chat/ChatAudioAlert";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +139,8 @@ const App = () => {
         <BrowserRouter>
           <SidebarProvider open={!!(user && (user.role === 'admin' || user.role === 'employee'))} defaultOpen={true}>
             <div className={`flex min-h-screen w-full ${user?.role === 'admin' || user?.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
+              <ChatAudioAlert />
+              <GlobalChatWidget />
               {user && <AppSidebar />}
               <div className="flex-1">
                 <ErrorBoundary>

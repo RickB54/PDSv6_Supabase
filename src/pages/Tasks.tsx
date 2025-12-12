@@ -91,6 +91,23 @@ export default function Tasks() {
     });
   }, [editingMap]);
 
+  // Determine unique "Guests" (Unknown emails in chat history)
+  const guests = useMemo(() => {
+    const knownEmails = new Set([
+      ...employees.map(e => (e.email || '').toLowerCase()),
+      ...customers.map(c => (c.email || '').toLowerCase()),
+      (user?.email || '').toLowerCase()
+    ]);
+    const guestMap = new Map<string, string>(); // email -> name
+    chatMessages.forEach(m => {
+      const sEmail = (m.sender_email || '').toLowerCase();
+      if (sEmail && !knownEmails.has(sEmail)) {
+        if (!guestMap.has(sEmail)) guestMap.set(sEmail, m.sender_name || 'Guest');
+      }
+    });
+    return Array.from(guestMap.entries()).map(([email, name]) => ({ email, name }));
+  }, [chatMessages, employees, customers, user]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -721,6 +738,14 @@ export default function Tasks() {
                   {customers.map(c => (
                     <SelectItem key={c.email || c.id} value={c.email || c.id}>{c.name} {c.email ? `(${c.email})` : ''}</SelectItem>
                   ))}
+                  {guests.length > 0 && (
+                    <>
+                      <div className="p-1 px-2 text-xs font-semibold text-muted-foreground uppercase opacity-70 border-t border-zinc-800 mt-1 pt-2">Guests</div>
+                      {guests.map(g => (
+                        <SelectItem key={g.email} value={g.email}>{g.name} ({g.email})</SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -755,7 +780,7 @@ export default function Tasks() {
             </div>
             <div className="flex items-center gap-2">
               <Input
-                placeholder={`Message ${chatRecipient === 'all' ? 'Team' : (employees.find(e => (e.email || e.id) === chatRecipient)?.name || customers.find(c => (c.email || c.id) === chatRecipient)?.name || 'Direct')}...`}
+                placeholder={`Message ${chatRecipient === 'all' ? 'Team' : (employees.find(e => (e.email || e.id) === chatRecipient)?.name || customers.find(c => (c.email || c.id) === chatRecipient)?.name || guests.find(g => g.email === chatRecipient)?.name || 'Direct')}...`}
                 value={newChatText}
                 onChange={(e) => setNewChatText(e.target.value)}
                 className="bg-zinc-950/50 text-sm"

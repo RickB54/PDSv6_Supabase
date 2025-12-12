@@ -302,11 +302,15 @@ export async function signupSupabase(email: string, password: string, name?: str
   }
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
   if (isSupabaseEnabled()) {
-    supabase.auth.signOut().catch(() => { });
+    try {
+      await supabase.auth.signOut();
+    } catch (e) { console.error("Logout error", e); }
     localStorage.removeItem('customerProfile');
     localStorage.removeItem('session_user_id');
+    setCurrentUser(null);
+  } else {
     setCurrentUser(null);
   }
 }

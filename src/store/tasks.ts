@@ -38,7 +38,7 @@ export interface Task {
   order: number; // for manual ordering
 }
 
-type FilterKey = "all" | "mine" | "overdue" | "today" | "upcoming";
+type FilterKey = "all" | "mine" | "overdue" | "today" | "upcoming" | "personal";
 
 interface TasksState {
   items: Task[];
@@ -84,7 +84,7 @@ async function load(): Promise<Task[]> {
         order: typeof t.order === 'number' ? t.order : 0,
       }));
     }
-  } catch {}
+  } catch { }
   // Fallback to localStorage if localforage is unavailable or empty
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -102,7 +102,7 @@ async function load(): Promise<Task[]> {
         order: typeof t.order === 'number' ? t.order : 0,
       }));
     }
-  } catch {}
+  } catch { }
   return [];
 }
 
@@ -110,7 +110,7 @@ async function save(items: Task[]): Promise<void> {
   try {
     await localforage.setItem(STORAGE_KEY, items);
   } catch {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { }
   }
 }
 
@@ -130,7 +130,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
   add: async (t) => {
     const now = new Date().toISOString();
-    const id = t.id || `task_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+    const id = t.id || `task_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const items = get().items;
     const order = items.length > 0 ? Math.max(...items.map(i => i.order || 0)) + 1 : 0;
     const record: Task = {
@@ -163,18 +163,18 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       if (record.dueDate) {
         const today = new Date();
         const due = new Date(record.dueDate + (record.dueTime ? `T${record.dueTime}:00` : 'T00:00:00'));
-        if (due.getTime() < today.setHours(23,59,59,999)) {
+        if (due.getTime() < today.setHours(23, 59, 59, 999)) {
           pushAdminAlert('todo_overdue', `Task overdue: ${record.title}`, 'system', { taskId: record.id });
         }
       }
-    } catch {}
+    } catch { }
     // Notify assigned employees on creation
     try {
       (record.assignees || []).forEach(a => {
         const key = String(a.email || a.name || '').trim();
         if (key) pushEmployeeNotification(key, `New Todo: ${record.title}`, { taskId: record.id });
       });
-    } catch {}
+    } catch { }
     return record;
   },
   update: async (id, patch) => {
@@ -190,7 +190,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         const key = String(a.email || a.name || '').trim();
         if (key) pushEmployeeNotification(key, `Todo Updated: ${updated.title}`, { taskId: id });
       });
-    } catch {}
+    } catch { }
     // If status moved to completed or acknowledged, notify admins
     try {
       const after = next.find(i => i.id === id)!;
@@ -203,7 +203,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
           pushAdminAlert('todo_acknowledged' as any, `Todo Acknowledged: ${after.title}`, String(actor?.email || actor?.name || 'employee'), { taskId: id });
         }
       }
-    } catch {}
+    } catch { }
   },
   remove: async (id) => {
     const items = get().items;
@@ -226,7 +226,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
   clearSelection: () => set({ selectedIds: [] }),
   bulkComplete: async (ids) => {
-    const items = get().items.map(i => ids.includes(i.id) ? { ...i, status: 'completed', updatedAt: new Date().toISOString() } : i);
+    const items = get().items.map(i => ids.includes(i.id) ? { ...i, status: 'completed' as TaskStatus, updatedAt: new Date().toISOString() } : i);
     await save(items);
     set({ items, selectedIds: [] });
   },
@@ -253,7 +253,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     const next = items.map(i => {
       if (i.id !== id) return i;
       const list = Array.isArray(i.comments) ? [...i.comments] : [];
-      const c: TaskComment = { id: `c_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, text: comment.text, authorEmail: comment.authorEmail || curUser?.email, authorName: comment.authorName || curUser?.name, createdAt: new Date().toISOString() };
+      const c: TaskComment = { id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, text: comment.text, authorEmail: comment.authorEmail || curUser?.email, authorName: comment.authorName || curUser?.name, createdAt: new Date().toISOString() };
       list.push(c);
       return { ...i, comments: list, updatedAt: new Date().toISOString() };
     });
@@ -268,7 +268,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         const key = String(a.email || a.name || '').trim();
         if (key && key !== String(curUser?.email || curUser?.name || '')) pushEmployeeNotification(key, `Comment on Todo: ${task.title}`, { taskId: id });
       });
-    } catch {}
+    } catch { }
   }
 }));
 
@@ -284,19 +284,19 @@ export function parseTaskInput(input: string): Partial<Task> {
   // Dates
   const now = new Date();
   if (/tomorrow/.test(lower)) {
-    const d = new Date(now.getTime() + 24*60*60*1000);
-    out.dueDate = d.toISOString().slice(0,10);
+    const d = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    out.dueDate = d.toISOString().slice(0, 10);
   } else if (/today/.test(lower)) {
-    out.dueDate = now.toISOString().slice(0,10);
+    out.dueDate = now.toISOString().slice(0, 10);
   } else {
     const m = lower.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s(\d{1,2})/);
     if (m) {
       try {
-        const monthIdx = ["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(m[1]);
+        const monthIdx = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"].indexOf(m[1]);
         const year = now.getFullYear();
         const dt = new Date(year, monthIdx, Number(m[2]));
-        out.dueDate = dt.toISOString().slice(0,10);
-      } catch {}
+        out.dueDate = dt.toISOString().slice(0, 10);
+      } catch { }
     }
   }
   // Time
@@ -307,7 +307,7 @@ export function parseTaskInput(input: string): Partial<Task> {
     const ampm = tm[3];
     if (ampm === 'pm' && hh < 12) hh += 12;
     if (ampm === 'am' && hh === 12) hh = 0;
-    out.dueTime = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    out.dueTime = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   }
 
   // Simple linkage extraction by keywords
@@ -332,7 +332,7 @@ export function initTaskWorkflowListeners() {
         customerId: payload.customerId,
         status: 'not_started',
         priority: 'medium',
-        dueDate: new Date(Date.now() + 3*24*60*60*1000).toISOString().slice(0,10)
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       });
     });
     window.addEventListener('service_package_selected', (ev: any) => {
@@ -340,11 +340,11 @@ export function initTaskWorkflowListeners() {
       if (!autoChecklistByServicePackage) return;
       const { packageName } = ev?.detail || {};
       const templates: Record<string, string[]> = {
-        'Express': ['Confirm booking time','Prep vehicle','Gather materials'],
-        'Full Detail': ['Pre-detail checklist','Interior deep clean','Exterior polish','Final inspection'],
+        'Express': ['Confirm booking time', 'Prep vehicle', 'Gather materials'],
+        'Full Detail': ['Pre-detail checklist', 'Interior deep clean', 'Exterior polish', 'Final inspection'],
       };
-      const checklist = (templates[packageName] || ['Pre-detail checklist']).map(t => ({ id: `chk_${Math.random().toString(36).slice(2,6)}`, text: t, done: false }));
+      const checklist = (templates[packageName] || ['Pre-detail checklist']).map(t => ({ id: `chk_${Math.random().toString(36).slice(2, 6)}`, text: t, done: false }));
       useTasksStore.getState().add({ title: `${packageName} workflow`, checklist });
     });
-  } catch {}
+  } catch { }
 }

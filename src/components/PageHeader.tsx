@@ -21,9 +21,9 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
   const navigate = useNavigate();
   const [showAbout, setShowAbout] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     useCartStore.getState().clear();
-    logout();
+    await logout();
     navigate('/login');
   };
 

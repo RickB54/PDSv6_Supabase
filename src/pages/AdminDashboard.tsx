@@ -571,35 +571,39 @@ export default function AdminDashboard() {
     badgeCount = 0,
     accent = 'blue',
   }: { title: string; subtitle?: string; href?: string; onClick?: () => void; Icon: any; badgeCount?: number; accent?: 'blue' | 'purple' | 'orange' | 'pink' | 'yellow' | 'green' | 'indigo' | 'cyan' | 'teal' | 'zinc'; }) => {
-    const accents: Record<string, { icon: string; badge: string; btn: string; hoverRing: string }> = {
-      blue: { icon: 'text-blue-600/80', badge: 'bg-blue-600/90', btn: 'border-blue-600 text-blue-600 hover:bg-blue-600/10', hoverRing: 'hover:ring-2 hover:ring-blue-600' },
-      purple: { icon: 'text-purple-600/80', badge: 'bg-purple-600/90', btn: 'border-purple-600 text-purple-600 hover:bg-purple-600/10', hoverRing: 'hover:ring-2 hover:ring-purple-600' },
-      orange: { icon: 'text-orange-500/80', badge: 'bg-orange-500/90', btn: 'border-orange-500 text-orange-500 hover:bg-orange-500/10', hoverRing: 'hover:ring-2 hover:ring-orange-500' },
-      pink: { icon: 'text-pink-600/80', badge: 'bg-pink-600/90', btn: 'border-pink-600 text-pink-600 hover:bg-pink-600/10', hoverRing: 'hover:ring-2 hover:ring-pink-600' },
-      yellow: { icon: 'text-yellow-500/80', badge: 'bg-yellow-500/90', btn: 'border-yellow-500 text-yellow-500 hover:bg-yellow-500/10', hoverRing: 'hover:ring-2 hover:ring-yellow-500' },
-      green: { icon: 'text-green-600/80', badge: 'bg-green-600/90', btn: 'border-green-600 text-green-600 hover:bg-green-600/10', hoverRing: 'hover:ring-2 hover:ring-green-600' },
-      indigo: { icon: 'text-indigo-600/80', badge: 'bg-indigo-600/90', btn: 'border-indigo-600 text-indigo-600 hover:bg-indigo-600/10', hoverRing: 'hover:ring-2 hover:ring-indigo-600' },
-      cyan: { icon: 'text-cyan-600/80', badge: 'bg-cyan-600/90', btn: 'border-cyan-600 text-cyan-600 hover:bg-cyan-600/10', hoverRing: 'hover:ring-2 hover:ring-cyan-600' },
-      teal: { icon: 'text-teal-600/80', badge: 'bg-teal-600/90', btn: 'border-teal-600 text-teal-600 hover:bg-teal-600/10', hoverRing: 'hover:ring-2 hover:ring-teal-600' },
-      zinc: { icon: 'text-zinc-400/80', badge: 'bg-zinc-600/90', btn: 'border-zinc-600 text-zinc-300 hover:bg-zinc-600/10', hoverRing: 'hover:ring-2 hover:ring-zinc-600' },
+    const accents: Record<string, { icon: string; badge: string; btn: string }> = {
+      blue: { icon: 'text-blue-600/80', badge: 'bg-blue-600/90', btn: 'border-blue-600 text-blue-600 hover:bg-blue-600/10' },
+      purple: { icon: 'text-purple-600/80', badge: 'bg-purple-600/90', btn: 'border-purple-600 text-purple-600 hover:bg-purple-600/10' },
+      orange: { icon: 'text-orange-500/80', badge: 'bg-orange-500/90', btn: 'border-orange-500 text-orange-500 hover:bg-orange-500/10' },
+      pink: { icon: 'text-pink-600/80', badge: 'bg-pink-600/90', btn: 'border-pink-600 text-pink-600 hover:bg-pink-600/10' },
+      yellow: { icon: 'text-yellow-500/80', badge: 'bg-yellow-500/90', btn: 'border-yellow-500 text-yellow-500 hover:bg-yellow-500/10' },
+      green: { icon: 'text-green-600/80', badge: 'bg-green-600/90', btn: 'border-green-600 text-green-600 hover:bg-green-600/10' },
+      indigo: { icon: 'text-indigo-600/80', badge: 'bg-indigo-600/90', btn: 'border-indigo-600 text-indigo-600 hover:bg-indigo-600/10' },
+      cyan: { icon: 'text-cyan-600/80', badge: 'bg-cyan-600/90', btn: 'border-cyan-600 text-cyan-600 hover:bg-cyan-600/10' },
+      teal: { icon: 'text-teal-600/80', badge: 'bg-teal-600/90', btn: 'border-teal-600 text-teal-600 hover:bg-teal-600/10' },
+      zinc: { icon: 'text-zinc-400/80', badge: 'bg-zinc-600/90', btn: 'border-zinc-600 text-zinc-300 hover:bg-zinc-600/10' },
     };
     const a = accents[accent] || accents.blue;
     const inner = (
-      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-sm ${a.btn}`}>
+      <>
         <Icon className={`w-3.5 h-3.5 ${a.icon}`} />
         <span>{title}</span>
         {badgeCount > 0 && (
           <span className={`ml-1 ${a.badge} text-white rounded-full h-4 w-4 inline-flex items-center justify-center text-[9px]`}>{badgeCount}</span>
         )}
-      </div>
+      </>
     );
+    // Reuse the exact same base class structure as Customer Intake buttons
+    // inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border [color] hover:bg-[color]/10
+    const className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-sm ${a.btn} w-fit`;
+
     if (href) {
       return (
-        <Link to={href} className={`${a.hoverRing}`}>{inner}</Link>
+        <Link to={href} className={className}>{inner}</Link>
       );
     }
     return (
-      <button type="button" onClick={onClick} className={`${a.hoverRing}`}>{inner}</button>
+      <button type="button" onClick={onClick} className={className}>{inner}</button>
     );
   };
 
