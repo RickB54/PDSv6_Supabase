@@ -9,17 +9,20 @@ import { LogOut, Globe, User } from "lucide-react";
 import logo from "@/assets/logo-3inch.png";
 import NotificationBell from "@/components/NotificationBell";
 import { Link } from "react-router-dom";
+import { useCartStore } from "@/store/cart";
 
 interface PageHeaderProps {
   title?: string;
+  subtitle?: string;
 }
 
-export function PageHeader({ title }: PageHeaderProps) {
+export function PageHeader({ title, subtitle }: PageHeaderProps) {
   const user = getCurrentUser();
   const navigate = useNavigate();
   const [showAbout, setShowAbout] = useState(false);
 
   const handleLogout = () => {
+    useCartStore.getState().clear();
     logout();
     navigate('/login');
   };
@@ -34,10 +37,13 @@ export function PageHeader({ title }: PageHeaderProps) {
               <img src={logo} alt="Prime Detail Solutions" className="h-10 w-auto" />
             </button>
             {title && (
-              <>
-                <span className="text-muted-foreground">/</span>
-                <span className="text-muted-foreground font-medium truncate max-w-[40vw] sm:max-w-[60vw]">{title}</span>
-              </>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-muted-foreground font-medium truncate max-w-[40vw] sm:max-w-[60vw]">{title}</span>
+                </div>
+                {subtitle && <span className="text-xs text-muted-foreground pl-4 hidden md:block">{subtitle}</span>}
+              </div>
             )}
           </div>
 

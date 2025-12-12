@@ -224,3 +224,55 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer>) => {
         return data;
     }
 };
+// ------------------------------------------------------------------
+// Team Chat
+// ------------------------------------------------------------------
+
+export interface TeamMessage {
+    id: string;
+    created_at: string;
+    sender_email: string;
+    sender_name: string;
+    recipient_email: string | null; // null = public
+    content: string;
+}
+
+export const getTeamMessages = async (): Promise<TeamMessage[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('team_messages')
+            .select('*')
+            .order('created_at', { ascending: true })
+            .limit(100);
+
+        if (error) {
+            console.error('getTeamMessages error:', error);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('getTeamMessages exception:', err);
+        return [];
+    }
+};
+
+export const sendTeamMessage = async (content: string, senderEmail: string, senderName: string, recipientEmail?: string | null) => {
+    try {
+        const { data, error } = await supabase
+            .from('team_messages')
+            .insert([{
+                content,
+                sender_email: senderEmail,
+                sender_name: senderName,
+                recipient_email: recipientEmail || null
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('sendTeamMessage error:', err);
+        throw err;
+    }
+};

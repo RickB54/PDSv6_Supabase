@@ -62,7 +62,7 @@ export default function WebsiteAdministration() {
         address: (c as any).address || '',
         email: (c as any).email || '',
       });
-    } catch {}
+    } catch { }
     try {
       const a = await api('/api/about', { method: 'GET' });
       setAboutSections(Array.isArray(a) ? a : []);
@@ -74,7 +74,7 @@ export default function WebsiteAdministration() {
         ecoFriendly: (af as any).ecoFriendly || '',
         satisfactionGuarantee: (af as any).satisfactionGuarantee || ''
       });
-    } catch {}
+    } catch { }
     try {
       const t = await api('/api/testimonials', { method: 'GET' });
       setTestimonials(Array.isArray(t) ? t : []);
@@ -82,7 +82,7 @@ export default function WebsiteAdministration() {
     try {
       const s = await api('/api/services', { method: 'GET' });
       if (s && typeof s === 'object') setServicesDisclaimer(String((s as any).disclaimer || ''));
-    } catch {}
+    } catch { }
 
     // Build Learn More editor state from built-in + custom packages and meta overrides
     try {
@@ -106,14 +106,14 @@ export default function WebsiteAdministration() {
       const unionMap: Record<string, string> = {};
       [...builtSteps, ...customServices].forEach(s => { if (!unionMap[s.id]) unionMap[s.id] = s.name; });
       setAllStepOptions(Object.entries(unionMap).map(([id, name]) => ({ id, name })));
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
     loadWA();
     const onChanged = (e: any) => {
       const tag = (e && e.detail && (e.detail.kind ?? e.detail.type)) || '';
-      if (['vehicle-types','faqs','contact','about','aboutFeatures','testimonials','services'].includes(tag)) loadWA();
+      if (['vehicle-types', 'faqs', 'contact', 'about', 'aboutFeatures', 'testimonials', 'services'].includes(tag)) loadWA();
     };
     window.addEventListener('content-changed', onChanged as any);
     return () => window.removeEventListener('content-changed', onChanged as any);
@@ -163,16 +163,16 @@ export default function WebsiteAdministration() {
                               const updated = await api('/api/vehicle-types', { method: 'GET' });
                               setVehicleTypes(Array.isArray(updated) ? updated : []);
                               try {
-                                await fetch('http://localhost:6061/api/vehicle-types/live', {
+                                await fetch('http://localhost:6066/api/vehicle-types/live', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify(Array.isArray(updated) ? updated : []),
                                 });
-                              } catch {}
-                              try { await postFullSync(); } catch {}
-                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch {}
-                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch {}
-                              try { localStorage.setItem('force-refresh', String(Date.now())); } catch {}
+                              } catch { }
+                              try { await postFullSync(); } catch { }
+                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
+                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
+                              try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
                               toast({ title: 'Vehicle type deleted', description: vt.name });
                             }}>Delete</Button>
                           </TableCell>
@@ -221,7 +221,7 @@ export default function WebsiteAdministration() {
                               await api(`/api/faqs/${fq.id}`, { method: 'DELETE' });
                               const updated = await api('/api/faqs', { method: 'GET' });
                               setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch {}
+                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
                               toast({ title: 'FAQ deleted' });
                             }}>Delete</Button>
                           </TableCell>
@@ -265,14 +265,14 @@ export default function WebsiteAdministration() {
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
                     await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
                     try {
-                      await fetch('http://localhost:6061/api/contact/live', {
+                      await fetch('http://localhost:6066/api/contact/live', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(contactInfo),
                       });
-                    } catch {}
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch {}
-                    toast({ title: 'Contact updated', description: 'Synced live on port 6061' });
+                    } catch { }
+                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch { }
+                    toast({ title: 'Contact updated', description: 'Synced live on port 6066' });
                   }}>Save Contact</Button>
                 </div>
               </AccordionContent>
@@ -342,7 +342,7 @@ export default function WebsiteAdministration() {
                   <div className="flex justify-end">
                     <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
                       await api('/api/about/features', { method: 'POST', body: JSON.stringify(aboutFeatures) });
-                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'aboutFeatures' } })); } catch {}
+                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'aboutFeatures' } })); } catch { }
                       toast({ title: 'About features updated' });
                     }}>Save Features</Button>
                   </div>
@@ -378,7 +378,7 @@ export default function WebsiteAdministration() {
                                 await api(`/api/testimonials/${t.id}`, { method: 'DELETE' });
                                 const updated = await api('/api/testimonials', { method: 'GET' });
                                 setTestimonials(Array.isArray(updated) ? updated : []);
-                                try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch {}
+                                try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch { }
                                 toast({ title: 'Testimonial deleted' });
                               }}>Delete</Button>
                             </TableCell>
@@ -409,15 +409,15 @@ export default function WebsiteAdministration() {
                   <div className="flex justify-end">
                     <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
                       await api('/api/services', { method: 'POST', body: JSON.stringify({ disclaimer: servicesDisclaimer }) });
-                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'services' } })); } catch {}
+                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'services' } })); } catch { }
                       try {
-                        await fetch('http://localhost:6061/api/services/live', {
+                        await fetch('http://localhost:6066/api/services/live', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ disclaimer: servicesDisclaimer }),
                         });
-                      } catch {}
-                      toast({ title: 'Services updated', description: 'Disclaimer saved (port 6061)' });
+                      } catch { }
+                      toast({ title: 'Services updated', description: 'Disclaimer saved (port 6066)' });
                     }}>Save Services</Button>
                   </div>
 
@@ -483,9 +483,9 @@ export default function WebsiteAdministration() {
                                 onClick={async () => {
                                   const current = learnMoreEdit[pkg.id] || { description: '', stepIds: [] };
                                   setPackageMeta(pkg.id, { descriptionOverride: current.description, stepIds: current.stepIds });
-                                  try { await postFullSync(); } catch {}
-                                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch {}
-                                  try { localStorage.setItem('force-refresh', String(Date.now())); } catch {}
+                                  try { await postFullSync(); } catch { }
+                                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
+                                  try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
                                   toast({ title: 'Learn More updated', description: pkg.name.replace(' (BEST VALUE)', '') });
                                 }}
                               >
@@ -519,7 +519,7 @@ export default function WebsiteAdministration() {
                     await api(`/api/testimonials/${editTestimonial.id}`, { method: 'PUT', body: JSON.stringify({ name: editTestimonial.name, quote: editTestimonial.quote }) });
                     const updated = await api('/api/testimonials', { method: 'GET' });
                     setTestimonials(Array.isArray(updated) ? updated : []);
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch {}
+                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch { }
                     setEditTestimonial(null);
                     toast({ title: 'Testimonial updated' });
                   }}>Save</Button>
@@ -547,7 +547,7 @@ export default function WebsiteAdministration() {
                   await api('/api/testimonials', { method: 'POST', body: JSON.stringify({ name, quote }) });
                   const updated = await api('/api/testimonials', { method: 'GET' });
                   setTestimonials(Array.isArray(updated) ? updated : []);
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch {}
+                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch { }
                   setNewTestimonialName('');
                   setNewTestimonialQuote('');
                   setNewTestimonialOpen(false);
@@ -594,17 +594,17 @@ export default function WebsiteAdministration() {
                     setVehicleTypes(Array.isArray(updated) ? updated : []);
                     // Push live vehicle types to server so all dropdowns reflect edits immediately
                     try {
-                      await fetch('http://localhost:6061/api/vehicle-types/live', {
+                      await fetch('http://localhost:6066/api/vehicle-types/live', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(Array.isArray(updated) ? updated : []),
                       });
-                    } catch {}
-                    try { await postFullSync(); } catch {}
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch {}
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch {}
+                    } catch { }
+                    try { await postFullSync(); } catch { }
+                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
+                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
                     // Force refresh Service and Book Now pages in other tabs
-                    try { localStorage.setItem('force-refresh', String(Date.now())); } catch {}
+                    try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
                     setEditVehicle(null);
                     toast({ title: 'Vehicle type updated' });
                   }}>Save</Button>
@@ -658,7 +658,7 @@ export default function WebsiteAdministration() {
                   await api('/api/vehicle-types', { method: 'POST', body: JSON.stringify({ id: slug, name: safeName, description: newVehicleDesc, hasPricing: true }) });
                   let amt = Math.round(Number(newVehicleMultiplier || '100'));
                   if (!Number.isFinite(amt) || amt < 0 || amt > 10000) {
-                    toast({ title: 'Invalid $ Amount', description: 'Enter a whole number between 0 and 10000.' , variant: 'destructive'});
+                    toast({ title: 'Invalid $ Amount', description: 'Enter a whole number between 0 and 10000.', variant: 'destructive' });
                     return;
                   }
                   if (String(amt) !== String(newVehicleMultiplier)) {
@@ -672,17 +672,17 @@ export default function WebsiteAdministration() {
                   setVehicleTypes(Array.isArray(updated) ? updated : []);
                   // Push live vehicle types to server for immediate dropdown sync
                   try {
-                    await fetch('http://localhost:6061/api/vehicle-types/live', {
+                    await fetch('http://localhost:6066/api/vehicle-types/live', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(Array.isArray(updated) ? updated : []),
                     });
-                  } catch {}
-                  try { await postFullSync(); } catch {}
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch {}
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch {}
+                  } catch { }
+                  try { await postFullSync(); } catch { }
+                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
+                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
                   // Force refresh Service and Book Now pages in other tabs
-                  try { localStorage.setItem('force-refresh', String(Date.now())); } catch {}
+                  try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
                   setNewVehicleName('');
                   setNewVehicleDesc('');
                   setNewVehicleMultiplier('100');
@@ -710,7 +710,7 @@ export default function WebsiteAdministration() {
                     await api(`/api/faqs/${editFaq.id}`, { method: 'PUT', body: JSON.stringify({ question: editFaq.question, answer: editFaq.answer }) });
                     const updated = await api('/api/faqs', { method: 'GET' });
                     setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch {}
+                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
                     setEditFaq(null);
                     toast({ title: 'FAQ updated' });
                   }}>Save</Button>
@@ -739,7 +739,7 @@ export default function WebsiteAdministration() {
                   await api('/api/faqs', { method: 'POST', body: JSON.stringify({ question: newFaqQ, answer: newFaqA }) });
                   const updated = await api('/api/faqs', { method: 'GET' });
                   setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch {}
+                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
                   setNewFaqQ('');
                   setNewFaqA('');
                   setNewFaqOpen(false);

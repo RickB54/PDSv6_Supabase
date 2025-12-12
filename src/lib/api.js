@@ -1,5 +1,5 @@
 import localforage from 'localforage';
-const API_BASE = ''; // Changed from localhost:6061 to prevent connection errors in Supabase version
+const API_BASE = ''; // Changed from localhost:6066 to prevent connection errors in Supabase version
 
 // Basic retry wrapper and clearer error messaging when backend is unavailable.
 async function fetchWithRetry(url, options = {}, retries = 1) {
@@ -955,7 +955,7 @@ const api = async (endpoint, options = {}) => {
       const record = { id, ...payload, createdAt: new Date().toISOString() };
       list.push(record);
       await localforage.setItem('generic-checklists', list);
-      // Best-effort forward to live server on 6061 so other clients can reflect instantly
+      // Best-effort forward to live server on 6066 so other clients can reflect instantly
       try {
         await fetchWithRetry(`${API_BASE}/api/checklist/generic`, {
           method: 'POST',
@@ -979,7 +979,7 @@ const api = async (endpoint, options = {}) => {
       if (idx >= 0) {
         list[idx] = { ...list[idx], customerId: customerId || list[idx].customerId, jobId: jobId || list[idx].jobId, linkedAt: new Date().toISOString() };
         await localforage.setItem('generic-checklists', list);
-        // Forward link operation to live server on 6061
+        // Forward link operation to live server on 6066
         try {
           await fetchWithRetry(`${API_BASE}/api/checklist/${id}/link-customer`, {
             method: 'PUT',
@@ -1051,7 +1051,7 @@ const api = async (endpoint, options = {}) => {
       return { ok: false, error: 'failed_to_save_customer_local' };
     }
   }
-  // Forward checklist materials usage to live backend on port 6061
+  // Forward checklist materials usage to live backend on port 6066
   if (endpoint === '/api/checklist/materials' && (options.method || 'GET').toUpperCase() === 'POST') {
     try {
       const payload = JSON.parse(options.body || '[]');

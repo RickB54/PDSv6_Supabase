@@ -8,8 +8,27 @@ export type HelpTopic = {
   section?: 'menu' | 'dashboard';
 };
 
+// RELEASE NOTES TOPIC
+export const releaseNotesTopic: HelpTopic = {
+  id: 'release-notes-dec',
+  title: "What's New (December Update)",
+  summary: 'Latest features and fixes deployed in this update.',
+  content: [
+    '• Team Chat Improvements: Added Direct Messaging (Select specific staff/customers) and Cross-role chat sync.',
+    '• Customer Support Chat: Customers can now message staff directly from their dashboard.',
+    '• Tasks UI: Improved "Quick Add" layout and Mobile Responsiveness for the toolbar.',
+    '• Stability Fixes: Resolved "Employee Role Reversion" issue to keep you logged in correctly.',
+    '• Invoicing: Added "Estimates" functionality for quoting jobs.',
+    '• Vehicle Classification: Added PDF Export for shop reference.',
+    '• Inventory: Added AI Cost Suggestions and simplified Material Updates.',
+    '• Settings: Added "Restore Default Data" in Danger Zone for quick resets.',
+  ],
+  section: 'menu',
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
+  releaseNotesTopic,
   {
     id: 'admin-dashboard',
     title: 'Admin Dashboard',
@@ -389,6 +408,7 @@ export const adminTopics: HelpTopic[] = [
 // 2) Employee Dashboard items (cards and quick actions)
 
 export const employeeMenuTopics: HelpTopic[] = [
+  releaseNotesTopic,
   {
     id: 'website',
     title: 'Website',

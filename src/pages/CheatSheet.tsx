@@ -51,7 +51,7 @@ export function CheatSheetPanel({ embedded = false }: { embedded?: boolean }) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) setExam(parsed.slice(0, 50));
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const downloadPDF = () => {
@@ -107,15 +107,15 @@ export function CheatSheetPanel({ embedded = false }: { embedded?: boolean }) {
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-xl font-semibold text-white">Training Cheat Sheet</h1>
         <div className="flex items-center gap-2">
-          {!embedded && (<Badge className="bg-purple-700 text-white">Always on Port 6061</Badge>)}
-          <Button variant="outline" onClick={() => { try { window.print(); } catch {} }}>Print</Button>
+          {!embedded && (<Badge className="bg-purple-700 text-white">Always on Port 6066</Badge>)}
+          <Button variant="outline" onClick={() => { try { window.print(); } catch { } }}>Print</Button>
           <Button variant="outline" onClick={downloadPDF}>Save to File Manager</Button>
         </div>
       </div>
       <div className="mb-3 flex items-center gap-2">
         <Button variant={mode === 'exam' ? 'default' : 'outline'} onClick={() => setMode('exam')}>Exam Q&A</Button>
         <Button variant={mode === 'handbook' ? 'default' : 'outline'} onClick={() => setMode('handbook')}>Handbook Summary</Button>
-        <Button variant="outline" onClick={() => { try { const raw = localStorage.getItem(EXAM_CUSTOM_KEY); if (raw) setExam(JSON.parse(raw).slice(0,50)); } catch {} }}>Refresh</Button>
+        <Button variant="outline" onClick={() => { try { const raw = localStorage.getItem(EXAM_CUSTOM_KEY); if (raw) setExam(JSON.parse(raw).slice(0, 50)); } catch { } }}>Refresh</Button>
       </div>
       {mode === 'exam' ? (
         <div className="space-y-3">

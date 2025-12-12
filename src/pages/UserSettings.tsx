@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { getCurrentUser, User, finalizeSupabaseSession } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
 import supabase from "@/lib/supabase";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -9,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { UserCog, Lock, Save, Loader2 } from "lucide-react";
+import { UserCog, Lock, Save, Loader2, LayoutDashboard } from "lucide-react";
 
 export default function UserSettings() {
     const { toast } = useToast();
+    const navigate = useNavigate();
     const [user, setUser] = useState<User | null>(getCurrentUser());
     const [loading, setLoading] = useState(false);
 
@@ -87,12 +89,27 @@ export default function UserSettings() {
 
             <main className="container mx-auto px-4 py-8 max-w-2xl animate-fade-in">
                 <Card className="p-6 bg-gradient-card border-border">
-                    <div className="flex items-center gap-3 mb-6">
-                        <UserCog className="h-8 w-8 text-primary" />
-                        <div>
-                            <h2 className="text-2xl font-bold text-foreground">My Profile</h2>
-                            <p className="text-muted-foreground text-sm">Manage your account credentials</p>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <UserCog className="h-8 w-8 text-primary" />
+                            <div>
+                                <h2 className="text-2xl font-bold text-foreground">My Profile</h2>
+                                <p className="text-muted-foreground text-sm">Manage your account credentials</p>
+                            </div>
                         </div>
+                        <Button
+                            variant="outline"
+                            className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+                            onClick={() => {
+                                if (!user) return;
+                                if (user.role === 'admin') navigate("/dashboard/admin");
+                                else if (user.role === 'employee') navigate("/dashboard/employee");
+                                else navigate("/customer-dashboard");
+                            }}
+                        >
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            My Dashboard
+                        </Button>
                     </div>
 
                     <div className="space-y-6">

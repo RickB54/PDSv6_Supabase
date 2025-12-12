@@ -16,6 +16,15 @@ export default function ForgotPassword() {
         e.preventDefault();
         setLoading(true);
         try {
+            // Check if user exists first
+            const { data: user } = await supabase.from('app_users').select('id').eq('email', email).maybeSingle();
+
+            if (!user) {
+                toast.error("No account found with this email");
+                setLoading(false);
+                return;
+            }
+
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/update-password`,
             });

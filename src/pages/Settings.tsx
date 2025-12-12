@@ -119,8 +119,9 @@ const Settings = () => {
       const { json } = await exportAllData();
       downloadBackup(json);
       toast({ title: "Backup Created", description: `Backup includes Supabase + local (v${SCHEMA_VERSION}).` });
-    } catch (error) {
-      toast({ title: "Backup Failed", description: "Could not create backup.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Backup error:", error);
+      toast({ title: "Backup Failed", description: "Error: " + (error?.message || String(error)), variant: "destructive" });
     }
   };
 
@@ -132,8 +133,9 @@ const Settings = () => {
       await restoreFromJSON(text);
       toast({ title: "Restore Complete", description: "Supabase + local data restored." });
       setTimeout(() => window.location.reload(), 1000);
-    } catch (error) {
-      toast({ title: "Restore Failed", description: "Could not restore data.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Restore error:", error);
+      toast({ title: "Restore Failed", description: "Error: " + (error?.message || String(error)), variant: "destructive" });
     }
   };
 
@@ -195,7 +197,7 @@ const Settings = () => {
       if (data.customServices) localStorage.setItem('customServices', JSON.stringify(data.customServices));
       await postFullSync();
       await postServicesFullSync();
-      try { await fetch(`http://localhost:6061/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
       toast({ title: "Pricing restored from backup — live site updated" });
     } catch (error) {
       toast({ title: "Restore Failed", description: "Could not restore pricing.", variant: "destructive" });
@@ -355,9 +357,9 @@ const Settings = () => {
           note: 'Preserved: Admin/employee accounts, exam content, training manual, pricing packages, website content, and all system configurations.'
         });
         setSummaryOpen(true);
-        // Revalidate live content endpoints on port 6063 (user's custom port)
-        try { await fetch(`http://localhost:6063/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-        try { await fetch(`http://localhost:6063/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+        // Revalidate live content endpoints on port 6066 (dev server port)
+        try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+        try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
         try { setTimeout(() => window.location.reload(), 300); } catch { }
       }
 
@@ -406,9 +408,9 @@ const Settings = () => {
         window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'about' } }));
       } catch { }
 
-      // Revalidate live content endpoints on port 6061 if available
-      try { await fetch(`http://localhost:6061/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-      try { await fetch(`http://localhost:6061/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      // Revalidate live content endpoints on port 6066 if available
+      try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
 
       toast({ title: 'Restored', description: `${mode === 'both' ? 'Defaults' : mode} restored successfully. Live site updated.` });
     } catch (err: any) {
@@ -644,9 +646,9 @@ const Settings = () => {
                     };
                     setReportData((prev: any) => ({ ...(prev || {}), customers: custSection, employees: empSection, jobs: jobsSection, inventory: inventorySection, summary, errors }));
                     toast({ title: 'Mock Data Inserted', description: `Users: ${tracker.users.length}, Jobs: ${tracker.jobs.length}, Invoices: ${tracker.invoices.length}` });
-                    // Revalidate content endpoints on 6061 if available
-                    try { await fetch(`http://localhost:6061/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-                    try { await fetch(`http://localhost:6061/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+                    // Revalidate content endpoints on 6066 if available
+                    try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+                    try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
                   } catch (e) {
                     toast({ title: 'Insert Failed', description: 'Could not insert mock data.', variant: 'destructive' });
                   }

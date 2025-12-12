@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { getInvoices } from "@/lib/db";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { FileText, Download, Eye, Clock, CheckCircle2, Trash2, ShoppingCart, CreditCard } from "lucide-react";
+import { FileText, Download, Eye, Clock, CheckCircle2, Trash2, ShoppingCart, CreditCard, MessageSquare, Send } from "lucide-react";
 import jsPDF from "jspdf";
+import { getSupabaseEmployees, getTeamMessages, sendTeamMessage, TeamMessage } from "@/lib/supa-data";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +42,11 @@ const CustomerDashboard = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  // Chat State
+  const [chatMessages, setChatMessages] = useState<TeamMessage[]>([]);
+  const [newChatText, setNewChatText] = useState("");
+
   const user = getCurrentUser();
   const navigate = useNavigate();
   const { items, subtotal, removeItem } = useCartStore();
@@ -56,11 +64,31 @@ const CustomerDashboard = () => {
 
     // Load jobs from localStorage
     const completedJobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
-    const userJobs = completedJobs.filter((j: Job) => 
+    const userJobs = completedJobs.filter((j: Job) =>
       j.customer.toLowerCase() === user?.name.toLowerCase()
     );
     setJobs(userJobs);
+    setJobs(userJobs);
   };
+
+  useEffect(() => {
+    // Load chat history
+    (async () => {
+      const msgs = await getTeamMessages();
+      setChatMessages(msgs);
+    })();
+
+    // Subscribe to Realtime Updates
+    const channel = supabase
+      .channel('public:team_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
+        const newMsg = payload.new as TeamMessage;
+        setChatMessages(prev => [...prev, newMsg]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const downloadInvoice = (invoice: Invoice) => {
     const doc = new jsPDF();
@@ -71,7 +99,7 @@ const CustomerDashboard = () => {
     doc.text(`Date: ${invoice.date}`, 20, 50);
     doc.text(`Customer: ${invoice.customerName}`, 20, 60);
     doc.text(`Vehicle: ${invoice.vehicle}`, 20, 70);
-    
+
     let y = 85;
     doc.text("Services:", 20, y);
     y += 10;
@@ -79,11 +107,11 @@ const CustomerDashboard = () => {
       doc.text(`${s.name}: $${s.price.toFixed(2)}`, 30, y);
       y += 8;
     });
-    
+
     y += 5;
     doc.setFontSize(14);
     doc.text(`Total: $${invoice.total.toFixed(2)}`, 20, y);
-    
+
     doc.save(`Invoice_${invoice.invoiceNumber}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
@@ -101,9 +129,74 @@ const CustomerDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name}!</h1>
             <div className="flex gap-2">
               <Link to="/customer-profile" className="inline-flex items-center rounded-md border px-3 py-2 text-sm">Profile</Link>
-              <Button variant="outline" onClick={() => { try { logout(); } finally { navigate('/login', { replace: true }); } }}>Logout</Button>
+              <Button variant="outline" onClick={() => { try { useCartStore.getState().clear(); logout(); } finally { navigate('/login', { replace: true }); } }}>Logout</Button>
             </div>
           </div>
+
+          {/* Chat Widget */}
+          <Card className="p-6 bg-gradient-card border-border">
+            <div className="flex items-center gap-3 mb-4">
+              <MessageSquare className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold text-foreground">Contact Support</h2>
+            </div>
+            <div className="flex flex-col h-[300px]">
+              <div className="flex-1 overflow-auto bg-background/50 rounded-md border border-border p-4 mb-4 space-y-3">
+                {(() => {
+                  const myEmail = (user?.email || '').toLowerCase();
+                  const visibleMsgs = chatMessages.filter(m =>
+                    (m.sender_email || '').toLowerCase() === myEmail ||
+                    (m.recipient_email || '').toLowerCase() === myEmail
+                  );
+
+                  if (visibleMsgs.length === 0) return <p className="text-sm text-muted-foreground text-center mt-10">Send us a message if you need help!</p>;
+
+                  return visibleMsgs.map(m => {
+                    const isMe = (m.sender_email || '').toLowerCase() === myEmail;
+                    return (
+                      <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] rounded-lg p-3 ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                          <p className="text-xs font-bold mb-1 opacity-80">{isMe ? 'You' : m.sender_name}</p>
+                          <p className="text-sm">{m.content}</p>
+                          <p className="text-[10px] mt-1 opacity-70 text-right">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Type a message..."
+                  value={newChatText}
+                  onChange={e => setNewChatText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      const btn = e.currentTarget.parentElement?.querySelector('button');
+                      btn?.click();
+                    }
+                  }}
+                />
+                <Button onClick={async () => {
+                  const text = newChatText.trim();
+                  if (!text) return;
+                  const senderEmail = user?.email || '';
+                  const senderName = user?.name || senderEmail;
+                  // Send to public (null) so it appears in Admin "All Team" inbox. 
+                  // Logic: Admins see all NULL recipient messages. 
+                  // Privacy-wise: Other customers filter NULL messages out if sender != them.
+                  try {
+                    await sendTeamMessage(text, senderEmail, senderName, null);
+                    setNewChatText("");
+                  } catch (err) {
+                    toast({ title: "Failed to send", variant: "destructive" });
+                  }
+                }}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
 
           {/* Active Jobs */}
           <Card className="p-6 bg-gradient-card border-border">
@@ -259,11 +352,10 @@ const CustomerDashboard = () => {
                         <h3 className="font-semibold text-foreground">Invoice #{inv.invoiceNumber}</h3>
                         <p className="text-sm text-muted-foreground">{inv.date}</p>
                         <p className="text-lg font-bold text-primary mt-1">${inv.total.toFixed(2)}</p>
-                        <p className={`text-sm font-medium ${
-                          (inv.paymentStatus || "unpaid") === "paid" ? "text-success" :
+                        <p className={`text-sm font-medium ${(inv.paymentStatus || "unpaid") === "paid" ? "text-success" :
                           (inv.paymentStatus || "unpaid") === "partially-paid" ? "text-yellow-500" :
-                          "text-destructive"
-                        }`}>
+                            "text-destructive"
+                          }`}>
                           {(inv.paymentStatus || "unpaid").replace("-", " ").toUpperCase()}
                         </p>
                       </div>
@@ -292,7 +384,7 @@ const CustomerDashboard = () => {
           </DialogHeader>
           {selectedInvoice && (
             <div className="space-y-4">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
                   <p className="font-medium">{selectedInvoice.date}</p>

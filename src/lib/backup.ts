@@ -176,8 +176,8 @@ export async function restoreFromJSON(json: string): Promise<void> {
   }
 
   // Trigger package/add-on live sync if present
-  try { await fetch(`http://localhost:6061/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-  try { await fetch(`http://localhost:6061/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+  try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+  try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
 
   try { await logRestore({ tablesRestored: applied.map(a => a.table), localforageKeys: Object.keys(local?.localforage || {}), localStorageKeys: Object.keys(local?.localStorage || {}) }); } catch { }
 }

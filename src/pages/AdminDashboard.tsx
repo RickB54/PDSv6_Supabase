@@ -1252,7 +1252,7 @@ export default function AdminDashboard() {
               <Card className="p-4 bg-zinc-900 border-zinc-800">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">Website Admin</h3>
-                  <span className="text-xs text-zinc-400">Port 6061 • Red/Black</span>
+                  <span className="text-xs text-zinc-400">Port 6066 • Red/Black</span>
                 </div>
                 {/* Vehicle Types */}
                 <div className="mb-6">
@@ -1286,7 +1286,7 @@ export default function AdminDashboard() {
                                 setVehicleTypes(Array.isArray(updated) ? updated : []);
                                 // Push live vehicle types to server so all dropdowns immediately reflect deletion
                                 try {
-                                  await fetch('http://localhost:6061/api/vehicle-types/live', {
+                                  await fetch('http://localhost:6066/api/vehicle-types/live', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify(Array.isArray(updated) ? updated : []),
@@ -1379,16 +1379,16 @@ export default function AdminDashboard() {
                   <div className="mt-3">
                     <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
                       await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
-                      // Push to live endpoint on 6061 so Contact page reflects changes immediately
+                      // Push to live endpoint on 6066 so Contact page reflects changes immediately
                       try {
-                        await fetch('http://localhost:6061/api/contact/live', {
+                        await fetch('http://localhost:6066/api/contact/live', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(contactInfo),
                         });
                       } catch { }
                       try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch { }
-                      toast({ title: 'Contact updated', description: 'Synced live on port 6061' });
+                      toast({ title: 'Contact updated', description: 'Synced live on port 6066' });
                     }}>Save Contact</Button>
                   </div>
                 </div>
@@ -1461,7 +1461,7 @@ export default function AdminDashboard() {
                           setVehicleTypes(Array.isArray(updated) ? updated : []);
                           // Push live vehicle types to server so all dropdowns reflect edits immediately
                           try {
-                            await fetch('http://localhost:6061/api/vehicle-types/live', {
+                            await fetch('http://localhost:6066/api/vehicle-types/live', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify(Array.isArray(updated) ? updated : []),
@@ -1540,7 +1540,7 @@ export default function AdminDashboard() {
                         setVehicleTypes(Array.isArray(updated) ? updated : []);
                         // Push live vehicle types to server for immediate dropdown sync
                         try {
-                          await fetch('http://localhost:6061/api/vehicle-types/live', {
+                          await fetch('http://localhost:6066/api/vehicle-types/live', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(Array.isArray(updated) ? updated : []),

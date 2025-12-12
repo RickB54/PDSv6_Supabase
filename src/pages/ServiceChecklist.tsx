@@ -146,7 +146,7 @@ const ServiceChecklist = () => {
   useEffect(() => {
     const loadVehicleTypes = async () => {
       try {
-        const res = await fetch(`http://localhost:6061/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
+        const res = await fetch(`http://localhost:6066/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {

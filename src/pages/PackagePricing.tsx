@@ -131,7 +131,7 @@ export default function PackagePricing() {
   async function getSavedPrices(): Promise<PriceMap> {
     const local = (await localforage.getItem<PriceMap>("savedPrices")) || {};
     try {
-      const res = await fetch(`http://localhost:6061/api/packages/prices?v=${Date.now()}`, {
+      const res = await fetch(`http://localhost:6066/api/packages/prices?v=${Date.now()}`, {
         headers: { 'Cache-Control': 'no-cache' }
       });
       if (res.ok) {
@@ -189,7 +189,7 @@ export default function PackagePricing() {
 
   async function saveToBackend(updated: PriceMap) {
     try {
-      await fetch("http://localhost:6061/api/packages/prices", {
+      await fetch("http://localhost:6066/api/packages/prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
@@ -249,7 +249,7 @@ export default function PackagePricing() {
   // Helper to silently ping backend live API after saves (no new tab)
   const openPackagesLiveInBrowser = async () => {
     try {
-      const url = `http://localhost:6061/api/packages/live?v=${Date.now()}`;
+      const url = `http://localhost:6066/api/packages/live?v=${Date.now()}`;
       await fetch(url, { headers: { 'Cache-Control': 'no-cache' } });
       try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
     } catch { }
@@ -258,7 +258,7 @@ export default function PackagePricing() {
   // Soft refresh signal for Website preview without opening tabs
   const forceWebsiteTabRefresh = async () => {
     try {
-      await fetch(`http://localhost:6061/api/packages/sync?v=${Date.now()}`, { method: 'POST' });
+      await fetch(`http://localhost:6066/api/packages/sync?v=${Date.now()}`, { method: 'POST' });
     } catch { }
     try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
     try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'website' } })); } catch { }
@@ -340,7 +340,7 @@ export default function PackagePricing() {
   // Refresh the in-memory live snapshot after a sync so View All reflects latest
   const refreshLiveAfterSync = async () => {
     try {
-      const res = await fetch(`http://localhost:6061/api/packages/live?v=${Date.now()}`, {
+      const res = await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, {
         headers: { 'Cache-Control': 'no-cache' }
       });
       if (res.ok) {
@@ -525,7 +525,7 @@ export default function PackagePricing() {
   useEffect(() => {
     const loadVehicleTypes = async () => {
       try {
-        const res = await fetch(`http://localhost:6061/api/vehicle-types/live?v=${Date.now()}`, {
+        const res = await fetch(`http://localhost:6066/api/vehicle-types/live?v=${Date.now()}`, {
           headers: { 'Cache-Control': 'no-cache' }
         });
         if (res.ok) {
@@ -681,7 +681,7 @@ export default function PackagePricing() {
     setPendingVisibilityAddon({});
     // Update persistent restore point to ALWAYS remember your latest saved prices
     savePersistentBackup(rounded);
-    await fetch("http://localhost:6061/api/packages/sync", { method: "POST" });
+    await fetch("http://localhost:6066/api/packages/sync", { method: "POST" });
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
@@ -709,7 +709,7 @@ export default function PackagePricing() {
     setCurrentPrices(restored);
     // Also refresh regular backup to match restored values
     await saveBackupPrices(restored);
-    try { await fetch("http://localhost:6061/api/packages/sync", { method: "POST" }); } catch { }
+    try { await fetch("http://localhost:6066/api/packages/sync", { method: "POST" }); } catch { }
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();

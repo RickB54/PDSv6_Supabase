@@ -158,7 +158,7 @@ export async function restorePackages() {
 
     // 3. Sync to Backend/Live
     try {
-      await fetch("http://localhost:6061/api/packages/prices", {
+      await fetch("http://localhost:6066/api/packages/prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
@@ -220,7 +220,7 @@ export async function restoreAddons() {
 
     // 3. Sync to Backend/Live
     try {
-      await fetch("http://localhost:6061/api/packages/prices", {
+      await fetch("http://localhost:6066/api/packages/prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),

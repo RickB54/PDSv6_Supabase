@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { getCurrentUser, isSupabaseEnabled } from "@/lib/auth";
 
@@ -40,7 +41,7 @@ export default function CustomerProfile() {
             vehicle_year: (data as any).vehicle_year || '',
             notes: (data as any).notes || '',
           });
-          try { localStorage.setItem('customerProfile', JSON.stringify(data)); } catch {}
+          try { localStorage.setItem('customerProfile', JSON.stringify(data)); } catch { }
         }
       } finally { setLoading(false); }
     })();
@@ -71,8 +72,8 @@ export default function CustomerProfile() {
       };
       const { error } = await supabase.from('customers').upsert(payload, { onConflict: 'id' });
       if (!error) {
-        try { localStorage.setItem('customerProfile', JSON.stringify(payload)); } catch {}
-        try { window.dispatchEvent(new CustomEvent('customer-profile-changed', { detail: payload })); } catch {}
+        try { localStorage.setItem('customerProfile', JSON.stringify(payload)); } catch { }
+        try { window.dispatchEvent(new CustomEvent('customer-profile-changed', { detail: payload })); } catch { }
       }
     } finally { setLoading(false); }
   };
@@ -95,6 +96,16 @@ export default function CustomerProfile() {
     <div className="min-h-screen bg-background">
       <PageHeader title="My Profile" />
       <main className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            className="pl-0 hover:bg-transparent hover:text-primary gap-2"
+            onClick={() => navigate('/customer-dashboard')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
         <Card className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Name</label>

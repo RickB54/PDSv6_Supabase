@@ -149,7 +149,7 @@ async function updateInventoryStock(item: InventoryItem, quantityUsed: number): 
         // Also try to update via API
         try {
             const endpoint = storageKey === "chemicals" ? "/api/inventory/chemicals" : "/api/inventory/materials";
-            await fetch(`http://localhost:6061${endpoint}`, {
+            await fetch(`http://localhost:6066${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(currentItem),

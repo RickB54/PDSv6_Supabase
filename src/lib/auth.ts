@@ -143,25 +143,45 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     // Check for pre-authorization in authorized_users table
     let authorizedRole: 'admin' | 'employee' | null = null;
     try {
-      const { data: authUser } = await supabase
-        .from('authorized_users')
-        .select('role')
-        .eq('email', email)
-        .maybeSingle();
-      if (authUser) authorizedRole = authUser.role as 'admin' | 'employee';
-    } catch (e) { console.warn("Error checking authorized_users", e); }
+      const res: any = await timeoutPromise(
+        supabase.from('authorized_users').select('role').eq('email', email).maybeSingle() as any,
+        3000,
+        "checkAuthorizedUsers"
+      );
+      if (res.data) authorizedRole = res.data.role as 'admin' | 'employee';
+    } catch (e) { console.warn("Error checking authorized_users or timeout", e); }
 
     const overrideRole = getEmailRoleOverride(email) || authorizedRole;
 
     if (profile) {
       role = profile.role;
-    } else if (overrideRole) {
+    }
+
+    // Logic Fix: If an override exists and differs from the DB profile, use the override
+    if (overrideRole && profile && profile.role !== overrideRole) {
+      console.log(`finalizeSupabaseSession: applying role override from ${profile.role} to ${overrideRole}`);
+      role = overrideRole;
+    } else if (overrideRole && !profile) {
       role = overrideRole;
     }
 
     // 3. Upsert profile if missing or needs update
-    if (!profile || (overrideRole && profile.role !== overrideRole)) {
-      console.log("finalizeSupabaseSession: attempting upsert...");
+    // SAFETY FIX: If we failed to fetch the profile (profile is null), and there is NO override,
+    // we should NOT inadvertently upsert a default 'customer' role over an existing DB role.
+    // If profile is explicitly null because the table is empty, that's fine (insert).
+    // But if (res.error) occurred in getSupabaseUserProfile, profile is null, and we risk overwriting.
+    // For now, only upsert if we either have the profile (update) or we are creating a new one with a confident role.
+
+    // Logic: 
+    // - If we have an overrideRole, we enforce it -> Upsert.
+    // - If we have a profile, we check consistency -> Upsert if needed.
+    // - If we have NEITHER (profile fetch failed/timed out, and no override), we should act conservatively:
+    //   Do NOT write to DB. Use 'customer' for this session but don't persist it.
+
+    const shouldUpsert = !!overrideRole || !!profile || role !== 'customer';
+
+    if (shouldUpsert) {
+      console.log("finalizeSupabaseSession: attempting upsert...", { id: u.id, role });
       try {
         const { error } = await timeoutPromise(
           supabase.from('app_users').upsert({
@@ -181,10 +201,14 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
 
       // Re-fetch profile to be sure (optional, but good verification)
       if (!profile) profile = await getSupabaseUserProfile(u.id);
+    } else {
+      console.warn("finalizeSupabaseSession: skipping upsert to protect potential existing role (profile fetch failed & no override)");
     }
 
     // Construct User object guaranteed to return even if DB failed
-    const finalRole = profile?.role || role || 'customer';
+    // FIX: Use 'role' which contains the authoritative role (either from profile, or the override we just applied)
+    // We ignore 'profile.role' here because 'profile' might be stale (pre-update)
+    const finalRole = role || profile?.role || 'customer';
     const mapped: User = {
       email,
       name: profile?.name || (email || '').split('@')[0],

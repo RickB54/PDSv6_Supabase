@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       mode === "development" && componentTagger(),
-      // Lightweight mock API for dev server to satisfy live endpoints on port 6061
+      // Lightweight mock API for dev server to satisfy live endpoints on port 6066
       {
         name: "mock-live-api",
         configureServer(server: ViteDevServer) {

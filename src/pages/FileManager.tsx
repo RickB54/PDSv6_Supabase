@@ -195,7 +195,7 @@ const FileManager = () => {
   // Using the global view tracker ensures sidebar badges stay in sync.
 
   const buildBackendUrl = (record: PDFRecord) => {
-    const base = "http://localhost:6061/files/";
+    const base = "http://localhost:6066/files/";
     // Preferred: folder path + fileName
     if (record.path) {
       const path = record.path.endsWith("/") ? record.path : record.path + "/";

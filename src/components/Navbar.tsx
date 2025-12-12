@@ -14,20 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LayoutDashboard, LogOut } from "lucide-react";
 
-let clickTimer: number | null = null;
-let clickCount = 0;
+// Helper for admin unlock removed
 
-function handleAdminUnlock() {
-  clickCount++;
-  if (clickTimer) window.clearTimeout(clickTimer);
-  clickTimer = window.setTimeout(() => {
-    if (clickCount >= 5) {
-      localStorage.setItem('adminMode', 'true');
-      window.location.href = '/dashboard';
-    }
-    clickCount = 0;
-  }, 600);
-}
 
 export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,6 +34,7 @@ export const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
+    useCartStore.getState().clear();
     logout();
     window.location.href = "/";
   };
@@ -60,16 +49,9 @@ export const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // 5-tap admin unlock logic
+  // 5-tap admin unlock logic REMOVED at user request
   const handleLogoClick = (e: React.MouseEvent) => {
-    // We allow default navigation to /, but we also count clicks
-    // If we want to prevent navigation on the 5th click, we could, but redirecting to dashboard handles it.
-
-    // Use module-level variables or refs? 
-    // Since this is a functional component, let's use a ref or just static variables outside if we want persistence across re-renders (though Navbar shouldn't unmount often).
-    // The user provided snippet used module level lets. I'll put them outside or use refs.
-    // Let's use the user's snippet logic but adapted for the component.
-    handleAdminUnlock();
+    // Standard navigation only
   };
 
   return (

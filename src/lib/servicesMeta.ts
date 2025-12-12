@@ -106,7 +106,7 @@ export function getCustomServices(): CustomServiceDef[] {
   try { return JSON.parse(localStorage.getItem(CUSTOM_SERVICES_KEY) || '[]'); } catch { return []; }
 }
 export function addCustomService(name: string): CustomServiceDef {
-  const id = `cs-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+  const id = `cs-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const all = getCustomServices();
   const svc = { id, name };
   all.push(svc);
@@ -158,12 +158,12 @@ export async function buildFullSyncPayload(): Promise<any> {
 export async function postFullSync() {
   try {
     const payload = await buildFullSyncPayload();
-    await fetch('http://localhost:6061/api/packages/full-sync', {
+    await fetch('http://localhost:6066/api/packages/full-sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-  } catch {}
+  } catch { }
 }
 
 export async function postServicesFullSync() {
@@ -173,10 +173,10 @@ export async function postServicesFullSync() {
       packageMeta: getAllPackageMeta(),
       addOnMeta: getAllAddOnMeta(),
     };
-    await fetch('http://localhost:6061/api/services/full-sync', {
+    await fetch('http://localhost:6066/api/services/full-sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-  } catch {}
+  } catch { }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -55,7 +56,7 @@ const CustomerPortal = () => {
   const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
   const fetchLive = async () => {
-    // Rely on local snapshot since backend API is not running on port 6061
+    // Rely on local snapshot since backend API is updated to port 6066
     try {
       const snapshot = await buildFullSyncPayload();
       setSavedPricesLive(snapshot.savedPrices || {});
@@ -163,6 +164,7 @@ const CustomerPortal = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Navbar />
       <HeroSection />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Vehicle Type Selector - Centered */}

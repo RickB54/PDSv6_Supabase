@@ -301,6 +301,11 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
     }
   };
 
+  const saveAndExitHandbook = async () => {
+    await saveHandbookProgress();
+    setHandbookOpen(false);
+  };
+
   const saveHandbookProgress = async () => {
     const startedAt = localStorage.getItem(HANDBOOK_START_KEY) || new Date().toISOString();
     const savedAt = new Date();
@@ -416,7 +421,8 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
           </DialogHeader>
 
           <div className="flex flex-1 overflow-hidden min-h-0">
-            {/* Table of contents - Sidebar */}
+            {/* Table of contents - Sidebar (Visible on MD+, hidden on mobile unless toggled - wait, user wants Show Skipped back) */}
+            {/* Moving Show Skipped to Header for better visibility, but keeping sidebar structure */}
             <div className="hidden md:flex flex-col w-64 lg:w-80 border-r border-blue-800 bg-[#0f172a]">
               <div className="p-2 border-b border-blue-800 bg-[#0f172a] shrink-0">
                 <div className="flex items-center justify-between gap-2">
@@ -462,14 +468,22 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="bg-slate-900 border-blue-800 text-white w-80">
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-blue-400">Handbook Navigation</h4>
-                        <p className="text-sm text-slate-300">
-                          • Use the <strong>Sidebar</strong> or <strong>Next/Prev</strong> buttons to move between sections.<br />
-                          • Click <strong>Mark Read</strong> to complete a section.<br />
-                          • You can <strong>Skip</strong> sections, but you must complete all of them to finish the handbook.<br />
-                          • Your progress is saved automatically.
-                        </p>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-blue-400">Navigation</h4>
+                          <Button className="w-full mt-2 bg-blue-800/50 hover:bg-blue-700" size="sm" onClick={() => setShowSkippedOnly(s => !s)}>
+                            {showSkippedOnly ? 'Show All Sections' : 'Show Skipped Only'}
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-blue-400">Instructions</h4>
+                          <p className="text-sm text-slate-300">
+                            • Use the <strong>Sidebar</strong> or <strong>Next/Prev</strong> buttons to move between sections.<br />
+                            • Click <strong>Mark Read</strong> to complete a section.<br />
+                            • You can <strong>Skip</strong> sections, but you must complete all of them to finish the handbook.<br />
+                            • Use <strong>Save & Exit</strong> to save progress and close.
+                          </p>
+                        </div>
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -529,8 +543,8 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
 
                 {/* Global Actions Row */}
                 <div className="flex items-center justify-center md:justify-end gap-3 pt-2 border-t border-blue-900/50">
-                  <Button variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/50 h-8 text-sm" onClick={saveHandbookProgress}>
-                    Save Progress
+                  <Button variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/50 h-8 text-sm" onClick={saveAndExitHandbook}>
+                    Save & Exit
                   </Button>
                   <Button className="bg-emerald-600 text-white hover:bg-emerald-500 h-8 text-sm" onClick={confirmHandbook}>
                     Complete Handbook
@@ -568,7 +582,7 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
                   </PopoverContent>
                 </Popover>
               </DialogTitle>
-              <Button className="bg-yellow-400 text-black hover:bg-yellow-500 h-7 text-xs" size="sm" onClick={saveExamForLater}>Save & Close</Button>
+              <Button className="bg-yellow-400 text-black hover:bg-yellow-500 h-7 text-xs" size="sm" onClick={() => { saveExamForLater(); setExamOpen(false); }}>Save & Close</Button>
             </div>
           </DialogHeader>
 

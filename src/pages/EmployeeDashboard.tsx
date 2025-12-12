@@ -125,9 +125,9 @@ const EmployeeDashboard = () => {
       // Alert admin
       pushAdminAlert("admin_email_sent", `Employee contact: ${subject}`, actor, { priority });
 
-      // Attempt background email via local API (port 6061)
+      // Attempt background email via local API (port 6066)
       try {
-        await fetch("http://localhost:6061/api/email/admin", {
+        await fetch("http://localhost:6066/api/email/admin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ from: actor, subject, message, priority, pdfDataUrl })

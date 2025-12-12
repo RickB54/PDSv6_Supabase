@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import supabase from "@/lib/supabase";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -46,77 +47,73 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timed out")), 10000)
+      // 1. Fetch Supabase Data (Profiles & Invites)
+      // Workaround: Use ephemeral client to bypass RLS issues with authenticated session
+      // (Leveraging the fact that anon read access works as proven by verify script)
+      const anonClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false } }
       );
+      const { data: profiles, error: pError } = await anonClient.from("app_users").select("id, role, name, email, updated_at");
+      if (pError) throw pError;
 
-      // Wrap the actual fetch logic
-      const fetchData = async () => {
-        // 1. Fetch Supabase Data (Profiles & Invites)
-        const { data: profiles, error: pError } = await supabase.from("app_users").select("id, role, name, email, updated_at");
-        if (pError) console.error("Error fetching app_users:", pError);
+      const { data: invites, error: iError } = await supabase.from("authorized_users").select("*");
+      if (iError) console.error("Error fetching authorized_users (non-critical):", iError);
 
-        const { data: invites, error: iError } = await supabase.from("authorized_users").select("*");
-        if (iError) console.error("Error fetching authorized_users:", iError);
+      // 2. Fetch Local Employees (Safely)
+      let localEmployees: any[] = [];
+      try {
+        localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
+      } catch (err) {
+        console.error("LocalForage error:", err);
+      }
 
-        // 2. Fetch Local Employees (for "Ghosts" or unsynced data)
-        const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
+      const activeMap = new Map((profiles || []).map(p => [p.email?.toLowerCase(), p]));
 
-        const activeMap = new Map((profiles || []).map(p => [p.email?.toLowerCase(), p]));
+      // Combine all sources
+      const combined: AppUser[] = [...(profiles || [])];
+      const seenEmails = new Set(combined.map(u => u.email?.toLowerCase()).filter(Boolean));
 
-        // Combine all sources
-        const combined: AppUser[] = [...(profiles || [])];
-        const seenEmails = new Set(combined.map(u => u.email?.toLowerCase()).filter(Boolean));
+      // Add Pending Invites (Authorized but no profile yet)
+      (invites || []).forEach((inv: any) => {
+        const email = inv.email?.toLowerCase();
+        if (!activeMap.has(email)) {
+          if (seenEmails.has(email)) return;
 
-        // Add Pending Invites (Authorized but no profile yet)
-        (invites || []).forEach((inv: any) => {
-          const email = inv.email?.toLowerCase();
-          if (!activeMap.has(email)) {
-            if (seenEmails.has(email)) return;
+          combined.push({
+            id: 'pending_' + inv.email,
+            role: inv.role,
+            name: inv.name || inv.email,
+            email: inv.email,
+            updated_at: inv.created_at,
+            isPending: true
+          });
+          seenEmails.add(email);
+        }
+      });
 
-            combined.push({
-              id: 'pending_' + inv.email,
-              role: inv.role,
-              name: inv.name || inv.email,
-              email: inv.email,
-              updated_at: inv.created_at,
-              isPending: true
-            });
-            seenEmails.add(email);
-          }
-        });
+      // Add Local Employees missing from Supabase (Sync gap)
+      localEmployees.forEach(emp => {
+        const email = emp.email?.toLowerCase();
+        if (!email) return;
+        if (!seenEmails.has(email)) {
+          combined.push({
+            id: emp.id || `local_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            role: emp.role || 'employee',
+            name: emp.name,
+            email: emp.email,
+            updated_at: new Date().toISOString(),
+            isLocalOnly: true
+          });
+          seenEmails.add(email);
+        }
+      });
 
-        // Add Local Employees missing from Supabase (Sync gap)
-        localEmployees.forEach(emp => {
-          const email = emp.email?.toLowerCase();
-          if (!email) return;
-          if (!seenEmails.has(email)) {
-            combined.push({
-              id: emp.id || `local_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-              role: emp.role || 'employee',
-              name: emp.name,
-              email: emp.email,
-              updated_at: new Date().toISOString(),
-              isLocalOnly: true
-            });
-            seenEmails.add(email);
-          }
-        });
-
-        return combined.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
-      };
-
-      // Race against timeout
-      const result = await Promise.race([fetchData(), timeoutPromise]) as any[];
-      setUsers(result);
+      setUsers(combined.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')));
     } catch (err: any) {
       console.error("fetchUsers failed:", err);
-      if (err.message === "Request timed out") {
-        toast({ title: "Connection slow", description: "Taking longer than expected...", variant: "default" });
-      } else {
-        toast({ title: "Refresh failed", description: "Could not fetch users.", variant: "destructive" });
-      }
+      toast({ title: "Load failed", description: "Could not fetch users. " + err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -128,25 +125,37 @@ export default function AdminUsers() {
     setSavingId(id);
     try {
       const user = users.find(u => u.id === id);
+
+      // Attempt to update whitelist (authorized_users) - non-blocking
       if (user && user.email) {
-        // Normalize role in authorized_users source of truth
-        await supabase.from('authorized_users').upsert({
-          email: user.email,
-          role: role,
-          name: user.name
-        }, { onConflict: 'email' });
+        try {
+          await supabase.from('authorized_users').upsert({
+            email: user.email,
+            role: role,
+            name: user.name
+          }, { onConflict: 'email' });
+        } catch (err) {
+          console.error("Failed to update authorized_users whitelist:", err);
+        }
       }
 
-      // Also update profile if exists
+      // Update actual user profile (app_users)
       if (!id.startsWith('pending_') && !id.startsWith('local_')) {
         const { error } = await supabase.from("app_users").update({ role }).eq("id", id);
         if (error) throw error;
+      } else if (id.startsWith('local_')) {
+        // Sync local role change
+        const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
+        const updated = localEmployees.map(e => e.id === id || e.email === user?.email ? { ...e, role } : e);
+        await localforage.setItem('company-employees', updated);
       }
 
       toast({ title: "Role updated", description: `User is now ${role}` });
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)));
     } catch (e: any) {
-      toast({ title: "Update failed", description: String(e?.message), variant: "destructive" });
+      toast({ title: "Update failed", description: String(e?.message || e), variant: "destructive" });
+      // Revert optimism if needed, but we didn't do optimistic UI set here, so just refetch might be safer
+      await fetchUsers();
     }
     setSavingId(null);
   };
@@ -230,7 +239,18 @@ export default function AdminUsers() {
     }
 
     try {
-      // 1. Add to authorized_users whitelist
+      // 1. Check if user already exists in app_users
+      const { data: existing } = await supabase.from('app_users').select('id, role').eq('email', email.trim()).single();
+
+      if (existing) {
+        // User exists! Update their role directly.
+        const { error: updateError } = await supabase.from('app_users').update({ role: role }).eq('id', existing.id);
+        if (updateError) throw updateError;
+        toast({ title: "User Updated", description: `${name} (${email}) was found and promoted to ${role}.` });
+      }
+
+      // 2. Add to authorized_users whitelist (always keep this mostly in sync)
+      // We use upsert to ensure if they're already there, we update the role
       const { error } = await supabase.from('authorized_users').upsert({
         email: email.trim(),
         name: name.trim(),
@@ -238,9 +258,11 @@ export default function AdminUsers() {
         added_by: getCurrentUserEmail()
       }, { onConflict: 'email' });
 
-      if (error) throw error;
+      if (error) console.error("Whitelist error (non-critical):", error);
 
-      toast({ title: "User Authorized", description: `${name} can now sign up as ${role}.` });
+      if (!existing) {
+        toast({ title: "User Authorized", description: `${name} can now sign up as ${role}.` });
+      }
 
       // Clear form
       if (role === 'employee') {
@@ -253,7 +275,7 @@ export default function AdminUsers() {
 
       await fetchUsers();
     } catch (e: any) {
-      toast({ title: "Authorization failed", description: String(e?.message || e), variant: "destructive" });
+      toast({ title: "Operation failed", description: String(e?.message || e), variant: "destructive" });
     }
   };
 

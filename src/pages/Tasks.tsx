@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,11 +13,12 @@ import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
 import { useTasksStore, parseTaskInput, Task, TaskPriority, TaskStatus } from "@/store/tasks";
 import api from "@/lib/api";
-import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
+import { getSupabaseEmployees, getSupabaseCustomers, getTeamMessages, sendTeamMessage, TeamMessage } from "@/lib/supa-data"; // NEW IMPORT
+import { supabase } from "@/lib/supabase";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
-import { CalendarDays, CheckSquare, Trash2, Edit, Clock, User, Paperclip, ListChecks, Filter, GripVertical, ChevronDown, Save, X, MessageSquare, HelpCircle, LayoutTemplate, ArrowUpDown, ChevronsUpDown } from "lucide-react";
+import { CalendarDays, CheckSquare, Trash2, Edit, Clock, User, Paperclip, ListChecks, Filter, GripVertical, ChevronDown, Save, X, MessageSquare, HelpCircle, LayoutTemplate, ArrowUpDown, ChevronsUpDown, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,30 +42,44 @@ export default function Tasks() {
   const [expandAll, setExpandAll] = useState(false);
   const dragIdRef = useRef<string | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const isAdmin = user?.role === 'admin';
   const isEmployee = user?.role === 'employee';
   // Team Communication state
-  const [chatMessages, setChatMessages] = useState<{ id: string; author: string; text: string; at: string }[]>([]);
+  const [chatMessages, setChatMessages] = useState<TeamMessage[]>([]);
   const [newChatText, setNewChatText] = useState("");
+  const [chatRecipient, setChatRecipient] = useState<string>("all"); // 'all' or employee email
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
     (async () => {
       try {
-        const list = await getSupabaseEmployees();
-        setEmployees(Array.isArray(list) ? list : []);
-      } catch { setEmployees([]); }
+        const [empList, custList] = await Promise.all([
+          getSupabaseEmployees(),
+          getSupabaseCustomers()
+        ]);
+        setEmployees(Array.isArray(empList) ? empList : []);
+        setCustomers(Array.isArray(custList) ? custList : []);
+      } catch { setEmployees([]); setCustomers([]); }
     })();
   }, []);
   useEffect(() => {
-    // Load team chat history
+    // Load team chat history from Supabase
     (async () => {
-      try {
-        const raw = await localforage.getItem('task_chat');
-        const arr = Array.isArray(raw) ? raw as any[] : [];
-        setChatMessages(arr.map(m => ({ id: m.id, author: m.author, text: m.text, at: m.at })));
-      } catch { setChatMessages([]); }
+      const msgs = await getTeamMessages();
+      setChatMessages(msgs);
     })();
+
+    // Subscribe to Realtime Updates
+    const channel = supabase
+      .channel('public:team_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
+        const newMsg = payload.new as TeamMessage;
+        setChatMessages(prev => [...prev, newMsg]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
   useEffect(() => {
     // Mark read receipt when opening tasks
@@ -94,9 +110,19 @@ export default function Tasks() {
         }
         switch (filter) {
           case 'mine': {
+            // "Assigned to Me" (Tasks I am assigned to, created by anyone)
             const me = [user?.email, user?.name].filter(Boolean).map(s => String(s).toLowerCase());
             const assigned = Array.isArray((t as any).assignees) ? (t as any).assignees : (t.assigneeId ? [{ name: t.assigneeId }] : []);
             return !!user && assigned.some((a: any) => me.includes(String(a.email || a.name || '').toLowerCase()));
+          }
+          case 'personal': {
+            // "My Personal" (Tasks I created AND am the ONLY assignee)
+            // Or just Tasks I am assigned to? User asked for "My Personal" distinction.
+            // Let's define Personal as: Assigned ONLY to me.
+            const me = [user?.email, user?.name].filter(Boolean).map(s => String(s).toLowerCase());
+            const assigned = Array.isArray((t as any).assignees) ? (t as any).assignees : (t.assigneeId ? [{ name: t.assigneeId }] : []);
+            if (assigned.length !== 1) return false;
+            return me.includes(String(assigned[0].email || assigned[0].name || '').toLowerCase());
           }
           case 'overdue': {
             if (!t.dueDate || t.status === 'completed') return false;
@@ -127,7 +153,8 @@ export default function Tasks() {
   const handleQuickAdd = async () => {
     const parsed = parseTaskInput(quickAdd);
     // Employees can add tasks, but they'll be auto-assigned to themselves.
-    const rec = await add(isAdmin ? parsed : {
+    // Admin also auto-assigns to self by default so it appears in "My Tasks", but they can reassign.
+    const rec = await add({
       ...parsed,
       assignees: [{ email: user?.email, name: user?.name }]
     });
@@ -176,35 +203,59 @@ export default function Tasks() {
         {/* Main Content */}
         <div className="space-y-4">
           <Card className="p-4 bg-[#0f0f13] border border-zinc-800 rounded-xl">
-            <div className="flex items-center gap-2">
-              {(isAdmin || isEmployee) && (
-                <>
-                  <Input placeholder="e.g., Follow up with John tomorrow at 3 PM" value={quickAdd} onChange={(e) => setQuickAdd(e.target.value)} className="flex-1" />
-                  <Button onClick={handleQuickAdd}>Add</Button>
-                </>
-              )}
-              <Select value={view} onValueChange={(v) => setView(v as any)}>
-                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="list">List</SelectItem>
-                  <SelectItem value="kanban">Kanban</SelectItem>
-                  <SelectItem value="calendar">Calendar</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} className="w-[200px]" />
-              <Button size="icon" variant={expandAll ? 'secondary' : 'outline'} onClick={() => {
-                const next = !expandAll;
-                setExpandAll(next);
-                if (next) {
-                  const map: Record<string, Task> = {};
-                  filtered.forEach(t => { map[t.id] = { ...t }; });
-                  setEditingMap(map);
-                } else {
-                  setEditingMap({});
-                }
-              }} title={expandAll ? "Collapse All" : "Expand All"}>
-                <ChevronsUpDown className="w-4 h-4" />
-              </Button>
+            {/* Top Row: Add Task */}
+            {(isAdmin || isEmployee) && (
+              <div className="flex flex-row gap-2 w-full items-center mb-4">
+                <div className="flex-1 w-full">
+                  <Input
+                    placeholder="Add a new task (e.g. Wash Car)..."
+                    value={quickAdd}
+                    onChange={(e) => setQuickAdd(e.target.value)}
+                    className="w-full bg-zinc-950/50 min-w-[250px]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleQuickAdd();
+                      }
+                    }}
+                  />
+                </div>
+                <Button onClick={handleQuickAdd}>Add</Button>
+              </div>
+            )}
+
+            {/* Second Row: Filters & View Options */}
+            {/* Second Row: Filters & View Options */}
+            <div className="flex flex-row flex-wrap gap-2 items-center">
+              <div className="flex gap-2 items-center">
+                <Select value={view} onValueChange={(v) => setView(v as any)}>
+                  <SelectTrigger className="w-[110px] sm:w-[120px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="list">List</SelectItem>
+                    <SelectItem value="kanban">Kanban</SelectItem>
+                    <SelectItem value="calendar">Calendar</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button size="icon" variant={expandAll ? 'secondary' : 'outline'} onClick={() => {
+                  const next = !expandAll;
+                  setExpandAll(next);
+                  if (next) {
+                    const map: Record<string, Task> = {};
+                    filtered.forEach(t => { map[t.id] = { ...t }; });
+                    setEditingMap(map);
+                  } else {
+                    setEditingMap({});
+                  }
+                }} title={expandAll ? "Collapse All" : "Expand All"}>
+                  <ChevronsUpDown className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex-1 min-w-[120px] sm:w-[200px] sm:flex-none"
+              />
             </div>
             {/* Categories Accordion */}
             <div className="mt-3">
@@ -217,9 +268,9 @@ export default function Tasks() {
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
                       <div className="flex flex-wrap gap-2">
-                        {(isAdmin ? (['all', 'mine', 'overdue', 'today', 'upcoming'] as const) : (['mine', 'overdue', 'today', 'upcoming'] as const)).map((f) => (
-                          <Button key={f} size="sm" variant={filter === f ? 'secondary' : 'outline'} onClick={() => setFilter(f)}>
-                            {f === 'all' ? 'All' : f === 'mine' ? 'My Tasks' : f[0].toUpperCase() + f.slice(1)}
+                        {(isAdmin ? (['all', 'mine', 'personal', 'overdue', 'today', 'upcoming'] as const) : (['mine', 'overdue', 'today', 'upcoming'] as const)).map((f) => (
+                          <Button key={f} size="sm" variant={filter === f ? 'secondary' : 'outline'} onClick={() => setFilter(f as any)}>
+                            {f === 'all' ? 'All' : f === 'mine' ? 'Assigned to Me' : f === 'personal' ? 'My Personal' : f[0].toUpperCase() + f.slice(1)}
                           </Button>
                         ))}
                         <Button size="sm" variant={sortedByPriority ? 'secondary' : 'outline'} onClick={() => setSortedByPriority(!sortedByPriority)}>
@@ -373,29 +424,76 @@ export default function Tasks() {
                                   </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="px-4 pb-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {employees.map((e: any) => {
-                                      const key = String(e.email || e.name || e.id || '').trim();
-                                      const selected = Array.isArray((editing as any).assignees) ? (editing as any).assignees : (editing?.assigneeId ? [{ name: editing?.assigneeId }] : []);
-                                      const isChecked = selected.some((a: any) => String(a.email || a.name || '') === key);
-                                      return (
-                                        <label key={key} className="flex items-center gap-2 text-sm p-2 hover:bg-zinc-900 rounded cursor-pointer">
-                                          <Checkbox checked={isChecked} onCheckedChange={(v) => {
-                                            const list = Array.isArray((editing as any).assignees) ? (editing as any).assignees.slice() : [];
-                                            if (v) list.push({ email: e.email, name: e.name }); else {
-                                              const idx = list.findIndex((a: any) => String(a.email || a.name || '') === key);
-                                              if (idx >= 0) list.splice(idx, 1);
-                                            }
+                                  <div className="space-y-3">
+                                    {/* Existing Assignees List */}
+                                    <div className="flex flex-wrap gap-2">
+                                      {(Array.isArray((editing as any).assignees) ? (editing as any).assignees : []).length === 0 && (
+                                        <span className="text-xs text-muted-foreground italic">No assignees</span>
+                                      )}
+                                      {(Array.isArray((editing as any).assignees) ? (editing as any).assignees : []).map((a: any, idx: number) => (
+                                        <div key={idx} className="flex items-center gap-1 bg-zinc-800 text-xs px-2 py-1 rounded-full border border-zinc-700">
+                                          <User className="w-3 h-3 text-zinc-400" />
+                                          <span>{a.name || a.email}</span>
+                                          <button
+                                            onClick={() => {
+                                              const list = (editing as any).assignees.slice();
+                                              list.splice(idx, 1);
+                                              setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], assignees: list } }));
+                                            }}
+                                            className="text-zinc-500 hover:text-red-400 ml-1"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Add Assignee Dropdown */}
+                                    <div className="flex items-center gap-2">
+                                      <Select onValueChange={(val) => {
+                                        const emp = employees.find(e => e.email === val || e.id === val);
+                                        if (emp) {
+                                          const list = Array.isArray((editing as any).assignees) ? (editing as any).assignees.slice() : [];
+                                          // Prevent dupes
+                                          if (!list.some((existing: any) => existing.email === emp.email)) {
+                                            list.push({ email: emp.email, name: emp.name });
                                             setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], assignees: list } }));
-                                          }} />
-                                          <span>{e.name || e.email}</span>
-                                        </label>
-                                      );
-                                    })}
+                                          }
+                                        }
+                                      }}>
+                                        <SelectTrigger className="h-8 text-xs w-[200px] bg-zinc-900 border-zinc-700">
+                                          <SelectValue placeholder="Add Employee..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {employees.map(e => (
+                                            <SelectItem key={e.id || e.email} value={e.email || e.id}>{e.name || e.email}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
                                   </div>
+
                                   <div className="mt-4 space-y-2">
                                     <Label className="text-xs">Links</Label>
-                                    <Input value={editing.customerId || ''} onChange={(e) => setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], customerId: e.target.value } }))} placeholder="Link customer (id/name)" className="h-8 text-sm" />
+
+                                    {/* Customer Link Dropdown */}
+                                    <Select
+                                      value={editing.customerId || ''}
+                                      onValueChange={(val) => setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], customerId: val } }))}
+                                    >
+                                      <SelectTrigger className="h-9 text-sm w-full bg-zinc-900 border-zinc-700">
+                                        <SelectValue placeholder="Select Customer to Link..." />
+                                      </SelectTrigger>
+                                      <SelectContent className="max-h-[200px]">
+                                        <SelectItem value="none">-- No Customer --</SelectItem>
+                                        {customers.map(c => (
+                                          <SelectItem key={c.id} value={c.id}>
+                                            {c.name} {c.phone ? `(${c.phone})` : ''}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+
                                     <Input value={editing.vehicleId || ''} onChange={(e) => setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], vehicleId: e.target.value } }))} placeholder="Link vehicle (id)" className="h-8 text-sm" />
                                     <Input value={editing.workOrderId || ''} onChange={(e) => setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], workOrderId: e.target.value } }))} placeholder="Link work order (id)" className="h-8 text-sm" />
                                   </div>
@@ -604,26 +702,60 @@ export default function Tasks() {
         {/* Right Sidebar - Team Communication (Moved from bottom/detail view) */}
         <div className="space-y-4">
           <Card className="p-4 bg-[#0f0f13] border border-zinc-800 rounded-xl lg:sticky lg:top-6 max-w-full">
-            <div className="font-semibold mb-3 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-primary" />
-              Team Chat
+            <div className="font-semibold mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-primary" />
+                Team Chat
+              </div>
+              <Select value={chatRecipient} onValueChange={setChatRecipient}>
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Team</SelectItem>
+                  <div className="p-1 px-2 text-xs font-semibold text-muted-foreground uppercase opacity-70">Staff</div>
+                  {employees.filter(e => e.email !== user?.email).map(e => (
+                    <SelectItem key={e.email || e.id} value={e.email || e.id}>{e.name || e.email}</SelectItem>
+                  ))}
+                  <div className="p-1 px-2 text-xs font-semibold text-muted-foreground uppercase opacity-70 border-t border-zinc-800 mt-1 pt-2">Customers</div>
+                  {customers.map(c => (
+                    <SelectItem key={c.email || c.id} value={c.email || c.id}>{c.name} {c.email ? `(${c.email})` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-3 max-h-[400px] overflow-auto pr-1 mb-3 scrollbar-thin scrollbar-thumb-zinc-700">
-              {chatMessages.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-4">No messages yet.</div>
-              ) : chatMessages.map(m => (
-                <div key={m.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-2.5">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-xs font-semibold text-zinc-300">{m.author}</span>
-                    <span className="text-[10px] text-muted-foreground">{new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              {(() => {
+                const myEmail = (user?.email || '').toLowerCase();
+                const filteredMsgs = chatMessages.filter(m => {
+                  if (chatRecipient === 'all') {
+                    // Show Public messages ONLY 
+                    return m.recipient_email === null;
+                  } else {
+                    // Show interaction between Me and Recipient
+                    const target = chatRecipient.toLowerCase();
+                    const sender = (m.sender_email || '').toLowerCase();
+                    const recipient = (m.recipient_email || '').toLowerCase();
+                    return (sender === target && recipient === myEmail) || (sender === myEmail && recipient === target);
+                  }
+                });
+
+                if (filteredMsgs.length === 0) return <div className="text-sm text-muted-foreground text-center py-4">No messages yet.</div>;
+
+                return filteredMsgs.map(m => (
+                  <div key={m.id} className={`bg-zinc-900/50 border border-zinc-800 rounded-lg p-2.5 ${m.recipient_email ? 'border-l-2 border-l-blue-500' : ''}`}>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-semibold text-zinc-300">{m.sender_name || m.sender_email} {m.recipient_email ? '(Direct)' : ''}</span>
+                      <span className="text-[10px] text-muted-foreground">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div className="text-sm text-zinc-300 leading-relaxed break-words">{m.content}</div>
                   </div>
-                  <div className="text-sm text-zinc-300 leading-relaxed break-words">{m.text}</div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <Input
-                placeholder="Message team..."
+                placeholder={`Message ${chatRecipient === 'all' ? 'Team' : (employees.find(e => (e.email || e.id) === chatRecipient)?.name || customers.find(c => (c.email || c.id) === chatRecipient)?.name || 'Direct')}...`}
                 value={newChatText}
                 onChange={(e) => setNewChatText(e.target.value)}
                 className="bg-zinc-950/50 text-sm"
@@ -636,18 +768,18 @@ export default function Tasks() {
               />
               <Button size="sm" variant="secondary" onClick={async () => {
                 const text = newChatText.trim(); if (!text) return;
-                const msg = { id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, author: String(user?.name || user?.email || 'User'), text, at: new Date().toISOString() };
-                const next = [...chatMessages, msg];
-                setChatMessages(next);
-                setNewChatText('');
-                try { await localforage.setItem('task_chat', next); } catch { }
-                try { pushAdminAlert('todo_chat' as any, `New team message`, String(user?.email || user?.name || 'user'), { text }); } catch { }
+                const senderEmail = user?.email || '';
+                const senderName = user?.name || senderEmail;
+                const recipient = chatRecipient === 'all' ? null : chatRecipient;
+
                 try {
-                  (employees || []).forEach(e => {
-                    const key = String(e.email || e.name || '').trim();
-                    if (key && key !== String(user?.email || user?.name || '')) pushEmployeeNotification(key, `Team Message from ${String(user?.name || 'User')}`, { text });
-                  });
-                } catch { }
+                  await sendTeamMessage(text, senderEmail, senderName, recipient);
+                  setNewChatText('');
+                  // Optimistic update handled by Realtime subscription, but duplicate prevention might be needed if latency is high?
+                  // Supabase Realtime is fast usually.
+                } catch (err) {
+                  toast({ title: "Failed to send", variant: "destructive" });
+                }
               }}>Send</Button>
             </div>
           </Card>
