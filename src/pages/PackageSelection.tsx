@@ -537,10 +537,10 @@ export default function PackageSelection() {
                             onCheckedChange={() => toggleSelection(pkg.id)}
                             className="mr-4 h-5 w-5"
                         />
-                        <AccordionTrigger className="flex-1 hover:no-underline py-0">
-                            <div className="flex flex-col items-start text-left">
-                                <span className="font-semibold text-lg">{pkg.name}</span>
-                                <span className="text-sm text-muted-foreground">{pkg.description}</span>
+                        <AccordionTrigger className="flex-1 hover:no-underline py-0 min-w-0">
+                            <div className="flex flex-col items-start text-left w-full">
+                                <span className="font-semibold text-lg break-words w-full">{pkg.name}</span>
+                                <span className="text-sm text-muted-foreground whitespace-normal break-words w-full">{pkg.description}</span>
                             </div>
                         </AccordionTrigger>
                         <div className="flex gap-2 ml-4">
@@ -572,11 +572,28 @@ export default function PackageSelection() {
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-8 pb-24">
-            <PageHeader title="Package Comparison Guide" description="Select packages to compare features side-by-side." />
+            <PageHeader title="Package Comparison Guide" />
 
-            {/* Comparison View (Sticky or Top if active) */}
+            {/* Actual Packages Section - MOVED TO TOP as per request */}
+            <Accordion type="single" collapsible defaultValue="actual" className="w-full">
+                <AccordionItem value="actual" className="border-none">
+                    <AccordionTrigger className="hover:no-underline py-2">
+                        <div className="flex items-center justify-between w-full pr-4">
+                            <span className="text-2xl font-bold text-primary">Actual Packages</span>
+                            <span className="text-muted-foreground text-sm font-normal">Currently live on your site</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="mt-4">
+                            {renderPackageList(actualPackages, "actual")}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+
+            {/* Comparison View */}
             {comparisonData && (
-                <Accordion type="single" collapsible defaultValue="summary" className="w-full">
+                <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="summary" className="border-none">
                         <AccordionTrigger className="hover:no-underline py-2">
                             <div className="flex items-center gap-2">
@@ -691,36 +708,10 @@ export default function PackageSelection() {
                 </Accordion>
             )}
 
-            {/* Actual Packages Section */}
-            <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="actual" className="border-none">
-                    <AccordionTrigger className="hover:no-underline py-2">
-                        <div className="flex items-center justify-between w-full pr-4">
-                            <span className="text-2xl font-bold text-primary">Actual Packages</span>
-                            <span className="text-muted-foreground text-sm font-normal">Currently live on your site</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <div className="mt-4">
-                            {renderPackageList(actualPackages, "actual")}
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+            {/* Colorful Divider Removed to reduce dead space and because we reordered sections */}
 
-            {/* Colorful Divider */}
-            <div className="relative py-8">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t-4 border-dashed border-indigo-500/30"></div>
-                </div>
-                <div className="relative flex justify-center">
-                    <span className="bg-background px-4 text-sm text-muted-foreground font-medium uppercase tracking-wider">
-                        <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text font-bold text-lg">
-                            Additional Options
-                        </span>
-                    </span>
-                </div>
-            </div>
+
+
 
             {/* Other Packages Section */}
             <Accordion type="single" collapsible className="w-full">

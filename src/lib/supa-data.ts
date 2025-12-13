@@ -1,6 +1,7 @@
 
 import { supabase } from './supabase';
 import localforage from 'localforage';
+import { createClient } from '@supabase/supabase-js';
 
 
 // Types
@@ -26,6 +27,8 @@ export interface Customer {
     vehicle_info?: any;
     notes?: string;
     created_at?: string;
+    type?: string;
+    is_archived?: boolean; // New field
 }
 
 // ------------------------------------------------------------------
@@ -46,17 +49,19 @@ export interface Customer {
 export const getSupabaseEmployees = async (): Promise<Employee[]> => {
     try {
         // 1. Fetch from Supabase
-        // We try 'app_users' first as it seems to be the main user directory based on AdminUsers.tsx
-        const { data: supaUsers, error } = await supabase
+        // Use ephemeral client to bypass RLS/session issues for reliable directory listing
+        const anonClient = createClient(
+            import.meta.env.VITE_SUPABASE_URL,
+            import.meta.env.VITE_SUPABASE_ANON_KEY,
+            { auth: { persistSession: false } }
+        );
+
+        const { data: supaUsers, error } = await anonClient
             .from('app_users')
             .select('*');
 
         if (error) {
             console.error('Supabase fetch error (app_users):', error);
-            // Fallback: If allowed, maybe return local? But goal is Single Source of Truth.
-            // Let's try to return what we can or throw.
-            // For now, let's look at authorized_users as fallback if app_users is empty/fails?
-            // Actually AdminUsers.tsx uses app_users for the list.
         }
 
         const safeSupaUsers = supaUsers || [];
@@ -139,15 +144,19 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
  */
 export const getSupabaseCustomers = async (): Promise<Customer[]> => {
     try {
+        // Fetch customers with their vehicles
         const { data, error } = await supabase
             .from('customers')
-            .select('*')
+            .select(`
+                *,
+                vehicles (
+                    make, model, year, type, color, vin
+                )
+            `)
             .order('created_at', { ascending: false });
 
         if (error) {
             console.error('getSupabaseCustomers error:', error);
-            // Fallback to local if offline? 
-            // For this task, we want to enforce Supabase truth.
             return [];
         }
 
@@ -155,26 +164,42 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
         const uniqueCustomers: Customer[] = [];
         const seenMap = new Set<string>();
 
+        // 1. Process Supabase Data
         (data || []).forEach((c: any) => {
-            // Create a composite key for uniqueness ?? 
-            // Or just use ID? User showed 'Cinthia Branka' twice. 
-            // If they have different IDs but same name, they show as duplicates.
-            // Let's dedup by Name + Phone to be safe for the UI list.
             const key = `${c.name?.trim().toLowerCase()}|${c.phone?.trim()}`;
             if (!seenMap.has(key)) {
+                const v = c.vehicles && c.vehicles[0] ? c.vehicles[0] : {};
                 uniqueCustomers.push({
                     id: c.id,
-                    name: c.name,
+                    name: c.full_name || c.name,
                     email: c.email,
                     phone: c.phone,
                     address: c.address,
-                    vehicle_info: c.vehicle_info,
+                    vehicle_info: { make: v.make, model: v.model, year: v.year, type: v.type, color: v.color },
                     notes: c.notes,
-                    created_at: c.created_at
-                });
+                    created_at: c.created_at,
+                    type: c.type || 'customer',
+                    is_archived: c.is_archived || false,
+                } as any);
                 seenMap.add(key);
             }
         });
+
+        // 2. Merge Local Mocks (Safe Testing)
+        try {
+            const localCust = await localforage.getItem<any[]>('customers') || [];
+            localCust.forEach(c => {
+                if (!c.isStaticMock) return; // Only allow explicit mocks
+                const key = `${c.name?.trim().toLowerCase()}|${c.phone?.trim()}`;
+                if (!seenMap.has(key)) {
+                    uniqueCustomers.push({
+                        ...c,
+                        vehicle_info: { make: c.vehicle, model: c.model, year: c.year, type: c.vehicleType, color: 'Mock' }
+                    });
+                    seenMap.add(key);
+                }
+            });
+        } catch { }
 
         return uniqueCustomers;
     } catch (err) {
@@ -185,44 +210,73 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 
 /**
  * Upserts a customer to Supabase.
+ * Automatically handles vehicle creation/update if vehicle_info is provided.
  */
-export const upsertSupabaseCustomer = async (customer: Partial<Customer>) => {
-    // If no ID, it's a new customer.
-    // We should check if one exists with same details first to prevent dupes?
-
-    // 1. Prepare payload
-    const payload = {
-        name: customer.name,
+export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { type?: string }) => {
+    // 1. Prepare payload for CUSTOMERS table
+    const payload: any = {
+        full_name: customer.name,
         email: customer.email,
         phone: customer.phone,
         address: customer.address,
-        vehicle_info: customer.vehicle_info,
         notes: customer.notes || '',
-        // If it's new, add created_at? Supabase usually handles default now()
+        type: customer.type || 'customer',
+        is_archived: customer.is_archived || false // Include in payload
     };
 
-    if (customer.id) {
+    let customerId = customer.id;
+
+    if (customerId) {
         // Update
         const { data, error } = await supabase
             .from('customers')
             .update(payload)
-            .eq('id', customer.id)
+            .eq('id', customerId)
             .select()
             .single();
         if (error) throw error;
-        return data;
     } else {
         // Insert
-        // Optional: Check existence.
-        // But simpler to just insert. logic in UI usually handles "edit vs new".
-        const { data, error } = await supabase
-            .from('customers')
-            .insert([payload])
-            .select() // return the inserted record
-            .single();
-        if (error) throw error;
-        return data;
+        // Check duplication by email first to be safe
+        if (payload.email) {
+            const { data: existing } = await supabase.from('customers').select('id').eq('email', payload.email).single();
+            if (existing) {
+                // Update existing instead of simple insert
+                const { data, error } = await supabase.from('customers').update(payload).eq('id', existing.id).select().single();
+                if (error) throw error;
+                customerId = existing.id;
+            } else {
+                const { data, error } = await supabase.from('customers').insert([payload]).select().single();
+                if (error) throw error;
+                customerId = data.id;
+            }
+        } else {
+            const { data, error } = await supabase.from('customers').insert([payload]).select().single();
+            if (error) throw error;
+            customerId = data.id;
+        }
     }
+
+    // 2. Upsert VEHICLE if info provided
+    if (customerId && customer.vehicle_info) {
+        // Simple logic: Insert a new vehicle if it has content, 
+        // essentially satisfying "Last Known Vehicle".
+        // A more complex logic would check if it exists.
+        const v = customer.vehicle_info;
+        if (v.make || v.model || v.year) {
+            const { error: vErr } = await supabase.from('vehicles').insert({
+                customer_id: customerId,
+                make: v.make,
+                model: v.model,
+                year: v.year, // ensure number or handled by db
+                type: v.type || v.vehicleType,
+                color: v.color
+            });
+            if (vErr) console.warn("Vehicle save failed", vErr);
+        }
+    }
+
+    return { id: customerId, ...payload };
 };
 // ------------------------------------------------------------------
 // Team Chat
@@ -275,4 +329,155 @@ export const sendTeamMessage = async (content: string, senderEmail: string, send
         console.error('sendTeamMessage error:', err);
         throw err;
     }
+};
+
+// ------------------------------------------------------------------
+// Estimates & Invoices
+// ------------------------------------------------------------------
+
+export interface Estimate {
+    id?: string;
+    estimateNumber?: number;
+    customerId?: string;
+    customerName?: string; // UI convenience
+    vehicle?: string; // UI convenience
+    vehicleId?: string;
+    services: { name: string; price: number }[];
+    total: number;
+    date: string;
+    status: string; // open, accepted, declined
+    created_at?: string;
+    notes?: string;
+    packageId?: string; // optional metadata
+    addonIds?: string[]; // optional metadata
+}
+
+export const getSupabaseEstimates = async (): Promise<Estimate[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('estimates')
+            .select('*, customers(full_name), vehicles(make, model, year)')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('getSupabaseEstimates error:', error);
+            return [];
+        }
+
+        const results = (data || []).map((e: any) => ({
+            id: e.id,
+            estimateNumber: e.estimate_number,
+            customerId: e.customer_id,
+            customerName: e.customers?.full_name || 'Unknown',
+            vehicle: e.vehicles ? `${e.vehicles.year} ${e.vehicles.make} ${e.vehicles.model}` : 'Unknown',
+            vehicleId: e.vehicle_id,
+            services: e.services || [],
+            total: e.total,
+            date: e.date,
+            status: e.status,
+            created_at: e.created_at,
+            notes: e.notes
+        }));
+
+        // Merge Local Mock Estimates
+        try {
+            const localEst = await localforage.getItem<any[]>('estimates') || [];
+            localEst.forEach(e => {
+                if (e.isStaticMock) {
+                    results.push(e);
+                }
+            });
+        } catch { }
+
+        return results.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
+    } catch (err) {
+        console.error('Exception getSupabaseEstimates', err);
+        return [];
+    }
+};
+
+/**
+ * Creates or updates an estimate.
+ * Can optionally upsert customer/vehicle if provided in metadata (for BookNow flow).
+ */
+export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
+    customer?: Partial<Customer> & { type?: string },
+    vehicle?: any
+}) => {
+    // 1. Upsert Customer/Vehicle if provided
+    let customerId = p.customerId;
+    let vehicleId = p.vehicleId;
+
+    if (p.customer) {
+        // Use existing upsert logic
+        const c = await upsertSupabaseCustomer({ ...p.customer, vehicle_info: p.vehicle });
+        customerId = c.id;
+
+        // If we just created the customer/vehicle via that function, we might need to query the vehicle ID
+        if (p.vehicle) {
+            const { data: vData } = await supabase.from('vehicles')
+                .select('id')
+                .eq('customer_id', customerId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            if (vData) vehicleId = vData.id;
+        }
+    }
+
+    // 2. Prepare Estimate Payload
+    const payload = {
+        customer_id: customerId,
+        vehicle_id: vehicleId,
+        services: p.services, // ensure this is valid json or use JSON.stringify if needed, Supabase client handles array/obj -> jsonb usually
+        total: p.total,
+        date: p.date,
+        status: p.status || 'open',
+        notes: p.notes,
+    };
+
+    // HANDLE LOCAL MOCK ESTIMATES
+    const isMock = (String(p.id || '').startsWith('est_') || String(p.id || '').startsWith('static_') || (p as any).isStaticMock);
+    if (isMock) {
+        // Save to localforage instead of Supabase
+        const ests = await localforage.getItem<any[]>('estimates') || [];
+        const idx = ests.findIndex(e => e.id === p.id);
+        const saved = {
+            ...p,
+            ...payload,
+            id: p.id || `est_${Date.now()}`,
+            customerName: p.customerName || p.customer?.name || 'Mock Customer', // Persist UI Helpers
+            vehicle: p.vehicle || 'Mock Vehicle',
+            isStaticMock: true,
+            updatedAt: new Date().toISOString()
+        };
+
+        if (idx >= 0) {
+            ests[idx] = saved;
+        } else {
+            ests.push(saved);
+        }
+        await localforage.setItem('estimates', ests);
+        return saved;
+    }
+
+    if (p.id) {
+        const { data, error } = await supabase.from('estimates').update(payload).eq('id', p.id).select().single();
+        if (error) throw error;
+        return data;
+    } else {
+        const { data, error } = await supabase.from('estimates').insert([payload]).select().single();
+        if (error) throw error;
+        return data;
+    }
+};
+
+export const deleteSupabaseEstimate = async (id: string) => {
+    const { error } = await supabase.from('estimates').delete().eq('id', id);
+    if (error) throw error;
+};
+
+export const deleteTeamMessage = async (id: string) => {
+    const { error } = await supabase.from('team_messages').delete().eq('id', id);
+    if (error) throw error;
 };

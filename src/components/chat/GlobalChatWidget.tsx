@@ -132,9 +132,27 @@ export function GlobalChatWidget() {
                             <h3 className="font-bold flex items-center gap-2"><MessageCircle className="h-5 w-5" /> Chat with Us</h3>
                             <p className="text-xs opacity-90">We typically reply in a few minutes.</p>
                         </div>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-primary-foreground/20 text-white" onClick={() => setIsOpen(false)}>
-                            <X className="h-5 w-5" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                            {isIdentified && (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10"
+                                    onClick={() => {
+                                        localStorage.removeItem('guest_identity');
+                                        setIsIdentified(false);
+                                        setGuestName('');
+                                        setGuestEmail('');
+                                        setMessages([]);
+                                    }}
+                                >
+                                    End
+                                </Button>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-primary-foreground/20 text-white" onClick={() => setIsOpen(false)}>
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Body */}

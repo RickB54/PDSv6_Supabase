@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Save, AlertTriangle } from "lucide-react";
+import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { servicePackages } from "@/lib/services";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -299,7 +299,6 @@ const Reports = () => {
     else window.open(doc.output('bloburl'), '_blank');
   };
 
-  // Build a PDF for a specific customer's jobs; returns data URL or blob URL
   const buildCustomerJobsPDF = (cust: any, jobsForCust: any[], returnDataUrl: boolean) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
@@ -335,7 +334,6 @@ const Reports = () => {
       doc.text(`Add-ons: ${addOnsStr}`, 20, y); y += 5;
       doc.text(`Duration: ${durationStr} | Total: ${totalStr}`, 20, y); y += 8;
 
-      // Optional: attach checklist info from servicePackages if available
       const svc = servicePackages.find(sp => sp.id === job.serviceId || sp.name === job.service);
       if (svc) {
         const stepCount = (svc.steps || []).length;
@@ -346,7 +344,6 @@ const Reports = () => {
     return returnDataUrl ? doc.output('datauristring') : doc.output('bloburl');
   };
 
-  // Admin-only check
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background">
@@ -356,9 +353,7 @@ const Reports = () => {
             <div className="flex flex-col items-center gap-4 text-center">
               <AlertTriangle className="h-16 w-16 text-destructive" />
               <h2 className="text-2xl font-bold text-foreground">Admin Access Required</h2>
-              <p className="text-muted-foreground">
-                Reports are only accessible to administrators. Please contact your system administrator.
-              </p>
+              <p className="text-muted-foreground">Reports are only accessible to administrators.</p>
             </div>
           </Card>
         </main>
@@ -387,31 +382,41 @@ const Reports = () => {
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
 
-  const [params] = useSearchParams();
-  const initialTab = (params.get('tab') || 'customers') as 'customers' | 'invoices' | 'inventory' | 'employee' | 'estimates' | 'accounting';
-  const [tab, setTab] = useState<typeof initialTab>(initialTab);
+  const tabList = [
+    { id: 'customers', label: 'Customers' },
+    { id: 'invoices', label: 'Invoices' },
+    { id: 'inventory', label: 'Inventory' },
+    { id: 'employee', label: 'Employee' },
+    { id: 'estimates', label: 'Estimates' },
+    { id: 'accounting', label: 'Accounting' },
+  ]
 
-  useEffect(() => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('tab', tab);
-      window.history.replaceState({}, '', url.toString());
-    } catch { }
-  }, [tab]);
+  const initialTab = new URLSearchParams(window.location.search).get('tab') || 'customers';
+  const [tab, setTab] = useState(initialTab);
 
   return (
-    <div className="min-h-screen bg-background">
-      <PageHeader title="Business Reports (Admin Only)" />
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="space-y-6 animate-fade-in">
-          {/* Date Filters */}
-          <Card className="p-4 bg-gradient-card border-border">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
+    <div className="min-h-screen bg-background pb-20">
+      <PageHeader title="Business Reports" />
+      <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
+
+        {/* Stats / Header Card */}
+        <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-full bg-zinc-800 text-zinc-200">
+                <FileBarChart className="h-8 w-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Reports Center</h2>
+                <p className="text-zinc-400 text-sm">Analyze business performance</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
               <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as any)}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-40 bg-zinc-950 border-zinc-800 text-zinc-200">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border-border z-50">
+                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
                   <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="daily">Today</SelectItem>
                   <SelectItem value="weekly">This Week</SelectItem>
@@ -420,759 +425,446 @@ const Reports = () => {
               </Select>
               <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="reports-range" />
             </div>
-          </Card>
+          </div>
+        </Card>
 
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-6 bg-muted">
-              <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="invoices">Invoices</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              <TabsTrigger value="employee">Employee</TabsTrigger>
-              <TabsTrigger value="estimates">Estimates</TabsTrigger>
-              <TabsTrigger value="accounting">Accounting</TabsTrigger>
-            </TabsList>
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 w-full flex flex-wrap h-auto">
+            {tabList.map(t => (
+              <TabsTrigger
+                key={t.id}
+                value={t.id}
+                className="flex-1 min-w-[100px] data-[state=active]:bg-zinc-800 data:[state=active]:text-white data-[state=active]:shadow-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-            {/* Customer Report */}
-            <TabsContent value="customers" className="space-y-4">
-              <Card className="p-6 bg-gradient-card border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Customer Report</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)}>
-                      <Printer className="h-4 w-4 mr-2" />Print
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => generateCustomerReport(true)}>
-                      <Save className="h-4 w-4 mr-2" />Save PDF
-                    </Button>
-                  </div>
+          {/* CUSTOMERS TAB */}
+          <TabsContent value="customers" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-200">Customer Overview</h3>
+                  <p className="text-zinc-500 text-sm">Total Customers: <span className="text-white font-mono">{customers.length}</span></p>
                 </div>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Total Customers: <span className="font-semibold text-foreground">{customers.length}</span>
-                  </p>
-
-                  {/* Customer-Specific Report */}
-                  <div className="pt-4 border-t border-border">
-                    <label className="block text-sm font-medium mb-2">Select Customer for Detailed Report</label>
-                    <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                      <SelectTrigger className="w-full max-w-md bg-background border-border">
-                        <SelectValue placeholder="Choose a customer..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50">
-                        {customers.map(cust => (
-                          <SelectItem key={cust.id} value={cust.id}>
-                            {cust.name} - {cust.vehicle || 'No vehicle'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {selectedCustomer && (() => {
-                    const cust = customers.find(c => c.id === selectedCustomer);
-                    const custInvoices = invoices.filter(inv => inv.customerId === selectedCustomer);
-                    const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-                    const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
-
-                    return (
-                      <div className="mt-4 p-4 bg-muted/20 rounded-lg">
-                        <button
-                          className="font-bold text-lg mb-2 text-primary underline"
-                          onClick={() => {
-                            const jobsForCustomer = jobs.filter(j => (j.customerId || j.customer?.id) === cust?.id || (j.customer || j.customerName) === cust?.name);
-                            setCustomerJobs(jobsForCustomer);
-                            setCustomerJobsCustomer(cust);
-                            setCustomerJobsOpen(true);
-                          }}
-                        >{cust?.name}</button>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Total Spent</p>
-                            <p className="text-xl font-bold text-primary">${totalSpent.toFixed(2)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Balance Owed</p>
-                            <p className="text-xl font-bold text-destructive">${totalOwed.toFixed(2)}</p>
-                          </div>
-                        </div>
-                        <p className="text-sm">Vehicle: {cust?.year} {cust?.vehicle} {cust?.model}</p>
-                        <p className="text-sm">Total Services: {custInvoices.length}</p>
-                      </div>
-                    );
-                  })()}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateCustomerReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
                 </div>
-              </Card>
-            </TabsContent>
+              </div>
 
-            {/* Invoice Report */}
-            <TabsContent value="invoices" className="space-y-4">
-              <Card className="p-6 bg-gradient-card border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Invoice Report</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)}>
-                      <Printer className="h-4 w-4 mr-2" />Print
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => generateCustomerReport(true)}>
-                      <Save className="h-4 w-4 mr-2" />Save PDF
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Invoices</p>
-                    <p className="text-2xl font-bold text-foreground">{filterByDate(invoices).length}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Revenue</p>
-                    <p className="text-2xl font-bold text-primary">
-                      ${filterByDate(invoices).reduce((sum, inv) => sum + (inv.total || 0), 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Paid</p>
-                    <p className="text-2xl font-bold text-success">
-                      ${filterByDate(invoices).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Outstanding</p>
-                    <p className="text-2xl font-bold text-destructive">
-                      ${(filterByDate(invoices).reduce((sum, inv) => sum + (inv.total || 0), 0) -
-                        filterByDate(invoices).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0)).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
+              <div className="pt-6 border-t border-zinc-800">
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Detailed Customer Report</label>
+                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                  <SelectTrigger className="w-full max-w-md bg-zinc-950 border-zinc-800 text-zinc-200">
+                    <SelectValue placeholder="Select a customer..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
+                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
 
-            {/* Inventory Report */}
-            <TabsContent value="inventory" className="space-y-4">
-              <Card className="p-6 bg-gradient-card border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Inventory Report</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => generateInventoryReport(false)}>
-                      <Printer className="h-4 w-4 mr-2" />Print
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => generateInventoryReport(true)}>
-                      <Save className="h-4 w-4 mr-2" />Save PDF
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Items</p>
-                    <p className="text-2xl font-bold text-foreground">{chemicals.length + materials.length + tools.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Low Stock Items</p>
-                    <p className="text-2xl font-bold text-destructive">{lowStockChemicals.length + lowStockMaterials.length + lowStockTools.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Value</p>
-                    <p className="text-2xl font-bold text-success">${(totalInventoryValue + totalMaterialsValue + totalToolsValue).toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <h3 className="text-lg font-semibold mb-2 text-red-600">Chemicals</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead>Cost</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {chemicalsSorted.map(chem => (
-                        <TableRow key={chem.id}>
-                          <TableCell className="font-medium">{chem.name}</TableCell>
-                          <TableCell>{chem.bottleSize}</TableCell>
-                          <TableCell className={chem.currentStock <= chem.threshold ? 'text-destructive font-bold' : ''}>
-                            {chem.currentStock}
-                          </TableCell>
-                          <TableCell>${(chem.costPerBottle || 0).toFixed(2)}</TableCell>
-                          <TableCell>${((chem.costPerBottle || 0) * (chem.currentStock || 0)).toFixed(2)}</TableCell>
-                          <TableCell>
-                            {chem.currentStock <= chem.threshold ? (
-                              <span className="text-destructive font-semibold">⚠️ LOW STOCK</span>
-                            ) : (
-                              <span className="text-success">✓ OK</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow className="bg-muted/50 font-bold">
-                        <TableCell colSpan={4} className="text-right">Subtotal:</TableCell>
-                        <TableCell>${totalInventoryValue.toFixed(2)}</TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
-
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-2 text-red-600">Materials</h3>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Subtype</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Cost</TableHead>
-                          <TableHead>Value</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {materialsSorted.map(mat => (
-                          <TableRow key={mat.id}>
-                            <TableCell className="font-medium">{mat.name}</TableCell>
-                            <TableCell>{mat.subtype || mat.type || '—'}</TableCell>
-                            <TableCell className={(mat.quantity || 0) <= (mat.threshold || mat.lowThreshold || 0) ? 'text-destructive font-bold' : ''}>
-                              {mat.quantity || 0}
-                            </TableCell>
-                            <TableCell>${(mat.costPerItem || 0).toFixed(2)}</TableCell>
-                            <TableCell>${((mat.costPerItem || 0) * (mat.quantity || 0)).toFixed(2)}</TableCell>
-                            <TableCell>
-                              {(mat.quantity || 0) <= (mat.threshold || mat.lowThreshold || 0) ? (
-                                <span className="text-destructive font-semibold">⚠️ LOW STOCK</span>
-                              ) : (
-                                <span className="text-success">✓ OK</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {materialsSorted.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No materials tracked.</TableCell>
-                          </TableRow>
-                        )}
-                        <TableRow className="bg-muted/50 font-bold">
-                          <TableCell colSpan={4} className="text-right">Subtotal:</TableCell>
-                          <TableCell>${totalMaterialsValue.toFixed(2)}</TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-2 text-red-600">Tools</h3>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Cost</TableHead>
-                          <TableHead>Value</TableHead>
-                          <TableHead>Threshold</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {toolsSorted.map(tool => (
-                          <TableRow key={tool.id}>
-                            <TableCell className="font-medium">{tool.name}</TableCell>
-                            <TableCell>{tool.category || '—'}</TableCell>
-                            <TableCell className={(tool.quantity || 0) <= (tool.threshold || 0) ? 'text-destructive font-bold' : ''}>
-                              {tool.quantity || 0}
-                            </TableCell>
-                            <TableCell>${(tool.cost || 0).toFixed(2)}</TableCell>
-                            <TableCell>${((tool.cost || 0) * (tool.quantity || 1)).toFixed(2)}</TableCell>
-                            <TableCell>{tool.threshold || 0}</TableCell>
-                            <TableCell>
-                              {(tool.quantity || 0) <= (tool.threshold || 0) ? (
-                                <span className="text-destructive font-semibold">⚠️ LOW STOCK</span>
-                              ) : (
-                                <span className="text-success">✓ OK</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {toolsSorted.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-center text-muted-foreground py-6">No tools tracked.</TableCell>
-                          </TableRow>
-                        )}
-                        <TableRow className="bg-muted/50 font-bold">
-                          <TableCell colSpan={4} className="text-right">Subtotal:</TableCell>
-                          <TableCell>${totalToolsValue.toFixed(2)}</TableCell>
-                          <TableCell colSpan={2}></TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
-
-            {/* Employee Performance Report */}
-            <TabsContent value="employee" className="space-y-4">
-              <Card className="p-6 bg-gradient-card border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Employee Performance Report</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => generateEmployeeReport(false)}>
-                      <Printer className="h-4 w-4 mr-2" />Print
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => generateEmployeeReport(true)}>
-                      <Save className="h-4 w-4 mr-2" />Save PDF
-                    </Button>
-                  </div>
-                </div>
-                {(() => {
-                  const filteredJobs = filterByDate(jobs, 'finishedAt');
-                  const filteredPayments = filterByDate(payrollHistory, 'date');
-                  const totalPaid = filteredPayments.reduce((s, p) => s + (p.amount || 0), 0);
-                  const hoursRegex = /([0-9]+(?:\.[0-9]+)?)\s*hrs/i;
-                  const totalHours = filteredPayments.reduce((s, p) => {
-                    const d = String(p.description || '');
-                    const m = d.match(hoursRegex); return s + (m ? Number(m[1]) : 0);
-                  }, 0);
-                  const employeesPaid = Array.from(new Set(filteredPayments.map(p => p.employee).filter(Boolean))).length;
+                {selectedCustomer && (() => {
+                  const cust = customers.find(c => c.id === selectedCustomer);
+                  const custInvoices = invoices.filter(inv => inv.customerId === selectedCustomer);
+                  const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+                  const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
                   return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Jobs Completed</p>
-                        <p className="text-2xl font-bold text-foreground">{filteredJobs.length}</p>
+                    <div className="mt-6 p-6 bg-zinc-950 rounded-xl border border-zinc-800">
+                      <h4 className="text-lg font-bold text-white mb-4 underline decoration-zinc-700 underline-offset-4 cursor-pointer hover:text-blue-400 transition-colors"
+                        onClick={() => {
+                          const jobsForCustomer = jobs.filter(j => (j.customerId || j.customer?.id) === cust?.id || (j.customer || j.customerName) === cust?.name);
+                          setCustomerJobs(jobsForCustomer);
+                          setCustomerJobsCustomer(cust);
+                          setCustomerJobsOpen(true);
+                        }}>
+                        {cust?.name}
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div className="p-4 bg-zinc-900 rounded border border-zinc-800">
+                          <p className="text-xs text-zinc-500 uppercase">Total Spent</p>
+                          <p className="text-2xl font-bold text-emerald-400">${totalSpent.toFixed(2)}</p>
+                        </div>
+                        <div className="p-4 bg-zinc-900 rounded border border-zinc-800">
+                          <p className="text-xs text-zinc-500 uppercase">Outstanding Balance</p>
+                          <p className="text-2xl font-bold text-red-400">${totalOwed.toFixed(2)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Paid</p>
-                        <p className="text-2xl font-bold text-success">${totalPaid.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Hours</p>
-                        <p className="text-2xl font-bold text-primary">{totalHours.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Employees Paid</p>
-                        <p className="text-2xl font-bold text-foreground">{employeesPaid}</p>
+                      <div className="text-sm text-zinc-400 space-y-1">
+                        <p>Vehicle: <span className="text-zinc-200">{cust?.year} {cust?.vehicle} {cust?.model}</span></p>
+                        <p>Total Services: <span className="text-zinc-200">{custInvoices.length}</span></p>
                       </div>
                     </div>
-                  );
+                  )
                 })()}
+              </div>
+            </Card>
+          </TabsContent>
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filterByDate(jobs, 'finishedAt').map((job, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium">
-                            <span
-                              className="text-primary underline cursor-pointer"
-                              onClick={() => { setSelectedJob(job); setChecklistOpen(true); }}
-                            >
-                              {job.employee || 'N/A'}
-                            </span>
-                          </TableCell>
-                          <TableCell>{job.customer || 'N/A'}</TableCell>
-                          <TableCell>{job.service || 'N/A'}</TableCell>
-                          <TableCell>{job.totalTime || 'N/A'}</TableCell>
-                          <TableCell>{job.finishedAt ? new Date(job.finishedAt).toLocaleDateString() : 'N/A'}</TableCell>
-                        </TableRow>
-                      ))}
-                      {filterByDate(jobs, 'finishedAt').length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                            No completed jobs for the selected period.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+          {/* INVOICES TAB */}
+          <TabsContent value="invoices" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-zinc-200">Invoice Performance</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateCustomerReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
                 </div>
+              </div>
 
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-2">Payroll Payments</h3>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Employee</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filterByDate(payrollHistory, 'date').map((p, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{p.date ? new Date(p.date).toLocaleDateString() : 'N/A'}</TableCell>
-                            <TableCell className="font-medium">{p.employee || 'N/A'}</TableCell>
-                            <TableCell>{p.type || 'N/A'}</TableCell>
-                            <TableCell>{p.description || '—'}</TableCell>
-                            <TableCell className="text-primary font-semibold">${Number(p.amount || 0).toFixed(2)}</TableCell>
-                          </TableRow>
-                        ))}
-                        {filterByDate(payrollHistory, 'date').length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                              No payroll payments for the selected period.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Count</p>
+                  <p className="text-3xl font-bold text-white mt-1">{filterByDate(invoices).length}</p>
                 </div>
-              </Card>
-            </TabsContent>
-
-            {/* Estimates & Quotes Report */}
-            <TabsContent value="estimates" className="space-y-4">
-              <Card className="p-6 bg-gradient-card border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Estimates & Quotes Report</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => generateEstimatesReport(false)}>
-                      <Printer className="h-4 w-4 mr-2" />Print
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => generateEstimatesReport(true)}>
-                      <Save className="h-4 w-4 mr-2" />Save PDF
-                    </Button>
-                  </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Revenue</p>
+                  <p className="text-3xl font-bold text-emerald-400 mt-1">${filterByDate(invoices).reduce((sum, inv) => sum + (inv.total || 0), 0).toFixed(2)}</p>
                 </div>
-
-                <div className="mb-6">
-                  <p className="text-sm text-muted-foreground">
-                    Total Estimates: <span className="font-semibold text-foreground">{filterByDate(estimates).length}</span>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Collected</p>
+                  <p className="text-3xl font-bold text-blue-400 mt-1">${filterByDate(invoices).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0).toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Outstanding</p>
+                  <p className="text-3xl font-bold text-red-400 mt-1">
+                    ${(filterByDate(invoices).reduce((sum, inv) => sum + (inv.total || 0), 0) - filterByDate(invoices).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0)).toFixed(2)}
                   </p>
                 </div>
+              </div>
+            </Card>
+          </TabsContent>
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+          {/* INVENTORY TAB */}
+          <TabsContent value="inventory" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-zinc-200">Inventory Status</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateInventoryReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateInventoryReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Items Tracked</p>
+                  <p className="text-3xl font-bold text-white mt-1">{chemicals.length + materials.length + tools.length}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Low Stock Alerts</p>
+                  <p className="text-3xl font-bold text-amber-500 mt-1">{lowStockChemicals.length + lowStockMaterials.length + lowStockTools.length}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Valuation</p>
+                  <p className="text-3xl font-bold text-emerald-400 mt-1">${(totalInventoryValue + totalMaterialsValue + totalToolsValue).toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Chemicals Table */}
+              <h4 className="text-md font-bold text-red-400 mb-3 bg-red-500/10 p-2 rounded inline-block border border-red-500/20">Chemicals</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Item</TableHead><TableHead className="text-zinc-400">Size</TableHead><TableHead className="text-zinc-400">Stock</TableHead><TableHead className="text-zinc-400">Cost</TableHead><TableHead className="text-zinc-400">Value</TableHead><TableHead className="text-zinc-400">Status</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {chemicalsSorted.map(c => (
+                      <TableRow key={c.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-medium text-zinc-200">{c.name}</TableCell>
+                        <TableCell className="text-zinc-400">{c.bottleSize}</TableCell>
+                        <TableCell className={c.currentStock <= c.threshold ? "text-amber-500 font-bold" : "text-zinc-300"}>{c.currentStock}</TableCell>
+                        <TableCell className="text-zinc-400">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</TableCell>
+                        <TableCell>{c.currentStock <= c.threshold ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filterByDate(estimates).map((est) => (
-                        <TableRow key={est.id}>
-                          <TableCell className="font-medium">#{est.id || 'N/A'}</TableCell>
-                          <TableCell>{est.customerName || 'N/A'}</TableCell>
-                          <TableCell>{est.service || 'N/A'}</TableCell>
-                          <TableCell className="text-primary font-semibold">${est.total || 0}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 rounded text-xs font-semibold 
-                            ${est.status === 'Accepted' ? 'bg-success/20 text-success' :
-                                est.status === 'Sent' ? 'bg-primary/20 text-primary' :
-                                  'bg-muted text-muted-foreground'}`}>
-                              {est.status || 'Draft'}
-                            </span>
-                          </TableCell>
-                          <TableCell>{est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
-                        </TableRow>
-                      ))}
-                      {filterByDate(estimates).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                            No estimates for the selected period.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            </TabsContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-            {/* Accounting Report */}
-            <TabsContent value="accounting" className="space-y-4">
-              <Card className="p-6 bg-gradient-card border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-foreground">Accounting Report</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      // Export CSV
-                      const within = (d: string) => {
-                        const dt = new Date(d);
-                        let okQuick = true;
-                        const now = new Date();
-                        if (dateFilter === 'daily') okQuick = dt.toDateString() === now.toDateString();
-                        else if (dateFilter === 'weekly') okQuick = dt >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        else if (dateFilter === 'monthly') okQuick = dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
-                        let okRange = true;
-                        if (dateRange.from) okRange = dt >= new Date(dateRange.from.setHours(0, 0, 0, 0));
-                        if (okRange && dateRange.to) okRange = dt <= new Date(dateRange.to.setHours(23, 59, 59, 999));
-                        return okQuick && okRange;
-                      };
-                      const lines: string[] = ['Type,Date,Amount,Category,Description,Customer,Method'];
-                      income.filter(i => within(i.date || i.createdAt)).forEach(i => {
-                        lines.push(`Income,${(i.date || i.createdAt || '').slice(0, 10)},${i.amount || 0},${i.category || ''},${String(i.description || '').replace(/,/g, ';')},${i.customerName || ''},${i.paymentMethod || ''}`);
-                      });
-                      expenses.filter(e => within(e.createdAt)).forEach(e => {
-                        lines.push(`Expense,${(e.createdAt || '').slice(0, 10)},${e.amount || 0},${e.category || ''},${String(e.description || '').replace(/,/g, ';')},,`);
-                      });
-                      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url; a.download = `accounting_${new Date().toISOString().slice(0, 10)}.csv`;
-                      a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }}>
-                      Export CSV
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Income</p>
-                    <p className="text-2xl font-bold text-success">
-                      ${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Expenses</p>
-                    <p className="text-2xl font-bold text-destructive">
-                      ${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Profit / Loss</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {(() => {
-                        const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
-                        const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
-                        const p = inc - exp; return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
-                      })()}
-                    </p>
-                  </div>
-                </div>
+              {/* Materials Table */}
+              <h4 className="text-md font-bold text-blue-400 mb-3 bg-blue-500/10 p-2 rounded inline-block border border-blue-500/20">Materials</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Item</TableHead><TableHead className="text-zinc-400">Subtype</TableHead><TableHead className="text-zinc-400">Qty</TableHead><TableHead className="text-zinc-400">Cost</TableHead><TableHead className="text-zinc-400">Value</TableHead><TableHead className="text-zinc-400">Status</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {materialsSorted.map(m => (
+                      <TableRow key={m.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-medium text-zinc-200">{m.name}</TableCell>
+                        <TableCell className="text-zinc-400">{m.subtype || m.type || '—'}</TableCell>
+                        <TableCell className={(m.quantity || 0) <= (m.threshold || m.lowThreshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{m.quantity || 0}</TableCell>
+                        <TableCell className="text-zinc-400">${(m.costPerItem || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">${((m.costPerItem || 0) * (m.quantity || 0)).toFixed(2)}</TableCell>
+                        <TableCell>{(m.quantity || 0) <= (m.threshold || m.lowThreshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-                {/* Income Table */}
-                <div className="mb-6">
-                  <h3 className="font-semibold mb-2">Income</h3>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Method</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
-                            <TableCell>${(i.amount || 0).toFixed(2)}</TableCell>
-                            <TableCell>{i.category || 'General'}</TableCell>
-                            <TableCell>{i.description || ''}</TableCell>
-                            <TableCell>{i.customerName || ''}</TableCell>
-                            <TableCell>{i.paymentMethod || ''}</TableCell>
-                          </TableRow>
-                        ))}
-                        {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No income records.</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+              {/* Tools Table */}
+              <h4 className="text-md font-bold text-orange-400 mb-3 bg-orange-500/10 p-2 rounded inline-block border border-orange-500/20">Tools</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Item</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Qty</TableHead><TableHead className="text-zinc-400">Cost</TableHead><TableHead className="text-zinc-400">Value</TableHead><TableHead className="text-zinc-400">Status</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {toolsSorted.map(t => (
+                      <TableRow key={t.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-medium text-zinc-200">{t.name}</TableCell>
+                        <TableCell className="text-zinc-400">{t.category || '—'}</TableCell>
+                        <TableCell className={(t.quantity || 0) <= (t.threshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{t.quantity || 0}</TableCell>
+                        <TableCell className="text-zinc-400">${(t.cost || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">${((t.cost || 0) * (t.quantity || 1)).toFixed(2)}</TableCell>
+                        <TableCell>{(t.quantity || 0) <= (t.threshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
 
-                {/* Expense Table */}
+          {/* EMPLOYEE TAB */}
+          <TabsContent value="employee" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-zinc-200">Employee Performance</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateEmployeeReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateEmployeeReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
+                </div>
+              </div>
+
+              {(() => {
+                const fJobs = filterByDate(jobs, 'finishedAt');
+                const fPay = filterByDate(payrollHistory, 'date');
+                const totalPaid = fPay.reduce((s, p) => s + (p.amount || 0), 0);
+                const employeesPaid = Array.from(new Set(fPay.map(p => p.employee).filter(Boolean))).length;
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="p-4 bg-zinc-950 rounded border border-zinc-800"><p className="text-xs text-zinc-500 uppercase">Jobs Completed</p><p className="text-2xl font-bold text-white mt-1">{fJobs.length}</p></div>
+                    <div className="p-4 bg-zinc-950 rounded border border-zinc-800"><p className="text-xs text-zinc-500 uppercase">Total Paid</p><p className="text-2xl font-bold text-emerald-400 mt-1">${totalPaid.toFixed(2)}</p></div>
+                    <div className="p-4 bg-zinc-950 rounded border border-zinc-800"><p className="text-xs text-zinc-500 uppercase">Employees Paid</p><p className="text-2xl font-bold text-purple-400 mt-1">{employeesPaid}</p></div>
+                  </div>
+                )
+              })()}
+
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Employee</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Service</TableHead><TableHead className="text-zinc-400">Time</TableHead><TableHead className="text-zinc-400">Date</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {filterByDate(jobs, 'finishedAt').map((job, idx) => (
+                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-medium">
+                          <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline underline-offset-2" onClick={() => { setSelectedJob(job); setChecklistOpen(true); }}>{job.employee || 'N/A'}</span>
+                        </TableCell>
+                        <TableCell className="text-zinc-300">{job.customer || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-300">{job.service || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400">{job.totalTime || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400">{job.finishedAt ? new Date(job.finishedAt).toLocaleDateString() : '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                    {filterByDate(jobs, 'finishedAt').length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-8">No jobs found.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <h4 className="text-md font-bold text-zinc-300 mb-3">Recent Payroll</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Employee</TableHead><TableHead className="text-zinc-400">Type</TableHead><TableHead className="text-zinc-400">Description</TableHead><TableHead className="text-zinc-400">Amount</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {filterByDate(payrollHistory, 'date').map((p, idx) => (
+                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="text-zinc-400">{p.date ? new Date(p.date).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-200 font-medium">{p.employee || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400">{p.type || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[200px] truncate" title={p.description}>{p.description || '—'}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold">${Number(p.amount || 0).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {filterByDate(payrollHistory, 'date').length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-8">No payroll history found.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* ESTIMATES TAB */}
+          <TabsContent value="estimates" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="font-semibold mb-2">Expenses</h3>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Description</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{(e.createdAt || '').slice(0, 10)}</TableCell>
-                            <TableCell>${(e.amount || 0).toFixed(2)}</TableCell>
-                            <TableCell>{e.category || 'General'}</TableCell>
-                            <TableCell>{e.description || ''}</TableCell>
-                          </TableRow>
-                        ))}
-                        {expenses.filter(e => filterByDate([e]).length).length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">No expense records.</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <h3 className="text-xl font-bold text-zinc-200">Estimates Ledger</h3>
+                  <p className="text-sm text-zinc-500">Total Estimates: {filterByDate(estimates).length}</p>
                 </div>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateEstimatesReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateEstimatesReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
+                </div>
+              </div>
 
-        {/* Checklist Modal for Employee Report */}
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">ID</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Service</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Status</TableHead><TableHead className="text-zinc-400">Date</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {filterByDate(estimates).map(est => (
+                      <TableRow key={est.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-mono text-zinc-500">#{est.id}</TableCell>
+                        <TableCell className="text-zinc-300 font-medium">{est.customerName || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400">{est.service || 'N/A'}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold">${est.total || 0}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${est.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : est.status === 'Sent' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
+                            {est.status || 'Draft'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-zinc-400">{est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
+                      </TableRow>
+                    ))}
+                    {filterByDate(estimates).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">No estimates found.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* ACCOUNTING TAB */}
+          <TabsContent value="accounting" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-zinc-200">Accounting Ledger</h3>
+                <Button variant="outline" size="sm" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
+                  const within = (d: string) => {
+                    const dt = new Date(d);
+                    let okQuick = true;
+                    const now = new Date();
+                    if (dateFilter === 'daily') okQuick = dt.toDateString() === now.toDateString();
+                    else if (dateFilter === 'weekly') okQuick = dt >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    else if (dateFilter === 'monthly') okQuick = dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+                    let okRange = true;
+                    if (dateRange.from) okRange = dt >= new Date(dateRange.from.setHours(0, 0, 0, 0));
+                    if (okRange && dateRange.to) okRange = dt <= new Date(dateRange.to.setHours(23, 59, 59, 999));
+                    return okQuick && okRange;
+                  };
+                  const lines = ['Type,Date,Amount,Category,Description,Customer,Method'];
+                  income.filter(i => within(i.date || i.createdAt)).forEach(i => lines.push(`Income,${(i.date || i.createdAt || '').slice(0, 10)},${i.amount || 0},${i.category || ''},${String(i.description || '').replace(/,/g, ';')},${i.customerName || ''},${i.paymentMethod || ''}`));
+                  expenses.filter(e => within(e.createdAt)).forEach(e => lines.push(`Expense,${(e.createdAt || '').slice(0, 10)},${e.amount || 0},${e.category || ''},${String(e.description || '').replace(/,/g, ';')},,`));
+                  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `accounting_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }}>
+                  <Save className="h-4 w-4 mr-2" /> Export CSV
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Income</p>
+                  <p className="text-2xl font-bold text-emerald-400 mt-1">${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
+                  <p className="text-2xl font-bold text-red-400 mt-1">${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
+                  <p className="text-2xl font-bold text-white mt-1">
+                    {(() => {
+                      const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
+                      const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
+                      const p = inc - exp;
+                      return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Income Table */}
+              <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Income Records</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
+                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">{i.category || 'General'}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[150px] truncate">{i.description}</TableCell>
+                        <TableCell className="text-zinc-400">{i.customerName}</TableCell>
+                        <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
+                      </TableRow>
+                    ))}
+                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Expense Table */}
+              <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Expense Records</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
+                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
+                        <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">{e.category || 'General'}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
+                      </TableRow>
+                    ))}
+                    {expenses.filter(e => filterByDate([e]).length).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No expense records.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+        </Tabs>
+
+        {/* DIALOGS */}
         <Dialog open={checklistOpen} onOpenChange={setChecklistOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Job Checklist</DialogTitle>
-            </DialogHeader>
+          <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-zinc-200">
+            <DialogHeader><DialogTitle className="text-white">Job Details</DialogTitle></DialogHeader>
             {selectedJob && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Customer</div>
-                    <div>{selectedJob.customer || selectedJob.customerName || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Vehicle</div>
-                    <div>{selectedJob.vehicle || selectedJob.vehicleType || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Service</div>
-                    <div>{selectedJob.service || selectedJob.package || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Employee</div>
-                    <div>{selectedJob.employee || selectedJob.employeeName || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Finished</div>
-                    <div>{selectedJob.finishedAt ? new Date(selectedJob.finishedAt).toLocaleString() : '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total</div>
-                    <div>${Number(selectedJob.totalRevenue || selectedJob.total || 0).toFixed(2)}</div>
-                  </div>
-                </div>
-
-                {!!(selectedJob.addOns && selectedJob.addOns.length) && (
-                  <div>
-                    <div className="text-sm font-medium">Add-ons</div>
-                    <ul className="list-disc ml-5">
-                      {selectedJob.addOns.map((a: string, idx: number) => (
-                        <li key={idx}>{a}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(selectedJob.tasks && selectedJob.tasks.length > 0) ? (
-                  <div>
-                    <div className="text-sm font-medium">Checklist Tasks</div>
-                    <ul className="list-disc ml-5">
-                      {selectedJob.tasks.map((t: string, idx: number) => (
-                        <li key={idx}>{t}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-sm font-medium">Checklist Tasks</div>
-                    <ul className="list-disc ml-5">
-                      {(() => {
-                        const svcKey = selectedJob.service || selectedJob.package;
-                        const pkg = servicePackages.find(s => s.id === svcKey) || servicePackages.find(s => s.name === svcKey);
-                        const steps = pkg?.steps || [];
-                        return steps.map((step, idx) => (<li key={idx}>{step.name}</li>));
-                      })()}
-                    </ul>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-4">
+                <div className="space-y-1"><p className="text-zinc-500">Customer</p><p className="font-semibold text-white">{selectedJob.customer || selectedJob.customerName || '—'}</p></div>
+                <div className="space-y-1"><p className="text-zinc-500">Vehicle</p><p className="font-semibold text-white">{selectedJob.vehicle || selectedJob.vehicleType || '—'}</p></div>
+                <div className="space-y-1"><p className="text-zinc-500">Service</p><p className="font-semibold text-white text-blue-400">{selectedJob.service || selectedJob.package || '—'}</p></div>
+                <div className="space-y-1"><p className="text-zinc-500">Employees</p><p className="font-semibold text-white">{selectedJob.employee || selectedJob.employeeName || '—'}</p></div>
+                <div className="space-y-1"><p className="text-zinc-500">Finished</p><p className="font-semibold text-white">{selectedJob.finishedAt ? new Date(selectedJob.finishedAt).toLocaleString() : '—'}</p></div>
+                <div className="space-y-1"><p className="text-zinc-500">Revenue</p><p className="font-semibold text-emerald-400 text-lg">${Number(selectedJob.totalRevenue || selectedJob.total || 0).toFixed(2)}</p></div>
               </div>
             )}
           </DialogContent>
         </Dialog>
 
-        {/* Customer Jobs Modal */}
         <Dialog open={customerJobsOpen} onOpenChange={setCustomerJobsOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Customer Jobs Report</DialogTitle>
-            </DialogHeader>
+          <DialogContent className="max-w-4xl bg-zinc-950 border-zinc-800 text-zinc-200">
+            <DialogHeader><DialogTitle>Customer History</DialogTitle></DialogHeader>
             {customerJobsCustomer && (
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
+              <div className="space-y-6">
+                <div className="flex justify-between items-start border-b border-zinc-800 pb-4">
                   <div>
-                    <h3 className="text-lg font-bold">{customerJobsCustomer.name}</h3>
-                    <p className="text-sm text-muted-foreground">{customerJobsCustomer.email || '—'} • {customerJobsCustomer.phone || '—'}</p>
-                    <p className="text-sm text-muted-foreground">Vehicle: {customerJobsCustomer.year || ''} {customerJobsCustomer.vehicle || ''} {customerJobsCustomer.model || ''}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      try {
-                        const url = buildCustomerJobsPDF(customerJobsCustomer, customerJobs, false);
-                        window.open(url, '_blank');
-                      } catch { }
-                    }}>
-                      <Printer className="h-4 w-4 mr-2" />Print
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      try {
-                        const dataUrl = buildCustomerJobsPDF(customerJobsCustomer, customerJobs, true);
-                        const fileName = `CustomerJobs_${String(customerJobsCustomer.name || 'Customer').replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-                        savePDFToArchive('Customer', customerJobsCustomer.name || 'Customer', customerJobsCustomer.id || String(Date.now()), String(dataUrl), { fileName });
-                      } catch { }
-                    }}>
-                      <Save className="h-4 w-4 mr-2" />Save to File Manager
-                    </Button>
+                    <h3 className="text-xl font-bold text-white">{customerJobsCustomer.name}</h3>
+                    <p className="text-zinc-400">{customerJobsCustomer.email || ''} • {customerJobsCustomer.phone || ''}</p>
                   </div>
                 </div>
-
-                <div className="overflow-x-auto">
+                <div className="rounded border border-zinc-800 overflow-hidden">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Add-ons</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader className="bg-zinc-900"><TableRow><TableHead>Date</TableHead><TableHead>Service</TableHead><TableHead>Total</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {customerJobs.map((job, idx) => (
+                      {customerJobs.map((j, idx) => (
                         <TableRow key={idx}>
-                          <TableCell>{job.finishedAt ? new Date(job.finishedAt).toLocaleString() : '—'}</TableCell>
-                          <TableCell>{job.employee?.name || job.employee || job.employeeName || '—'}</TableCell>
-                          <TableCell>{job.service || job.package || '—'}</TableCell>
-                          <TableCell>{Array.isArray(job.addOns) ? job.addOns.join(', ') : (job.addOns || '—')}</TableCell>
-                          <TableCell>{job.totalTime || job.duration || '—'}</TableCell>
-                          <TableCell>${Number(job.totalRevenue || job.total || 0).toFixed(2)}</TableCell>
+                          <TableCell>{j.finishedAt ? new Date(j.finishedAt).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell>{j.service || j.package}</TableCell>
+                          <TableCell className="text-emerald-400">${Number(j.totalRevenue || j.total || 0).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
-                      {customerJobs.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No jobs found for this customer.</TableCell>
-                        </TableRow>
-                      )}
                     </TableBody>
                   </Table>
                 </div>

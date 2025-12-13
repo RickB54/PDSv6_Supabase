@@ -8,27 +8,8 @@ export type HelpTopic = {
   section?: 'menu' | 'dashboard';
 };
 
-// RELEASE NOTES TOPIC
-export const releaseNotesTopic: HelpTopic = {
-  id: 'release-notes-dec',
-  title: "What's New (December Update)",
-  summary: 'Latest features and fixes deployed in this update.',
-  content: [
-    '• Team Chat Improvements: Added Direct Messaging (Select specific staff/customers) and Cross-role chat sync.',
-    '• Customer Support Chat: Customers can now message staff directly from their dashboard.',
-    '• Tasks UI: Improved "Quick Add" layout and Mobile Responsiveness for the toolbar.',
-    '• Stability Fixes: Resolved "Employee Role Reversion" issue to keep you logged in correctly.',
-    '• Invoicing: Added "Estimates" functionality for quoting jobs.',
-    '• Vehicle Classification: Added PDF Export for shop reference.',
-    '• Inventory: Added AI Cost Suggestions and simplified Material Updates.',
-    '• Settings: Added "Restore Default Data" in Danger Zone for quick resets.',
-  ],
-  section: 'menu',
-};
-
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
-  releaseNotesTopic,
   {
     id: 'admin-dashboard',
     title: 'Admin Dashboard',
@@ -53,8 +34,22 @@ export const adminMenuTopics: HelpTopic[] = [
       'Create and update customer profiles including contact details and service history.',
       'Search and link invoices and tasks to customers.',
       'Import and export customer data using provided tools.',
+      '**Archiving**: You can archive inactive customers using the "Archive" button. Toggle "Show Archived" to view or restore them.',
     ],
     route: '/search-customer',
+    section: 'menu',
+  },
+  {
+    id: 'prospects',
+    title: 'Prospects',
+    summary: 'Track potential clients and convert them to customers.',
+    content: [
+      'Add new prospects and track their vehicle interest and source.',
+      'Convert prospects to full customers with one click when they book a job.',
+      '**Archiving**: Archive prospects that are no longer active. Use the "Show Archived" filter to manage them.',
+      'Generate PDF reports of your current prospect list.',
+    ],
+    route: '/prospects',
     section: 'menu',
   },
   {
@@ -156,6 +151,19 @@ export const adminMenuTopics: HelpTopic[] = [
       'New automated folders for Estimates, Vehicle Classifications, and Inventory Reports.',
     ],
     route: '/file-manager',
+    section: 'menu',
+  },
+  {
+    id: 'team-chat',
+    title: 'Team Chat',
+    summary: 'Real-time messaging for the whole team and guest users.',
+    content: [
+      'Direct Messages: Private secure chats between employees and admins.',
+      'Group Chat: General channels for team-wide announcements.',
+      'Guest Chat: Communicate with customers or guests via secure links.',
+      'Notifications: Badges indicate unread messages instantly.',
+    ],
+    route: '/team-chat',
     section: 'menu',
   },
   {
@@ -325,6 +333,33 @@ export const adminMenuTopics: HelpTopic[] = [
     route: '/package-pricing',
     section: 'menu',
   },
+  {
+    id: 'bookings',
+    title: 'Bookings & Calendar',
+    summary: 'Manage appointments, history, filtration, and archives.',
+    content: [
+      'Bookings Calendar: View upcoming jobs. Use the top filter icon to select custom date ranges.',
+      'Archiving: Completed or cancelled bookings can be archived to declutter the view.',
+      'Show Archived: Use the toggle in the filter menu to show or hide archived records.',
+      'Analytics: Switch to Analytics view for charts and CRM tables, which also support the new date and archive filters.',
+      'Mobile Friendly: All booking lists and calendars are optimized for mobile devices.',
+    ],
+    route: '/bookings',
+    section: 'menu',
+  },
+  {
+    id: 'bookings-analytics',
+    title: 'Booking Calendar Analytics',
+    summary: 'View business performance, customer trends, and booking stats.',
+    content: [
+      'Access Analytics view from the Bookings page or sidebar.',
+      'Use date filters to analyze specific periods.',
+      'View charts for revenue, booking counts, and customer acquisition.',
+      'CRM Table: Filter and manage customer bookings directly.',
+    ],
+    route: '/bookings', // Points to same page, user switches view
+    section: 'menu',
+  },
 ];
 
 export const adminDashboardTopics: HelpTopic[] = [
@@ -408,7 +443,6 @@ export const adminTopics: HelpTopic[] = [
 // 2) Employee Dashboard items (cards and quick actions)
 
 export const employeeMenuTopics: HelpTopic[] = [
-  releaseNotesTopic,
   {
     id: 'website',
     title: 'Website',

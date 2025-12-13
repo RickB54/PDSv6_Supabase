@@ -4,16 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, FileBarChart, DollarSign, Plus, Car } from "lucide-react";
-import { Link } from "react-router-dom";
-import { getInvoices, upsertInvoice, deleteInvoice, getEstimates, addEstimate } from "@/lib/db";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter } from "lucide-react";
+import { getInvoices, upsertInvoice, deleteInvoice } from "@/lib/db";
 import { getSupabaseCustomers } from "@/lib/supa-data";
 import { Customer } from "@/components/customers/CustomerModal";
-import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";
-import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import {
   Select,
   SelectContent,
@@ -63,31 +60,21 @@ const Invoicing = () => {
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterCustomerId, setFilterCustomerId] = useState("");
-  const [estimates, setEstimates] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<'invoices' | 'estimates'>('invoices');
-  const [createType, setCreateType] = useState<'invoice' | 'estimate'>('invoice');
-  const [selectedPackage, setSelectedPackage] = useState("");
-  const [selectedVehicleType, setSelectedVehicleType] = useState<"compact" | "midsize" | "truck" | "luxury">("midsize");
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
-  const [selectedVehicleDetails, setSelectedVehicleDetails] = useState<{ make: string; model: string; category: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [invs, custs, ests] = await Promise.all([getInvoices(), getSupabaseCustomers(), getEstimates()]);
-
-    // Assign invoice numbers starting from 100
+    const [invs, custs] = await Promise.all([getInvoices(), getSupabaseCustomers()]);
+    // Assign invoice numbers starting from 100 if missing
     const invoicesWithNumbers = (invs as Invoice[]).map((inv, idx) => ({
       ...inv,
       invoiceNumber: inv.invoiceNumber || 100 + idx
     }));
-
     setInvoices(invoicesWithNumbers);
     setCustomers(custs as Customer[]);
-    setEstimates(ests || []);
   };
 
   const addService = () => {
@@ -112,13 +99,8 @@ const Invoicing = () => {
     const customer = customers.find(c => c.id === selectedCustomer);
     if (!customer) return;
 
-    // Get next invoice number
     const maxInvoiceNum = invoices.reduce((max, inv) => Math.max(max, inv.invoiceNumber || 99), 99);
-
-    // Use selected vehicle details if available, otherwise fallback to customer vehicle
-    const vehicleDesc = selectedVehicleDetails
-      ? `${selectedVehicleDetails.make} ${selectedVehicleDetails.model}`
-      : `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
+    const vehicleDesc = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
 
     const invoice: Invoice = {
       invoiceNumber: maxInvoiceNum + 1,
@@ -133,83 +115,13 @@ const Invoicing = () => {
       paidAmount: 0,
     };
 
-    if (createType === 'estimate') {
-      await addEstimate({ ...invoice, status: 'Open', invoiceNumber: undefined });
-      toast({ title: "Success", description: "Estimate created successfully" });
-      setViewMode('estimates');
-    } else {
-      await upsertInvoice(invoice);
-      toast({ title: "Success", description: "Invoice created successfully" });
-      setViewMode('invoices');
-    }
+    await upsertInvoice(invoice);
+    toast({ title: "Success", description: "Invoice created successfully" });
+
     setSelectedCustomer("");
     setServices([]);
     setShowCreateForm(false);
-    setSelectedVehicleDetails(null);
     loadData();
-  };
-
-  const handleVehicleSelect = (data: { make: string; model: string; category: string }) => {
-    setSelectedVehicleDetails(data);
-
-    // Map complicated categories to our 4 pricing tiers
-    let mappedType: "compact" | "midsize" | "truck" | "luxury" = "midsize"; // default
-
-    const cat = data.category.toLowerCase();
-    if (cat.includes("compact")) mappedType = "compact";
-    else if (cat.includes("midsize") || cat.includes("sedan")) mappedType = "midsize";
-    else if (cat.includes("suv") || cat.includes("crossover") || cat.includes("truck") || cat.includes("oversized")) mappedType = "truck";
-    else if (cat.includes("luxury") || cat.includes("exotic")) mappedType = "luxury";
-
-    setSelectedVehicleType(mappedType);
-
-    // Recalculate price if package is selected
-    if (selectedPackage) {
-      const pkg = servicePackages.find(p => p.id === selectedPackage);
-      if (pkg) {
-        const price = pkg.pricing[mappedType] || 0;
-        setServices([{ name: pkg.name, price }]);
-      }
-    }
-  };
-
-  const generatePDF = (invoice: Invoice, download = false) => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Prime Detail Solutions", 105, 20, { align: "center" });
-    doc.setFontSize(12);
-    doc.text("Invoice", 105, 30, { align: "center" });
-    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 38, { align: "center" });
-    doc.text(`Date: ${invoice.date}`, 20, 50);
-    doc.text(`Customer: ${invoice.customerName}`, 20, 60);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 70);
-
-    let y = 85;
-    doc.text("Services:", 20, y);
-    y += 10;
-    invoice.services.forEach((s) => {
-      doc.text(`${s.name}: $${s.price.toFixed(2)}`, 30, y);
-      y += 8;
-    });
-
-    y += 5;
-    doc.setFontSize(14);
-    doc.text(`Total: $${invoice.total.toFixed(2)}`, 20, y);
-
-    y += 10;
-    doc.setFontSize(10);
-    const status = invoice.paymentStatus || "unpaid";
-    doc.text(`Payment Status: ${status.toUpperCase()}`, 20, y);
-    if (invoice.paidAmount && invoice.paidAmount > 0) {
-      y += 6;
-      doc.text(`Paid: $${invoice.paidAmount.toFixed(2)}`, 20, y);
-    }
-
-    if (download) {
-      doc.save(`Invoice_${invoice.invoiceNumber}_${new Date().toISOString().split('T')[0]}.pdf`);
-    } else {
-      window.open(doc.output('bloburl'), '_blank');
-    }
   };
 
   const handleDeleteInvoice = async (id: string) => {
@@ -220,9 +132,8 @@ const Invoicing = () => {
   };
 
   const filterItems = () => {
-    const source = viewMode === 'estimates' ? estimates : invoices;
     const now = new Date();
-    return source.filter(inv => {
+    return invoices.filter(inv => {
       const invDate = new Date(inv.createdAt || inv.date);
       let passQuick = true;
       if (dateFilter === "daily") passQuick = invDate.toDateString() === now.toDateString();
@@ -236,13 +147,25 @@ const Invoicing = () => {
       let passCustomer = true;
       if (filterCustomerId) passCustomer = inv.customerId === filterCustomerId;
 
-      return passQuick && passRange && passCustomer;
+      let passSearch = true;
+      if (searchTerm) {
+        const lower = searchTerm.toLowerCase();
+        passSearch =
+          (inv.customerName || '').toLowerCase().includes(lower) ||
+          String(inv.invoiceNumber || '').includes(lower);
+      }
+
+      return passQuick && passRange && passCustomer && passSearch;
     });
   };
 
-  const totalOutstanding = filterItems()
+  const filteredInvoices = filterItems();
+  const totalOutstanding = filteredInvoices
     .filter(inv => (inv.paymentStatus || "unpaid") !== "paid")
     .reduce((sum, inv) => sum + (inv.total - (inv.paidAmount || 0)), 0);
+
+  const totalRevenue = filteredInvoices
+    .reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
 
   const updatePayment = async () => {
     if (!selectedInvoice) return;
@@ -259,321 +182,282 @@ const Invoicing = () => {
     toast({ title: "Payment recorded", description: `Added $${amt.toFixed(2)} to invoice #${updated.invoiceNumber}` });
   };
 
-  const generateListPDF = (download = false) => {
+  const generatePDF = (invoice: Invoice, download = false) => {
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Invoice List", 20, 20);
+    doc.setFontSize(18);
+    doc.setTextColor(16, 185, 129); // Emerald color
+    doc.text("Prime Detail Solutions", 105, 20, { align: "center" });
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.text("INVOICE", 105, 30, { align: "center" });
+    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 38, { align: "center" });
+
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 28);
-    let y = 40;
-    filterItems().forEach((inv) => {
-      doc.setFontSize(10);
-      const status = inv.paymentStatus || "unpaid";
-      doc.text(`#${inv.invoiceNumber} | ${inv.customerName} | $${inv.total.toFixed(2)} | ${status.toUpperCase()} | ${inv.date}`, 20, y);
+    doc.text(`Date: ${invoice.date}`, 20, 50);
+    doc.text(`Customer: ${invoice.customerName}`, 20, 56);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 62);
+
+    let y = 80;
+    doc.setFontSize(12);
+    doc.text("Services:", 20, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    invoice.services.forEach((s) => {
+      doc.text(`${s.name}`, 25, y);
+      doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });
       y += 7;
-      if (y > 280) { doc.addPage(); y = 20; }
     });
-    if (download) doc.save(`Invoices_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    y += 5;
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    doc.setFontSize(14);
+    doc.text("Total:", 140, y);
+    doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
+
+    if (invoice.paidAmount && invoice.paidAmount > 0) {
+      y += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(16, 185, 129);
+      doc.text(`Paid: $${invoice.paidAmount.toFixed(2)}`, 180, y, { align: "right" });
+
+      const balance = invoice.total - invoice.paidAmount;
+      if (balance > 0) {
+        y += 6;
+        doc.setTextColor(239, 68, 68);
+        doc.text(`Balance Due: $${balance.toFixed(2)}`, 180, y, { align: "right" });
+      }
+    }
+
+    if (download) doc.save(`Invoice_${invoice.invoiceNumber}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Invoicing" />
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex justify-between items-center flex-wrap gap-3">
+
+      <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
+
+        {/* Stats Card */}
+        <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg relative overflow-hidden">
+          <div className="absolute right-0 top-0 h-full w-1/3 bg-emerald-500/5 rotate-12 transform scale-150 pointer-events-none" />
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-foreground">Invoicing</h1>
-              <div className="flex bg-muted rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'invoices' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('invoices')}
-                  className="rounded-md"
-                >
-                  Invoices
-                </Button>
-                <Button
-                  variant={viewMode === 'estimates' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('estimates')}
-                  className="rounded-md"
-                >
-                  Estimates
-                </Button>
+              <div className="p-4 rounded-full bg-emerald-500/20 text-emerald-400">
+                <FileText className="h-8 w-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Invoicing & Payments</h2>
+                <p className="text-zinc-400 text-sm">Manage billing and track revenue</p>
               </div>
             </div>
-            <div className="flex gap-3 items-center flex-wrap w-full md:w-auto">
-              <Link to="/reports">
-                <Button variant="outline" size="sm">
-                  <FileBarChart className="h-4 w-4 mr-2" />Reports
-                </Button>
-              </Link>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="daily">Today</SelectItem>
-                  <SelectItem value="weekly">This Week</SelectItem>
-                  <SelectItem value="monthly">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-              <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="invoices-range" />
-              <Button variant="outline" size="sm" onClick={() => generateListPDF(false)}>
-                <Printer className="h-4 w-4 mr-2" />Print
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => generateListPDF(true)}>
-                <Save className="h-4 w-4 mr-2" />Save PDF
-              </Button>
-              <div className="flex gap-2">
-                <Button onClick={() => { setCreateType('invoice'); setShowCreateForm(!showCreateForm); }} className="bg-gradient-hero">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </Button>
-                <Button onClick={() => { setCreateType('estimate'); setShowCreateForm(!showCreateForm); }} variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Create Estimate
-                </Button>
+
+            <div className="flex gap-8">
+              <div className="text-center">
+                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Outstanding</p>
+                <p className="text-3xl font-bold text-red-400 mt-1">${totalOutstanding.toFixed(2)}</p>
+              </div>
+              <div className="text-center border-l border-zinc-700 pl-8">
+                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Revenue</p>
+                <p className="text-3xl font-bold text-emerald-400 mt-1">${totalRevenue.toFixed(2)}</p>
               </div>
             </div>
           </div>
+        </Card>
 
-          {/* Customer Filter */}
-          <Card className="p-4 bg-gradient-card border-border">
-            <Label htmlFor="customer-filter" className="text-sm font-medium mb-2 block">Filter by Customer</Label>
-            <div className="flex gap-2 items-center">
-              <Select value={filterCustomerId || "all"} onValueChange={(val) => setFilterCustomerId(val === "all" ? "" : val)}>
-                <SelectTrigger id="customer-filter" className="flex-1">
-                  <SelectValue placeholder="All Customers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Customers</SelectItem>
-                  {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {filterCustomerId && (
-                <Button variant="outline" size="sm" onClick={() => setFilterCustomerId("")}>
-                  Clear
-                </Button>
-              )}
+        {/* Controls */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+          <div className="flex gap-2 w-full md:w-auto items-center">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+              <Input
+                placeholder="Search invoices..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-zinc-950 border-zinc-800"
+              />
             </div>
-          </Card>
+            <Select value={filterCustomerId || "all"} onValueChange={(val) => setFilterCustomerId(val === "all" ? "" : val)}>
+              <SelectTrigger className="w-[180px] bg-zinc-950 border-zinc-800">
+                <SelectValue placeholder="All Customers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Customers</SelectItem>
+                {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
 
-          {/* Outstanding Balance */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-destructive/20 rounded-lg">
-                <DollarSign className="h-6 w-6 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Outstanding Balance</p>
-                <h3 className="text-2xl font-bold text-foreground">${totalOutstanding.toFixed(2)}</h3>
-              </div>
+          <div className="flex flex-wrap gap-2 items-center w-full md:w-auto justify-end">
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-[130px] bg-zinc-950 border-zinc-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="daily">Today</SelectItem>
+                <SelectItem value="weekly">This Week</SelectItem>
+                <SelectItem value="monthly">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+            <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="invoices-range" />
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white border-0" onClick={() => setShowCreateForm(true)}>
+              <Plus className="h-4 w-4 mr-2" /> New Invoice
+            </Button>
+          </div>
+        </div>
+
+        {showCreateForm && (
+          <Card className="p-6 bg-zinc-900 border-zinc-800 animate-in slide-in-from-top-4">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-xl font-bold text-white">Create New Invoice</h2>
+              <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>Cancel</Button>
             </div>
-          </Card>
 
-          {showCreateForm && (
-            <Card className="p-6 bg-gradient-card border-border">
-              <h2 className="text-xl font-bold text-foreground mb-4">New {createType === 'estimate' ? 'Estimate' : 'Invoice'}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="customer">Select Customer</Label>
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Select Customer</Label>
                   <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a customer" />
+                    <SelectTrigger className="bg-zinc-950 border-zinc-800">
+                      <SelectValue placeholder="Choose customer..." />
                     </SelectTrigger>
                     <SelectContent>
                       {customers.map(c => (
-                        <SelectItem key={c.id} value={c.id!}>
-                          {c.name} - {c.vehicle} {c.model}
-                        </SelectItem>
+                        <SelectItem key={c.id} value={c.id!}>{c.name} - {c.vehicle}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Estimates: Service Package & Addons Selection */}
-                {createType === 'estimate' && (
-                  <>
-                    <div className="border-t border-border pt-4">
-                      <Label>Select Service Package</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <Select value={selectedPackage} onValueChange={(val) => {
-                          setSelectedPackage(val);
-                          const pkg = servicePackages.find(p => p.id === val);
-                          if (pkg) {
-                            const price = pkg.pricing[selectedVehicleType] || 0;
-                            setServices([{ name: pkg.name, price }]);
-                            setSelectedAddons([]); // Clear addons when changing package
-                          }
-                        }}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose package..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {servicePackages.map(pkg => {
-                              const price = pkg.pricing[selectedVehicleType] || 0;
-                              return (
-                                <SelectItem key={pkg.id} value={pkg.id}>
-                                  {pkg.name} - ${price}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <Select value={selectedVehicleType} onValueChange={(val: any) => {
-                          setSelectedVehicleType(val);
-                          if (selectedPackage) {
-                            const pkg = servicePackages.find(p => p.id === selectedPackage);
-                            if (pkg) {
-                              const price = pkg.pricing[val] || 0;
-                              setServices([{ name: pkg.name, price }]);
-                            }
-                          }
-                        }}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Vehicle type..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="compact">Compact (Cars, Small Sedans)</SelectItem>
-                            <SelectItem value="midsize">Midsize (Sedans, Small SUVs)</SelectItem>
-                            <SelectItem value="truck">Truck/SUV (Large Vehicles)</SelectItem>
-                            <SelectItem value="luxury">Luxury (Premium Vehicles)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="mt-2 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-primary/90 p-0 h-auto"
-                          onClick={() => setVehicleModalOpen(true)}
-                        >
-                          <Car className="w-4 h-4 mr-1" />
-                          Need help classifying? Open Vehicle Database
-                        </Button>
-                        {selectedVehicleDetails && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Selected: <span className="font-medium text-foreground">{selectedVehicleDetails.make} {selectedVehicleDetails.model}</span>
-                            <span className="mx-1">•</span>
-                            Classified as: <span className="font-medium text-foreground">{selectedVehicleDetails.category}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Manual Service Entry for Invoices */}
-                {createType === 'invoice' && (
-                  <div className="border-t border-border pt-4">
-                    <Label>Add Services</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        placeholder="Service name"
-                        value={newService.name}
-                        onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Price"
-                        value={newService.price}
-                        onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                        className="w-32"
-                      />
-                      <Button onClick={addService} variant="outline">Add</Button>
-                    </div>
+                <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800">
+                  <Label className="text-zinc-400 mb-2 block">Line Items</Label>
+                  <div className="flex gap-2 mb-4">
+                    <Input
+                      placeholder="Service Description"
+                      value={newService.name}
+                      onChange={e => setNewService({ ...newService, name: e.target.value })}
+                      className="bg-zinc-900 border-zinc-800 text-zinc-200"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Price"
+                      value={newService.price}
+                      onChange={e => setNewService({ ...newService, price: e.target.value })}
+                      className="w-32 bg-zinc-900 border-zinc-800 text-zinc-200"
+                    />
+                    <Button size="icon" variant="outline" onClick={addService} className="border-zinc-700 hover:bg-zinc-800">
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
 
-                {services.length > 0 && (
-                  <div className="space-y-2">
-                    {services.map((s, i) => (
-                      <div key={i} className="flex justify-between items-center p-2 bg-background/50 rounded">
-                        <span>{s.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">${s.price.toFixed(2)}</span>
-                          <Button size="icon" variant="ghost" onClick={() => removeService(i)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  {services.length > 0 ? (
+                    <div className="space-y-2">
+                      {services.map((s, i) => (
+                        <div key={i} className="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800/50">
+                          <span className="text-sm text-zinc-300">{s.name}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-emerald-400">${s.price.toFixed(2)}</span>
+                            <Button size="icon" variant="ghost" className="h-6 w-6 text-zinc-500 hover:text-red-400" onClick={() => removeService(i)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
+                      ))}
+                      <div className="pt-3 mt-3 border-t border-zinc-800 flex justify-between items-center">
+                        <span className="font-bold text-zinc-400">Total</span>
+                        <span className="font-bold text-xl text-white">${calculateTotal().toFixed(2)}</span>
                       </div>
-                    ))}
-                    <div className="text-right text-xl font-bold text-primary pt-2 border-t">
-                      Total: ${calculateTotal().toFixed(2)}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-zinc-600 italic text-sm">No items added yet</div>
+                  )}
+
+                  <Button onClick={createInvoice} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={services.length === 0 || !selectedCustomer}>
+                    Generate Invoice
+                  </Button>
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center justify-center p-6 bg-emerald-500/5 rounded-xl border border-emerald-500/10 border-dashed">
+                <div className="text-center">
+                  <FileText className="h-16 w-16 text-emerald-500/30 mx-auto mb-4" />
+                  <h3 className="text-emerald-500 font-medium">Ready to invoice</h3>
+                  <p className="text-sm text-emerald-500/60 max-w-xs mt-2">Generate clean, professional invoices and track payments easily.</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Invoice List */}
+        <div className="space-y-4">
+          {filteredInvoices.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {filteredInvoices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(invoice => (
+                <div key={invoice.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
+                  <div className="flex items-center gap-4 mb-4 md:mb-0">
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center border ${(invoice.paymentStatus === 'paid')
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-400'
+                      }`}>
+                      {(invoice.paymentStatus === 'paid') ? <CheckCircle className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-lg">#{invoice.invoiceNumber}</span>
+                        <span className="text-zinc-500 text-sm">• {invoice.date}</span>
+                      </div>
+                      <div className="font-medium text-zinc-300">{invoice.customerName}</div>
+                      <div className="text-xs text-zinc-500">{invoice.vehicle}</div>
                     </div>
                   </div>
-                )}
 
-                <Button onClick={createInvoice} className="w-full bg-gradient-hero">
-                  Create {createType === 'estimate' ? 'Estimate' : 'Invoice'}
-                </Button>
-              </div>
-            </Card>
-          )}
+                  <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto">
+                    <div className="text-right">
+                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
+                      <div className="text-xl font-bold text-white">${invoice.total.toFixed(2)}</div>
+                    </div>
 
-          <div className="grid gap-4">
-            {filterItems().map((inv) => (
-              <Card
-                key={inv.id}
-                className="p-4 bg-gradient-card border-border cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => setSelectedInvoice(inv)}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-foreground">{viewMode === 'estimates' ? 'Estimate' : 'Invoice'} #{inv.invoiceNumber || 'N/A'}</h3>
-                    <p className="text-sm text-muted-foreground">{inv.customerName}</p>
-                    <p className="text-sm text-muted-foreground">{inv.vehicle}</p>
-                    <p className="text-sm text-muted-foreground">Date: {inv.date}</p>
-                    <p className="text-lg font-bold text-primary mt-2">Total: ${inv.total.toFixed(2)}</p>
-                    <p className={`text-sm font-medium mt-1 ${(inv.paymentStatus || "unpaid") === "paid" ? "text-success" :
-                      (inv.paymentStatus || "unpaid") === "partially-paid" ? "text-yellow-500" :
-                        "text-destructive"
-                      }`}>
-                      {(inv.paymentStatus || "unpaid").replace("-", " ").toUpperCase()}
-                      {inv.paidAmount && inv.paidAmount > 0 ? ` ($${inv.paidAmount.toFixed(2)} paid)` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button size="icon" variant="outline" onClick={() => generatePDF(inv, false)}>
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="outline" onClick={() => generatePDF(inv, true)}>
+                    <div className="text-right min-w-[100px]">
+                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Status</div>
+                      <div className={`font-medium ${invoice.paymentStatus === 'paid' ? 'text-emerald-400' :
+                          invoice.paymentStatus === 'partially-paid' ? 'text-amber-400' : 'text-red-400'
+                        }`}>
+                        {(invoice.paymentStatus || 'unpaid').toUpperCase()}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(invoice, true)}>
                         <Save className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(inv.id!)}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(invoice.id!)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      disabled={viewMode === 'estimates'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (viewMode !== 'estimates' && inv.services && Array.isArray(inv.services)) {
-                          setSelectedInvoice(inv);
-                          const remaining = inv.total - (inv.paidAmount || 0);
-                          setPaymentAmount(remaining > 0 ? String(remaining.toFixed(2)) : "");
-                          setPaymentDialogOpen(true);
-                        }
-                      }}
-                    >
-                      Record Payment
-                    </Button>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-zinc-900/30 rounded-xl border border-zinc-800 dashed border-2">
+              <div className="inline-flex items-center justify-center p-4 rounded-full bg-zinc-900 mb-4 text-zinc-600">
+                <FileText className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-medium text-zinc-300">No invoices found</h3>
+              <p className="text-zinc-500 mt-1 max-w-sm mx-auto">Try adjusting your filters or create a new invoice to get started.</p>
+              <Button className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setShowCreateForm(true)}>
+                Create Invoice
+              </Button>
+            </div>
+          )}
         </div>
+
       </main>
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
@@ -581,12 +465,12 @@ const Invoicing = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone.
+              This action cannot be undone. Always verify before deleting financial records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="button-group-responsive">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && handleDeleteInvoice(deleteId)}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={() => deleteId && handleDeleteInvoice(deleteId)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -600,82 +484,70 @@ const Invoicing = () => {
         onConfirm={updatePayment}
       />
 
-      {/* Invoice Detail Dialog */}
-      {selectedInvoice && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedInvoice(null)}>
-          <Card className="max-w-2xl w-full max-h-[90vh] overflow-auto bg-background" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 space-y-4">
-              <div className="flex justify-between items-start">
+      {/* Detail Modal */}
+      {selectedInvoice && !paymentDialogOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedInvoice(null)}>
+          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">Invoice #{selectedInvoice.invoiceNumber}</h2>
-                  <p className="text-muted-foreground">Prime Detail Solutions</p>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    Invoice #{selectedInvoice.invoiceNumber}
+                    {(selectedInvoice.paymentStatus === 'paid') && <CheckCircle className="h-5 w-5 text-emerald-500" />}
+                  </h2>
+                  <p className="text-zinc-400">Prime Detail Solutions</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)}>✕</Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
               </div>
 
-              <div className="border-t border-border pt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-8 py-6 border-t border-b border-zinc-800">
                 <div>
-                  <Label className="text-sm font-semibold">Customer</Label>
-                  <p className="text-foreground">{selectedInvoice.customerName}</p>
+                  <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Bill To</Label>
+                  <div className="mt-1 font-medium text-zinc-200 text-lg">{selectedInvoice.customerName}</div>
+                  <div className="text-sm text-zinc-400">{selectedInvoice.vehicle}</div>
                 </div>
-                <div>
-                  <Label className="text-sm font-semibold">Vehicle</Label>
-                  <p className="text-foreground">{selectedInvoice.vehicle}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Date</Label>
-                  <p className="text-foreground">{selectedInvoice.date}</p>
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4">
-                <Label className="text-sm font-semibold mb-2 block">Services</Label>
-                <div className="space-y-2">
-                  {(selectedInvoice.services || []).map((s, i) => (
-                    <div key={i} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                      <span>{s.name}</span>
-                      <span className="font-semibold">${s.price.toFixed(2)}</span>
-                    </div>
-                  ))}
+                <div className="text-right">
+                  <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Details</Label>
+                  <div className="mt-1 text-zinc-300">Date: {selectedInvoice.date}</div>
+                  <div className={`mt-1 font-bold ${(selectedInvoice.paymentStatus || 'unpaid') === 'paid' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {(selectedInvoice.paymentStatus || 'unpaid').toUpperCase()}
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t border-border pt-4">
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total:</span>
-                  <span className="text-primary">${selectedInvoice.total.toFixed(2)}</span>
+              <div className="py-6 space-y-3">
+                <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold mb-4 block">Services Provided</Label>
+                {selectedInvoice.services.map((s, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-300">{s.name}</span>
+                    <span className="font-mono text-zinc-200">${s.price.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
+                  <span className="text-lg font-bold text-white">Total</span>
+                  <span className="text-2xl font-bold text-emerald-400">${selectedInvoice.total.toFixed(2)}</span>
                 </div>
-                <div className="mt-2">
-                  <p className={`text-sm font-medium ${(selectedInvoice.paymentStatus || "unpaid") === "paid" ? "text-success" :
-                    (selectedInvoice.paymentStatus || "unpaid") === "partially-paid" ? "text-yellow-500" :
-                      "text-destructive"
-                    }`}>
-                    Status: {(selectedInvoice.paymentStatus || "unpaid").replace("-", " ").toUpperCase()}
-                  </p>
-                  {selectedInvoice.paidAmount && selectedInvoice.paidAmount > 0 && (
-                    <p className="text-sm text-muted-foreground">Paid: ${selectedInvoice.paidAmount.toFixed(2)}</p>
-                  )}
-                </div>
+                {(selectedInvoice.paidAmount || 0) > 0 && (
+                  <div className="flex justify-between items-center text-sm text-zinc-400">
+                    <span>Amount Paid</span>
+                    <span>-${selectedInvoice.paidAmount?.toFixed(2)}</span>
+                  </div>
+                )}
+                {(selectedInvoice.paidAmount || 0) > 0 && (selectedInvoice.total - (selectedInvoice.paidAmount || 0) > 0) && (
+                  <div className="flex justify-between items-center text-lg font-bold text-red-400 border-t border-zinc-800/50 pt-2">
+                    <span>Balance Due</span>
+                    <span>${(selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="border-t border-border pt-4 flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => generatePDF(selectedInvoice, false)}>
-                  <Printer className="h-4 w-4 mr-2" />Print
+              <div className="flex gap-2 justify-end pt-4 border-t border-zinc-800">
+                <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedInvoice, false)}>
+                  <Printer className="h-4 w-4 mr-2" /> Print
                 </Button>
-                <Button variant="outline" onClick={() => generatePDF(selectedInvoice, true)}>
-                  <Save className="h-4 w-4 mr-2" />Save PDF
-                </Button>
-                {viewMode === 'invoices' && (selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && (
-                  <Button
-                    onClick={() => {
-                      const remaining = selectedInvoice.total - (selectedInvoice.paidAmount || 0);
-                      setPaymentAmount(remaining > 0 ? String(remaining.toFixed(2)) : "");
-                      setPaymentDialogOpen(true);
-                    }}
-                    className="bg-gradient-hero"
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Record Payment
+                {(selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && (
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setPaymentAmount((selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
+                    <CreditCard className="h-4 w-4 mr-2" /> Record Payment
                   </Button>
                 )}
               </div>
@@ -683,11 +555,6 @@ const Invoicing = () => {
           </Card>
         </div>
       )}
-      <VehicleSelectorModal
-        open={vehicleModalOpen}
-        onOpenChange={setVehicleModalOpen}
-        onSelect={handleVehicleSelect}
-      />
     </div>
   );
 };

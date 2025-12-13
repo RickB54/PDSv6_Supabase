@@ -397,7 +397,7 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
 
       {/* Handbook Sub-Modal: Handbook UI */}
       < Dialog open={handbookOpen} onOpenChange={setHandbookOpen} >
-        <DialogContent className="max-w-[110rem] w-[98vw] h-[95vh] bg-[#020617] text-white p-0 border border-blue-900 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-[110rem] w-[100vw] h-[100dvh] md:w-[98vw] md:h-[95vh] bg-[#020617] text-white p-0 border border-blue-900 md:rounded-lg shadow-2xl flex flex-col overflow-hidden">
           <DialogHeader className="bg-[#172554] p-4 border-b border-blue-800 shrink-0 flex flex-row items-center justify-between">
             <DialogTitle className="text-white">Auto Detailing Handbook</DialogTitle>
             <Popover>

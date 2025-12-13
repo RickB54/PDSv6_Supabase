@@ -66,9 +66,82 @@ export async function upsertCustomer<T extends Partial<GenericWithId>>(cust: T):
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
+  // 1. Get customer details for name matching
   const list = await getArray<any>(KEYS.customers);
+  const customerToDelete = list.find((c: any) => c.id === id);
+  const customerName = customerToDelete ? customerToDelete.name : null;
+
+  // 2. Remove from Customers
   const next = list.filter((c: any) => c.id !== id);
   await setArray(KEYS.customers, next);
+
+  // 3. Cascade: Invoices
+  try {
+    const invoices = await getArray<any>(KEYS.invoices);
+    const nextInvoices = invoices.filter((i: any) => i.customerId !== id && i.customerName !== customerName);
+    if (invoices.length !== nextInvoices.length) await setArray(KEYS.invoices, nextInvoices);
+  } catch (e) { console.error("Cascade delete invoices failed", e); }
+
+  // 4. Cascade: Estimates
+  try {
+    const estimates = await getArray<any>(KEYS.estimates);
+    const nextEstimates = estimates.filter((e: any) => e.customer_id !== id && e.customerName !== customerName);
+    if (estimates.length !== nextEstimates.length) await setArray(KEYS.estimates, nextEstimates);
+  } catch (e) { console.error("Cascade delete estimates failed", e); }
+
+  // 5. Cascade: Checklists (localforage 'generic-checklists')
+  try {
+    const checklists = (await localforage.getItem<any[]>("generic-checklists")) || [];
+    const nextChecklists = checklists.filter((c: any) => c.customerId !== id && c.customerName !== customerName);
+    if (checklists.length !== nextChecklists.length) await localforage.setItem("generic-checklists", nextChecklists);
+  } catch (e) { console.error("Cascade delete checklists failed", e); }
+
+  // 6. Cascade: Tasks (localforage 'tasks') & Reminders
+  try {
+    const tasks = (await localforage.getItem<any[]>("tasks")) || [];
+    const nextTasks = tasks.filter((t: any) => {
+      // Direct ID match
+      if (t.customerId === id) return false;
+      // Name match in title/desc for loose links (common in simple tasks)
+      if (customerName) {
+        const title = (t.title || '').toLowerCase();
+        const desc = (t.description || '').toLowerCase();
+        const nameLower = customerName.toLowerCase();
+        if (title.includes(nameLower) || desc.includes(`with ${nameLower}`) || desc.includes(`call ${nameLower}`)) return false;
+      }
+      return true;
+    });
+    if (tasks.length !== nextTasks.length) await localforage.setItem("tasks", nextTasks);
+  } catch (e) { console.error("Cascade delete tasks failed", e); }
+
+  // 7. Cascade: Bookings (localStorage 'bookings')
+  try {
+    const rawBookings = localStorage.getItem("bookings");
+    if (rawBookings) {
+      const bookings = JSON.parse(rawBookings);
+      const nextBookings = bookings.filter((b: any) => {
+        if (customerName && (b.customer || '').toLowerCase() === customerName.toLowerCase()) return false;
+        if (b.customerId === id) return false;
+        return true;
+      });
+      if (bookings.length !== nextBookings.length) {
+        localStorage.setItem("bookings", JSON.stringify(nextBookings));
+        // Dispatch specific event for UI awareness if needed
+        window.dispatchEvent(new Event("bookings-updated"));
+      }
+    }
+  } catch (e) { console.error("Cascade delete bookings failed", e); }
+
+  // 8. Cascade: Expenses (if linked by description/name, tricky but worth trying for cleanup)
+  try {
+    const expenses = await getArray<any>(KEYS.expenses);
+    const nextExpenses = expenses.filter((e: any) => {
+      // Usually no direct link, but check description
+      if (customerName && (e.description || '').toLowerCase().includes(customerName.toLowerCase())) return false;
+      return true;
+    });
+    if (expenses.length !== nextExpenses.length) await setArray(KEYS.expenses, nextExpenses);
+  } catch (e) { console.error("Cascade delete expenses failed", e); }
 }
 export async function purgeTestCustomers(): Promise<void> {
   const list = await getArray<any>(KEYS.customers);

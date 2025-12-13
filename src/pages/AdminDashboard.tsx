@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle } from "lucide-react";
+import { AlertTriangle, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -84,7 +84,7 @@ const MENU_REGISTRY: { key: string; label: string }[] = [
   { key: 'training-manual', label: 'Quick Detailing Manual' },
   { key: 'company-employees', label: 'Company Employees' },
   { key: 'jobs-completed-admin', label: 'Jobs Completed by Admin' },
-  { key: 'book-new-job', label: 'Book A New Job' },
+  { key: 'book-new-job', label: 'Book Now via website' },
 ];
 
 function getHiddenMenuItems(): string[] {
@@ -612,7 +612,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <PageHeader title="Admin Dashboard" />
-      <div className="p-4 space-y-6 max-w-screen-xl mx-auto overflow-x-hidden">
+      <div className="p-2 sm:p-4 space-y-6 max-w-screen-xl mx-auto overflow-x-hidden">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
           <Button
@@ -628,12 +628,12 @@ export default function AdminDashboard() {
         {/* Removed top-right Website Administration button; now a dashboard box below */}
         {/* Real-time Alerts banner with deep purple background */}
         <Card className="p-4 border-purple-500/60 border bg-purple-900">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-white" />
               <h2 className="font-bold text-white">Real-time Alerts</h2>
             </div>
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center justify-between w-full sm:w-auto gap-3 text-sm">
               <span className="text-white">Unread: {unreadCount}</span>
               <Button size="sm" className="bg-black text-red-700 border-red-700 hover:bg-red-800/20" onClick={dismissAll}>Dismiss All</Button>
             </div>
@@ -737,9 +737,10 @@ export default function AdminDashboard() {
                   <RedBox accent="orange" title="Jobs Completed by Admin" href="/jobs-completed?employee=admin" Icon={FileText} badgeCount={adminJobsCount} />
                 )}
                 {!isMenuHidden('book-new-job') && (
-                  <RedBox accent="orange" title="Book A New Job" href="/book-now" Icon={ClipboardCheck} />
+                  <RedBox accent="orange" title="Book Now via website" href="/book-now" Icon={ClipboardCheck} />
                 )}
                 <RedBox accent="orange" title="Bookings" href="/bookings?add=true" Icon={CalendarDays} />
+                <RedBox accent="orange" title="Analytics" href="/bookings?view=analytics" Icon={FileBarChart} />
                 <button
                   onClick={() => setSubContractorsOpen(true)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit"
@@ -759,10 +760,6 @@ export default function AdminDashboard() {
             </div>
             <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
               <div className="flex flex-row flex-wrap gap-2">
-                <Link to="/manage-sub-contractors" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10">
-                  <Users className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Manage Sub-Contractors</span>
-                </Link>
                 <Link to="/detailing-vendors" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10">
                   <Package className="w-3.5 h-3.5 text-green-600" />
                   <span>Detailing Vendors</span>
@@ -876,10 +873,10 @@ export default function AdminDashboard() {
                 {!isMenuHidden('service-checklist') && (
                   <RedBox accent="zinc" title="Todo" href="/tasks" Icon={CheckSquare} badgeCount={badgeByType('todo_overdue')} />
                 )}
-                <button className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
+                <Link to="/team-chat" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
                   <Users className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Team Communications</span>
-                </button>
+                  <span>Team Chat</span>
+                </Link>
               </div>
             </Card>
           </Card>

@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { getCustomers as getLocalCustomers } from "@/lib/db";
+import { getSupabaseCustomers } from "@/lib/supa-data";
 
 export interface UnifiedCustomer {
   id?: string;
@@ -56,6 +57,28 @@ export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
 
   const localCustomers = await getLocalCustomers<UnifiedCustomer & { id: string }>();
 
+  // Fetch Supabase
+  let supaCustomers: UnifiedCustomer[] = [];
+  try {
+    const rawSupa = await getSupabaseCustomers();
+    supaCustomers = rawSupa.map((SC: any) => ({
+      id: SC.id,
+      name: SC.name,
+      email: SC.email,
+      phone: SC.phone,
+      address: SC.address,
+      // Map flattened vehicle_info to top-level
+      vehicle: SC.vehicle_info?.make || '',
+      model: SC.vehicle_info?.model || '',
+      year: String(SC.vehicle_info?.year || ''),
+      vehicleType: SC.vehicle_info?.type || '',
+      notes: SC.notes,
+      type: SC.type,
+      createdAt: SC.created_at,
+      updatedAt: SC.created_at
+    }));
+  } catch (err) { }
+
   // Pull names from bookings (created via website) and merge as minimal customers
   let bookingCustomers: UnifiedCustomer[] = [];
   try {
@@ -67,7 +90,7 @@ export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
     bookingCustomers = [];
   }
 
-  const merged = dedupeByKey([...apiCustomers, ...localCustomers, ...bookingCustomers]);
+  const merged = dedupeByKey([...apiCustomers, ...localCustomers, ...supaCustomers, ...bookingCustomers]);
   // Sort by recency when available, fallback to name
   merged.sort((a, b) => {
     const at = a.updatedAt || a.createdAt;

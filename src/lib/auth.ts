@@ -87,7 +87,7 @@ function timeoutPromise<T>(promise: PromiseLike<T>, ms: number, label: string): 
 
 async function getSupabaseUserProfile(userId: string): Promise<{ role: 'admin' | 'employee' | 'customer'; name?: string } | null> {
   try {
-    console.log("getSupabaseUserProfile: request", userId);
+    // console.log("getSupabaseUserProfile: request", userId);
     // Timeout the DB read to prevent hang
     // We cast to any because the Supabase builder is a "Thenable", not a strict Promise in all TS versions
     const res: any = await timeoutPromise(
@@ -100,7 +100,7 @@ async function getSupabaseUserProfile(userId: string): Promise<{ role: 'admin' |
       console.error("getSupabaseUserProfile error:", res.error);
       return null;
     }
-    console.log("getSupabaseUserProfile response:", res.data);
+    // console.log("getSupabaseUserProfile response:", res.data);
     return (res.data as any) || null;
   } catch (e) {
     console.warn("getSupabaseUserProfile exc:", e);
@@ -128,9 +128,9 @@ async function getSupabaseCustomerProfile(userId: string): Promise<any | null> {
 // Now accepts the Supabase user object directly to avoid blocking getUser() calls
 export async function finalizeSupabaseSession(u: any): Promise<User | null> {
   try {
-    console.log("finalizeSupabaseSession: starting for user", u?.id);
+    // console.log("finalizeSupabaseSession: starting for user", u?.id);
     if (!u) {
-      console.log("finalizeSupabaseSession: no user provided");
+      // console.log("finalizeSupabaseSession: no user provided");
       return null;
     }
 
@@ -159,7 +159,7 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
 
     // Logic Fix: If an override exists and differs from the DB profile, use the override
     if (overrideRole && profile && profile.role !== overrideRole) {
-      console.log(`finalizeSupabaseSession: applying role override from ${profile.role} to ${overrideRole}`);
+      // console.log(`finalizeSupabaseSession: applying role override from ${profile.role} to ${overrideRole}`);
       role = overrideRole;
     } else if (overrideRole && !profile) {
       role = overrideRole;
@@ -181,7 +181,7 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     const shouldUpsert = !!overrideRole || !!profile || role !== 'customer';
 
     if (shouldUpsert) {
-      console.log("finalizeSupabaseSession: attempting upsert...", { id: u.id, role });
+      // console.log("finalizeSupabaseSession: attempting upsert...", { id: u.id, role });
       try {
         const { error } = await timeoutPromise(
           supabase.from('app_users').upsert({
@@ -220,7 +220,7 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     // Non-blocking background fetch
     getSupabaseCustomerProfile(u.id).catch(() => { });
 
-    console.log("finalizeSupabaseSession: success", mapped);
+    // console.log("finalizeSupabaseSession: success", mapped);
     return mapped;
   } catch (e) {
     console.error('Session Init Error', e);
@@ -233,7 +233,7 @@ export function initSupabaseAuth(): void {
   if (!isSupabaseEnabled()) return;
   try {
     supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Supabase Auth Change:", event);
+      // console.log("Supabase Auth Change:", event);
       if (session?.user) {
         // We only actively finalize if we don't have a user or if the event implies a change
         // But to be safe and responsive, we attempt finalize.
@@ -251,7 +251,7 @@ export function initSupabaseAuth(): void {
 }
 
 export async function loginSupabase(email: string, password: string): Promise<User | null> {
-  console.log("loginSupabase: attempting login for", email);
+  // console.log("loginSupabase: attempting login for", email);
   if (!isSupabaseEnabled()) {
     console.warn("loginSupabase: Supabase not enabled");
     return null;
@@ -263,7 +263,7 @@ export async function loginSupabase(email: string, password: string): Promise<Us
       console.error("loginSupabase error:", error);
       throw error;
     }
-    console.log("loginSupabase: auth successful, finalizing...");
+    // console.log("loginSupabase: auth successful, finalizing...");
     // Pass the user we just got - DO NOT fetch it again
     return await finalizeSupabaseSession(data.user);
   } catch (err) {
@@ -273,7 +273,7 @@ export async function loginSupabase(email: string, password: string): Promise<Us
 }
 
 export async function signupSupabase(email: string, password: string, name?: string): Promise<User | null> {
-  console.log("signupSupabase: attempting signup for", email);
+  // console.log("signupSupabase: attempting signup for", email);
   if (!isSupabaseEnabled()) return null;
 
   try {
@@ -290,7 +290,7 @@ export async function signupSupabase(email: string, password: string, name?: str
 
     if (data.user) {
       if (!data.session) {
-        console.log("signupSupabase: confirm email required");
+        // console.log("signupSupabase: confirm email required");
         return { email, name: name || email.split('@')[0], role: 'customer' };
       }
       return await finalizeSupabaseSession(data.user);

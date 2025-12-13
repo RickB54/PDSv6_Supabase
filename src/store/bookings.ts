@@ -19,6 +19,9 @@ export interface Booking {
   price?: number;
   addons?: string[];
   bookedBy?: string; // Newly added field
+  hasReminder?: boolean;
+  reminderFrequency?: number; // months: 1, 3, 4, 6
+  isArchived?: boolean; // New field for archiving functionality
 }
 
 const STORAGE_KEY = "bookings";

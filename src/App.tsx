@@ -58,8 +58,8 @@ import Tasks from "./pages/Tasks";
 import VehicleClassification from "./pages/VehicleClassification";
 import ClientEvaluation from "./pages/ClientEvaluation";
 import AddonUpsellScript from "./pages/AddonUpsellScript";
+import TeamChat from "./pages/TeamChat";
 import PackageExplanationGuide from "./pages/PackageExplanationGuide";
-import ManageSubContractors from "./pages/ManageSubContractors";
 import DetailingVendors from "./pages/DetailingVendors";
 import PackageSelection from "./pages/PackageSelection";
 import Prospects from "./pages/Prospects";
@@ -145,6 +145,7 @@ const App = () => {
               <div className="flex-1">
                 <ErrorBoundary>
                   <Routes>
+                    <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
                     {/* Login route removed */}
                     {/* QuickLogin removed: Supabase-only authentication */}
                     {/* Public homepage routes */}
@@ -159,6 +160,8 @@ const App = () => {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/faq" element={<FAQ />} />
                     <Route path="/thank-you" element={<ThankYou />} />
+                    <Route path="/payment-success" element={<ThankYou />} />
+                    <Route path="/payment-canceled" element={<Checkout />} />
                     <Route path="/book" element={<BookNow />} />
                     <Route path="/book-now" element={<BookNow />} />
                     {/* Public services page */}
@@ -390,11 +393,6 @@ const App = () => {
                         <PackageExplanationGuide />
                       </ProtectedRoute>
                     } />
-                    <Route path="/manage-sub-contractors" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <ManageSubContractors />
-                      </ProtectedRoute>
-                    } />
                     <Route path="/detailing-vendors" element={
                       <ProtectedRoute allowedRoles={['admin']}>
                         <DetailingVendors />
@@ -414,7 +412,7 @@ const App = () => {
           </SidebarProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </QueryClientProvider>
+    </QueryClientProvider >
   );
 };
 

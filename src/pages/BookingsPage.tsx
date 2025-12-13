@@ -1,33 +1,24 @@
-import React, { useState, useMemo, useEffect } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  addMonths,
-  subMonths,
-  parseISO,
-  isToday,
-  addHours
-} from "date-fns";
+import { SidebarTrigger } from "@/components/ui/sidebar"; // NEW IMPORT
+import { BookingsAnalytics } from "@/components/bookings/BookingsAnalytics"; // NEW IMPORT
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isToday, addHours, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter } from "lucide-react"; // Added Wrench and BarChart3
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { useBookingsStore, type Booking } from "@/store/bookings";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
+import { getSupabaseEmployees } from "@/lib/supa-data";
 import { servicePackages, addOns } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
@@ -39,15 +30,17 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 
 // --- Types ---
-type ViewMode = "day" | "week" | "month" | "year";
+type ViewMode = "day" | "week" | "month" | "year" | "analytics"; // Added analytics
 
 // --- Components ---
 
 export default function BookingsPage() {
+  const navigate = useNavigate(); // Hook for navigation
   const { items, add, update, remove, refresh } = useBookingsStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [analyticsDefaultTab, setAnalyticsDefaultTab] = useState<string | undefined>(undefined); // New state for auto-opening accordion
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
@@ -65,10 +58,31 @@ export default function BookingsPage() {
     address: "",
     time: "09:00",
     assignedEmployee: "",
-    bookedBy: "", // NEW FIELD
+    bookedBy: "",
     notes: "",
-    addons: [] as string[]
+    addons: [] as string[],
+    hasReminder: false,
+    reminderFrequency: "3"
   });
+
+  const handleStartJob = () => {
+    const params = new URLSearchParams();
+    if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
+    else if (formData.customer) params.set('customerName', formData.customer); // Fallback
+
+    // Find service ID
+    const svc = allServices.find(s => s.name === formData.service);
+    if (svc) params.set('package', svc.id);
+
+    if (formData.vehicle) params.set('vehicleType', formData.vehicle);
+    if (formData.addons.length > 0) {
+      // Map names to IDs
+      const aids = formData.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+      params.set('addons', aids.join(','));
+    }
+
+    navigate(`/service-checklist?${params.toString()}`);
+  };
 
   const handleVehicleSelect = (data: { make: string; model: string; category: string }) => {
     let mappedType = "";
@@ -93,10 +107,18 @@ export default function BookingsPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
+
+  const handleArchiveToggle = (booking: Booking) => {
+    update(booking.id, { isArchived: !booking.isArchived });
+    toast({ title: booking.isArchived ? "Booking restored" : "Booking archived" });
+  };
 
   // Fetch employees
   useEffect(() => {
@@ -115,7 +137,7 @@ export default function BookingsPage() {
       try {
         // Get customers from localforage which has complete mock data
         const custs = (await localforage.getItem<any[]>('customers')) || [];
-        console.log('Loaded customers:', custs); // Debug log
+        // console.log('Loaded customers:', custs); // Debug log
         setCustomers(custs);
       } catch (err) {
         console.error('Failed to fetch customers:', err);
@@ -157,6 +179,16 @@ export default function BookingsPage() {
       window.history.replaceState({}, '', location.pathname);
     }
   }, [location.search]);
+
+  // Sync view mode with URL param 'view'
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const viewParam = params.get('view');
+    if (viewParam === 'analytics') {
+      setViewMode('analytics');
+    }
+  }, [location.search]);
+
 
   // Refresh data on mount and focus
   useEffect(() => {
@@ -217,9 +249,18 @@ export default function BookingsPage() {
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "", // Load bookedBy
       notes: booking.notes || "",
-      addons: booking.addons || []
+      addons: booking.addons || [],
+      hasReminder: booking.hasReminder || false,
+      reminderFrequency: booking.reminderFrequency?.toString() || "3"
     });
     setIsAddModalOpen(true);
+    setIsAddModalOpen(true);
+  };
+
+  const handleBellClick = (e: React.MouseEvent, booking: Booking) => {
+    e.stopPropagation();
+    setViewMode("analytics");
+    setAnalyticsDefaultTab("reminders");
   };
 
   const handleSave = async () => {
@@ -263,7 +304,9 @@ export default function BookingsPage() {
         assignedEmployee: formData.assignedEmployee,
         bookedBy: formData.bookedBy, // Save bookedBy
         notes: formData.notes,
-        addons: formData.addons
+        addons: formData.addons,
+        hasReminder: formData.hasReminder,
+        reminderFrequency: parseInt(formData.reminderFrequency) || 0
       });
       toast.success("Booking updated");
     } else {
@@ -283,6 +326,8 @@ export default function BookingsPage() {
         bookedBy: formData.bookedBy, // Save bookedBy
         notes: formData.notes,
         addons: formData.addons,
+        hasReminder: formData.hasReminder,
+        reminderFrequency: parseInt(formData.reminderFrequency) || 0,
         createdAt: new Date().toISOString()
       });
       toast.success("Booking created");
@@ -293,7 +338,8 @@ export default function BookingsPage() {
     setIsAddModalOpen(false);
     setSelectedBooking(null);
     setSelectedCustomer(null);
-    setFormData({ customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [] });
+    setSelectedCustomer(null);
+    setFormData({ customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3" });
   };
 
   const handleDelete = () => {
@@ -390,103 +436,129 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 space-y-6">
+    <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 space-y-6 w-full max-w-[100vw] overflow-x-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Booking Calendar</h1>
-          <p className="text-muted-foreground">Manage appointments and schedule services</p>
+        <div className="flex items-center gap-3">
+          <div className="md:hidden">
+            <SidebarTrigger className="text-foreground" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Booking Calendar</h1>
+            <p className="text-muted-foreground">Manage appointments and schedule services</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleToday}>Today</Button>
-          <div className="flex items-center bg-secondary/50 rounded-md border border-border">
-            <Button variant="ghost" size="icon" onClick={handlePrevMonth}><ChevronLeft className="h-4 w-4" /></Button>
-            <span className="w-32 text-center font-semibold">{format(currentDate, "MMMM yyyy")}</span>
-            <Button variant="ghost" size="icon" onClick={handleNextMonth}><ChevronRight className="h-4 w-4" /></Button>
-          </div>
+          <Button variant={viewMode === 'analytics' ? 'secondary' : 'outline'} onClick={() => setViewMode(viewMode === 'analytics' ? 'month' : 'analytics')}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {viewMode === 'analytics' ? 'Calendar View' : 'Analytics'}
+          </Button>
+          {viewMode !== 'analytics' && (
+            <>
+              <Button variant="outline" onClick={handleToday}>Today</Button>
+              <div className="flex items-center bg-secondary/50 rounded-md border border-border">
+                <Button variant="ghost" size="icon" onClick={handlePrevMonth}><ChevronLeft className="h-4 w-4" /></Button>
+                <span className="w-32 text-center font-semibold">{format(currentDate, "MMMM yyyy")}</span>
+                <Button variant="ghost" size="icon" onClick={handleNextMonth}><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+            </>
+          )}
           <Button className="bg-primary hover:bg-primary/90" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" /> New Booking
           </Button>
         </div>
       </div>
 
-      <Card className="p-1 bg-zinc-950/50 border-zinc-800 shadow-2xl overflow-hidden rounded-xl">
-        {/* Calendar Header */}
-        <div className="grid grid-cols-7 mb-1 text-center py-2 bg-zinc-900/50 rounded-t-lg border-b border-zinc-800">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{day}</div>
-          ))}
-        </div>
+      {viewMode === 'analytics' ? (
+        <BookingsAnalytics bookings={items} customers={customers} defaultOpenAccordion={analyticsDefaultTab} />
+      ) : (
+        <Card className="p-1 bg-zinc-950/50 border-zinc-800 shadow-2xl overflow-hidden rounded-xl">
+          {/* Calendar Header */}
+          <div className="grid grid-cols-7 mb-1 text-center py-2 bg-zinc-900/50 rounded-t-lg border-b border-zinc-800">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{day}</div>
+            ))}
+          </div>
 
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 auto-rows-fr gap-px bg-zinc-800">
-          {calendarDays.map((day, dayIdx) => {
-            const bookings = getBookingsForDay(day);
-            const isSelectedMonth = isSameMonth(day, currentDate);
-            const isTodayDate = isToday(day);
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 auto-rows-fr gap-px bg-zinc-800">
+            {calendarDays.map((day, dayIdx) => {
+              const bookings = getBookingsForDay(day);
+              const isSelectedMonth = isSameMonth(day, currentDate);
+              const isTodayDate = isToday(day);
 
-            return (
-              <div
-                key={day.toString()}
-                onClick={() => handleDayClick(day)}
-                className={cn(
-                  "min-h-[140px] bg-zinc-950 p-2 relative group transition-colors hover:bg-zinc-900/80 cursor-pointer flex flex-col gap-1",
-                  !isSelectedMonth && "bg-zinc-950/30 text-muted-foreground/40"
-                )}
-              >
-                <div className="flex justify-between items-start">
-                  <span className={cn(
-                    "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                    isTodayDate ? "bg-primary text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                  )}>
-                    {format(day, "d")}
-                  </span>
-                  {bookings.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground font-mono">{bookings.length}</span>
+              return (
+                <div
+                  key={day.toString()}
+                  onClick={() => handleDayClick(day)}
+                  className={cn(
+                    "min-h-[140px] bg-zinc-950 p-2 relative group transition-colors hover:bg-zinc-900/80 cursor-pointer flex flex-col gap-1",
+                    !isSelectedMonth && "bg-zinc-950/30 text-muted-foreground/40"
                   )}
-                </div>
+                >
+                  <div className="flex justify-between items-start">
+                    <span className={cn(
+                      "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                      isTodayDate ? "bg-primary text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                    )}>
+                      {format(day, "d")}
+                    </span>
+                    {bookings.length > 0 && (
+                      <span className="text-[10px] text-muted-foreground font-mono">{bookings.length}</span>
+                    )}
+                  </div>
 
-                <div className="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
-                  {bookings.map(booking => (
-                    <div
-                      key={booking.id}
-                      onClick={(e) => handleBookingClick(e, booking)}
-                      className={cn(
-                        "text-xs px-2 py-1.5 rounded border truncate transition-all hover:scale-[1.02] shadow-sm",
-                        getStatusColor(booking.status)
-                      )}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "HH:mm")}</span>
-                        <span className="font-semibold truncate">{booking.customer}</span>
+                  <div className="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
+                    {bookings.map(booking => (
+                      <div
+                        key={booking.id}
+                        onClick={(e) => handleBookingClick(e, booking)}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded border truncate transition-all hover:scale-[1.02] shadow-sm",
+                          getStatusColor(booking.status)
+                        )}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "HH:mm")}</span>
+                          <span className="font-semibold truncate">{booking.customer}</span>
+                        </div>
+                        <div className="truncate opacity-80 text-[10px]">{booking.title}</div>
+                        {booking.vehicleYear && booking.vehicleMake && (
+                          <div className="truncate opacity-70 text-[9px]">
+                            {booking.vehicleYear} {booking.vehicleMake} {booking.vehicleModel}
+                          </div>
+                        )}
+                        {booking.assignedEmployee && (
+                          <div className="truncate opacity-70 text-[9px]">
+                            👤 {booking.assignedEmployee}
+                          </div>
+                        )}
+                        {booking.hasReminder && (
+                          <div
+                            className="absolute top-0.5 right-1 cursor-pointer hover:scale-110 z-10 p-0.5"
+                            onClick={(e) => handleBellClick(e, booking)}
+                            title="View/Edit Reminder in Analytics"
+                          >
+                            <Bell className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500/20" />
+                          </div>
+                        )}
                       </div>
-                      <div className="truncate opacity-80 text-[10px]">{booking.title}</div>
-                      {booking.vehicleYear && booking.vehicleMake && (
-                        <div className="truncate opacity-70 text-[9px]">
-                          {booking.vehicleYear} {booking.vehicleMake} {booking.vehicleModel}
-                        </div>
-                      )}
-                      {booking.assignedEmployee && (
-                        <div className="truncate opacity-70 text-[9px]">
-                          👤 {booking.assignedEmployee}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Hover Add Button */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
-                  <Plus className="h-8 w-8 text-zinc-700/50" />
+                  {/* Hover Add Button */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                    <Plus className="h-8 w-8 text-zinc-700/50" />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Booking Dialog */}
       <Dialog open={isAddModalOpen} onOpenChange={(open) => { if (!open) { setSelectedBooking(null); setSelectedCustomer(null); } setIsAddModalOpen(open); }}>
-        <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-zinc-800">
+        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 p-4 sm:p-6">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
@@ -543,7 +615,7 @@ export default function BookingsPage() {
 
                     // Find and set customer data
                     const cust = customers.find(c => c.name === custName);
-                    console.log('Selected customer:', cust); // Debug log
+                    // console.log('Selected customer:', cust); // Debug log
                     if (cust) {
                       setSelectedCustomer(cust);
                       setFormData(prev => ({
@@ -556,7 +628,7 @@ export default function BookingsPage() {
                         vehicleMake: cust.vehicle || prev.vehicleMake,
                         vehicleModel: cust.model || prev.vehicleModel
                       }));
-                      console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
+                      // console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
                     }
                   }}
                 >
@@ -809,14 +881,54 @@ export default function BookingsPage() {
                 />
               </div>
             </div>
+
+            {/* Reminder Settings */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label className="text-right text-sm font-medium text-gray-400">Reminder</label>
+              <div className="col-span-3 flex items-center gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="hasReminder"
+                    className="rounded border-zinc-800 bg-zinc-900 data-[state=checked]:bg-primary"
+                    checked={formData.hasReminder}
+                    onChange={(e) => setFormData({ ...formData, hasReminder: e.target.checked })}
+                  />
+                  <label htmlFor="hasReminder" className="text-sm font-medium text-gray-300 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Enable Follow-up
+                  </label>
+                </div>
+
+                {formData.hasReminder && (
+                  <div className="flex-1">
+                    <select
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={formData.reminderFrequency}
+                      onChange={(e) => setFormData({ ...formData, reminderFrequency: e.target.value })}
+                    >
+                      <option value="1">1 Month</option>
+                      <option value="3">3 Months</option>
+                      <option value="4">4 Months</option>
+                      <option value="6">6 Months</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="flex justify-between sm:justify-between gap-2">
-            {selectedBooking ? (
-              <Button variant="destructive" onClick={handleDelete} className="bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-900">
-                Delete Booking
+            <div className="flex gap-2">
+              {selectedBooking && (
+                <Button variant="destructive" size="icon" onClick={handleDelete} className="bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-900">
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="secondary" onClick={handleStartJob} className="gap-2">
+                <Wrench className="h-4 w-4" /> Start Job
               </Button>
-            ) : <div></div>}
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
               <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">Save Booking</Button>
@@ -835,10 +947,57 @@ export default function BookingsPage() {
 
       {/* Booking History Section */}
       <Card className="mt-6 p-6 bg-zinc-950/50 border-zinc-800">
-        <h2 className="text-2xl font-bold mb-4">Booking History</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          View all customers with bookings and their complete information
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold">Booking History</h2>
+            <p className="text-sm text-muted-foreground">
+              View all customers with bookings and their complete information
+            </p>
+          </div>
+          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                <Filter className="h-4 w-4" />
+                Filter History
+                {(showArchived || dateFilter.start) && (
+                  <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
+                    !
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Show Archived</span>
+                  <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm font-medium">Date Range</span>
+                  <div className="grid gap-2">
+                    <Calendar
+                      mode="range"
+                      selected={{ from: dateFilter.start, to: dateFilter.end }}
+                      onSelect={(range) => setDateFilter({ start: range?.from, end: range?.to })}
+                      initialFocus
+                      className="rounded-md border border-zinc-800 bg-zinc-900"
+                    />
+                  </div>
+                  {(dateFilter.start || dateFilter.end) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-muted-foreground hover:text-white"
+                      onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                    >
+                      Clear Dates
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
 
         <div className="space-y-2">
           {(() => {
@@ -847,7 +1006,33 @@ export default function BookingsPage() {
               new Set(items.map(b => b.customer))
             ).map(customerName => {
               // Find all bookings for this customer
-              const customerBookings = items.filter(b => b.customer === customerName);
+              // Apply filters here
+              let customerBookings = items.filter(b => b.customer === customerName);
+
+              if (!showArchived) {
+                customerBookings = customerBookings.filter(b => !b.isArchived);
+              }
+
+              if (dateFilter.start && dateFilter.end) {
+                customerBookings = customerBookings.filter(b => {
+                  const d = parseISO(b.date);
+                  return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+                });
+              } else if (dateFilter.start) {
+                // Single day selection or partial range? Calendar range usually sets both if range
+                // If only start is set, maybe just match start?
+                // But range calendar might return undefined end while selecting
+                // Let's assume strict range only if both set, or just allow strict filtering if single day
+                // Actually standard behavior is to show nothing or just start? 
+                // Let's safe guard:
+                if (!dateFilter.end) {
+                  customerBookings = customerBookings.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
+                }
+              }
+
+              if (customerBookings.length === 0) return null;
+
+              // Get the most recent booking to extract customer details
               // Get the most recent booking to extract customer details
               const recentBooking = customerBookings.sort((a, b) =>
                 new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -868,7 +1053,7 @@ export default function BookingsPage() {
                 email: fullCustomer?.email || 'N/A',
                 bookings: customerBookings
               };
-            });
+            }).filter(Boolean) as any[];
 
             if (uniqueCustomers.length === 0) {
               return (
@@ -974,11 +1159,48 @@ export default function BookingsPage() {
                                     {booking.status}
                                   </Badge>
                                 </div>
-                                {booking.assignedEmployee && (
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    👤 {booking.assignedEmployee}
-                                  </div>
-                                )}
+                                <div className="flex justify-end mt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-6 text-xs gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const params = new URLSearchParams();
+                                      if (customer.name) params.set('customerName', customer.name);
+                                      if (booking.title) {
+                                        const svc = allServices.find(s => s.name === booking.title);
+                                        if (svc) params.set('package', svc.id);
+                                      }
+                                      if (booking.vehicle) params.set('vehicleType', booking.vehicle);
+                                      if (booking.addons && booking.addons.length) {
+                                        const aids = booking.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+                                        params.set('addons', aids.join(','));
+                                      }
+                                      navigate(`/service-checklist?${params.toString()}`);
+                                    }}
+                                  >
+                                    <Wrench className="h-3 w-3" /> Start Job
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className={cn("h-6 text-xs gap-1 ml-2", booking.isArchived ? "text-yellow-500 hover:text-yellow-400" : "text-zinc-500 hover:text-zinc-300")}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleArchiveToggle(booking);
+                                    }}
+                                  >
+                                    <Archive className="h-3 w-3" /> {booking.isArchived ? "Restore" : "Archive"}
+                                  </Button>
+                                </div>
+                                {
+                                  booking.assignedEmployee && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      👤 {booking.assignedEmployee}
+                                    </div>
+                                  )
+                                }
                               </div>
                             ))}
                           </div>
@@ -991,7 +1213,7 @@ export default function BookingsPage() {
             ));
           })()}
         </div>
-      </Card>
+      </Card >
     </div >
   );
 }

@@ -281,6 +281,12 @@ const BookNow = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const addOnDefs = liveAddOns;
+  const getAddOnPrice = (id: string, vType: string) => {
+    const a = addOnDefs.find(x => x.id === id);
+    return a?.pricing?.[vType] || 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formEl = e.currentTarget as HTMLFormElement;
@@ -299,8 +305,8 @@ const BookNow = () => {
     // Silent auto-create customer account
     try {
       const autoPassword = `PDS${Math.random().toString(36).slice(2, 10)}`;
-      console.log(`Customer account created: ${formData.email} / ${autoPassword}`);
-      console.log(`Portal link: ${window.location.origin}/portal?token=auto-${Date.now()}`);
+      // console.log(`Customer account created: ${formData.email} / ${autoPassword}`);
+      // console.log(`Portal link: ${window.location.origin}/portal?token=auto-${Date.now()}`);
     } catch { }
 
     // 1) Save booking to API and local store for instant calendar
@@ -327,6 +333,9 @@ const BookNow = () => {
           phone: formData.phone,
           email: formData.email,
           vehicle_type: vehicleType,
+          year: formData.year,
+          make: formData.make,
+          model: formData.model,
           package: bookingPayload.service || formData.package,
           add_ons: addOns,
           date: dateIso,
@@ -668,6 +677,41 @@ const BookNow = () => {
                   onClick={async () => {
                     try {
                       const dateIso = formData.datetime ? new Date(formData.datetime).toISOString() : new Date().toISOString();
+
+                      // Construct Services List for Estimate
+                      const selectedPkg = livePackages.find((p: any) => p.id === formData.package);
+                      const servicesList = [];
+                      if (selectedPkg) {
+                        servicesList.push({ name: selectedPkg.name, price: selectedPkg.pricing[vehicleType] || 0 });
+                      }
+                      addOns.forEach(id => {
+                        const addon = liveAddOns.find((a: any) => a.id === id);
+                        if (addon) {
+                          servicesList.push({ name: addon.name, price: addon.pricing[vehicleType] || 0 });
+                        }
+                      });
+
+                      // Save to Supabase
+                      await upsertSupabaseEstimate({
+                        date: new Date().toLocaleDateString(),
+                        status: 'open',
+                        total: discountedTotal,
+                        services: servicesList,
+                        notes: formData.message,
+                        customer: {
+                          name: formData.name,
+                          email: formData.email,
+                          phone: formData.phone,
+                          type: 'prospect'
+                        },
+                        vehicle: {
+                          year: formData.year,
+                          make: formData.make,
+                          model: formData.model,
+                          type: vehicleType
+                        }
+                      });
+
                       const estimatePayload = {
                         kind: 'estimate-request',
                         customer: { name: formData.name, email: formData.email, phone: formData.phone },

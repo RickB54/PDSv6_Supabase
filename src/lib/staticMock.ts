@@ -81,9 +81,27 @@ async function addStaticInventory(): Promise<MockInventoryItem[]> {
   return inv;
 }
 
+import jsPDF from "jspdf";
+
 function archiveJobPDFPlaceholder(customerName: string, checklistId: string) {
-  const dummy = 'data:application/pdf;base64,' + btoa('Static Mock Job PDF');
-  try { savePDFToArchive('Job', customerName, checklistId, dummy, { fileName: `Job_Completion_${customerName}_${new Date().toISOString().split('T')[0]}.pdf` }); } catch { }
+  try {
+    const doc = new jsPDF();
+    doc.setFontSize(22);
+    doc.text("MOCK JOB COMPLETION REPORT", 20, 30);
+
+    doc.setFontSize(14);
+    doc.text(`Customer: ${customerName}`, 20, 50);
+    doc.text(`Job ID: ${checklistId}`, 20, 60);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 70);
+
+    doc.setFontSize(11);
+    doc.text("This is a generated placeholder for testing purposes.", 20, 90);
+
+    const dataUrl = doc.output('dataurlstring');
+    savePDFToArchive('Job', customerName, checklistId, dataUrl, { fileName: `Job_Completion_${customerName}_${new Date().toISOString().split('T')[0]}.pdf` });
+  } catch (err) {
+    console.error("Failed to generate mock PDF", err);
+  }
 }
 
 export async function insertStaticMockData(reporter?: (msg: string) => void) {
@@ -439,6 +457,86 @@ export async function insertStaticMockBasic(
   tracker.invoices = invoices;
   report(`Created ${invoices.length} invoices`);
 
+  // Create mock estimates
+  report('Creating mock estimates…');
+  const estimates = [];
+  const estPkgs = servicePackages.slice(0, 3);
+  for (let i = 0; i < 5; i++) {
+    const customer = tracker.customers[i % tracker.customers.length];
+    const pkg = estPkgs[i % estPkgs.length];
+    const total = getServicePrice(pkg.id as any, customer.vehicleType as any) || 150;
+
+    const est = {
+      id: genId('est'), // Local ID
+      estimateNumber: 500 + i,
+      customerId: customer.id,
+      customerName: customer.name,
+      vehicle: `${customer.year} ${customer.vehicle} ${customer.model}`,
+      vehicleId: 'mock_v_' + i,
+      services: [{ name: pkg.name, price: total }],
+      total,
+      date: new Date().toISOString(),
+      status: ['open', 'accepted', 'declined'][i % 3],
+      created_at: new Date().toISOString(),
+      notes: 'Mock estimate for testing',
+      isStaticMock: true
+    };
+    estimates.push(est);
+  }
+  const currentEstimates = (await localforage.getItem<any[]>('estimates')) || [];
+  await localforage.setItem('estimates', [...currentEstimates, ...estimates]);
+  report(`Created ${estimates.length} estimates`);
+
+
+  // Create mock jobs (checklists)
+  report('Creating mock completed jobs…');
+  const checklists = (await localforage.getItem<any[]>('generic-checklists')) || [];
+  const jobs = [];
+
+  for (let i = 0; i < 3; i++) {
+    const customer = tracker.customers[i % tracker.customers.length];
+    const employee = tracker.employees[i % tracker.employees.length];
+    const pkg = servicePackages[0]; // Standard package
+
+    const tasks = (pkg.steps || []).map((s: any) => ({
+      id: s.id || s,
+      name: s.name || s,
+      category: s.category || 'exterior',
+      checked: true
+    }));
+
+    const jobId = genId('gc');
+    const jobDate = new Date();
+    jobDate.setDate(jobDate.getDate() - (i * 2)); // Spread out over last week
+
+    const job = {
+      id: jobId,
+      packageId: pkg.id,
+      vehicleType: customer.vehicleType,
+      vehicleTypeNote: customer.vehicle,
+      addons: [],
+      tasks,
+      progress: 100,
+      employeeId: employee.name,
+      estimatedTime: '120 mins',
+      customerId: customer.id,
+      customerName: customer.name, // Ensure flattening for easy display if needed
+      createdAt: jobDate.toISOString(),
+      linkedAt: jobDate.toISOString(),
+      status: 'completed',
+      isStaticMock: true
+    };
+    jobs.push(job);
+
+    // Generate PDF placeholder for this job
+    archiveJobPDFPlaceholder(customer.name, jobId);
+  }
+
+  await localforage.setItem('generic-checklists', [...checklists, ...jobs]);
+  tracker.jobs = jobs.map(j => j.id);
+  report(`Created ${jobs.length} completed jobs`);
+
+
   // Dispatch events
   try {
     window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
@@ -447,6 +545,7 @@ export async function insertStaticMockBasic(
     window.dispatchEvent(new CustomEvent('inventory-changed'));
     window.dispatchEvent(new CustomEvent('accounting-changed'));
     window.dispatchEvent(new CustomEvent('payroll-changed'));
+    window.dispatchEvent(new CustomEvent('estimate-updated')); // Trigger estimate refresh
   } catch { }
 
   // Track categories for report
@@ -455,7 +554,7 @@ export async function insertStaticMockBasic(
     expense: expenseCategories
   };
 
-  report('Static mock data insertion complete with accounting, payroll, invoices, and categories!');
+  report('Static mock data insertion complete with accounting, payroll, invoices, estimates, jobs, and categories!');
   return tracker;
 }
 
@@ -551,34 +650,33 @@ export async function removeStaticMockBasic(reporter?: (msg: string) => void) {
   report('Cleaning Jobs/Checklists...');
   const checklists = (await localforage.getItem<any[]>('generic-checklists')) || [];
   const nextChecklists = checklists.filter(c => {
+    if (c.isStaticMock) return false; // Explicit tag check
     if (String(c.id || '').startsWith('static_') || String(c.id || '').startsWith('gc_')) {
-      // Double check against mock customer if ID pattern is generic
-      // Assuming static mocks used 'gc_' prefix heavily in tracker
       if (isMockName(c.customerName)) return false;
     }
     return true;
   });
   await localforage.setItem('generic-checklists', nextChecklists);
 
-  // 10. Custom Categories (LocalStorage/LocalForage)
-  report('Cleaning Custom Categories...');
-  // Note: We only remove categories if they match our specific mock list exactly and are unused? 
-  // Safest is to leave them unless we track them, but user asked to remove "Accounting and budget items".
-  // Let's remove them from the custom lists if present.
-  const customCats = (await localforage.getItem<string[]>('customCategories')) || [];
-  // const nextCustomCats = customCats.filter(c => !mockIncomeCategories.includes(c) && !mockExpenseCategories.includes(c)); 
-  // Actually, let's keep them in case user used them for real things, unless we are sure.
-  // The prompt implies "Mock Data" items in the list. The transactions are the items. 
-  // We will leave the category names themselves to avoid breaking filters if user adopted them.
+  // 10. Estimates
+  report('Cleaning Estimates...');
+  const estimates = (await localforage.getItem<any[]>('estimates')) || [];
+  const nextEstimates = estimates.filter(e => !e.isStaticMock && !isMockName(e.customerName || ''));
+  await localforage.setItem('estimates', nextEstimates);
 
-  // 11. Clear Alerts & Badges
+  // 11. Custom Categories (LocalStorage/LocalForage)
+  report('Cleaning Custom Categories...');
+  const customCats = (await localforage.getItem<string[]>('customCategories')) || [];
+  // Use caution
+
+  // 12. Clear Alerts & Badges
   report('Clearing Alerts...');
   try {
     const { clearAllAlerts } = await import('@/lib/adminAlerts');
     clearAllAlerts();
   } catch { }
 
-  // 12. Reset helpers
+  // 13. Reset helpers
   try { localStorage.setItem('inventory_low_count', '0'); } catch { }
   try { localStorage.setItem('payroll_owed_adjustments', '{}'); } catch { }
 
@@ -590,6 +688,7 @@ export async function removeStaticMockBasic(reporter?: (msg: string) => void) {
     window.dispatchEvent(new CustomEvent('inventory-changed'));
     window.dispatchEvent(new CustomEvent('accounting-changed'));
     window.dispatchEvent(new CustomEvent('payroll-changed'));
+    window.dispatchEvent(new CustomEvent('estimate-updated'));
     window.dispatchEvent(new CustomEvent('admin_alerts_updated'));
   } catch { }
 

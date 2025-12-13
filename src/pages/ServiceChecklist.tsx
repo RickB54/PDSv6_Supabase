@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock } from "lucide-react";
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -111,6 +111,8 @@ const ServiceChecklist = () => {
   const [tipsOpen, setTipsOpen] = useState(false);
   const [proTips, setProTips] = useState<string[]>([]);
 
+
+
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("pro_tips") || "[]");
@@ -202,6 +204,34 @@ const ServiceChecklist = () => {
   const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
+  // Timer State
+  const [jobStartTime, setJobStartTime] = useState<number | null>(null);
+  const [jobEndTime, setJobEndTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
+
+  useEffect(() => {
+    // Auto-start timer on first check if not already started
+    if (!jobStartTime && checklistSteps.some(s => s.checked)) {
+      setJobStartTime(Date.now());
+    }
+  }, [checklistSteps, jobStartTime]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (jobStartTime && !jobEndTime) {
+      interval = setInterval(() => {
+        const diff = Date.now() - jobStartTime;
+        const hrs = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setElapsedTime(
+          `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+        );
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [jobStartTime, jobEndTime]);
+
   // Materials Used state
   type ChemItem = { id: string; name: string; threshold?: number; currentStock?: number };
   type MatItem = { id: string; name: string; lowThreshold?: number; quantity?: number };
@@ -227,6 +257,28 @@ const ServiceChecklist = () => {
       const prefill = params.get("customerId");
       if (prefill && list.find((c: any) => c.id === prefill)) {
         setSelectedCustomer(prefill);
+      } else {
+        // Fallback: name match
+        const cName = params.get("customerName");
+        if (cName) {
+          const match = list.find((c: any) => c.name === cName);
+          if (match) setSelectedCustomer(match.id);
+        }
+      }
+
+      const pkgId = params.get("package");
+      if (pkgId) setSelectedPackage(pkgId);
+
+      const vType = params.get("vehicleType");
+      if (vType) {
+        // Map to built-in key logic
+        const key = toVehKey(vType);
+        setVehicleType(key);
+      }
+
+      const addonsParam = params.get("addons");
+      if (addonsParam) {
+        setSelectedAddOns(addonsParam.split(','));
       }
       // Load employees for assignment
       const emps = (await localforage.getItem('company-employees')) || [];
@@ -610,6 +662,18 @@ const ServiceChecklist = () => {
       doc.text(`Vehicle Type: ${vehicleLabels[vehicleType] || vehicleType}`, 20, 54);
       let y = 62;
       if (employeeAssigned) { doc.text(`Employee: ${employeeAssigned}`, 20, y); y += 8; }
+
+      // Timer Info
+      if (finalize && jobStartTime) {
+        doc.text(`Started: ${new Date(jobStartTime).toLocaleTimeString()}`, 120, 46);
+        if (jobEndTime) doc.text(`Finished: ${new Date(jobEndTime).toLocaleTimeString()}`, 120, 54);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Time Taken: ${elapsedTime}`, 120, 62);
+        doc.setFont(undefined, 'normal');
+      } else if (estimatedTime) {
+        doc.text(`Est. Time: ${estimatedTime}`, 120, 38);
+      }
+
       // Continue content
       if (y < 66) y = 66;
       doc.setFontSize(12);
@@ -887,6 +951,10 @@ const ServiceChecklist = () => {
     toast({ title: "Invoice Created", description: "Invoice saved and PDF downloaded." });
   };
   const finishJob = async () => {
+    // Stop the timer
+    const end = Date.now();
+    setJobEndTime(end);
+
     let step = 'start';
     try {
       const idToUse = checklistId || await saveGenericChecklist();
@@ -1080,6 +1148,12 @@ const ServiceChecklist = () => {
                 </Button>
                 <Progress value={progressPercent} className="w-40 hidden sm:block" />
                 <span className="text-sm hidden sm:inline">{progressPercent}%</span>
+                {jobStartTime && (
+                  <div className="flex items-center gap-1.5 ml-2 px-2 py-1 bg-red-900/30 border border-red-500/30 rounded text-xs font-mono text-red-200">
+                    <Clock className="h-3 w-3 animate-pulse" />
+                    {elapsedTime}
+                  </div>
+                )}
               </div>
             </div>
             {(!selectedPackage || !vehicleType) && (

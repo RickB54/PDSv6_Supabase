@@ -10,10 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+
 import { getCurrentUser } from "@/lib/auth";
 import { useTasksStore, parseTaskInput, Task, TaskPriority, TaskStatus } from "@/store/tasks";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseCustomers, getTeamMessages, sendTeamMessage, TeamMessage } from "@/lib/supa-data"; // NEW IMPORT
+import { getSupabaseEmployees, getSupabaseCustomers, getTeamMessages, sendTeamMessage, deleteTeamMessage, TeamMessage } from "@/lib/supa-data"; // NEW IMPORT
 import { supabase } from "@/lib/supabase";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -767,15 +768,52 @@ export default function Tasks() {
 
                 if (filteredMsgs.length === 0) return <div className="text-sm text-muted-foreground text-center py-4">No messages yet.</div>;
 
-                return filteredMsgs.map(m => (
-                  <div key={m.id} className={`bg-zinc-900/50 border border-zinc-800 rounded-lg p-2.5 ${m.recipient_email ? 'border-l-2 border-l-blue-500' : ''}`}>
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-semibold text-zinc-300">{m.sender_name || m.sender_email} {m.recipient_email ? '(Direct)' : ''}</span>
-                      <span className="text-[10px] text-muted-foreground">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className="text-sm text-zinc-300 leading-relaxed break-words">{m.content}</div>
-                  </div>
-                ));
+                // Group by sender
+                const grouped: Record<string, TeamMessage[]> = {};
+                filteredMsgs.forEach(m => {
+                  const key = m.sender_name || m.sender_email || 'Unknown';
+                  if (!grouped[key]) grouped[key] = [];
+                  grouped[key].push(m);
+                });
+
+                return (
+                  <Accordion type="single" collapsible className="w-full">
+                    {Object.entries(grouped).map(([sender, msgs]) => (
+                      <AccordionItem key={sender} value={sender} className="border-b-0">
+                        <AccordionTrigger className="py-2 px-1 hover:no-underline hover:bg-zinc-800/50 rounded-md data-[state=open]:bg-zinc-800/50">
+                          <span className="text-sm font-semibold truncate flex-1 text-left">{sender} <span className="text-xs font-normal text-muted-foreground ml-2">({msgs.length})</span></span>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-2 pl-2">
+                          {msgs.map(m => (
+                            <div key={m.id} className={`bg-zinc-900/50 border border-zinc-800 rounded-lg p-2.5 mb-2 ${m.recipient_email ? 'border-l-2 border-l-blue-500' : ''} group relative`}>
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-xs font-semibold text-zinc-300">{m.sender_name || m.sender_email}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-muted-foreground">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                  {(isAdmin || m.sender_email === user?.email) && (
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Delete this message?')) {
+                                          await deleteTeamMessage(m.id);
+                                          setChatMessages(prev => prev.filter(msg => msg.id !== m.id));
+                                        }
+                                      }}
+                                      className="text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-sm text-zinc-300 leading-relaxed break-words">{m.content}</div>
+                            </div>
+                          ))}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                );
               })()}
             </div>
             <div className="flex items-center gap-2">

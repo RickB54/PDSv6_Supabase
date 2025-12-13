@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, AlertCircle, ArrowLeft, Car, Edit, Trash2, History, FileDown } from "lucide-react";
+import { CheckCircle2, AlertCircle, ArrowLeft, Car, Edit, Trash2, History, FileDown, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import vehicleDatabase from "@/data/vehicle_db.json";
 import jsPDF from "jspdf";
@@ -349,51 +349,59 @@ export default function VehicleClassification() {
 
     const getClassificationColor = (classif: string) => {
         switch (classif) {
-            case "Compact": return "text-green-500";
-            case "Midsize / Sedan": return "text-blue-500";
-            case "SUV / Crossover": return "text-purple-500";
-            case "Truck / Oversized": return "text-orange-500";
-            case "Oversized Specialty": return "text-red-500";
-            default: return "text-yellow-500";
+            case "Compact": return "text-emerald-400";
+            case "Midsize / Sedan": return "text-blue-400";
+            case "SUV / Crossover": return "text-purple-400";
+            case "Truck / Oversized": return "text-amber-400";
+            case "Oversized Specialty": return "text-red-400";
+            default: return "text-zinc-400";
         }
     };
 
     return (
-        <div>
+        <div className="min-h-screen bg-background pb-20">
             <PageHeader title="Vehicle Classification" />
-            <div className="p-4 max-w-4xl mx-auto">
+            <div className="p-4 max-w-5xl mx-auto space-y-6">
 
                 {/* Step 1: Select Make */}
                 {step === 1 && (
-                    <Card className="p-8 bg-zinc-900 border-zinc-800">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Car className="w-8 h-8 text-blue-500" />
-                            <h2 className="text-2xl font-bold text-white">Step 1: Select Vehicle Make</h2>
+                    <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/20">
+                                <Car className="w-8 h-8 text-blue-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-white">Select Vehicle Make</h2>
+                                <p className="text-zinc-400 text-sm">Step 1 of 3: Identify the manufacturer</p>
+                            </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm text-zinc-400 mb-2 block">Search Make</label>
-                                <Input
-                                    placeholder="Type to search makes..."
-                                    value={makeSearchQuery}
-                                    onChange={(e) => setMakeSearchQuery(e.target.value)}
-                                    className="bg-zinc-800 border-zinc-700 text-white mb-4"
-                                />
+                        <div className="space-y-6">
+                            <div className="relative">
+                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Search Manufacturer</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                                    <Input
+                                        placeholder="Type to search (e.g. Ford, Toyota)..."
+                                        value={makeSearchQuery}
+                                        onChange={(e) => setMakeSearchQuery(e.target.value)}
+                                        className="pl-9 bg-zinc-950 border-zinc-800 text-zinc-200 focus:border-blue-500 focus:ring-blue-500/20 py-6"
+                                    />
+                                </div>
                             </div>
 
                             <div>
-                                <label className="text-sm text-zinc-400 mb-2 block">Select Make</label>
+                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Browse All Makes</label>
                                 <Select value={selectedMake} onValueChange={handleMakeSelect}>
-                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
                                         <SelectValue placeholder="Choose a vehicle make..." />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-zinc-800 border-zinc-700 max-h-[300px]">
+                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
                                         {filteredMakes.length === 0 ? (
                                             <div className="p-4 text-center text-zinc-500">No makes found</div>
                                         ) : (
                                             filteredMakes.map((make) => (
-                                                <SelectItem key={make} value={make} className="text-white">
+                                                <SelectItem key={make} value={make} className="text-zinc-200 focus:bg-zinc-800 cursor-pointer">
                                                     {make}
                                                 </SelectItem>
                                             ))
@@ -402,8 +410,10 @@ export default function VehicleClassification() {
                                 </Select>
                             </div>
 
-                            <div className="text-sm text-zinc-500 mt-4">
-                                {allMakes.length} makes available in database
+                            <div className="flex items-center justify-between pt-4 border-t border-zinc-900">
+                                <p className="text-sm text-zinc-500">
+                                    <span className="text-zinc-300 font-mono">{allMakes.length}</span> makes available in database
+                                </p>
                             </div>
                         </div>
                     </Card>
@@ -411,117 +421,106 @@ export default function VehicleClassification() {
 
                 {/* Classification History - Only show on Step 1 */}
                 {step === 1 && history.length > 0 && (
-                    <Card className="p-6 bg-zinc-900 border-zinc-800 mt-6">
-                        <div className="flex items-center justify-between mb-4">
+                    <Card className="bg-zinc-900/50 border-zinc-800 overflow-hidden">
+                        <div className="p-6 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                                <History className="w-6 h-6 text-purple-500" />
-                                <h3 className="text-xl font-bold text-white">Classification History</h3>
-                                <span className="text-sm text-zinc-500">({history.length} {history.length === 1 ? 'vehicle' : 'vehicles'})</span>
+                                <History className="w-5 h-5 text-purple-400" />
+                                <h3 className="text-lg font-bold text-zinc-200">Recent Classifications</h3>
                             </div>
-                            <Button onClick={handleExportPDF} className="bg-purple-600 hover:bg-purple-700 text-white">
-                                <FileDown className="mr-2 h-4 w-4" /> Save PDF
+                            <Button onClick={handleExportPDF} variant="outline" size="sm" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                                <FileDown className="mr-2 h-4 w-4" /> Export PDF
                             </Button>
                         </div>
 
-                        <Accordion type="single" collapsible className="space-y-2">
-                            {history.map((item) => (
-                                <AccordionItem key={item.id} value={item.id} className="border border-zinc-800 rounded-lg bg-zinc-800/50">
-                                    <AccordionTrigger className="px-4 hover:no-underline hover:bg-zinc-800/80">
+                        <Accordion type="single" collapsible className="w-full">
+                            {history.slice(0, 10).map((item) => (
+                                <AccordionItem key={item.id} value={item.id} className="border-b border-zinc-800 last:border-0">
+                                    <AccordionTrigger className="px-6 hover:no-underline hover:bg-zinc-800/50 transition-colors py-4">
                                         <div className="flex items-center justify-between w-full pr-4">
-                                            <div className="flex items-center gap-3">
-                                                <Car className="w-5 h-5 text-blue-400" />
-                                                <span className="font-semibold text-white">{item.make} {item.model}</span>
-                                            </div>
-                                            <div className={`text-sm font-medium ${getClassificationColor(item.category)}`}>
+                                            <span className="font-semibold text-zinc-200">{item.make} {item.model}</span>
+                                            <span className={`text-sm font-medium ${getClassificationColor(item.category)}`}>
                                                 {item.category}
-                                            </div>
+                                            </span>
                                         </div>
                                     </AccordionTrigger>
-                                    <AccordionContent className="px-4 pb-4">
-                                        <div className="space-y-3 pt-2">
-                                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div>
-                                                    <div className="text-zinc-500">Make</div>
-                                                    <div className="text-white font-medium">{item.make}</div>
+                                    <AccordionContent className="px-6 pb-6 bg-zinc-900/30">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                            <div className="p-4 rounded bg-zinc-950 border border-zinc-800 space-y-3">
+                                                <div className="flex justify-between">
+                                                    <span className="text-zinc-500">Make</span>
+                                                    <span className="text-zinc-300">{item.make}</span>
                                                 </div>
-                                                <div>
-                                                    <div className="text-zinc-500">Model</div>
-                                                    <div className="text-white font-medium">{item.model}</div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-zinc-500">Model</span>
+                                                    <span className="text-zinc-300">{item.model}</span>
                                                 </div>
-                                                <div>
-                                                    <div className="text-zinc-500">Classification</div>
-                                                    <div className={`font-medium ${getClassificationColor(item.category)}`}>
-                                                        {item.category}
-                                                    </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-zinc-500">Class</span>
+                                                    <span className={getClassificationColor(item.category)}>{item.category}</span>
                                                 </div>
-                                                <div>
-                                                    <div className="text-zinc-500">Date</div>
-                                                    <div className="text-white font-medium">
-                                                        {new Date(item.timestamp).toLocaleDateString()}
-                                                    </div>
-                                                </div>
-                                                {item.customer?.name && (
-                                                    <div className="col-span-2">
-                                                        <div className="text-zinc-500">Customer</div>
-                                                        <div className="text-white font-medium">{item.customer.name}</div>
-                                                    </div>
-                                                )}
                                             </div>
-
-                                            <div className="flex gap-2 pt-2 border-t border-zinc-700">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleEdit(item)}
-                                                    className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
-                                                >
-                                                    <Edit className="w-4 h-4 mr-2" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleDelete(item.id)}
-                                                    className="flex-1 border-red-700 text-red-500 hover:bg-red-900/20"
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Delete
-                                                </Button>
+                                            <div className="p-4 rounded bg-zinc-950 border border-zinc-800 space-y-3">
+                                                <div className="flex justify-between">
+                                                    <span className="text-zinc-500">Customer</span>
+                                                    <span className="text-zinc-300">{item.customer?.name || '—'}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-zinc-500">Date</span>
+                                                    <span className="text-zinc-300">{new Date(item.timestamp).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="pt-2 flex gap-2">
+                                                    <Button size="sm" variant="ghost" className="h-8 flex-1 text-zinc-400 hover:text-white" onClick={() => handleEdit(item)}>
+                                                        <Edit className="h-3 w-3 mr-1" /> Edit
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-8 flex-1 text-red-500 hover:text-red-400 hover:bg-red-950" onClick={() => handleDelete(item.id)}>
+                                                        <Trash2 className="h-3 w-3 mr-1" /> Delete
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}
                         </Accordion>
+                        {history.length > 10 && (
+                            <div className="p-3 text-center text-xs text-zinc-600 bg-zinc-950 border-t border-zinc-800">
+                                Showing recent 10 of {history.length} records
+                            </div>
+                        )}
                     </Card>
                 )}
 
                 {/* Step 2: Select Model */}
                 {step === 2 && (
-                    <Card className="p-8 bg-zinc-900 border-zinc-800">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Car className="w-8 h-8 text-blue-500" />
-                            <h2 className="text-2xl font-bold text-white">Step 2: Select Vehicle Model</h2>
+                    <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/20">
+                                <Car className="w-8 h-8 text-blue-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-white">Select Vehicle Model</h2>
+                                <p className="text-zinc-400 text-sm">Step 2 of 3: Identify the specific model</p>
+                            </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
+                        <div className="space-y-6">
+                            <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-800 flex items-center justify-between">
                                 <div className="text-sm text-zinc-400">Selected Make</div>
-                                <div className="text-xl font-semibold text-white">{selectedMake}</div>
+                                <div className="text-xl font-bold text-white">{selectedMake}</div>
                             </div>
 
                             <div>
-                                <label className="text-sm text-zinc-400 mb-2 block">Select Model</label>
+                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Choose Model</label>
                                 <Select value={selectedModel} onValueChange={handleModelSelect}>
-                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
                                         <SelectValue placeholder="Choose a model..." />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-zinc-800 border-zinc-700 max-h-[300px]">
+                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
                                         {availableModels.length === 0 ? (
                                             <div className="p-4 text-center text-zinc-500">No models found</div>
                                         ) : (
                                             availableModels.map((model) => (
-                                                <SelectItem key={model} value={model} className="text-white">
+                                                <SelectItem key={model} value={model} className="text-zinc-200 focus:bg-zinc-800 cursor-pointer">
                                                     {model}
                                                 </SelectItem>
                                             ))
@@ -530,48 +529,58 @@ export default function VehicleClassification() {
                                 </Select>
                             </div>
 
-                            <div className="text-sm text-zinc-500 mt-4">
-                                {availableModels.length} models available for {selectedMake}
+                            <div className="flex items-center justify-between">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setStep(1)}
+                                    className="text-zinc-400 hover:text-white pl-0"
+                                >
+                                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make Selection
+                                </Button>
+                                <div className="text-sm text-zinc-500">
+                                    {availableModels.length} models found
+                                </div>
                             </div>
-
-                            <Button
-                                variant="outline"
-                                onClick={() => setStep(1)}
-                                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                            >
-                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make Selection
-                            </Button>
                         </div>
                     </Card>
                 )}
 
                 {/* Step 3: Result & Confirmation */}
                 {step === 3 && (
-                    <Card className="p-8 bg-zinc-900 border-zinc-800">
-                        <div className="flex items-center gap-3 mb-6">
-                            <CheckCircle2 className="w-8 h-8 text-green-500" />
-                            <h2 className="text-2xl font-bold text-white">Step 3: Classification Result</h2>
+                    <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="p-3 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-white">Review & Confirm</h2>
+                                <p className="text-zinc-400 text-sm">Step 3 of 3: Verify classification and save</p>
+                            </div>
                         </div>
 
                         <div className="space-y-6">
-                            <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700">
-                                <div className="text-sm text-zinc-400 mb-2">Vehicle Selected</div>
-                                <div className="text-2xl font-bold text-white mb-4">
-                                    {selectedMake} {selectedModel}
-                                </div>
-
-                                <div className="border-t border-zinc-700 pt-4 mt-4">
-                                    <div className="text-sm text-zinc-400 mb-2">System Classification</div>
-                                    <div className={`text-3xl font-bold ${getClassificationColor(category)}`}>
-                                        {category}
+                            <div className="p-6 bg-zinc-900 rounded-xl border border-zinc-800 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div>
+                                        <div className="text-xs text-zinc-500 uppercase font-bold mb-1">Vehicle Selected</div>
+                                        <div className="text-3xl font-bold text-white">
+                                            {selectedMake} <span className="text-zinc-400 font-light">{selectedModel}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-zinc-500 uppercase font-bold mb-1">System Classification</div>
+                                        <div className={`text-3xl font-bold ${getClassificationColor(category)}`}>
+                                            {category}
+                                        </div>
                                     </div>
                                 </div>
 
                                 {category === "Manual Classification Required" && (
-                                    <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg flex items-start gap-2">
-                                        <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
-                                        <div className="text-sm text-yellow-200">
-                                            This vehicle was not found in our database. Please select a classification manually.
+                                    <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+                                        <div className="text-sm text-amber-200">
+                                            <strong>Action Required:</strong> This vehicle was not found in our database. Please manually select the correct classification below before confirming.
                                         </div>
                                     </div>
                                 )}
@@ -579,136 +588,116 @@ export default function VehicleClassification() {
 
                             {/* Customer Field (Optional) */}
                             <div>
-                                <label className="text-sm text-zinc-400 mb-2 block">Link to Customer (Optional)</label>
+                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Link to Customer (Optional)</label>
                                 <Select value={selectedCustomerId || "none"} onValueChange={(val) => setSelectedCustomerId(val === "none" ? "" : val)}>
-                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                                        <SelectValue placeholder="Select a customer (optional)..." />
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
+                                        <SelectValue placeholder="Associate with a customer..." />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-zinc-800 border-zinc-700">
-                                        <SelectItem value="none" className="text-white">None</SelectItem>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 h-[300px]">
+                                        <SelectItem value="none" className="text-zinc-400 italic">No Customer Link</SelectItem>
                                         {customers.map(c => (
-                                            <SelectItem key={c.id} value={c.id} className="text-white">
-                                                {c.name}{c.email ? ` (${c.email})` : ''}
+                                            <SelectItem key={c.id} value={c.id} className="text-zinc-200">
+                                                {c.name} <span className="text-zinc-500 ml-2 text-xs">{c.email}</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {selectedCustomerId && (
-                                    <div className="mt-2 text-xs text-zinc-500">
-                                        This classification will be linked to the selected customer
-                                    </div>
-                                )}
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
                                 <Button
                                     onClick={handleConfirm}
-                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg font-bold shadow-lg shadow-emerald-900/20"
                                 >
-                                    <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm Classification
+                                    <CheckCircle2 className="mr-2 h-5 w-5" /> Confirm & Save
                                 </Button>
                                 <Button
                                     onClick={() => setOverrideModalOpen(true)}
                                     variant="outline"
-                                    className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                                    className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 h-12"
                                 >
                                     Override Classification
                                 </Button>
                             </div>
 
-                            <Button
-                                variant="ghost"
-                                onClick={() => setStep(2)}
-                                className="text-zinc-400 hover:text-white"
-                            >
-                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Model Selection
-                            </Button>
+                            <div className="text-center">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setStep(2)}
+                                    className="text-zinc-500 hover:text-white"
+                                >
+                                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Model Selection
+                                </Button>
+                            </div>
                         </div>
                     </Card>
                 )}
 
                 {/* Step 4: Saved Confirmation */}
                 {step === 4 && (
-                    <Card className="p-8 bg-zinc-900 border-zinc-800">
-                        <div className="flex items-center gap-3 mb-6">
-                            <CheckCircle2 className="w-8 h-8 text-green-500" />
-                            <h2 className="text-2xl font-bold text-white">Vehicle Classification Saved</h2>
+                    <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl text-center py-16">
+                        <div className="mb-6 inline-flex items-center justify-center p-4 bg-emerald-500/10 rounded-full border border-emerald-500/20 animate-in zoom-in-50 duration-300">
+                            <CheckCircle2 className="w-16 h-16 text-emerald-400" />
+                        </div>
+                        <h2 className="text-3xl font-bold text-white mb-2">Classification Saved</h2>
+                        <p className="text-zinc-400 mb-8 max-w-md mx-auto">
+                            The vehicle has been successfully classified and stored in your history database.
+                        </p>
+
+                        <div className="bg-zinc-900 rounded-xl border border-zinc-800 max-w-lg mx-auto p-6 mb-8 text-left">
+                            <div className="flex justify-between border-b border-zinc-800 pb-2 mb-2">
+                                <span className="text-zinc-500">Vehicle</span>
+                                <span className="text-zinc-200 font-bold">{selectedMake} {selectedModel}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-800 pb-2 mb-2">
+                                <span className="text-zinc-500">Class</span>
+                                <span className={`font-bold ${getClassificationColor(category)}`}>{category}</span>
+                            </div>
+                            {selectedCustomerId && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-zinc-500">Customer</span>
+                                    <span className="text-zinc-200">{customers.find(c => c.id === selectedCustomerId)?.name}</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="bg-green-900/20 border border-green-700 p-6 rounded-lg">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <div className="text-sm text-zinc-400">Make</div>
-                                        <div className="text-lg font-semibold text-white">{selectedMake}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-zinc-400">Model</div>
-                                        <div className="text-lg font-semibold text-white">{selectedModel}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-zinc-400">Classification</div>
-                                        <div className={`text-lg font-semibold ${getClassificationColor(category)}`}>
-                                            {category}
-                                        </div>
-                                    </div>
-                                </div>
-                                {selectedCustomerId && (
-                                    <div className="mt-4 pt-4 border-t border-green-700">
-                                        <div className="text-sm text-zinc-400">Linked Customer</div>
-                                        <div className="text-lg font-semibold text-white">
-                                            {customers.find(c => c.id === selectedCustomerId)?.name || ""}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
-                                <div className="text-sm text-zinc-400 mb-2">Storage Location</div>
-                                <div className="text-white font-mono text-sm">localStorage: vehicle_classification_history</div>
-                            </div>
-
-                            <div className="text-xs text-zinc-500 italic p-3 bg-zinc-800/50 rounded border border-zinc-700">
-                                Future: Auto-send classification to Package Pricing module.
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <Button
-                                    onClick={handleReset}
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    Classify Another Vehicle
-                                </Button>
-                                <Button
-                                    onClick={() => window.location.href = "/dashboard"}
-                                    variant="outline"
-                                    className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                                >
-                                    Back to Client Intake Tools
-                                </Button>
-                            </div>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Button
+                                onClick={handleReset}
+                                className="bg-blue-600 hover:bg-blue-700 text-white min-w-[200px]"
+                            >
+                                Classify Another Vehicle
+                            </Button>
+                            <Button
+                                onClick={() => window.location.href = "/dashboard"}
+                                variant="outline"
+                                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 min-w-[200px]"
+                            >
+                                Return to Dashboard
+                            </Button>
                         </div>
                     </Card>
                 )}
 
                 {/* Override Classification Modal */}
                 <Dialog open={overrideModalOpen} onOpenChange={setOverrideModalOpen}>
-                    <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+                    <DialogContent className="bg-zinc-950 border-zinc-800 text-white">
                         <DialogHeader>
-                            <DialogTitle>Manual Classification Override</DialogTitle>
+                            <DialogTitle>Manual Classification</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-3">
-                            <p className="text-sm text-zinc-400">
-                                Select the correct classification for {selectedMake} {selectedModel}:
+                        <div className="space-y-3 pt-2">
+                            <p className="text-sm text-zinc-400 mb-4">
+                                Select the correct size category for the <strong>{selectedMake} {selectedModel}</strong>:
                             </p>
                             {CLASSIFICATION_OPTIONS.map((option) => (
                                 <Button
                                     key={option}
                                     onClick={() => handleOverride(option)}
                                     variant="outline"
-                                    className={`w-full justify-start border-zinc-700 hover:bg-zinc-800 ${category === option ? 'bg-zinc-800 border-blue-500' : ''}`}
+                                    className={`w-full justify-between border-zinc-800 hover:bg-zinc-900 h-14 ${category === option ? 'bg-zinc-900 border-emerald-500 ring-1 ring-emerald-500' : 'bg-zinc-900/50'}`}
                                 >
-                                    <span className={getClassificationColor(option)}>{option}</span>
+                                    <span className={`font-semibold ${getClassificationColor(option)}`}>{option}</span>
+                                    {category === option && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                                 </Button>
                             ))}
                         </div>

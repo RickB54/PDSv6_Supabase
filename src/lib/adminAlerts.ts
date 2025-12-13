@@ -24,6 +24,9 @@ export type AdminAlertType =
   | "todo_comment"
   | "todo_updated"
   | "pricing_update"
+  | "exam_validation_failed"
+  | "exam_randomized"
+  | "cheat_sheet_generated"
   | "job_progress"
   | "job_completed"
   | "admin_email_sent";
@@ -47,7 +50,7 @@ export function pushAdminAlert(
   payload?: Record<string, any>
 ): void {
   const alert: AdminAlert = {
-    id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     type,
     message,
     actor,
@@ -66,7 +69,7 @@ export function pushAdminAlert(
   // Proactively notify the current tab to refresh alerts (storage events don't fire in same tab)
   try {
     window.dispatchEvent(new CustomEvent('admin_alerts_updated'));
-  } catch {}
+  } catch { }
 }
 
 export function getAdminAlerts(): AdminAlert[] {

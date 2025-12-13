@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, UserCog, User, ShoppingCart } from "lucide-react";
+import { Menu, X, UserCog, User, ShoppingCart, Sidebar as SidebarIcon } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import logo from "@/assets/logo-3inch.png";
 import NotificationBell from "@/components/NotificationBell";
 import { useCartStore } from "@/store/cart";
+import { useSidebar } from "@/components/ui/sidebar"; // Import Use Sidebar
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import { LayoutDashboard, LogOut } from "lucide-react";
 
 
 export const Navbar = () => {
+  const { toggleSidebar } = useSidebar(); // Consume context
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const [user, setUser] = useState(getCurrentUser());
@@ -58,11 +60,18 @@ export const Navbar = () => {
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
-            <img src={logo} alt="Prime Detail Solutions" className="w-10 h-10" />
-            <span className="font-bold text-foreground hidden sm:inline">Prime Detail Solutions</span>
-          </Link>
+          {/* Logo & Sidebar Toggle */}
+          <div className="flex items-center gap-2">
+            {user && user.role === 'admin' && (
+              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
+                <SidebarIcon className="h-5 w-5" />
+              </Button>
+            )}
+            <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
+              <img src={logo} alt="Prime Detail Solutions" className="w-10 h-10" />
+              <span className="font-bold text-foreground hidden sm:inline">Prime Detail Solutions</span>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">

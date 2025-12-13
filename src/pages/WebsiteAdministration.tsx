@@ -163,7 +163,8 @@ export default function WebsiteAdministration() {
                               const updated = await api('/api/vehicle-types', { method: 'GET' });
                               setVehicleTypes(Array.isArray(updated) ? updated : []);
                               try {
-                                await fetch('http://localhost:6066/api/vehicle-types/live', {
+                                const baseUrl = window.location.origin;
+                                await fetch(`${baseUrl}/api/vehicle-types/live`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify(Array.isArray(updated) ? updated : []),
@@ -265,14 +266,14 @@ export default function WebsiteAdministration() {
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
                     await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
                     try {
-                      await fetch('http://localhost:6066/api/contact/live', {
+                      await fetch(`${window.location.origin}/api/contact/live`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(contactInfo),
                       });
                     } catch { }
                     try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch { }
-                    toast({ title: 'Contact updated', description: 'Synced live on port 6066' });
+                    toast({ title: 'Contact updated', description: 'Synced live' });
                   }}>Save Contact</Button>
                 </div>
               </AccordionContent>
@@ -411,13 +412,13 @@ export default function WebsiteAdministration() {
                       await api('/api/services', { method: 'POST', body: JSON.stringify({ disclaimer: servicesDisclaimer }) });
                       try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'services' } })); } catch { }
                       try {
-                        await fetch('http://localhost:6066/api/services/live', {
+                        await fetch(`${window.location.origin}/api/services/live`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ disclaimer: servicesDisclaimer }),
                         });
                       } catch { }
-                      toast({ title: 'Services updated', description: 'Disclaimer saved (port 6066)' });
+                      toast({ title: 'Services updated', description: 'Disclaimer saved (live)' });
                     }}>Save Services</Button>
                   </div>
 
@@ -594,7 +595,7 @@ export default function WebsiteAdministration() {
                     setVehicleTypes(Array.isArray(updated) ? updated : []);
                     // Push live vehicle types to server so all dropdowns reflect edits immediately
                     try {
-                      await fetch('http://localhost:6066/api/vehicle-types/live', {
+                      await fetch(`${window.location.origin}/api/vehicle-types/live`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(Array.isArray(updated) ? updated : []),
@@ -672,7 +673,7 @@ export default function WebsiteAdministration() {
                   setVehicleTypes(Array.isArray(updated) ? updated : []);
                   // Push live vehicle types to server for immediate dropdown sync
                   try {
-                    await fetch('http://localhost:6066/api/vehicle-types/live', {
+                    await fetch(`${window.location.origin}/api/vehicle-types/live`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(Array.isArray(updated) ? updated : []),

@@ -26,11 +26,11 @@ export default function ExamAdmin() {
           return;
         }
       }
-    } catch {}
+    } catch { }
     // Seed with detailed 50-question exam derived from Auto Detailing Handbook
     const defaults = generateDefaultQuestions();
     setQuestions(defaults);
-    try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(defaults)); } catch {}
+    try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(defaults)); } catch { }
   }, []);
 
   const save = () => {
@@ -53,7 +53,7 @@ export default function ExamAdmin() {
     }
   };
 
-  const addQuestion = () => setQuestions(prev => [...prev, { q: `Question ${prev.length + 1}`, options: ["Option A","Option B","Option C","Option D","Option E"], correct: 0 }]);
+  const addQuestion = () => setQuestions(prev => [...prev, { q: `Question ${prev.length + 1}`, options: ["Option A", "Option B", "Option C", "Option D", "Option E"], correct: 0 }]);
 
   const randomize = () => {
     setQuestions(prev => {
@@ -65,10 +65,10 @@ export default function ExamAdmin() {
         [arr[i], arr[j]] = [arr[j], arr[i]];
       }
       // Shuffle options per question and recompute correct indices
-      const distribution: number[] = [0,0,0,0,0];
+      const distribution: number[] = [0, 0, 0, 0, 0];
       arr.forEach((q, qi) => {
         const opts = [...q.options];
-        const indices = [0,1,2,3,4];
+        const indices = [0, 1, 2, 3, 4];
         // Fisher-Yates shuffle for options
         for (let i = indices.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -92,7 +92,7 @@ export default function ExamAdmin() {
           }
         });
       }
-      try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(arr)); } catch {}
+      try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(arr)); } catch { }
       pushAdminAlert('exam_randomized', 'Exam questions and answers randomized by admin', 'admin', { count: arr.length });
       toast({ title: 'Randomized', description: 'Questions and answer letters shuffled to prevent patterns.' });
       return arr;
@@ -135,7 +135,7 @@ export default function ExamAdmin() {
   function generateDefaultQuestions(): ExamQ[] {
     // Derived from Auto Detailing Handbook items; consistent phrasing and varied correct index
     const add = (q: string, correctText: string, distractors: string[]): ExamQ => {
-      const base = [correctText, ...distractors.slice(0,4)];
+      const base = [correctText, ...distractors.slice(0, 4)];
       // Start with varied correct index across adds to avoid patterns
       const correctIndex = Math.floor(Math.random() * Math.min(5, base.length));
       // Rotate array so correct lands at chosen index
@@ -144,56 +144,56 @@ export default function ExamAdmin() {
       return { q, options, correct: correctIndex };
     };
     const items: { q: string; a: string; d: string[] }[] = [
-      { q: 'Intake photos — exterior purpose?', a: 'Document pre-existing vehicle condition consistently', d: ['Speed up washing for time savings','Social media content for marketing','Warm panels for polishing work','Replace customer notes entirely'] },
-      { q: 'Intake photos — interior purpose?', a: 'Record seats, carpets, console, and trunk condition', d: ['Plan steam cleaner purchase only','Skip customer walkthrough process','Confirm customer address data','Reset infotainment settings'] },
-      { q: 'Customer notes review purpose?', a: 'Highlight specific requests and concerns before work', d: ['Upsell coatings regardless of needs','Eliminate maintenance plans entirely','Ignore unusual odors and stains','Disable owner reminders'] },
-      { q: 'Vehicle walkaround identifies?', a: 'Heavy soil, tar, bug splatter, trim condition', d: ['Wheel alignment problems','Engine ECU faults','Ozone level inside cabin','Insurance claim eligibility'] },
-      { q: 'Safety & PPE requirement?', a: 'Use gloves, eye protection; respirator when needed', d: ['Open-toe footwear near machines','No gloves to improve feel','Use acid without ventilation','Skip eyewear to save time'] },
-      { q: 'Keys & electronics check objective?', a: 'Secure keys and protect locks/windows from product', d: ['Pair phones with Bluetooth','Reset radio presets for customer','Replace fuses proactively','Disable automatic windows'] },
-      { q: 'Pre-rinse benefit?', a: 'Remove loose dirt to reduce marring risk', d: ['Dry vehicle faster without towels','Warm paint for faster polishing','Harden bugs prior to washing','Strip coatings unintentionally'] },
-      { q: 'Two-bucket method achieves?', a: 'Separate rinse and wash to reduce grit transfer', d: ['Double soap concentration always','Dramatically increase foam thickness','Shorten rinse steps only','Polish wheels automatically'] },
-      { q: 'Foam pre-wash provides?', a: 'Lubrication and dwell to soften contaminants', d: ['Tinted coating layer','Rapid panel heating','Drying without towels','Decontamination of interior glass'] },
-      { q: 'Iron remover purpose?', a: 'Dissolve ferrous particles like rail/brake dust', d: ['Add gloss to coatings','Fix scratching instantly','Clean leather pores','Remove window stickers'] },
-      { q: 'Clay bar function?', a: 'Mechanical decon for bonded contaminants', d: ['Chemical oxidation removal only','Add permanent sealant','Repair clear coat cracks','Remove high spots from coating'] },
-      { q: 'Test spot goal?', a: 'Safely dial pad/polish combo before full pass', d: ['Warm panels for wax','Check towel inventory','Skip taping sensitive trim','Speed up product cure'] },
-      { q: 'Inspection lighting reveals?', a: 'Swirls, RIDS, holograms and defects clearly', d: ['Mileage on odometer','Ozone quantity in cabin','Brake dust composition','Surface temperature gradients only'] },
-      { q: 'Masking trim prevents?', a: 'Staining and edge damage during polishing', d: ['Pad saturation only','Battery drain during curing','Wheel face pitting','Carpet wicking under seats'] },
-      { q: 'IPA wipe before coating?', a: 'Removes oils to improve bonding to paint', d: ['Adds long-term protection','Creates immediate high spots','Removes clear coat entirely','Levels coatings using heat'] },
-      { q: 'Level high spots ensures?', a: 'Uniform finish and proper coating curing', d: ['Faster carpet drying','Dust attraction for ammonia','Sticker residue removal','Matte finish on trim'] },
-      { q: 'Vacuum first because?', a: 'Remove loose debris prior to wet work', d: ['Dry seats quickly','Polish leather safely','Replace steaming entirely','Add fragrance coverage'] },
-      { q: 'Steam used to?', a: 'Sanitize and lift embedded interior dirt', d: ['Tint windows permanently','Dry carpets without fans','Melt plastic trim','Remove clear coat'] },
-      { q: 'Ozone treatment for?', a: 'Eliminate persistent interior odors', d: ['Correct paint defects','Remove wax residues','Polish window glass','Clean brake components'] },
-      { q: 'Leather care best practice?', a: 'Use pH-appropriate cleaner and protectant', d: ['Use harsh solvent routinely','Bleach for dye transfer','Sandpaper on scuffs','Dry brushing only method'] },
-      { q: 'Tire dressing longevity improves when?', a: 'Applied to dry, clean tires evenly', d: ['Applied onto wet tire sidewalls','Sprayed over brake discs','Mixed with wax product','Put on rubber floor mats'] },
-      { q: 'Trim care objective?', a: 'Revive and protect exterior plastics', d: ['Make trim intentionally slippery','Clean wheels automatically','Add swirl marks to paint','Soften clear coat layers'] },
-      { q: 'Final inspection purpose?', a: 'Confirm quality under proper lighting', d: ['Skip when schedule tight','Perform in total darkness','Only check interior panels','Only inspect wheels quickly'] },
-      { q: 'Touchpoints sanitize includes?', a: 'Steering wheel, shifter, door handles', d: ['Exhaust tips only','Exterior paint panels','Only window glass','Only tires and rims'] },
-      { q: 'Tools & bottles storage after job?', a: 'Clean and organize for next job', d: ['Ignore spills intentionally','Leave in customer vehicle','Seal wet pads in bags','Throw away all chemicals'] },
-      { q: 'Inventory check ensures?', a: 'Consumables and equipment are restocked', d: ['Customer buys products','Only towels are counted','Random items ordered','Polish stock ignored'] },
-      { q: 'Care guide review purpose?', a: 'Educate customer on maintenance and care', d: ['Upsell coatings exclusively','Skip all questions asked','Discuss unrelated services','Verify VIN and title'] },
-      { q: 'CRM update helps?', a: 'Keep records with photos and notes', d: ['Erase job history','Change warranty terms','Auto-send spam emails','Hide service outcomes'] },
-      { q: 'Invoice finalize requires?', a: 'Confirm payment and send receipt', d: ['Guess totals loosely','Delay 30 days always','Cash-only policy enforced','Ignore tax calculations'] },
-      { q: 'Follow-up appointment offers?', a: 'Maintenance plan slot to keep results', d: ['Paint removal service','Nothing additional offered','Interior replacement service','Brake inspection program'] },
-      { q: 'Measure paint thickness to?', a: 'Choose safe correction strategy', d: ['Tint windows faster','Wax panels quickly','Remove clear coat','Change vehicle color'] },
-      { q: 'Avoid swirls during washing by?', a: 'Proper technique using clean tools', d: ['Use dirty towels','Dry brushing panels','No-rinse always','Steel wool mitt method'] },
-      { q: 'Manage panel temperature to?', a: 'Avoid overheating and paint damage', d: ['Keep panels always hot','Freeze panels between sets','Only interior matters','Skip thermal checks'] },
-      { q: 'Clean wheels order typically?', a: 'Wheels/tires first to prevent splatter', d: ['Body first always','Interior first for speed','Coating first immediately','Trim first every time'] },
-      { q: 'Glass cleaning tip?', a: 'Use clean towel and streak-free cleaner', d: ['Use greasy dressing','Use clay bar only','Skip entirely for time','Use wax for shine'] },
-      { q: 'Coating maintenance requires?', a: 'pH-neutral shampoo and gentle technique', d: ['Abrasives weekly on panels','Brake cleaner on paint','Strong acid on clearcoat','Heat gun curing daily'] },
-      { q: 'Pad cleaning during polishing?', a: 'Clean or swap pads to maintain cut', d: ['Never needed at all','Only wash end of day','Dress pads with oils','Vacuum pads constantly'] },
-      { q: 'Rinse after iron remover to?', a: 'Remove residues before next steps', d: ['Add contamination back','Dry panels instantly','Melt tires nearby','Polish glass quickly'] },
-      { q: 'Decon order generally?', a: 'Chemical then mechanical for thoroughness', d: ['Mechanical then chemical','Coating then polish','Polish then wash','Wax then clay only'] },
-      { q: 'Taping trim requires?', a: 'Protect edges and sensitive areas', d: ['Cover vents only','Use no tape anywhere','Use duct tape only','Apply tape when wet'] },
-      { q: 'Dedicated interior tools help?', a: 'Prevent cross-contamination and damage', d: ['Make kit heavier','Slow team intentionally','Increase swirl marks','Reduce working time drastically'] },
-      { q: 'Final walkaround lets you?', a: 'Show results and answer questions', d: ['Hide defects strategically','Skip customer handoff','Demand tips outright','Upsell only relentlessly'] },
-      { q: 'Pre-rinse + foam combo goal?', a: 'Lubricate and lift grime before contact', d: ['Polish glass immediately','Dry vehicle without towels','Generate colored foam patterns','Warm panels for wax layer'] },
-      { q: 'Trim protection after wash?', a: 'Revive color and shield UV exposure', d: ['Promote slickness on handles','Protect wheels from brake dust','Create matte on glass','Seal exhaust tips'] },
-      { q: 'Interior odor remediation uses?', a: 'Ozone treatment post-cleaning if needed', d: ['Brake cleaner mist','Solvent dressing spray','Panel wipe solutions','Wax vapor trials'] },
-      { q: 'Customer Q&A during handoff?', a: 'Explain care and answer maintenance questions', d: ['Avoid technical topics','Skip discussion entirely','Focus on upsell only','Discuss unrelated repairs'] },
-      { q: 'Coating high spot check?', a: 'Level uneven areas during cure', d: ['Force-cure with heat gun','Ignore until next visit','Sand without light','Apply dressing on paint'] },
-      { q: 'Photo documentation helps?', a: 'Evidence of condition and results', d: ['Social media only use','Warranty transfer only','Replace invoice document','Remove customer notes'] },
-      { q: 'Steam and vacuum sequencing?', a: 'Vacuum first then targeted steam', d: ['Steam first on loose debris','Skip vacuum entirely','Dry carpets with steam','Wax fabric after steam'] },
-      { q: 'Wheel/tire prep before dress?', a: 'Clean and dry thoroughly first', d: ['Dress on wet rubber','Dress on dirty wheels','Use wax as dressing','Skip drying completely'] },
+      { q: 'Intake photos — exterior purpose?', a: 'Document pre-existing vehicle condition consistently', d: ['Speed up washing for time savings', 'Social media content for marketing', 'Warm panels for polishing work', 'Replace customer notes entirely'] },
+      { q: 'Intake photos — interior purpose?', a: 'Record seats, carpets, console, and trunk condition', d: ['Plan steam cleaner purchase only', 'Skip customer walkthrough process', 'Confirm customer address data', 'Reset infotainment settings'] },
+      { q: 'Customer notes review purpose?', a: 'Highlight specific requests and concerns before work', d: ['Upsell coatings regardless of needs', 'Eliminate maintenance plans entirely', 'Ignore unusual odors and stains', 'Disable owner reminders'] },
+      { q: 'Vehicle walkaround identifies?', a: 'Heavy soil, tar, bug splatter, trim condition', d: ['Wheel alignment problems', 'Engine ECU faults', 'Ozone level inside cabin', 'Insurance claim eligibility'] },
+      { q: 'Safety & PPE requirement?', a: 'Use gloves, eye protection; respirator when needed', d: ['Open-toe footwear near machines', 'No gloves to improve feel', 'Use acid without ventilation', 'Skip eyewear to save time'] },
+      { q: 'Keys & electronics check objective?', a: 'Secure keys and protect locks/windows from product', d: ['Pair phones with Bluetooth', 'Reset radio presets for customer', 'Replace fuses proactively', 'Disable automatic windows'] },
+      { q: 'Pre-rinse benefit?', a: 'Remove loose dirt to reduce marring risk', d: ['Dry vehicle faster without towels', 'Warm paint for faster polishing', 'Harden bugs prior to washing', 'Strip coatings unintentionally'] },
+      { q: 'Two-bucket method achieves?', a: 'Separate rinse and wash to reduce grit transfer', d: ['Double soap concentration always', 'Dramatically increase foam thickness', 'Shorten rinse steps only', 'Polish wheels automatically'] },
+      { q: 'Foam pre-wash provides?', a: 'Lubrication and dwell to soften contaminants', d: ['Tinted coating layer', 'Rapid panel heating', 'Drying without towels', 'Decontamination of interior glass'] },
+      { q: 'Iron remover purpose?', a: 'Dissolve ferrous particles like rail/brake dust', d: ['Add gloss to coatings', 'Fix scratching instantly', 'Clean leather pores', 'Remove window stickers'] },
+      { q: 'Clay bar function?', a: 'Mechanical decon for bonded contaminants', d: ['Chemical oxidation removal only', 'Add permanent sealant', 'Repair clear coat cracks', 'Remove high spots from coating'] },
+      { q: 'Test spot goal?', a: 'Safely dial pad/polish combo before full pass', d: ['Warm panels for wax', 'Check towel inventory', 'Skip taping sensitive trim', 'Speed up product cure'] },
+      { q: 'Inspection lighting reveals?', a: 'Swirls, RIDS, holograms and defects clearly', d: ['Mileage on odometer', 'Ozone quantity in cabin', 'Brake dust composition', 'Surface temperature gradients only'] },
+      { q: 'Masking trim prevents?', a: 'Staining and edge damage during polishing', d: ['Pad saturation only', 'Battery drain during curing', 'Wheel face pitting', 'Carpet wicking under seats'] },
+      { q: 'IPA wipe before coating?', a: 'Removes oils to improve bonding to paint', d: ['Adds long-term protection', 'Creates immediate high spots', 'Removes clear coat entirely', 'Levels coatings using heat'] },
+      { q: 'Level high spots ensures?', a: 'Uniform finish and proper coating curing', d: ['Faster carpet drying', 'Dust attraction for ammonia', 'Sticker residue removal', 'Matte finish on trim'] },
+      { q: 'Vacuum first because?', a: 'Remove loose debris prior to wet work', d: ['Dry seats quickly', 'Polish leather safely', 'Replace steaming entirely', 'Add fragrance coverage'] },
+      { q: 'Steam used to?', a: 'Sanitize and lift embedded interior dirt', d: ['Tint windows permanently', 'Dry carpets without fans', 'Melt plastic trim', 'Remove clear coat'] },
+      { q: 'Ozone treatment for?', a: 'Eliminate persistent interior odors', d: ['Correct paint defects', 'Remove wax residues', 'Polish window glass', 'Clean brake components'] },
+      { q: 'Leather care best practice?', a: 'Use pH-appropriate cleaner and protectant', d: ['Use harsh solvent routinely', 'Bleach for dye transfer', 'Sandpaper on scuffs', 'Dry brushing only method'] },
+      { q: 'Tire dressing longevity improves when?', a: 'Applied to dry, clean tires evenly', d: ['Applied onto wet tire sidewalls', 'Sprayed over brake discs', 'Mixed with wax product', 'Put on rubber floor mats'] },
+      { q: 'Trim care objective?', a: 'Revive and protect exterior plastics', d: ['Make trim intentionally slippery', 'Clean wheels automatically', 'Add swirl marks to paint', 'Soften clear coat layers'] },
+      { q: 'Final inspection purpose?', a: 'Confirm quality under proper lighting', d: ['Skip when schedule tight', 'Perform in total darkness', 'Only check interior panels', 'Only inspect wheels quickly'] },
+      { q: 'Touchpoints sanitize includes?', a: 'Steering wheel, shifter, door handles', d: ['Exhaust tips only', 'Exterior paint panels', 'Only window glass', 'Only tires and rims'] },
+      { q: 'Tools & bottles storage after job?', a: 'Clean and organize for next job', d: ['Ignore spills intentionally', 'Leave in customer vehicle', 'Seal wet pads in bags', 'Throw away all chemicals'] },
+      { q: 'Inventory check ensures?', a: 'Consumables and equipment are restocked', d: ['Customer buys products', 'Only towels are counted', 'Random items ordered', 'Polish stock ignored'] },
+      { q: 'Care guide review purpose?', a: 'Educate customer on maintenance and care', d: ['Upsell coatings exclusively', 'Skip all questions asked', 'Discuss unrelated services', 'Verify VIN and title'] },
+      { q: 'CRM update helps?', a: 'Keep records with photos and notes', d: ['Erase job history', 'Change warranty terms', 'Auto-send spam emails', 'Hide service outcomes'] },
+      { q: 'Invoice finalize requires?', a: 'Confirm payment and send receipt', d: ['Guess totals loosely', 'Delay 30 days always', 'Cash-only policy enforced', 'Ignore tax calculations'] },
+      { q: 'Follow-up appointment offers?', a: 'Maintenance plan slot to keep results', d: ['Paint removal service', 'Nothing additional offered', 'Interior replacement service', 'Brake inspection program'] },
+      { q: 'Measure paint thickness to?', a: 'Choose safe correction strategy', d: ['Tint windows faster', 'Wax panels quickly', 'Remove clear coat', 'Change vehicle color'] },
+      { q: 'Avoid swirls during washing by?', a: 'Proper technique using clean tools', d: ['Use dirty towels', 'Dry brushing panels', 'No-rinse always', 'Steel wool mitt method'] },
+      { q: 'Manage panel temperature to?', a: 'Avoid overheating and paint damage', d: ['Keep panels always hot', 'Freeze panels between sets', 'Only interior matters', 'Skip thermal checks'] },
+      { q: 'Clean wheels order typically?', a: 'Wheels/tires first to prevent splatter', d: ['Body first always', 'Interior first for speed', 'Coating first immediately', 'Trim first every time'] },
+      { q: 'Glass cleaning tip?', a: 'Use clean towel and streak-free cleaner', d: ['Use greasy dressing', 'Use clay bar only', 'Skip entirely for time', 'Use wax for shine'] },
+      { q: 'Coating maintenance requires?', a: 'pH-neutral shampoo and gentle technique', d: ['Abrasives weekly on panels', 'Brake cleaner on paint', 'Strong acid on clearcoat', 'Heat gun curing daily'] },
+      { q: 'Pad cleaning during polishing?', a: 'Clean or swap pads to maintain cut', d: ['Never needed at all', 'Only wash end of day', 'Dress pads with oils', 'Vacuum pads constantly'] },
+      { q: 'Rinse after iron remover to?', a: 'Remove residues before next steps', d: ['Add contamination back', 'Dry panels instantly', 'Melt tires nearby', 'Polish glass quickly'] },
+      { q: 'Decon order generally?', a: 'Chemical then mechanical for thoroughness', d: ['Mechanical then chemical', 'Coating then polish', 'Polish then wash', 'Wax then clay only'] },
+      { q: 'Taping trim requires?', a: 'Protect edges and sensitive areas', d: ['Cover vents only', 'Use no tape anywhere', 'Use duct tape only', 'Apply tape when wet'] },
+      { q: 'Dedicated interior tools help?', a: 'Prevent cross-contamination and damage', d: ['Make kit heavier', 'Slow team intentionally', 'Increase swirl marks', 'Reduce working time drastically'] },
+      { q: 'Final walkaround lets you?', a: 'Show results and answer questions', d: ['Hide defects strategically', 'Skip customer handoff', 'Demand tips outright', 'Upsell only relentlessly'] },
+      { q: 'Pre-rinse + foam combo goal?', a: 'Lubricate and lift grime before contact', d: ['Polish glass immediately', 'Dry vehicle without towels', 'Generate colored foam patterns', 'Warm panels for wax layer'] },
+      { q: 'Trim protection after wash?', a: 'Revive color and shield UV exposure', d: ['Promote slickness on handles', 'Protect wheels from brake dust', 'Create matte on glass', 'Seal exhaust tips'] },
+      { q: 'Interior odor remediation uses?', a: 'Ozone treatment post-cleaning if needed', d: ['Brake cleaner mist', 'Solvent dressing spray', 'Panel wipe solutions', 'Wax vapor trials'] },
+      { q: 'Customer Q&A during handoff?', a: 'Explain care and answer maintenance questions', d: ['Avoid technical topics', 'Skip discussion entirely', 'Focus on upsell only', 'Discuss unrelated repairs'] },
+      { q: 'Coating high spot check?', a: 'Level uneven areas during cure', d: ['Force-cure with heat gun', 'Ignore until next visit', 'Sand without light', 'Apply dressing on paint'] },
+      { q: 'Photo documentation helps?', a: 'Evidence of condition and results', d: ['Social media only use', 'Warranty transfer only', 'Replace invoice document', 'Remove customer notes'] },
+      { q: 'Steam and vacuum sequencing?', a: 'Vacuum first then targeted steam', d: ['Steam first on loose debris', 'Skip vacuum entirely', 'Dry carpets with steam', 'Wax fabric after steam'] },
+      { q: 'Wheel/tire prep before dress?', a: 'Clean and dry thoroughly first', d: ['Dress on wet rubber', 'Dress on dirty wheels', 'Use wax as dressing', 'Skip drying completely'] },
     ];
     // Build exam; pad if fewer than 50 by reusing with slight distractor variation (no generic labels)
     const variations = (base: string[]) => [
@@ -227,7 +227,7 @@ export default function ExamAdmin() {
   function validateExam(qs: ExamQ[]) {
     const issuesByIndex: Record<number, string[]> = {};
     let total = 0;
-    const dist = [0,0,0,0,0];
+    const dist = [0, 0, 0, 0, 0];
     qs.forEach((q, qi) => {
       const msgs: string[] = [];
       if (!q.q || normalize(q.q).length < 12) msgs.push('Question must be self-explanatory (min ~12 chars).');
@@ -256,7 +256,7 @@ export default function ExamAdmin() {
     const n = qs.length;
     const target = Array(5).fill(Math.floor(n / 5));
     for (let i = 0; i < n % 5; i++) target[i]++;
-    const current = [0,0,0,0,0];
+    const current = [0, 0, 0, 0, 0];
     const result = qs.map(q => ({ q: q.q, options: [...q.options], correct: q.correct }));
     result.forEach(r => { current[r.correct]++; });
     const need: number[] = target.map((t, i) => Math.max(0, t - current[i]));
@@ -281,12 +281,13 @@ export default function ExamAdmin() {
   return (
     <div className="p-4 max-w-screen-xl mx-auto">
       <Card className="p-4 bg-[#18181b] border-zinc-800">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
           <h1 className="text-xl font-semibold text-white">Exam Administration</h1>
-          <div className="flex items-center gap-2">
-            <Button className="bg-purple-700 text-white hover:bg-purple-800" onClick={generateCheatSheetPDF}>Generate Cheat Sheet</Button>
-            <Button className="bg-blue-700 text-white hover:bg-blue-800" onClick={randomize}>Randomize Questions</Button>
-            <Button className="bg-teal-700 text-white hover:bg-teal-800" onClick={() => {
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => window.history.back()}>Back</Button>
+            <Button className="bg-purple-700 text-white hover:bg-purple-800 flex-1 sm:flex-none" onClick={generateCheatSheetPDF}>Generate Cheat Sheet</Button>
+            <Button className="bg-blue-700 text-white hover:bg-blue-800 flex-1 sm:flex-none" onClick={randomize}>Randomize</Button>
+            <Button className="bg-teal-700 text-white hover:bg-teal-800 flex-1 sm:flex-none" onClick={() => {
               try {
                 const doc = new jsPDF();
                 doc.setFontSize(14);
@@ -300,11 +301,11 @@ export default function ExamAdmin() {
                   const num = qi + 1;
                   const questionText = `${num}. ${q.q}`;
                   const split = doc.splitTextToSize(questionText, 180);
-                  split.forEach((line:string) => { doc.text(line, margin, y); y += lineHeight; });
+                  split.forEach((line: string) => { doc.text(line, margin, y); y += lineHeight; });
                   q.options.forEach((opt, oi) => {
                     const optText = `${String.fromCharCode(65 + oi)}) ${opt}`;
                     const splitOpt = doc.splitTextToSize(optText, 170);
-                    splitOpt.forEach((line:string) => { doc.text(line, margin + 6, y); y += lineHeight; });
+                    splitOpt.forEach((line: string) => { doc.text(line, margin + 6, y); y += lineHeight; });
                   });
                   y += 4; // extra spacing between questions
                   if (y > 274) { doc.addPage(); y = 15; }
@@ -313,13 +314,13 @@ export default function ExamAdmin() {
                 const fileName = `Full_Exam_${new Date().toLocaleString().replace(/[\/:]/g, '-')}.pdf`;
                 savePDFToArchive('Employee Training' as any, 'admin', `exam_full_${Date.now()}`, pdfData, { fileName, path: 'Employee Training/' });
                 toast({ title: 'Exam Saved', description: 'Full 50-question exam saved to File Manager.' });
-              } catch (err:any) {
+              } catch (err: any) {
                 toast({ title: 'Error', description: err?.message || 'Failed to generate exam PDF.', variant: 'destructive' });
               }
             }}>Save New Exam (PDF)</Button>
           </div>
         </div>
-        <p className="text-sm text-zinc-400 mb-4">Edit questions, options, and correct answers. Saved changes take effect immediately. Randomize keeps each question with its options and correct answer as a unit.</p>
+        <p className="text-sm text-zinc-400 mb-4">Edit questions, options, and correct answers. Saved changes take effect immediately. Randomize keeps each question with options/answer.</p>
         <div className="space-y-4">
           {questions.map((q, qi) => (
             <Card key={qi} className="p-3 bg-zinc-900 border-zinc-800">
@@ -327,7 +328,7 @@ export default function ExamAdmin() {
                 <span className="text-xs text-zinc-400">#{qi + 1}</span>
                 <Input value={q.q} onChange={(e) => {
                   const val = e.target.value; setQuestions(prev => { const n = [...prev]; n[qi] = { ...n[qi], q: val }; return n; });
-                }} className="bg-zinc-800 text-white" />
+                }} className="bg-zinc-800 text-white flex-1 min-w-0" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {q.options.map((opt, oi) => (
@@ -354,7 +355,7 @@ export default function ExamAdmin() {
           <Button className="bg-blue-700 text-white hover:bg-blue-800" onClick={addQuestion}>Add Question</Button>
           <Button className="bg-purple-700 text-white hover:bg-purple-800" onClick={save}>Save</Button>
         </div>
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 }

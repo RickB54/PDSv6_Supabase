@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
+import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, MapPin, CalendarPlus, Users } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,11 +48,10 @@ interface Customer {
   howFound?: string;
   howFoundOther?: string;
   type?: 'customer' | 'prospect';
+  is_archived?: boolean;
 }
 
 const Prospects = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -62,27 +60,10 @@ const Prospects = () => {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const list = await getUnifiedCustomers();
-        // Filter for prospects
-        const prospects = (list as Customer[]).filter(c => c.type === 'prospect');
-        setCustomers(prospects);
-      } catch (err: any) {
-        console.error('Failed to load prospects:', err);
-        try {
-          const fallback = await getCustomers();
-          const prospects = (fallback as Customer[]).filter(c => c.type === 'prospect');
-          setCustomers(prospects);
-          toast({ title: 'Load failed — retry', description: 'Using local cache.', variant: 'default' });
-        } catch (err2: any) {
-          toast({ title: 'Load failed — retry', description: err2?.message || String(err2), variant: 'destructive' });
-          setCustomers([]);
-        }
-      }
-    })();
+    refresh();
   }, []);
 
   const refresh = async () => {
@@ -96,9 +77,8 @@ const Prospects = () => {
         const fallback = await getCustomers();
         const prospects = (fallback as Customer[]).filter(c => c.type === 'prospect');
         setCustomers(prospects);
-        toast({ title: 'Load failed — retry', description: 'Using local cache.', variant: 'default' });
-      } catch (err2: any) {
-        console.error(err2);
+      } catch (err2) {
+        setCustomers([]);
       }
     }
   };
@@ -107,23 +87,45 @@ const Prospects = () => {
   const openEdit = (c: Customer) => { setEditing(c); setModalOpen(true); };
 
   const onSaveModal = async (data: ModalCustomer) => {
-    // Ensure it stays a prospect unless strictly changed (though modal handles type)
     if (!data.type) data.type = 'prospect';
-
     try {
-      await api('/api/customers', { method: 'POST', body: JSON.stringify(data) });
+      await upsertSupabaseCustomer({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes,
+        type: 'prospect',
+        is_archived: (data as any).is_archived || false,
+        vehicle_info: {
+          make: data.vehicle,
+          model: data.model,
+          year: data.year,
+          type: data.vehicleType,
+          color: data.color
+        }
+      });
+      await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();
       setModalOpen(false);
-      toast({ title: "Prospect Saved", description: "Record stored." });
+      toast({ title: "Saved", description: "Prospect updated." });
     } catch (err: any) {
-      try {
-        const saved = await upsertCustomer(data as any);
-        await refresh();
-        setModalOpen(false);
-        toast({ title: "Saved locally", description: "Backend unavailable; stored offline.", variant: 'default' });
-      } catch (err2: any) {
-        toast({ title: "Save failed", description: err2?.message || String(err2), variant: 'destructive' });
-      }
+      const saved = await upsertCustomer(data as any);
+      await refresh();
+      setModalOpen(false);
+      toast({ title: "Saved locally", description: "Backend unavailable; stored offline.", variant: 'default' });
+    }
+  };
+
+  const handleArchiveId = async (c: Customer) => {
+    const newVal = !c.is_archived;
+    try {
+      await upsertSupabaseCustomer({ ...c, is_archived: newVal });
+      await refresh();
+      toast({ title: newVal ? "Archived" : "Restored", description: `${c.name} has been ${newVal ? 'archived' : 'restored'}.` });
+    } catch (e) {
+      toast({ title: "Error", description: "Could not update status.", variant: "destructive" });
     }
   };
 
@@ -147,6 +149,13 @@ const Prospects = () => {
   };
 
   const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(customer => {
+    // Archive Filter
+    if (showArchived) {
+      if (!customer.is_archived) return false;
+    } else {
+      if (customer.is_archived) return false;
+    }
+
     const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.phone || '').includes(searchTerm) ||
       (customer.vehicle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,10 +168,7 @@ const Prospects = () => {
     if (!deleteCustomerId) return;
     await removeCustomer(deleteCustomerId);
     await refresh();
-    toast({
-      title: "Prospect Deleted",
-      description: "Record has been removed.",
-    });
+    toast({ title: "Deleted", description: "Prospect permanently removed." });
     setDeleteCustomerId(null);
   };
 
@@ -173,7 +179,7 @@ const Prospects = () => {
 
     doc.setFontSize(22);
     doc.setTextColor(40, 40, 40);
-    doc.text("Prospects List Report", 14, y);
+    doc.text(`Prospects List (${showArchived ? 'Archived' : 'Active'})`, 14, y);
     y += 8;
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -211,273 +217,164 @@ const Prospects = () => {
       try {
         const dataUrl = doc.output('datauristring');
         savePDFToArchive('Prospects', 'Admin', `prospects-${Date.now()}`, dataUrl, { fileName });
-        toast({ title: 'Archived', description: 'Saved to File Manager under prospects/.' });
-      } catch (e) {
-        console.error('Archive failed', e);
-      }
+        toast({ title: 'Archived', description: 'Saved to File Manager' });
+      } catch (e) { }
     } else {
       window.open(doc.output('bloburl'), '_blank');
     }
   };
 
-  const [expandedCustomers, setExpandedCustomers] = useState<string[]>([]);
-  const [allExpanded, setAllExpanded] = useState(false);
-  const [openMaps, setOpenMaps] = useState<string[]>([]);
-
-  const toggleMap = (id: string) => {
-    setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  const toggleCustomer = (id: string) => {
-    setExpandedCustomers(prev => (prev.includes(id) ? [] : [id]));
-    setAllExpanded(false);
-  };
-
-  const toggleAll = () => {
-    if (allExpanded) {
-      setExpandedCustomers([]);
-    } else {
-      setExpandedCustomers(filteredCustomers.map(c => c.id!));
-    }
-    setAllExpanded(!allExpanded);
-  };
+  const totalProspects = filteredCustomers.length;
+  const newThisMonth = filteredCustomers.filter(c => {
+    const d = c.createdAt ? new Date(c.createdAt) : new Date();
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Prospects" />
-
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="space-y-6 animate-fade-in">
-          {/* Search Bar */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <Users className="h-6 w-6 text-purple-400" />
-                  <h2 className="text-2xl font-bold text-foreground">Find Prospect</h2>
-                </div>
-                <div className="flex gap-2 items-center flex-wrap">
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value as any)}
-                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="daily">Today</option>
-                    <option value="weekly">This Week</option>
-                    <option value="monthly">This Month</option>
-                  </select>
-                  <Button variant="outline" onClick={() => generatePDF(true)}>
-                    <Save className="h-4 w-4 mr-2" />Save PDF
-                  </Button>
-                  <Button className="bg-gradient-hero" onClick={openAdd}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Prospect
-                  </Button>
-                </div>
+      <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
+        {/* Stats Card */}
+        <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-full bg-purple-500/20 text-purple-400">
+                <Users className="h-8 w-8" />
               </div>
-
-              {filteredCustomers.length > 0 && (
-                <div className="flex gap-2 items-center">
-                  <Button variant="outline" size="sm" onClick={toggleAll}>
-                    {allExpanded ? (
-                      <>
-                        <ChevronsUp className="h-4 w-4 mr-2" />
-                        Collapse All
-                      </>
-                    ) : (
-                      <>
-                        <ChevronsDown className="h-4 w-4 mr-2" />
-                        Expand All
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by name, phone, vehicle, etc..."
-                    className="pl-10 bg-background border-border"
-                  />
-                </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Prospects Overview</h2>
+                <p className="text-zinc-400 text-sm">Track potential clients and leads</p>
               </div>
             </div>
-          </Card>
-
-          {/* List */}
-          <div className="space-y-4">
-            {[...filteredCustomers]
-              .sort((a, b) => {
-                const da = a.updatedAt || a.createdAt || "";
-                const db = b.updatedAt || b.createdAt || "";
-                return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0);
-              })
-              .map((customer) => {
-                const isExpanded = expandedCustomers.includes(customer.id!);
-                if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) {
-                  return null;
-                }
-                return (
-                  <Card
-                    key={customer.id}
-                    className={`bg-gradient-card border-border hover:shadow-glow transition-all ${isExpanded ? 'sticky top-4 z-10 shadow-xl' : ''
-                      }`}
-                  >
-                    <Collapsible open={isExpanded} onOpenChange={() => toggleCustomer(customer.id!)}>
-                      <div className="p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <CollapsibleTrigger className="flex-1 text-left">
-                            <div className="flex items-center gap-2">
-                              {isExpanded ? (
-                                <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                              ) : (
-                                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                              )}
-                              <div>
-                                <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                                  {customer.name}
-                                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/50">Prospect</span>
-                                </h3>
-                                <p className="text-muted-foreground">{customer.phone}</p>
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteCustomerId(customer.id!)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <Button asChild variant="outline" size="sm" className="ml-2">
-                              <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&address=${encodeURIComponent(customer.address || '')}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}`}>
-                                <CalendarPlus className="h-4 w-4 mr-2" />
-                                Convert to Booking
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-
-                        <CollapsibleContent className="mt-4">
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <Label className="text-muted-foreground">Vehicle</Label>
-                                <p className="text-foreground font-medium">
-                                  {customer.year} {customer.vehicle} {customer.model}
-                                </p>
-                              </div>
-
-                              <div>
-                                <Label className="text-muted-foreground">Email</Label>
-                                <p className="text-foreground font-medium">{customer.email || "N/A"}</p>
-                              </div>
-
-                              <div className={openMaps.includes(customer.id!) ? "md:col-span-2" : ""}>
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-muted-foreground">Address</Label>
-                                  {customer.address && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-5 px-2 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                                      onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}
-                                    >
-                                      <MapPin className="h-3 w-3 mr-1" />
-                                      {openMaps.includes(customer.id!) ? "Hide Map" : "Find On Map"}
-                                    </Button>
-                                  )}
-                                </div>
-                                <p className="text-foreground font-medium">{customer.address || "N/A"}</p>
-                                {openMaps.includes(customer.id!) && customer.address && (
-                                  <div className="mt-2 w-full h-64 rounded-md overflow-hidden border border-zinc-800 animate-in fade-in zoom-in duration-300">
-                                    <iframe
-                                      width="100%"
-                                      height="100%"
-                                      frameBorder="0"
-                                      scrolling="no"
-                                      marginHeight={0}
-                                      marginWidth={0}
-                                      src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                                      title={`Map for ${customer.name}`}
-                                    ></iframe>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div>
-                                <Label className="text-muted-foreground">How Found</Label>
-                                <p className="text-foreground font-medium">
-                                  {customer.howFound === 'other' ? (customer.howFoundOther || 'Other') : (customer.howFound || "N/A")}
-                                </p>
-                              </div>
-                            </div>
-
-                            {customer.notes && (
-                              <div>
-                                <Label className="text-muted-foreground">Notes</Label>
-                                <p className="text-foreground">{customer.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        </CollapsibleContent>
-                      </div>
-                    </Collapsible>
-                  </Card>
-                );
-              })}
-          </div>
-
-          {filteredCustomers.length === 0 && (
-            <Card className="p-12 bg-gradient-card border-border text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-foreground mb-2">No prospects yet</h3>
-              <p className="text-muted-foreground">
-                Add people you meet to track them as potential clients.
-              </p>
-              <div className="mt-4">
-                <Button className="bg-gradient-hero" onClick={openAdd}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Prospect
-                </Button>
+            <div className="flex gap-8">
+              <div className="text-center">
+                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">{showArchived ? 'Archived' : 'Active'}</p>
+                <p className="text-3xl font-bold text-white mt-1">{totalProspects}</p>
               </div>
-            </Card>
-          )}
+              <div className="text-center border-l border-zinc-700 pl-8">
+                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">New This Month</p>
+                <p className="text-3xl font-bold text-purple-400 mt-1">{newThisMonth}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Controls */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="pl-10 bg-zinc-950 border-zinc-800" />
+          </div>
+          <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <Button
+              variant={showArchived ? "secondary" : "ghost"}
+              onClick={() => setShowArchived(!showArchived)}
+              className="text-zinc-400 hover:text-white"
+            >
+              {showArchived ? "Show Active" : "Show Archived"}
+            </Button>
+
+            <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="prospects-range" />
+            <Button variant="outline" onClick={() => generatePDF(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-200">
+              <Save className="h-4 w-4 mr-2" /> PDF
+            </Button>
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white border-0" onClick={openAdd}>
+              <Plus className="h-4 w-4 mr-2" /> Add
+            </Button>
+          </div>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block rounded-xl border border-zinc-800 overflow-hidden bg-zinc-900/50">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-zinc-900/80 text-zinc-400 font-medium border-b border-zinc-800">
+                <tr>
+                  <th className="px-4 py-3">Name / Contact</th>
+                  <th className="px-4 py-3">Vehicle Interest</th>
+                  <th className="px-4 py-3">Source</th>
+                  <th className="px-4 py-3">Notes</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/50">
+                {filteredCustomers.map(c => (
+                  <tr key={c.id} className="hover:bg-purple-500/5 transition-colors group">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-zinc-200">{c.name}</div>
+                      <div className="text-xs text-zinc-500">{c.phone}</div>
+                      <div className="text-xs text-zinc-500">{c.email}</div>
+                    </td>
+                    <td className="px-4 py-3 text-zinc-300">
+                      {c.year} {c.vehicle} {c.model}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400">
+                      <span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs">
+                        {c.howFound === 'other' ? c.howFoundOther : c.howFound || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400 max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={c.is_archived ? "Restore" : "Archive"}>
+                          {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                        {!c.is_archived && (
+                          <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 ml-2">
+                            <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}&vehicleYear=${encodeURIComponent(c.year || '')}&vehicleMake=${encodeURIComponent(c.vehicle || '')}&vehicleModel=${encodeURIComponent(c.model || '')}`}>Convert</Link>
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredCustomers.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-500">No prospects found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden space-y-4">
+          {filteredCustomers.map(c => (
+            <div key={c.id} className="bg-zinc-900 border border-purple-500/20 p-4 rounded-xl space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-zinc-200 text-lg">{c.name}</h3>
+                  <p className="text-zinc-400 text-sm">{c.phone}</p>
+                </div>
+                {!c.is_archived && (
+                  <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 bg-purple-500/10">
+                    <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                  </Button>
+                )}
+              </div>
+              {c.notes && <div className="text-sm text-zinc-500 italic border-l-2 border-zinc-700 pl-2">{c.notes}</div>}
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 text-zinc-400 hover:text-amber-400">
+                  {c.is_archived ? <><RotateCcw className="h-4 w-4 mr-2" /> Restore</> : <><Archive className="h-4 w-4 mr-2" /> Archive</>}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 text-zinc-400"><Pencil className="h-4 w-4 mr-2" /> Edit</Button>
+                <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 text-red-500"><Trash2 className="h-4 w-4 mr-2" /> Del</Button>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this prospect record.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="button-group-responsive">
-            <AlertDialogCancel>No</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive">
-              Yes
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Delete Permanently?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <CustomerModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        initial={editing}
-        onSave={onSaveModal}
-        defaultType="prospect"
-      />
+      <CustomerModal open={modalOpen} onOpenChange={setModalOpen} initial={editing} onSave={onSaveModal} defaultType="prospect" />
     </div>
   );
 };
