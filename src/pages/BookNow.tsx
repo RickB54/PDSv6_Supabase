@@ -21,6 +21,8 @@ import { generateBookingPDF, uploadToFileManager } from "@/lib/bookingsSync";
 import { useCouponsStore } from "@/store/coupons";
 import { isSupabaseEnabled } from "@/lib/auth";
 import * as bookingsSvc from "@/services/supabase/bookings";
+import * as supaPkgs from "@/services/supabase/packages";
+import * as supaAddOns from "@/services/supabase/addOns";
 import api from "@/lib/api.js";
 
 const BookNow = () => {
@@ -99,7 +101,86 @@ const BookNow = () => {
       setCustomPackagesLive(snapshot.customPackages || []);
       setCustomAddOnsLive(snapshot.customAddOns || []);
       setLastSyncTs(Date.now());
-    } catch { }
+    } catch {
+      // Fallback: If local fetch fails, try Supabase directly
+      if (isSupabaseEnabled()) {
+        try {
+          const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+
+          const newPackageMeta: Record<string, any> = {};
+          const newSavedPrices: Record<string, string> = {};
+
+          pkgs.forEach((p: any) => {
+            newPackageMeta[p.id] = {
+              visible: p.is_active !== false,
+              deleted: false, // assuming if it's in the DB it's not "deleted" in the metadata sense, or we filter elsewhere
+              imageDataUrl: undefined // Supabase doesn't store the massive data URL in the main table usually, or if it does, map it here
+            };
+            // Map prices
+            newSavedPrices[`package:${p.id}:compact`] = String(p.compact_price || 0);
+            newSavedPrices[`package:${p.id}:midsize`] = String(p.midsize_price || 0);
+            newSavedPrices[`package:${p.id}:truck`] = String(p.truck_price || 0);
+            newSavedPrices[`package:${p.id}:luxury`] = String(p.luxury_price || 0);
+          });
+
+          const newAddOnMeta: Record<string, any> = {};
+          addons.forEach((a: any) => {
+            newAddOnMeta[a.id] = {
+              visible: a.is_active !== false,
+              deleted: false
+            };
+            newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);
+            newSavedPrices[`addon:${a.id}:midsize`] = String(a.midsize_price || 0);
+            newSavedPrices[`addon:${a.id}:truck`] = String(a.truck_price || 0);
+            newSavedPrices[`addon:${a.id}:luxury`] = String(a.luxury_price || 0);
+          });
+
+          setPackageMetaLive(newPackageMeta);
+          setAddOnMetaLive(newAddOnMeta);
+          setSavedPricesLive(newSavedPrices);
+          // For now, customPackages logic in Supabase might need more work if they are stored differently, 
+          // but assuming they overwrite built-ins or are just rows in the 'packages' table.
+          // IF 'packages' table includes custom packages, we don't need separate customPackagesLive array interactions 
+          // unless BookNow logic splits them explicity. 
+          // BookNow merges: [...visibleBuiltIns, ...visibleCustomPkgs]
+          // The built-in IDs won't change. 
+          // The supabase `pkgs` includes BOTH built-in overrides AND custom packages. 
+          // So we might need to populate customPackagesLive with any row that isn't a built-in ID.
+
+          const builtInIds = builtInPackages.map(b => b.id);
+          const customs = pkgs.filter((p: any) => !builtInIds.includes(p.id)).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            pricing: {
+              compact: p.compact_price,
+              midsize: p.midsize_price,
+              truck: p.truck_price,
+              luxury: p.luxury_price
+            },
+            steps: [] // Steps might be missing if not joined, but prices are key
+          }));
+          setCustomPackagesLive(customs);
+
+          const builtInAddOnIds = builtInAddOns.map(b => b.id);
+          const customAdds = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            pricing: {
+              compact: a.compact_price,
+              midsize: a.midsize_price,
+              truck: a.truck_price,
+              luxury: a.luxury_price
+            },
+            steps: []
+          }));
+          setCustomAddOnsLive(customAdds);
+
+          setLastSyncTs(Date.now());
+        } catch (e) {
+          console.error("Supabase fallback fetch failed", e);
+        }
+      }
+    }
   };
 
   useEffect(() => {

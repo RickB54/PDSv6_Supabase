@@ -218,7 +218,7 @@ export default function PackagePricing() {
           discount_percent: null,
           discount_start: null,
           discount_end: null,
-          is_active: true,
+          is_active: getPackageMeta(p.id)?.visible !== false,
         }));
 
         const allAddOns = [...builtInAddOns, ...getCustomAddOns()];
@@ -233,7 +233,7 @@ export default function PackagePricing() {
           discount_percent: null,
           discount_start: null,
           discount_end: null,
-          is_active: true,
+          is_active: getAddOnMeta(a.id)?.visible !== false,
         }));
 
         try { await supaPkgs.upsert(pkgRows); } catch { }
@@ -1087,8 +1087,8 @@ export default function PackagePricing() {
               <Card key={pkg.id} className="p-4 space-y-3">
                 <h3 className="font-semibold">{pkg.name}</h3>
                 {/* Picture Upload Area (packages only) */}
-                <div className="flex flex-col md:flex-row md:flex-nowrap items-start gap-3">
-                  <img src={getLiveImage(pkg.id)} alt={pkg.name} className="w-full md:w-[300px] md:h-[200px] object-contain md:shrink-0 rounded border border-zinc-700 shadow" />
+                <div className="flex flex-col xl:flex-row xl:flex-nowrap items-start gap-3">
+                  <img src={getLiveImage(pkg.id)} alt={pkg.name} className="w-full xl:w-[300px] xl:h-[200px] object-contain xl:shrink-0 rounded border border-zinc-700 shadow" />
                   <div className="min-w-0 flex-1 w-full">
                     <Label className="text-xs text-white mb-1 block">Change Package Image</Label>
                     <input type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files && handleImageUpload(pkg.id, e.target.files[0])} />
@@ -1122,7 +1122,7 @@ export default function PackagePricing() {
                     />
                   </div>
                 </div>
-                <div className="button-group-responsive flex gap-2 flex-wrap md:flex-nowrap max-w-full">
+                <div className="button-group-responsive flex gap-2 flex-wrap xl:flex-nowrap max-w-full">
                   <Button variant="outline" onClick={() => applyIncrease(pkg.id, 5)}>Apply 5%</Button>
                   <Button variant="outline" onClick={() => applyIncrease(pkg.id, 10)}>Apply 10%</Button>
                   <Button variant="outline" onClick={() => reset(pkg.id)}>Reset</Button>
@@ -1190,7 +1190,7 @@ export default function PackagePricing() {
                     />
                   </div>
                 </div>
-                <div className="button-group-responsive flex gap-2 flex-wrap md:flex-nowrap max-w-full">
+                <div className="button-group-responsive flex gap-2 flex-wrap xl:flex-nowrap max-w-full">
                   <Button variant="outline" onClick={() => {
                     const sizes: string[] = builtInSizes;
                     const factor = 1 + (5 / 100);

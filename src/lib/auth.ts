@@ -280,7 +280,10 @@ export async function signupSupabase(email: string, password: string, name?: str
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name || email.split('@')[0] } }
+      options: {
+        data: { full_name: name || email.split('@')[0] },
+        emailRedirectTo: window.location.origin,
+      }
     });
 
     if (error) {
