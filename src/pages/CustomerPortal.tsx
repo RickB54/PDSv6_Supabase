@@ -514,7 +514,7 @@ const CustomerPortal = () => {
         <p>System Status Diagnostics:</p>
         <p>Mode: {isSupabaseEnabled() ? 'Cloud / Supabase' : 'Offline / Local (No Env Vars)'}</p>
         <p>Sync: {lastSyncTs > 0 ? `Success (${new Date(lastSyncTs).toLocaleTimeString()})` : 'Pending / Failed'}</p>
-        <p>Debug Premium: {String(packageMetaLive['premium-detail']?.visible)} | ID Found? {String(!!packageMetaLive['premium-detail'])}</p>
+        <p>Debug Premium: {String(packageMetaLive['premium-detail']?.visible)} | ID Found? {String(!!packageMetaLive['premium-detail'])} | Rows: {Object.keys(packageMetaLive).length}</p>
       </div>
       {/* Debug Bar removed: production environment with Supabase enabled */}
 
