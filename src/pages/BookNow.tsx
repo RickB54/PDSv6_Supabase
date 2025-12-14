@@ -860,6 +860,11 @@ const BookNow = () => {
         </div>
       </main>
       {/* Removed bottom debug banner for production */}
+      <div className="bg-muted p-4 text-xs font-mono text-center text-muted-foreground border-t">
+        <p>System Status Diagnostics:</p>
+        <p>Mode: {isSupabaseEnabled() ? 'Cloud / Supabase' : 'Offline / Local (No Env Vars)'}</p>
+        <p>Sync: {lastSyncTs > 0 ? `Success (${new Date(lastSyncTs).toLocaleTimeString()})` : 'Pending / Failed'}</p>
+      </div>
     </div>
   );
 };
