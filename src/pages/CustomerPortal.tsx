@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { servicePackages as builtInPackages, addOns as builtInAddOns, VehicleType, calculateDestinationFee } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
+import { isSupabaseEnabled } from "@/lib/auth";
+import * as supaPkgs from "@/services/supabase/packages";
+import * as supaAddOns from "@/services/supabase/addOns";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
@@ -65,7 +68,78 @@ const CustomerPortal = () => {
       setCustomPackagesLive(snapshot.customPackages || []);
       setCustomAddOnsLive(snapshot.customAddOns || []);
       setLastSyncTs(Date.now());
-    } catch { }
+    } catch {
+      // Fallback: If local fetch fails, try Supabase directly
+      if (isSupabaseEnabled()) {
+        try {
+          const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+
+          const newPackageMeta: Record<string, any> = {};
+          const newSavedPrices: Record<string, string> = {};
+
+          pkgs.forEach((p: any) => {
+            newPackageMeta[p.id] = {
+              visible: p.is_active !== false,
+              deleted: false
+            };
+            // Map prices
+            newSavedPrices[`package:${p.id}:compact`] = String(p.compact_price || 0);
+            newSavedPrices[`package:${p.id}:midsize`] = String(p.midsize_price || 0);
+            newSavedPrices[`package:${p.id}:truck`] = String(p.truck_price || 0);
+            newSavedPrices[`package:${p.id}:luxury`] = String(p.luxury_price || 0);
+          });
+
+          const newAddOnMeta: Record<string, any> = {};
+          addons.forEach((a: any) => {
+            newAddOnMeta[a.id] = {
+              visible: a.is_active !== false,
+              deleted: false
+            };
+            newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);
+            newSavedPrices[`addon:${a.id}:midsize`] = String(a.midsize_price || 0);
+            newSavedPrices[`addon:${a.id}:truck`] = String(a.truck_price || 0);
+            newSavedPrices[`addon:${a.id}:luxury`] = String(a.luxury_price || 0);
+          });
+
+          setPackageMetaLive(newPackageMeta);
+          setAddOnMetaLive(newAddOnMeta);
+          setSavedPricesLive(newSavedPrices);
+
+          // Map custom inputs
+          const builtInIds = builtInPackages.map(b => b.id);
+          const customs = pkgs.filter((p: any) => !builtInIds.includes(p.id)).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            pricing: {
+              compact: p.compact_price,
+              midsize: p.midsize_price,
+              truck: p.truck_price,
+              luxury: p.luxury_price
+            },
+            steps: []
+          }));
+          setCustomPackagesLive(customs);
+
+          const builtInAddOnIds = builtInAddOns.map(b => b.id);
+          const customAdds = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            pricing: {
+              compact: a.compact_price,
+              midsize: a.midsize_price,
+              truck: a.truck_price,
+              luxury: a.luxury_price
+            },
+            steps: []
+          }));
+          setCustomAddOnsLive(customAdds);
+
+          setLastSyncTs(Date.now());
+        } catch (e) {
+          console.error("Supabase CustomerPortal fallback failed", e);
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -436,6 +510,11 @@ const CustomerPortal = () => {
           {/* Removed confirmation button per request */}
         </Card>
       </main>
+      <div className="bg-muted p-4 text-xs font-mono text-center text-muted-foreground border-t">
+        <p>System Status Diagnostics:</p>
+        <p>Mode: {isSupabaseEnabled() ? 'Cloud / Supabase' : 'Offline / Local (No Env Vars)'}</p>
+        <p>Sync: {lastSyncTs > 0 ? `Success (${new Date(lastSyncTs).toLocaleTimeString()})` : 'Pending / Failed'}</p>
+      </div>
       {/* Debug Bar removed: production environment with Supabase enabled */}
 
       {/* Learn More Dialog */}
