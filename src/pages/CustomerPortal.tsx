@@ -59,7 +59,79 @@ const CustomerPortal = () => {
   const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
   const fetchLive = async () => {
-    // Rely on local snapshot since backend API is updated to port 6066
+    // Priority 1: Cloud / Supabase (The Real Source of Truth)
+    if (isSupabaseEnabled()) {
+      try {
+        const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+
+        const newPackageMeta: Record<string, any> = {};
+        const newSavedPrices: Record<string, string> = {};
+
+        pkgs.forEach((p: any) => {
+          newPackageMeta[p.id] = {
+            visible: p.is_active !== false,
+            deleted: false
+          };
+          // Map prices
+          newSavedPrices[`package:${p.id}:compact`] = String(p.compact_price || 0);
+          newSavedPrices[`package:${p.id}:midsize`] = String(p.midsize_price || 0);
+          newSavedPrices[`package:${p.id}:truck`] = String(p.truck_price || 0);
+          newSavedPrices[`package:${p.id}:luxury`] = String(p.luxury_price || 0);
+        });
+
+        const newAddOnMeta: Record<string, any> = {};
+        addons.forEach((a: any) => {
+          newAddOnMeta[a.id] = {
+            visible: a.is_active !== false,
+            deleted: false
+          };
+          newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);
+          newSavedPrices[`addon:${a.id}:midsize`] = String(a.midsize_price || 0);
+          newSavedPrices[`addon:${a.id}:truck`] = String(a.truck_price || 0);
+          newSavedPrices[`addon:${a.id}:luxury`] = String(a.luxury_price || 0);
+        });
+
+        setPackageMetaLive(newPackageMeta);
+        setAddOnMetaLive(newAddOnMeta);
+        setSavedPricesLive(newSavedPrices);
+
+        // Map custom inputs
+        const builtInIds = builtInPackages.map(b => b.id);
+        const customs = pkgs.filter((p: any) => !builtInIds.includes(p.id)).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          pricing: {
+            compact: p.compact_price,
+            midsize: p.midsize_price,
+            truck: p.truck_price,
+            luxury: p.luxury_price
+          },
+          steps: []
+        }));
+        setCustomPackagesLive(customs);
+
+        const builtInAddOnIds = builtInAddOns.map(b => b.id);
+        const customAdds = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
+          id: a.id,
+          name: a.name,
+          pricing: {
+            compact: a.compact_price,
+            midsize: a.midsize_price,
+            truck: a.truck_price,
+            luxury: a.luxury_price
+          },
+          steps: []
+        }));
+        setCustomAddOnsLive(customAdds);
+
+        setLastSyncTs(Date.now());
+        return; // Success, skip fallback
+      } catch (e) {
+        console.error("Supabase CustomerPortal fetch failed, falling back to local snapshot", e);
+      }
+    }
+
+    // Priority 2: Local Snapshot (Offline / Legacy / API Mock)
     try {
       const snapshot = await buildFullSyncPayload();
       setSavedPricesLive(snapshot.savedPrices || {});
@@ -68,78 +140,7 @@ const CustomerPortal = () => {
       setCustomPackagesLive(snapshot.customPackages || []);
       setCustomAddOnsLive(snapshot.customAddOns || []);
       setLastSyncTs(Date.now());
-    } catch {
-      // Fallback: If local fetch fails, try Supabase directly
-      if (isSupabaseEnabled()) {
-        try {
-          const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
-
-          const newPackageMeta: Record<string, any> = {};
-          const newSavedPrices: Record<string, string> = {};
-
-          pkgs.forEach((p: any) => {
-            newPackageMeta[p.id] = {
-              visible: p.is_active !== false,
-              deleted: false
-            };
-            // Map prices
-            newSavedPrices[`package:${p.id}:compact`] = String(p.compact_price || 0);
-            newSavedPrices[`package:${p.id}:midsize`] = String(p.midsize_price || 0);
-            newSavedPrices[`package:${p.id}:truck`] = String(p.truck_price || 0);
-            newSavedPrices[`package:${p.id}:luxury`] = String(p.luxury_price || 0);
-          });
-
-          const newAddOnMeta: Record<string, any> = {};
-          addons.forEach((a: any) => {
-            newAddOnMeta[a.id] = {
-              visible: a.is_active !== false,
-              deleted: false
-            };
-            newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);
-            newSavedPrices[`addon:${a.id}:midsize`] = String(a.midsize_price || 0);
-            newSavedPrices[`addon:${a.id}:truck`] = String(a.truck_price || 0);
-            newSavedPrices[`addon:${a.id}:luxury`] = String(a.luxury_price || 0);
-          });
-
-          setPackageMetaLive(newPackageMeta);
-          setAddOnMetaLive(newAddOnMeta);
-          setSavedPricesLive(newSavedPrices);
-
-          // Map custom inputs
-          const builtInIds = builtInPackages.map(b => b.id);
-          const customs = pkgs.filter((p: any) => !builtInIds.includes(p.id)).map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            pricing: {
-              compact: p.compact_price,
-              midsize: p.midsize_price,
-              truck: p.truck_price,
-              luxury: p.luxury_price
-            },
-            steps: []
-          }));
-          setCustomPackagesLive(customs);
-
-          const builtInAddOnIds = builtInAddOns.map(b => b.id);
-          const customAdds = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
-            id: a.id,
-            name: a.name,
-            pricing: {
-              compact: a.compact_price,
-              midsize: a.midsize_price,
-              truck: a.truck_price,
-              luxury: a.luxury_price
-            },
-            steps: []
-          }));
-          setCustomAddOnsLive(customAdds);
-
-          setLastSyncTs(Date.now());
-        } catch (e) {
-          console.error("Supabase CustomerPortal fallback failed", e);
-        }
-      }
-    }
+    } catch { }
   };
 
   useEffect(() => {
