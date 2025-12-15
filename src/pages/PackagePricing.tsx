@@ -218,7 +218,7 @@ export default function PackagePricing() {
           discount_percent: null,
           discount_start: null,
           discount_end: null,
-          is_active: getPackageMeta(p.id)?.visible !== false,
+          is_active: getPackageMeta(p.id)?.visible !== false && !getPackageMeta(p.id)?.deleted,
         }));
 
         const allAddOns = [...builtInAddOns, ...getCustomAddOns()];
@@ -233,7 +233,7 @@ export default function PackagePricing() {
           discount_percent: null,
           discount_start: null,
           discount_end: null,
-          is_active: getAddOnMeta(a.id)?.visible !== false,
+          is_active: getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted,
         }));
 
         try { await supaPkgs.upsert(pkgRows); } catch { }
@@ -479,42 +479,91 @@ export default function PackagePricing() {
 
   useEffect(() => {
     const load = async () => {
-      // Prefill immediately from website definitions so inputs are never empty
+      // 1. Seed defaults first (prevent empty UI)
       const seededDefault = seedFromDefinitions();
       setSavedPrices(seededDefault);
-      setCurrentPrices(seededDefault);
+      setCurrentPrices(seededDefault); // display defaults while loading
 
+      // 2. Try loading from Cloud (Supabase) - The Source of Truth
+      if (isSupabaseEnabled()) {
+        try {
+          const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+
+          if (pkgs.length > 0 || addons.length > 0) {
+            const cloudPrices: PriceMap = {};
+
+            // Map Package Data
+            pkgs.forEach((p: any) => {
+              cloudPrices[getKey('package', p.id, 'compact')] = String(p.compact_price || 0);
+              cloudPrices[getKey('package', p.id, 'midsize')] = String(p.midsize_price || 0);
+              cloudPrices[getKey('package', p.id, 'truck')] = String(p.truck_price || 0);
+              cloudPrices[getKey('package', p.id, 'luxury')] = String(p.luxury_price || 0);
+
+              // Sync Meta (Visibility/Deleted)
+              setPackageMeta(p.id, {
+                visible: p.is_active !== false,
+                deleted: false // If it's in DB, it's not deleted (unless we add a deleted column later)
+              });
+            });
+
+            // Map Add-On Data
+            addons.forEach((a: any) => {
+              cloudPrices[getKey('addon', a.id, 'compact')] = String(a.compact_price || 0);
+              cloudPrices[getKey('addon', a.id, 'midsize')] = String(a.midsize_price || 0);
+              cloudPrices[getKey('addon', a.id, 'truck')] = String(a.truck_price || 0);
+              cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.pricing?.luxury ?? a.basePrice ?? 0); // specific fallback logic
+              // fix standard map if needed:
+              cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.luxury_price || 0);
+
+              setAddOnMeta(a.id, {
+                visible: a.is_active !== false,
+                deleted: false
+              });
+            });
+
+            // Check for custom packages in DB that aren't local?
+            // For now, pricing sync is the main critical path.
+
+            // Merge with local just in case, but Cloud wins
+            const localSaved = await getSavedPrices();
+            const merged = { ...localSaved, ...cloudPrices };
+
+            setSavedPrices(merged);
+            setCurrentPrices(merged);
+
+            // Persist this fresh cloud state to local so offline works next time
+            await saveToLocalforage(merged);
+
+            toast.success("Pricing loaded from Cloud.");
+            return;
+          }
+        } catch (e) {
+          console.error("Cloud load failed, falling back to local", e);
+        }
+      }
+
+      // 3. Fallback: Load from Local Storage (Offline / Legacy)
       let lastSaved = await getSavedPrices();
       let backup = await getBackupPrices();
 
-      // ONE-TIME INJECTION: Set original website prices as the baseline exactly once
+      // ONE-TIME INJECTION (Keep existing logic)
       const hasSeeded = localStorage.getItem(ONE_TIME_ORIGINAL_SEED_FLAG) === "true";
       if (!hasSeeded) {
         const seeded = seedFromDefinitions();
-        // Persist locally for immediate baseline; let you click Save All to publish
         await saveToLocalforage(seeded);
-        // Prime backups to these original values
         await saveBackupPrices(seeded);
         savePersistentBackup(seeded);
         localStorage.setItem(ONE_TIME_ORIGINAL_SEED_FLAG, "true");
         setSavedPrices(seeded);
         setCurrentPrices(seeded);
-        toast.success("Original website prices loaded one-time. Click Save All to lock.");
         return;
       }
-      // Seed baseline from definitions if nothing saved yet
+
       if (Object.keys(lastSaved).length === 0) {
         const seeded = seedFromDefinitions();
-        await saveToLocalforage(seeded);
-        await saveToBackend(seeded);
         lastSaved = seeded;
       }
-      // Initialize backup if missing
-      if (Object.keys(backup).length === 0) {
-        const initialBackup = Object.keys(lastSaved).length > 0 ? lastSaved : seedFromDefinitions();
-        await saveBackupPrices(initialBackup);
-        backup = initialBackup;
-      }
+
       setSavedPrices(lastSaved);
       setCurrentPrices(lastSaved);
     };
