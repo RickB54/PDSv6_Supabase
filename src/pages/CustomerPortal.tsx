@@ -516,6 +516,7 @@ const CustomerPortal = () => {
         <p>Sync: {lastSyncTs > 0 ? `Success (${new Date(lastSyncTs).toLocaleTimeString()})` : 'Pending / Failed'}</p>
         <p>Debug Premium: {String(packageMetaLive['premium-detail']?.visible)} | ID Found? {String(!!packageMetaLive['premium-detail'])} | Rows: {Object.keys(packageMetaLive).length}</p>
         <p>DB URL: {import.meta.env.VITE_SUPABASE_URL ? import.meta.env.VITE_SUPABASE_URL.substring(0, 15) + '...' : 'MISSING'}</p>
+        <p>Project ID: {import.meta.env.VITE_SUPABASE_URL ? import.meta.env.VITE_SUPABASE_URL.split('//')[1]?.split('.')[0] : 'UNKNOWN'}</p>
       </div>
       {/* Debug Bar removed: production environment with Supabase enabled */}
 
