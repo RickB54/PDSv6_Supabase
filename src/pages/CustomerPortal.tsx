@@ -11,6 +11,7 @@ import { getCustomServices, getAllPackageMeta, getAllAddOnMeta, buildFullSyncPay
 import { isSupabaseEnabled } from "@/lib/auth";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
+import { contentService } from "@/lib/content";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
@@ -145,10 +146,23 @@ const CustomerPortal = () => {
 
   useEffect(() => {
     const loadVehicleTypes = async () => {
-      // Fallback to default types if no API
+      // 1. Try Supabase
+      if (isSupabaseEnabled()) {
+        try {
+          // contentService imported at top
+          const types = await contentService.getVehicleTypes();
+          if (types && types.length > 0) {
+            setVehicleOptions(types.filter(t => t.is_active).map(t => t.id));
+            const labels: Record<string, string> = {};
+            types.forEach(t => labels[t.id] = t.name + (t.description ? ` (${t.description})` : ''));
+            setVehicleLabels(labels);
+            return;
+          }
+        } catch { }
+      }
+
+      // Fallback
       setVehicleOptions(['compact', 'midsize', 'truck', 'luxury']);
-      // Should we check local storage for custom types?
-      // For now, rely on defaults or what `buildFullSyncPayload` might eventually provide if updated.
     };
     loadVehicleTypes();
     const onChanged = (e: any) => {

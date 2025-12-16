@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import api from "@/lib/api";
+import { isSupabaseEnabled } from "@/lib/auth";
 
 const FAQ = () => {
   const [faqs, setFaqs] = useState<{ id: string; question: string; answer: string }[]>([]);
@@ -13,6 +14,19 @@ const FAQ = () => {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
+      // 1. Try Supabase
+      if (isSupabaseEnabled()) {
+        try {
+          const { contentService } = await import("@/lib/content");
+          const data = await contentService.getFaqs();
+          if (data && data.length > 0) {
+            setFaqs(data.map(d => ({ id: d.id || `faq-${Math.random()}`, question: d.question, answer: d.answer })));
+            return;
+          }
+        } catch (e) { console.error(e); }
+      }
+
+      // 2. Fallback
       const list = await api('/api/faqs', { method: 'GET' });
       if (mounted && Array.isArray(list)) setFaqs(list);
     };
@@ -28,7 +42,7 @@ const FAQ = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/">

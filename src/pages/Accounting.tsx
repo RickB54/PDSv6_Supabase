@@ -55,6 +55,9 @@ interface Invoice {
   id?: string;
   total: number;
   createdAt: string;
+  paymentStatus?: "unpaid" | "partially-paid" | "paid"; // Added for ledger logic
+  paidAmount?: number; // Added for ledger logic
+  invoiceNumber?: string; // Added for ledger display
 }
 
 interface Expense {
@@ -721,80 +724,132 @@ const Accounting = () => {
                         Credits (Income) - {incomeList.length} transactions
                       </h3>
                       <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {incomeList.length === 0 ? (
+                        {incomeList.length === 0 && invoiceList.filter(i => (i.paymentStatus === 'paid' || (i.paidAmount || 0) > 0)).length === 0 ? (
                           <p className="text-sm text-muted-foreground p-4 text-center border border-dashed rounded">No income transactions yet</p>
                         ) : (
-                          incomeList.map((income) => (
-                            <div
-                              key={income.id}
-                              className="p-3 border rounded-lg"
-                              style={{
-                                backgroundColor: categoryColors[income.category || 'General']
-                                  ? `${categoryColors[income.category || 'General']}15`
-                                  : 'rgb(240, 253, 244)',
-                                borderColor: categoryColors[income.category || 'General'] || 'rgb(187, 247, 208)'
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-green-700 dark:text-green-400">
-                                      +${(income.amount || 0).toFixed(2)}
-                                    </span>
-                                    <span
-                                      className="text-xs px-2 py-0.5 rounded font-medium"
-                                      style={{
-                                        backgroundColor: categoryColors[income.category || 'General'] || '#10b981',
-                                        color: 'white'
-                                      }}
-                                    >
-                                      {income.category || 'General'}
-                                    </span>
+                          <>
+                            {/* Paid Invoices */}
+                            {invoiceList.filter(inv => {
+                              const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
+                              // Basic filter check if 'within' helper is available, otherwise re-implement or use dateFilter
+                              // Re-using local 'within' logic implicitly if we were inside the function, but we are in JSX.
+                              // We need to filter by the current date filter state.
+                              const d = new Date(inv.createdAt);
+                              const now = new Date();
+                              const today = now.toDateString();
+                              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+                              let show = false;
+                              if (dateFilter === 'all') show = true;
+                              else if (dateFilter === 'daily') show = d.toDateString() === today;
+                              else if (dateFilter === 'weekly') show = d >= weekAgo;
+                              else if (dateFilter === 'monthly') show = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+                              // Custom range check
+                              if (dateRange.from && d < new Date(dateRange.from.setHours(0, 0, 0, 0))) show = false;
+                              if (dateRange.to && d > new Date(dateRange.to.setHours(23, 59, 59, 999))) show = false;
+
+                              return isPaid && show;
+                            }).map(inv => (
+                              <div
+                                key={`inv-${inv.id}`}
+                                className="p-3 border rounded-lg bg-blue-50/50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-800"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-semibold text-blue-700 dark:text-blue-400">
+                                        +${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}
+                                      </span>
+                                      <span className="text-xs px-2 py-0.5 rounded font-medium bg-blue-600 text-white">
+                                        Invoice
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-foreground truncate">Paid Invoice #{String((inv as any).invoiceNumber || inv.id?.slice(0, 8) || 'Unknown')}</p>
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                      <span>{new Date(inv.createdAt).toLocaleString()}</span>
+                                    </div>
                                   </div>
-                                  <p className="text-sm text-foreground truncate">{income.description || income.customerName || 'No description'}</p>
-                                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                    <span>{new Date(income.date || income.createdAt).toLocaleString()}</span>
-                                    {income.customerName && <span>• Customer: {income.customerName}</span>}
-                                    {income.paymentMethod && <span>• {income.paymentMethod}</span>}
+                                  <div className="flex gap-1">
+                                    {/* Read-only for invoices */}
                                   </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={async () => {
-                                      const newAmount = prompt('Edit amount:', String(income.amount || 0));
-                                      if (newAmount && !isNaN(parseFloat(newAmount))) {
-                                        await upsertReceivable({ ...income, amount: parseFloat(newAmount) });
-                                        loadData();
-                                        toast({ title: 'Income Updated' });
-                                      }
-                                    }}
-                                    title="Edit"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={async () => {
-                                      if (confirm('Delete this income transaction?')) {
-                                        const { deleteReceivable } = await import('@/lib/receivables');
-                                        if (income.id) await deleteReceivable(income.id);
-                                        loadData();
-                                        toast({ title: 'Income Deleted' });
-                                      }
-                                    }}
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            ))}
+
+                            {/* Manual Income */}
+                            {incomeList.map((income) => (
+                              <div
+                                key={income.id}
+                                className="p-3 border rounded-lg"
+                                style={{
+                                  backgroundColor: categoryColors[income.category || 'General']
+                                    ? `${categoryColors[income.category || 'General']}15`
+                                    : 'rgb(240, 253, 244)',
+                                  borderColor: categoryColors[income.category || 'General'] || 'rgb(187, 247, 208)'
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-semibold text-green-700 dark:text-green-400">
+                                        +${(income.amount || 0).toFixed(2)}
+                                      </span>
+                                      <span
+                                        className="text-xs px-2 py-0.5 rounded font-medium"
+                                        style={{
+                                          backgroundColor: categoryColors[income.category || 'General'] || '#10b981',
+                                          color: 'white'
+                                        }}
+                                      >
+                                        {income.category || 'General'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-foreground truncate">{income.description || income.customerName || 'No description'}</p>
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                      <span>{new Date(income.date || income.createdAt).toLocaleString()}</span>
+                                      {income.customerName && <span>• Customer: {income.customerName}</span>}
+                                      {income.paymentMethod && <span>• {income.paymentMethod}</span>}
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8"
+                                      onClick={async () => {
+                                        const newAmount = prompt('Edit amount:', String(income.amount || 0));
+                                        if (newAmount && !isNaN(parseFloat(newAmount))) {
+                                          await upsertReceivable({ ...income, amount: parseFloat(newAmount) });
+                                          loadData();
+                                          toast({ title: 'Income Updated' });
+                                        }
+                                      }}
+                                      title="Edit"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={async () => {
+                                        if (confirm('Delete this income transaction?')) {
+                                          const { deleteReceivable } = await import('@/lib/receivables');
+                                          if (income.id) await deleteReceivable(income.id);
+                                          loadData();
+                                          toast({ title: 'Income Deleted' });
+                                        }
+                                      }}
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </>
                         )}
                       </div>
                     </div>

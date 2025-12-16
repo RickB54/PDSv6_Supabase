@@ -191,6 +191,16 @@ export const Navbar = () => {
                     <User className="h-4 w-4 text-purple-500 mr-1" />
                     Hi, {user.name || user.email}
                   </span>
+                  {(user.role === 'admin' || user.role === 'employee') && (
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-sm font-medium transition-colors hover:text-primary px-2 py-1 flex items-center"
+                    >
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Link>
+                  )}
                   {user.role === 'admin' && (
                     <div className="px-2"><NotificationBell /></div>
                   )}

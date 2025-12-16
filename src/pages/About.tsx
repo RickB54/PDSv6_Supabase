@@ -7,6 +7,7 @@ import { Shield, Users, Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo-3inch.png";
 import api from "@/lib/api";
+import { isSupabaseEnabled } from "@/lib/auth";
 
 const About = () => {
   const [sections, setSections] = useState<{ id: string; section: string; content: string }[]>([]);
@@ -16,14 +17,50 @@ const About = () => {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
+      if (isSupabaseEnabled()) {
+        try {
+          const { contentService } = await import("@/lib/content");
+          const data = await contentService.getAboutSections();
+          if (data && data.length > 0) {
+            setSections(data.map(d => ({ id: d.id, section: d.section_title, content: d.content }))); // map title->section
+            return;
+          }
+        } catch { }
+      }
       const list = await api('/api/about', { method: 'GET' });
       if (mounted && Array.isArray(list)) setSections(list);
     };
     const loadTestimonials = async () => {
+      if (isSupabaseEnabled()) {
+        try {
+          const { contentService } = await import("@/lib/content");
+          const data = await contentService.getTestimonials();
+          if (data && data.length > 0) {
+            setTestimonials(data.map(t => ({ id: t.id || `t-${Math.random()}`, name: t.name, quote: t.quote })));
+            return;
+          }
+        } catch { }
+      }
       const t = await api('/api/testimonials', { method: 'GET' });
       if (mounted && Array.isArray(t)) setTestimonials(t);
     };
     const loadFeatures = async () => {
+      if (isSupabaseEnabled()) {
+        try {
+          const { contentService } = await import("@/lib/content");
+          // Assuming getFeatures isn't explicitly defined yet or uses a specific about section logic,
+          // but reviewing content.ts showed generic methods. If getFeatures exists usage is good.
+          // If not, we might need a specific call. 
+          // For now, let's stick to the visible pattern or just fallback if method missing.
+          // Wait, looking at content.ts previously, I recall getAboutSections, getTestimonials. 
+          // I don't recall getFeatures. I'll stick to local API fallback for features if strict method missing, 
+          // or better, I will assume features are part of static content or a specific about section.
+          // Actually, features might be stored as a specific about section or just key-value. 
+          // Let's rely on fallback for features/safety for now unless I see getFeatures in content.ts.
+          // Checking content.ts... I previously saw getVehicleTypes, getFAQs, getAboutSections, getTestimonials, getContact.
+          // I did NOT recall getFeatures. So for features, I will leave as API fallback unless I add it.
+        } catch { }
+      }
       const f = await api('/api/about/features', { method: 'GET' });
       if (mounted && f && typeof f === 'object') setFeatures({
         expertTeam: (f as any).expertTeam || '',

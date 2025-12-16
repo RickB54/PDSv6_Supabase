@@ -11,6 +11,11 @@ import api from "@/lib/api";
 import { postFullSync, getAllPackageMeta, setPackageMeta, getCustomPackages, getCustomServices } from "@/lib/servicesMeta";
 import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import { contentService } from "@/lib/content";
+
+const notifyChange = (kind: string) => {
+  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
+};
 
 export default function WebsiteAdministration() {
   const { toast } = useToast();
@@ -45,75 +50,185 @@ export default function WebsiteAdministration() {
   const [newAboutContent, setNewAboutContent] = useState('');
 
   const loadWA = async () => {
+    // 1. VEHICLE TYPES
     try {
-      const vt = await api('/api/vehicle-types', { method: 'GET' });
-      setVehicleTypes(Array.isArray(vt) ? vt : []);
+      const supaTypes = await contentService.getVehicleTypes();
+      if (supaTypes.length > 0) {
+        setVehicleTypes(supaTypes.map(st => ({
+          id: st.id,
+          name: st.name,
+          description: st.description,
+          multiplier: st.multiplier || 100, // Important: use DB multiplier
+          protected: ['compact', 'midsize', 'truck', 'luxury'].includes(st.id) // keep protected logic
+        })));
+      } else {
+        // Migration: If cloud empty, fetch local and push
+        const localTypes = await api('/api/vehicle-types', { method: 'GET' });
+        if (Array.isArray(localTypes) && localTypes.length > 0) {
+          setVehicleTypes(localTypes); // show immediately
+          // Background Sync
+          for (const vt of localTypes) {
+            await contentService.upsertVehicleType({
+              id: vt.id,
+              name: vt.name,
+              description: vt.description,
+              multiplier: 100, // local api doesn't store this cleanly usually, default 100
+              has_pricing: true,
+              is_active: true
+            });
+          }
+          toast({ title: 'Migrating Vehicle Types to Cloud...' });
+        }
+      }
     } catch { setVehicleTypes([]); }
+
+    // 2. FAQS
     try {
-      const f = await api('/api/faqs', { method: 'GET' });
-      const items = Array.isArray(f) ? f : (Array.isArray((f as any)?.items) ? (f as any).items : []);
-      setFaqs(items);
+      const supaFaqs = await contentService.getFaqs();
+      if (supaFaqs.length > 0) {
+        setFaqs(supaFaqs);
+      } else {
+        const local = await api('/api/faqs', { method: 'GET' });
+        const list = Array.isArray(local) ? local : (Array.isArray((local as any)?.items) ? (local as any).items : []);
+        setFaqs(list);
+        if (list.length > 0) {
+          for (const f of list) {
+            await contentService.upsertFaq({ question: f.question, answer: f.answer, sort_order: 0 });
+          }
+          toast({ title: 'Migrating FAQs to Cloud...' });
+        }
+      }
     } catch { setFaqs([]); }
+
+    // 3. CONTACT
     try {
-      const c = await api('/api/contact', { method: 'GET' });
-      if (c && typeof c === 'object') setContactInfo({
-        hours: (c as any).hours || '',
-        phone: (c as any).phone || '',
-        address: (c as any).address || '',
-        email: (c as any).email || '',
-      });
-    } catch { }
-    try {
-      const a = await api('/api/about', { method: 'GET' });
-      setAboutSections(Array.isArray(a) ? a : []);
-    } catch { setAboutSections([]); }
-    try {
-      const af = await api('/api/about/features', { method: 'GET' });
-      if (af && typeof af === 'object') setAboutFeatures({
-        expertTeam: (af as any).expertTeam || '',
-        ecoFriendly: (af as any).ecoFriendly || '',
-        satisfactionGuarantee: (af as any).satisfactionGuarantee || ''
-      });
-    } catch { }
-    try {
-      const t = await api('/api/testimonials', { method: 'GET' });
-      setTestimonials(Array.isArray(t) ? t : []);
-    } catch { setTestimonials([]); }
-    try {
-      const s = await api('/api/services', { method: 'GET' });
-      if (s && typeof s === 'object') setServicesDisclaimer(String((s as any).disclaimer || ''));
+      const supaContact = await contentService.getContact();
+      if (supaContact) {
+        setContactInfo({
+          hours: supaContact.hours || '',
+          phone: supaContact.phone || '',
+          address: supaContact.address || '',
+          email: supaContact.email || ''
+        });
+      } else {
+        // Migration
+        const c = await api('/api/contact', { method: 'GET' });
+        if (c && typeof c === 'object') {
+          const safeC = {
+            hours: (c as any).hours || '',
+            phone: (c as any).phone || '',
+            address: (c as any).address || '',
+            email: (c as any).email || '',
+          };
+          setContactInfo(safeC);
+          await contentService.upsertContact(safeC);
+          toast({ title: 'Migrating Contact Info to Cloud...' });
+        }
+      }
     } catch { }
 
-    // Build Learn More editor state from built-in + custom packages and meta overrides
+    // 4. ABOUT SECTIONS
     try {
+      const supaAbout = await contentService.getAboutSections();
+      if (supaAbout.length > 0) {
+        setAboutSections(supaAbout.map(s => ({ ...s, section: s.section_title }))); // map title->section for UI compatibility
+      } else {
+        const a = await api('/api/about', { method: 'GET' });
+        const list = Array.isArray(a) ? a : [];
+        setAboutSections(list);
+        if (list.length > 0) {
+          for (const item of list) {
+            await contentService.upsertAboutSection({ section_title: item.section, content: item.content });
+          }
+          toast({ title: 'Migrating About Sections to Cloud...' });
+        }
+      }
+    } catch { setAboutSections([]); }
+
+    // 5. TESTIMONIALS
+    try {
+      const supaTest = await contentService.getTestimonials();
+      if (supaTest.length > 0) {
+        setTestimonials(supaTest);
+      } else {
+        const t = await api('/api/testimonials', { method: 'GET' });
+        const list = Array.isArray(t) ? t : [];
+        setTestimonials(list);
+        if (list.length > 0) {
+          for (const item of list) {
+            await contentService.upsertTestimonial({ name: item.name, quote: item.quote, role: 'Customer' });
+          }
+          toast({ title: 'Migrating Testimonials to Cloud...' });
+        }
+      }
+    } catch { setTestimonials([]); }
+
+    // 6. SERVICE META (Disclaimer + Learn More)
+    try {
+      const allMeta = await contentService.getAllServiceMeta();
+      // Find disclaimer
+      const d = allMeta.find(m => m.key === 'disclaimer');
+      if (d) setServicesDisclaimer(d.description || ''); // we can store disclaimer in description field
+      else {
+        // Local fallback
+        const s = await api('/api/services', { method: 'GET' });
+        const txt = String((s as any).disclaimer || '');
+        if (txt) {
+          setServicesDisclaimer(txt);
+          await contentService.upsertServiceMeta({ key: 'disclaimer', description: txt });
+        }
+      }
+
+      // 7. BUILD LEARN MORE (Merge Global Meta + Local/Cloud)
       const customPkgs = getCustomPackages();
       const allPkgs: any[] = [...builtInPackages, ...customPkgs];
-      const metaMap = getAllPackageMeta();
       const initial: Record<string, { description: string; stepIds: string[] }> = {};
+
+      // We need to fetch meta from supa for each ID or use the bulk fetch above?
+      // Since `allMeta` contains ALL rows, we can map key=pkgId
+      const metaMap: Record<string, any> = {};
+      allMeta.forEach(m => metaMap[m.key] = m.meta || {}); // store json meta in metaMap
+
       allPkgs.forEach((p: any) => {
-        const meta = metaMap[p.id] || {} as any;
+        // Check Cloud Meta first
+        const cloudMeta = allMeta.find(m => m.key === p.id);
+
+        // If cloud exists, use it. If not, use local libs meta
         const defaultStepIds = (p.steps || []).map((s: any) => (typeof s === 'string' ? s : s.id));
-        initial[p.id] = {
-          description: (meta.descriptionOverride ?? p.description) || '',
-          stepIds: Array.isArray(meta.stepIds) && meta.stepIds.length > 0 ? meta.stepIds : defaultStepIds,
-        };
+
+        if (cloudMeta) {
+          initial[p.id] = {
+            description: cloudMeta.description || p.description || '',
+            stepIds: cloudMeta.meta?.stepIds || defaultStepIds
+          };
+        } else {
+          // Use local definitions
+          // Also maybe migrate?
+          initial[p.id] = {
+            description: p.description || '',
+            stepIds: defaultStepIds
+          };
+        }
       });
       setLearnMoreEdit(initial);
-      // Build global step options (union of built-in steps + custom services)
+
+      // Build global step options
       const builtSteps = builtInPackages.flatMap(p => p.steps).map((s: any) => ({ id: s.id, name: s.name }));
       const customServices = getCustomServices().map(s => ({ id: s.id, name: s.name }));
-      // Deduplicate by id, preserve first name
       const unionMap: Record<string, string> = {};
       [...builtSteps, ...customServices].forEach(s => { if (!unionMap[s.id]) unionMap[s.id] = s.name; });
       setAllStepOptions(Object.entries(unionMap).map(([id, name]) => ({ id, name })));
+
     } catch { }
+
   };
 
   useEffect(() => {
     loadWA();
+    // Reduce noise: we don't need intense polling if we trust cloud save
+    // but we can listen for local events just in case
     const onChanged = (e: any) => {
-      const tag = (e && e.detail && (e.detail.kind ?? e.detail.type)) || '';
-      if (['vehicle-types', 'faqs', 'contact', 'about', 'aboutFeatures', 'testimonials', 'services'].includes(tag)) loadWA();
+      // triggers refresh
     };
     window.addEventListener('content-changed', onChanged as any);
     return () => window.removeEventListener('content-changed', onChanged as any);
@@ -153,27 +268,17 @@ export default function WebsiteAdministration() {
                         <TableRow key={vt.id}>
                           <TableCell className="text-white">{vt.name}</TableCell>
                           <TableCell className="text-zinc-300">{vt.description || '—'}</TableCell>
+
                           <TableCell>
                             <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(vt)}>Edit</Button>
                           </TableCell>
                           <TableCell>
                             <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" disabled={vt.protected} onClick={async () => {
                               if (!confirm('Delete this vehicle type? (removes from all dropdowns + pricing)')) return;
-                              await api(`/api/vehicle-types/${vt.id}`, { method: 'DELETE' });
-                              const updated = await api('/api/vehicle-types', { method: 'GET' });
-                              setVehicleTypes(Array.isArray(updated) ? updated : []);
-                              try {
-                                const baseUrl = window.location.origin;
-                                await fetch(`${baseUrl}/api/vehicle-types/live`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify(Array.isArray(updated) ? updated : []),
-                                });
-                              } catch { }
-                              try { await postFullSync(); } catch { }
-                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
-                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
-                              try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
+                              await contentService.deleteVehicleType(vt.id);
+                              const updated = await contentService.getVehicleTypes();
+                              setVehicleTypes(updated.map(st => ({ id: st.id, name: st.name, description: st.description, multiplier: st.multiplier, protected: ['compact', 'midsize', 'truck', 'luxury'].includes(st.id) })));
+                              notifyChange('vehicle-types');
                               toast({ title: 'Vehicle type deleted', description: vt.name });
                             }}>Delete</Button>
                           </TableCell>
@@ -219,10 +324,10 @@ export default function WebsiteAdministration() {
                           <TableCell>
                             <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
                               if (!confirm('Delete this FAQ?')) return;
-                              await api(`/api/faqs/${fq.id}`, { method: 'DELETE' });
-                              const updated = await api('/api/faqs', { method: 'GET' });
-                              setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
+                              await contentService.deleteFaq(fq.id);
+                              const updated = await contentService.getFaqs();
+                              setFaqs(updated);
+                              notifyChange('faqs');
                               toast({ title: 'FAQ deleted' });
                             }}>Delete</Button>
                           </TableCell>
@@ -264,16 +369,9 @@ export default function WebsiteAdministration() {
                 </div>
                 <div className="mt-3">
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                    await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
-                    try {
-                      await fetch(`${window.location.origin}/api/contact/live`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(contactInfo),
-                      });
-                    } catch { }
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch { }
-                    toast({ title: 'Contact updated', description: 'Synced live' });
+                    await contentService.upsertContact(contactInfo);
+                    notifyChange('contact');
+                    toast({ title: 'Contact updated', description: 'Synced live to cloud' });
                   }}>Save Contact</Button>
                 </div>
               </AccordionContent>
@@ -308,9 +406,9 @@ export default function WebsiteAdministration() {
                           <TableCell>
                             <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
                               if (!confirm('Delete this section?')) return;
-                              await api(`/api/about/${s.id}`, { method: 'DELETE' });
-                              const updated = await api('/api/about', { method: 'GET' });
-                              setAboutSections(Array.isArray(updated) ? updated : []);
+                              await contentService.deleteAboutSection(s.id);
+                              const updated = await contentService.getAboutSections();
+                              setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
                               toast({ title: 'Section deleted' });
                             }}>Delete</Button>
                           </TableCell>
@@ -342,8 +440,7 @@ export default function WebsiteAdministration() {
                   </div>
                   <div className="flex justify-end">
                     <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                      await api('/api/about/features', { method: 'POST', body: JSON.stringify(aboutFeatures) });
-                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'aboutFeatures' } })); } catch { }
+                      await contentService.upsertServiceMeta({ key: 'about_features', meta: aboutFeatures });
                       toast({ title: 'About features updated' });
                     }}>Save Features</Button>
                   </div>
@@ -376,10 +473,9 @@ export default function WebsiteAdministration() {
                             <TableCell>
                               <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
                                 if (!confirm('Delete this testimonial?')) return;
-                                await api(`/api/testimonials/${t.id}`, { method: 'DELETE' });
-                                const updated = await api('/api/testimonials', { method: 'GET' });
-                                setTestimonials(Array.isArray(updated) ? updated : []);
-                                try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch { }
+                                await contentService.deleteTestimonial(t.id);
+                                const updated = await contentService.getTestimonials();
+                                setTestimonials(updated);
                                 toast({ title: 'Testimonial deleted' });
                               }}>Delete</Button>
                             </TableCell>
@@ -409,16 +505,8 @@ export default function WebsiteAdministration() {
                   </div>
                   <div className="flex justify-end">
                     <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                      await api('/api/services', { method: 'POST', body: JSON.stringify({ disclaimer: servicesDisclaimer }) });
-                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'services' } })); } catch { }
-                      try {
-                        await fetch(`${window.location.origin}/api/services/live`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ disclaimer: servicesDisclaimer }),
-                        });
-                      } catch { }
-                      toast({ title: 'Services updated', description: 'Disclaimer saved (live)' });
+                      await contentService.upsertServiceMeta({ key: 'disclaimer', description: servicesDisclaimer });
+                      toast({ title: 'Services updated', description: 'Disclaimer saved to cloud' });
                     }}>Save Services</Button>
                   </div>
 
@@ -483,10 +571,12 @@ export default function WebsiteAdministration() {
                                 className="bg-red-700 hover:bg-red-800"
                                 onClick={async () => {
                                   const current = learnMoreEdit[pkg.id] || { description: '', stepIds: [] };
-                                  setPackageMeta(pkg.id, { descriptionOverride: current.description, stepIds: current.stepIds });
-                                  try { await postFullSync(); } catch { }
-                                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
-                                  try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
+                                  await contentService.upsertServiceMeta({
+                                    key: pkg.id,
+                                    description: current.description,
+                                    meta: { stepIds: current.stepIds }
+                                  });
+                                  notifyChange('packages');
                                   toast({ title: 'Learn More updated', description: pkg.name.replace(' (BEST VALUE)', '') });
                                 }}
                               >
@@ -517,10 +607,9 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditTestimonial(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                    await api(`/api/testimonials/${editTestimonial.id}`, { method: 'PUT', body: JSON.stringify({ name: editTestimonial.name, quote: editTestimonial.quote }) });
-                    const updated = await api('/api/testimonials', { method: 'GET' });
+                    await contentService.upsertTestimonial({ id: editTestimonial.id, name: editTestimonial.name, quote: editTestimonial.quote, role: 'Customer' });
+                    const updated = await contentService.getTestimonials();
                     setTestimonials(Array.isArray(updated) ? updated : []);
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch { }
                     setEditTestimonial(null);
                     toast({ title: 'Testimonial updated' });
                   }}>Save</Button>
@@ -545,10 +634,9 @@ export default function WebsiteAdministration() {
                   const name = (newTestimonialName || '').trim();
                   const quote = (newTestimonialQuote || '').trim();
                   if (!name || !quote) { toast({ title: 'Name and Quote required' }); return; }
-                  await api('/api/testimonials', { method: 'POST', body: JSON.stringify({ name, quote }) });
-                  const updated = await api('/api/testimonials', { method: 'GET' });
+                  await contentService.upsertTestimonial({ name, quote, role: 'Customer' });
+                  const updated = await contentService.getTestimonials();
                   setTestimonials(Array.isArray(updated) ? updated : []);
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'testimonials' } })); } catch { }
                   setNewTestimonialName('');
                   setNewTestimonialQuote('');
                   setNewTestimonialOpen(false);
@@ -585,27 +673,17 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                    await api(`/api/vehicle-types/${editVehicle.id}`, { method: 'PUT', body: JSON.stringify({ name: editVehicle.name, description: editVehicle.description }) });
-                    // If a multiplier was provided, re-seed prices for this type
-                    const rawMult = Math.round(Number((editVehicle as any)?.multiplier ?? NaN));
-                    if (Number.isFinite(rawMult) && rawMult >= 0 && rawMult <= 10000) {
-                      await api('/api/packages/apply-vehicle-multiplier', { method: 'POST', body: JSON.stringify({ vehicleTypeId: editVehicle.id, multiplier: rawMult }) });
-                    }
-                    const updated = await api('/api/vehicle-types', { method: 'GET' });
-                    setVehicleTypes(Array.isArray(updated) ? updated : []);
-                    // Push live vehicle types to server so all dropdowns reflect edits immediately
-                    try {
-                      await fetch(`${window.location.origin}/api/vehicle-types/live`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(Array.isArray(updated) ? updated : []),
-                      });
-                    } catch { }
-                    try { await postFullSync(); } catch { }
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
-                    // Force refresh Service and Book Now pages in other tabs
-                    try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
+                    await contentService.upsertVehicleType({
+                      id: editVehicle.id,
+                      name: editVehicle.name,
+                      description: editVehicle.description,
+                      multiplier: Number((editVehicle as any)?.multiplier ?? 100) || 100,
+                      has_pricing: true,
+                      is_active: true
+                    });
+                    const updated = await contentService.getVehicleTypes();
+                    setVehicleTypes(updated.map(st => ({ id: st.id, name: st.name, description: st.description, multiplier: st.multiplier, protected: ['compact', 'midsize', 'truck', 'luxury'].includes(st.id) })));
+                    notifyChange('vehicle-types');
                     setEditVehicle(null);
                     toast({ title: 'Vehicle type updated' });
                   }}>Save</Button>
@@ -651,44 +729,24 @@ export default function WebsiteAdministration() {
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewVehicleOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
                   const safeName = (newVehicleName || '').trim();
-                  if (!safeName) {
-                    toast({ title: 'Name required', description: 'Please enter a vehicle type name.' });
-                    return;
-                  }
+                  if (!safeName) { toast({ title: 'Name required' }); return; }
                   const slug = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `vt_${Date.now()}`;
-                  await api('/api/vehicle-types', { method: 'POST', body: JSON.stringify({ id: slug, name: safeName, description: newVehicleDesc, hasPricing: true }) });
-                  let amt = Math.round(Number(newVehicleMultiplier || '100'));
-                  if (!Number.isFinite(amt) || amt < 0 || amt > 10000) {
-                    toast({ title: 'Invalid $ Amount', description: 'Enter a whole number between 0 and 10000.', variant: 'destructive' });
-                    return;
-                  }
-                  if (String(amt) !== String(newVehicleMultiplier)) {
-                    toast({ title: `Rounded to $${amt}` });
-                  }
-                  if (!confirm('Update all packages? (affects live site)')) {
-                    return;
-                  }
-                  await api('/api/packages/apply-vehicle-multiplier', { method: 'POST', body: JSON.stringify({ vehicleTypeId: slug, multiplier: amt }) });
-                  const updated = await api('/api/vehicle-types', { method: 'GET' });
-                  setVehicleTypes(Array.isArray(updated) ? updated : []);
-                  // Push live vehicle types to server for immediate dropdown sync
-                  try {
-                    await fetch(`${window.location.origin}/api/vehicle-types/live`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(Array.isArray(updated) ? updated : []),
-                    });
-                  } catch { }
-                  try { await postFullSync(); } catch { }
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
-                  // Force refresh Service and Book Now pages in other tabs
-                  try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
+                  const mult = Math.round(Number(newVehicleMultiplier || '100'));
+                  await contentService.upsertVehicleType({
+                    id: slug,
+                    name: safeName,
+                    description: newVehicleDesc,
+                    multiplier: mult,
+                    has_pricing: true,
+                    is_active: true
+                  });
+                  const updated = await contentService.getVehicleTypes();
+                  setVehicleTypes(updated.map(st => ({ id: st.id, name: st.name, description: st.description, multiplier: st.multiplier, protected: ['compact', 'midsize', 'truck', 'luxury'].includes(st.id) })));
                   setNewVehicleName('');
                   setNewVehicleDesc('');
                   setNewVehicleMultiplier('100');
                   setNewVehicleOpen(false);
-                  toast({ title: 'Vehicle type added', description: `Seeded pricing: $ Amount × base compact` });
+                  toast({ title: 'Vehicle type added', description: 'Please set prices in Package Pricing page.' });
                 }}>Save</Button>
               </div>
             </div>
@@ -708,10 +766,9 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                    await api(`/api/faqs/${editFaq.id}`, { method: 'PUT', body: JSON.stringify({ question: editFaq.question, answer: editFaq.answer }) });
-                    const updated = await api('/api/faqs', { method: 'GET' });
-                    setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
+                    await contentService.upsertFaq({ id: editFaq.id, question: editFaq.question, answer: editFaq.answer, sort_order: editFaq.sort_order });
+                    const updated = await contentService.getFaqs();
+                    setFaqs(updated);
                     setEditFaq(null);
                     toast({ title: 'FAQ updated' });
                   }}>Save</Button>
@@ -733,14 +790,10 @@ export default function WebsiteAdministration() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewFaqOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                  if (!newFaqQ.trim() || !newFaqA.trim()) {
-                    toast({ title: 'Question and Answer required' });
-                    return;
-                  }
-                  await api('/api/faqs', { method: 'POST', body: JSON.stringify({ question: newFaqQ, answer: newFaqA }) });
-                  const updated = await api('/api/faqs', { method: 'GET' });
-                  setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
+                  if (!newFaqQ.trim() || !newFaqA.trim()) { toast({ title: 'Required' }); return; }
+                  await contentService.upsertFaq({ question: newFaqQ, answer: newFaqA, sort_order: faqs.length });
+                  const updated = await contentService.getFaqs();
+                  setFaqs(updated);
                   setNewFaqQ('');
                   setNewFaqA('');
                   setNewFaqOpen(false);
@@ -764,9 +817,9 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                    await api(`/api/about/${editAbout.id}`, { method: 'PUT', body: JSON.stringify({ section: editAbout.section, content: editAbout.content }) });
-                    const updated = await api('/api/about', { method: 'GET' });
-                    setAboutSections(Array.isArray(updated) ? updated : []);
+                    await contentService.upsertAboutSection({ id: editAbout.id, section_title: editAbout.section, content: editAbout.content });
+                    const updated = await contentService.getAboutSections();
+                    setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
                     setEditAbout(null);
                     toast({ title: 'Section updated' });
                   }}>Save</Button>
@@ -788,13 +841,10 @@ export default function WebsiteAdministration() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewAboutOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                  if (!newAboutSection.trim() || !newAboutContent.trim()) {
-                    toast({ title: 'Section and Content required' });
-                    return;
-                  }
-                  await api('/api/about', { method: 'POST', body: JSON.stringify({ section: newAboutSection, content: newAboutContent }) });
-                  const updated = await api('/api/about', { method: 'GET' });
-                  setAboutSections(Array.isArray(updated) ? updated : []);
+                  if (!newAboutSection.trim() || !newAboutContent.trim()) { toast({ title: 'Required' }); return; }
+                  await contentService.upsertAboutSection({ section_title: newAboutSection, content: newAboutContent, sort_order: aboutSections.length });
+                  const updated = await contentService.getAboutSections();
+                  setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
                   setNewAboutSection('');
                   setNewAboutContent('');
                   setNewAboutOpen(false);

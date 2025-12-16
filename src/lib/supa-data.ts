@@ -220,8 +220,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         phone: customer.phone,
         address: customer.address,
         notes: customer.notes || '',
-        type: customer.type || 'customer',
-        is_archived: customer.is_archived || false // Include in payload
+        type: customer.type || 'customer'
     };
 
     let customerId = customer.id;

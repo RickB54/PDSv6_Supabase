@@ -24,6 +24,8 @@ import * as bookingsSvc from "@/services/supabase/bookings";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import api from "@/lib/api.js";
+import { upsertSupabaseEstimate } from "@/lib/supa-data";
+import { contentService } from "@/lib/content";
 
 const BookNow = () => {
   const { toast } = useToast();
@@ -73,6 +75,29 @@ const BookNow = () => {
     luxury: "Luxury/High-End",
   });
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact', 'midsize', 'truck', 'luxury']);
+
+  useEffect(() => {
+    // Load dynamic vehicle types
+    const loadVT = async () => {
+      if (isSupabaseEnabled()) {
+        try {
+          const types = await contentService.getVehicleTypes();
+          if (types && types.length > 0) {
+            setVehicleOptions(types.filter(t => t.is_active).map(t => t.id));
+            const labels: Record<string, string> = {};
+            types.forEach(t => labels[t.id] = t.name + (t.description ? ` (${t.description})` : ''));
+            setVehicleLabels(labels);
+          }
+        } catch { }
+      }
+    };
+    loadVT();
+    const onChanged = (e: any) => {
+      if (e?.detail?.kind === 'vehicle-types') loadVT();
+    };
+    window.addEventListener('content-changed', onChanged as any);
+    return () => window.removeEventListener('content-changed', onChanged as any);
+  }, []);
 
   const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
@@ -791,7 +816,7 @@ const BookNow = () => {
                           model: formData.model,
                           type: vehicleType
                         }
-                      });
+                      } as any);
 
                       const estimatePayload = {
                         kind: 'estimate-request',

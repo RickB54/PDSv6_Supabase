@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,9 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Download, PieChart as PieChartIcon, BarChart3, TrendingUp, Plus, Filter, ChevronDown, Trash2, Pencil, Printer, FileText } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getReceivables, Receivable, upsertReceivable } from "@/lib/receivables";
-import { getExpenses, upsertExpense } from "@/lib/db";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { getReceivables, Receivable, upsertReceivable, deleteReceivable } from "@/lib/receivables";
+import { getExpenses, upsertExpense, getInvoices, deleteExpense } from "@/lib/db";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import localforage from "localforage";
 import { toast } from "sonner";
@@ -61,6 +61,15 @@ interface BudgetTarget {
     category: string;
     target: number;
     type: 'income' | 'expense';
+}
+
+interface Invoice {
+    id: string;
+    total: number;
+    paymentStatus?: "unpaid" | "partially-paid" | "paid";
+    paidAmount?: number;
+    createdAt: string;
+    date: string;
 }
 
 const DEFAULT_CATEGORIES = {
@@ -107,6 +116,7 @@ const hexToRgb = (hex: string) => {
 const CompanyBudget = () => {
     const [incomeList, setIncomeList] = useState<Receivable[]>([]);
     const [expenseList, setExpenseList] = useState<Expense[]>([]);
+    const [invoiceList, setInvoiceList] = useState<Invoice[]>([]); // Added state
     const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
     const [customCategories, setCustomCategories] = useState<string[]>([]);
     const [customIncomeCategories, setCustomIncomeCategories] = useState<string[]>([]);
@@ -123,19 +133,27 @@ const CompanyBudget = () => {
     const [editCategoryName, setEditCategoryName] = useState("");
     const [editingCategory, setEditingCategory] = useState<{ name: string; type: 'income' | 'expense'; isDefault: boolean } | null>(null);
 
-    // Add Income/Expense form states
+    // Use local date for default values to prevent "tomorrow" bug
+    const getLocalDateStr = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const [incomeFormOpen, setIncomeFormOpen] = useState(false);
     const [expenseFormOpen, setExpenseFormOpen] = useState(false);
     const [incomeAmount, setIncomeAmount] = useState("");
     const [incomeCategory, setIncomeCategory] = useState("");
     const [incomeDescription, setIncomeDescription] = useState("");
-    const [incomeDate, setIncomeDate] = useState(new Date().toISOString().slice(0, 10));
+    const [incomeDate, setIncomeDate] = useState(getLocalDateStr());
     const [incomeCustomer, setIncomeCustomer] = useState("");
     const [incomeMethod, setIncomeMethod] = useState("");
     const [expenseAmount, setExpenseAmount] = useState("");
     const [expenseCategory, setExpenseCategory] = useState("");
     const [expenseDescription, setExpenseDescription] = useState("");
-    const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10));
+    const [expenseDate, setExpenseDate] = useState(getLocalDateStr());
 
     useEffect(() => {
         loadData();
@@ -146,9 +164,11 @@ const CompanyBudget = () => {
     const loadData = async () => {
         const incomes = await getReceivables();
         const expenses = await getExpenses<Expense>();
+        const invoices = await getInvoices() as Invoice[];
         setIncomeList(incomes as Receivable[]);
         setExpenseList(expenses as Expense[]);
-        processCategoryData(incomes, expenses);
+        setInvoiceList(invoices); // Set state
+        processCategoryData(incomes, expenses, invoices);
     };
 
     const loadCustomCategories = async () => {
@@ -185,8 +205,82 @@ const CompanyBudget = () => {
         return true;
     };
 
-    const processCategoryData = (incomes: Receivable[], expenses: Expense[]) => {
+    // Derived state for transactions by category (ensures tooltip matches chart)
+    const categoryTransactions = useMemo(() => {
+        const map = new Map<string, any[]>();
+
+        // Helper to add tx
+        const addTx = (cat: string, tx: any) => {
+            const current = map.get(cat) || [];
+            map.set(cat, [...current, tx]);
+        };
+
+        // 1. Invoices (Service Income) - Filter applied same as Chart
+        invoiceList.forEach(inv => {
+            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                : 0;
+            if (amt > 0 && filterByDate(inv.createdAt || inv.date)) {
+                addTx("Service Income", {
+                    date: inv.createdAt || inv.date,
+                    desc: `Invoice #${(inv as any).invoiceNumber || 'Paid'}`,
+                    amount: amt,
+                    cat: 'Invoice'
+                });
+            }
+        });
+
+        // 2. Incomes
+        incomeList.forEach(inc => {
+            if (filterByDate(inc.date || inc.createdAt || '')) {
+                addTx(inc.category || "Other Income", {
+                    date: inc.date || inc.createdAt,
+                    desc: inc.description || inc.customerName || 'Income',
+                    amount: inc.amount,
+                    cat: 'Manual' // or inc.category
+                });
+            }
+        });
+
+        // 3. Expenses
+        expenseList.forEach(exp => {
+            if (filterByDate(exp.createdAt)) {
+                addTx(exp.category || "General", {
+                    date: exp.createdAt,
+                    desc: exp.description || 'Expense',
+                    amount: exp.amount,
+                    cat: 'Expense'
+                });
+            }
+        });
+
+        // Sort all lists
+        map.forEach((list, key) => {
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            map.set(key, list);
+        });
+
+        return map;
+    }, [incomeList, expenseList, invoiceList, dateFilter, dateRange]);
+
+    const processCategoryData = (incomes: Receivable[], expenses: Expense[], invoices: Invoice[] = []) => {
         const categoryMap = new Map<string, { amount: number; type: 'income' | 'expense' }>();
+
+        // Process invoices (paid only)
+        invoices.forEach(inv => {
+            // Use explicit paidAmount if available, otherwise total if paid
+            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                : 0;
+
+            if (amt <= 0) return;
+            // Check date of invoice (using createdAt or date)
+            if (!filterByDate(inv.createdAt || inv.date)) return;
+
+            const cat = "Service Income";
+            const current = categoryMap.get(cat) || { amount: 0, type: 'income' as const };
+            categoryMap.set(cat, { amount: current.amount + amt, type: 'income' });
+        });
 
         // Process income
         incomes.forEach(income => {
@@ -490,11 +584,32 @@ const CompanyBudget = () => {
         // Income Targets
         const uniqueIncomeCats = [...DEFAULT_CATEGORIES.income, ...customIncomeCategories, ...customCategories.filter(c => !DEFAULT_CATEGORIES.expense.includes(c))];
         uniqueIncomeCats.forEach(cat => {
-            const actual = incomeList.filter(i => {
+            const actualReceivables = incomeList.filter(i => {
                 const d = new Date(i.date || i.createdAt || '');
                 const now = new Date();
                 return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (i.category === cat);
             }).reduce((sum, i) => sum + (i.amount || 0), 0);
+
+            // Calculate actual from Invoices (for Service Income)
+            let actualInvoices = 0;
+            if (cat === 'Service Income' || cat === 'Invoice Revenue') {
+                actualInvoices = invoiceList.filter(inv => {
+                    // Check if paid
+                    const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                        ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                        : 0;
+                    if (amt <= 0) return false;
+
+                    const d = new Date(inv.date || inv.createdAt);
+                    const now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).reduce((sum, inv) => {
+                    const amt = (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0));
+                    return sum + amt;
+                }, 0);
+            }
+
+            const actual = actualReceivables + actualInvoices;
 
             const targetObj = budgetTargets.find(t => t.category === cat && t.type === 'income');
             const target = targetObj?.target || 0;
@@ -757,11 +872,130 @@ const CompanyBudget = () => {
 
                     {/* Main Content */}
                     <Tabs defaultValue="overview" className="space-y-4">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="categories">Categories</TabsTrigger>
-                            <TabsTrigger value="budget">Budget Planning</TabsTrigger>
+                        <TabsList className="flex h-auto flex-wrap justify-start gap-2 bg-muted/50 p-1">
+                            <TabsTrigger value="overview" className="flex-1 min-w-[100px]">Overview</TabsTrigger>
+                            <TabsTrigger value="transactions" className="flex-1 min-w-[100px]">Transactions</TabsTrigger>
+                            <TabsTrigger value="categories" className="flex-1 min-w-[100px]">Categories</TabsTrigger>
+                            <TabsTrigger value="budget" className="flex-1 min-w-[120px]">Budget Planning</TabsTrigger>
                         </TabsList>
+
+                        {/* Transactions Tab */}
+                        <TabsContent value="transactions" className="space-y-4">
+                            <Card className="p-6">
+                                <h2 className="text-xl font-bold mb-4">Transaction Ledger</h2>
+                                <p className="text-sm text-muted-foreground mb-6">View all your individual income and expense records. "Manual" income entries can be deleted here if they duplicate your Invoices.</p>
+
+                                <div className="space-y-8">
+                                    {/* Income List */}
+                                    {/* Income List */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-green-600 mb-3">Income & Invoices</h3>
+                                        <div className="rounded-md border overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead>Source</TableHead>
+                                                        <TableHead>Description</TableHead>
+                                                        <TableHead>Amount</TableHead>
+                                                        <TableHead className="w-[50px]"></TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {/* Paid Invoices */}
+                                                    {invoiceList.filter(inv => {
+                                                        const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                            ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                            : 0;
+                                                        return amt > 0 && filterByDate(inv.createdAt || inv.date);
+                                                    }).map(inv => (
+                                                        <TableRow key={`inv-${inv.id}`}>
+                                                            <TableCell>{(inv.createdAt || inv.date || '').slice(0, 10)}</TableCell>
+                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
+                                                            <TableCell>Paid Invoice</TableCell>
+                                                            <TableCell>${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
+                                                            <TableCell>
+                                                                {/* Invoices are read-only here */}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+
+                                                    {/* Manual Income */}
+                                                    {incomeList.filter(i => filterByDate(i.date || i.createdAt || '')).map(inc => (
+                                                        <TableRow key={`inc-${inc.id}`}>
+                                                            <TableCell>{(inc.date || inc.createdAt || '').slice(0, 10)}</TableCell>
+                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{inc.category || 'Manual'}</span></TableCell>
+                                                            <TableCell>{inc.description || inc.customerName || '-'}</TableCell>
+                                                            <TableCell>${(inc.amount || 0).toFixed(2)}</TableCell>
+                                                            <TableCell>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    onClick={async () => {
+                                                                        if (confirm('Delete this manual income entry?')) {
+                                                                            if (inc.id) await deleteReceivable(inc.id);
+                                                                            loadData();
+                                                                            toast.success("Income deleted");
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </div>
+
+                                    {/* Expense List */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-red-600 mb-3">Expenses</h3>
+                                        <div className="rounded-md border overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead>Category</TableHead>
+                                                        <TableHead>Description</TableHead>
+                                                        <TableHead>Amount</TableHead>
+                                                        <TableHead className="w-[50px]"></TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {expenseList.filter(e => filterByDate(e.createdAt)).map(exp => (
+                                                        <TableRow key={`exp-${exp.id}`}>
+                                                            <TableCell>{(exp.createdAt || '').slice(0, 10)}</TableCell>
+                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{exp.category || 'General'}</span></TableCell>
+                                                            <TableCell>{exp.description || '-'}</TableCell>
+                                                            <TableCell>${(exp.amount || 0).toFixed(2)}</TableCell>
+                                                            <TableCell>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    onClick={async () => {
+                                                                        if (confirm('Delete this expense entry?')) {
+                                                                            if (exp.id) await deleteExpense(exp.id);
+                                                                            loadData();
+                                                                            toast.success("Expense deleted");
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        </TabsContent>
 
                         {/* Overview Tab */}
                         <TabsContent value="overview" className="space-y-4">
@@ -797,36 +1031,69 @@ const CompanyBudget = () => {
                                 {viewMode === 'pie' && (
                                     <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
                                         <div className="relative w-64 h-64">
-                                            <svg viewBox="0 0 200 200" className="transform -rotate-90">
-                                                {(() => {
-                                                    let currentAngle = 0;
-                                                    const total = filteredCategories.reduce((sum, c) => sum + c.amount, 0);
-                                                    if (total === 0) return <circle cx="100" cy="100" r="80" fill="hsl(var(--muted))" />;
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={filteredCategories}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={60}
+                                                        outerRadius={80}
+                                                        paddingAngle={2}
+                                                        dataKey="amount"
+                                                    >
+                                                        {filteredCategories.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip
+                                                        content={({ active, payload }) => {
+                                                            if (active && payload && payload.length) {
+                                                                const data = payload[0].payload;
+                                                                const catName = data.name;
 
-                                                    return filteredCategories.map((cat, idx) => {
-                                                        const percentage = (cat.amount / total) * 100;
-                                                        const angle = (percentage / 100) * 360;
-                                                        const startAngle = currentAngle;
-                                                        currentAngle += angle;
+                                                                // Use the memoized map source of truth
+                                                                const transactions = categoryTransactions.get(catName) || [];
+                                                                const displayTx = transactions.slice(0, 5);
 
-                                                        const x1 = 100 + 80 * Math.cos((startAngle * Math.PI) / 180);
-                                                        const y1 = 100 + 80 * Math.sin((startAngle * Math.PI) / 180);
-                                                        const x2 = 100 + 80 * Math.cos((currentAngle * Math.PI) / 180);
-                                                        const y2 = 100 + 80 * Math.sin((currentAngle * Math.PI) / 180);
-                                                        const largeArc = angle > 180 ? 1 : 0;
-
-                                                        return (
-                                                            <path
-                                                                key={idx}
-                                                                d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                                                                fill={cat.color}
-                                                                opacity="0.9"
-                                                            />
-                                                        );
-                                                    });
-                                                })()}
-                                            </svg>
-                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                return (
+                                                                    <div className="bg-popover text-popover-foreground p-3 rounded-lg shadow-lg border border-border min-w-[200px]">
+                                                                        <div className="font-bold mb-2 border-b pb-1 flex justify-between">
+                                                                            <span>{catName}</span>
+                                                                            <span>{transactions.length} items</span>
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            {displayTx.map((tx, idx) => (
+                                                                                <div key={idx} className="text-xs flex justify-between items-center gap-4">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="font-medium">{tx.desc}</span>
+                                                                                        <span className="text-muted-foreground text-[10px]">{new Date(tx.date).toLocaleDateString()}</span>
+                                                                                    </div>
+                                                                                    <span className="font-semibold whitespace-nowrap">${tx.amount.toFixed(2)}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                            {transactions.length > 5 && (
+                                                                                <div className="text-xs text-muted-foreground pt-1 text-center italic">
+                                                                                    + {transactions.length - 5} more...
+                                                                                </div>
+                                                                            )}
+                                                                            {transactions.length === 0 && (
+                                                                                <div className="text-xs text-muted-foreground">No details available</div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="mt-2 pt-2 border-t font-bold flex justify-between text-sm">
+                                                                            <span>Total</span>
+                                                                            <span>${(payload[0].value as number).toFixed(2)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }}
+                                                    />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                 <div className="text-center">
                                                     <p className="text-sm text-muted-foreground">Total</p>
                                                     <p className="text-2xl font-bold">${(totalIncome + totalExpense).toFixed(0)}</p>
@@ -1028,7 +1295,8 @@ const CompanyBudget = () => {
                                                     const point: any = { name };
                                                     activeCategories.forEach(cat => {
                                                         const total = sourceList.filter(item => {
-                                                            const itemMonth = (item.date || item.createdAt || '').slice(0, 7);
+                                                            const d = (item as any).date || (item as any).createdAt || '';
+                                                            const itemMonth = d.slice(0, 7);
                                                             const itemCat = item.category || (isIncome ? "Other Income" : "Other Expenses");
                                                             return itemMonth === m && itemCat === cat;
                                                         }).reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -1053,11 +1321,156 @@ const CompanyBudget = () => {
                                                             <YAxis yAxisId="right" orientation="right" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value.toFixed(0)}%`} />
                                                         )}
                                                         <RechartsTooltip
-                                                            contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '6px' }}
-                                                            itemStyle={{ color: '#e5e7eb' }}
-                                                            formatter={(value: any, name: any) => {
-                                                                if (name === 'Margin') return [`${Number(value).toFixed(1)}%`, name];
-                                                                return [`$${Number(value).toFixed(2)}`, name];
+                                                            content={({ active, payload, label }) => {
+                                                                if (active && payload && payload.length) {
+                                                                    // For LineChart, payload is an array of lines. We want to show details for the active one or all?
+                                                                    // Usually user hovers a specific "dot" or the axis.
+                                                                    // Let's show details for the items that have value > 0 in this month.
+
+                                                                    const dateStr = label; // e.g. "Dec 2025"
+                                                                    // Reverse engineer the date from the string label?
+                                                                    // Actually, we have the filter logic available.
+                                                                    // Let's find the relevant month.
+
+                                                                    const relevantMonth = months.find(m => {
+                                                                        const [yr, mo] = m.split('-');
+                                                                        const dateObj = new Date(parseInt(yr), parseInt(mo) - 1, 1);
+                                                                        const name = dateObj.toLocaleDateString('default', { month: 'short', year: 'numeric' });
+                                                                        return name === label;
+                                                                    });
+
+                                                                    if (!relevantMonth) return null;
+
+                                                                    // Collect all relevant transactions for this month across all displayed categories
+                                                                    let allTx: any[] = [];
+
+                                                                    payload.forEach((p: any) => {
+                                                                        const catName = p.name; // "Income", "Expenses", or Category Name
+                                                                        const val = p.value;
+                                                                        const color = p.color;
+
+                                                                        if (val <= 0) return;
+
+                                                                        // Logic to find transactions for this Category + Month
+                                                                        if (catName === 'Income' || catName === 'Profit' || catName === 'Margin') {
+                                                                            // Aggregate mode - maybe just show total? User asked for "breakout".
+                                                                            // If "Income" line is hovered, show Income transactions.
+                                                                            if (catName === 'Income') {
+                                                                                // Invoices
+                                                                                const invs = invoiceList.filter(inv => {
+                                                                                    const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                                                        ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                                                        : 0;
+                                                                                    const d = inv.createdAt || inv.date || '';
+                                                                                    return amt > 0 && d.startsWith(relevantMonth);
+                                                                                }).map(i => ({
+                                                                                    date: i.createdAt || i.date,
+                                                                                    desc: `Invoice #${(i as any).invoiceNumber || 'Paid'}`,
+                                                                                    amount: (i.paidAmount || (i.paymentStatus === 'paid' ? i.total : 0)),
+                                                                                    cat: 'Invoice'
+                                                                                }));
+                                                                                allTx = [...allTx, ...invs];
+
+                                                                                // Manual Income
+                                                                                const incs = incomeList.filter(i => {
+                                                                                    const d = i.date || i.createdAt || '';
+                                                                                    return d.startsWith(relevantMonth);
+                                                                                }).map(i => ({
+                                                                                    date: i.date || i.createdAt,
+                                                                                    desc: i.description || i.customerName || 'Income',
+                                                                                    amount: i.amount,
+                                                                                    cat: i.category || 'Manual'
+                                                                                }));
+                                                                                allTx = [...allTx, ...incs];
+                                                                            }
+                                                                            // If "Expenses", show expenses
+                                                                            if (catName === 'Expenses') {
+                                                                                const exps = expenseList.filter(e => {
+                                                                                    const d = e.createdAt || '';
+                                                                                    return d.startsWith(relevantMonth);
+                                                                                }).map(e => ({
+                                                                                    date: e.createdAt,
+                                                                                    desc: e.description || 'Expense',
+                                                                                    amount: e.amount,
+                                                                                    cat: e.category || 'Expense'
+                                                                                }));
+                                                                                allTx = [...allTx, ...exps];
+                                                                            }
+                                                                        } else {
+                                                                            // Specific Category Mode
+                                                                            // Check if it's income or expense category
+                                                                            const isIncCat = DEFAULT_CATEGORIES.income.includes(catName) || customIncomeCategories.includes(catName) || (catName === "Service Income");
+
+                                                                            if (isIncCat) {
+                                                                                // Invoices logic for Service Income
+                                                                                if (catName === 'Service Income') {
+                                                                                    const invs = invoiceList.filter(inv => {
+                                                                                        const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                                                            ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                                                            : 0;
+                                                                                        const d = inv.createdAt || inv.date || '';
+                                                                                        return amt > 0 && d.startsWith(relevantMonth);
+                                                                                    }).map(i => ({
+                                                                                        date: i.createdAt || i.date,
+                                                                                        desc: `Invoice #${(i as any).invoiceNumber || 'Paid'}`,
+                                                                                        amount: (i.paidAmount || (i.paymentStatus === 'paid' ? i.total : 0)),
+                                                                                        cat: 'Invoice'
+                                                                                    }));
+                                                                                    allTx = [...allTx, ...invs];
+                                                                                }
+                                                                                // Manual Income for this cat
+                                                                                const incs = incomeList.filter(i => {
+                                                                                    const d = i.date || i.createdAt || '';
+                                                                                    return i.category === catName && d.startsWith(relevantMonth);
+                                                                                }).map(i => ({
+                                                                                    date: i.date || i.createdAt,
+                                                                                    desc: i.description || i.customerName || 'Income',
+                                                                                    amount: i.amount,
+                                                                                    cat: 'Manual'
+                                                                                }));
+                                                                                allTx = [...allTx, ...incs];
+                                                                            } else {
+                                                                                // Expense Cat
+                                                                                const exps = expenseList.filter(e => {
+                                                                                    const d = e.createdAt || '';
+                                                                                    return e.category === catName && d.startsWith(relevantMonth);
+                                                                                }).map(e => ({
+                                                                                    date: e.createdAt,
+                                                                                    desc: e.description || 'Expense',
+                                                                                    amount: e.amount,
+                                                                                    cat: 'Expense'
+                                                                                }));
+                                                                                allTx = [...allTx, ...exps];
+                                                                            }
+                                                                        }
+                                                                    });
+
+                                                                    // Sort and limit
+                                                                    allTx.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                                                                    const displayTx = allTx.slice(0, 5);
+
+                                                                    return (
+                                                                        <div className="bg-popover text-popover-foreground p-3 rounded-lg shadow-lg border border-border min-w-[200px]">
+                                                                            <div className="font-bold mb-2 border-b pb-1">{label}</div>
+                                                                            <div className="space-y-2">
+                                                                                {displayTx.map((tx, idx) => (
+                                                                                    <div key={idx} className="text-xs flex justify-between items-center gap-4">
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className="font-medium">{tx.desc}</span>
+                                                                                            <span className="text-[10px] text-muted-foreground">{tx.cat} • {new Date(tx.date).toLocaleDateString()}</span>
+                                                                                        </div>
+                                                                                        <span className="font-mono">${tx.amount.toFixed(2)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                                {allTx.length > 5 && (
+                                                                                    <div className="text-xs text-muted-foreground pt-1 text-center italic">+ {allTx.length - 5} more...</div>
+                                                                                )}
+                                                                                {allTx.length === 0 && <div className="text-xs text-muted-foreground">No details available</div>}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
                                                             }}
                                                         />
                                                         <Legend />
@@ -1120,7 +1533,7 @@ const CompanyBudget = () => {
                                                 return (
                                                     <div key={idx} className="p-3 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800 flex justify-between items-center group">
                                                         <span className="font-medium text-green-900 dark:text-green-100">{cat}</span>
-                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="flex gap-1">
                                                             {!isDefault && (
                                                                 <>
                                                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditCategory(cat, 'income')}>
@@ -1146,7 +1559,7 @@ const CompanyBudget = () => {
                                                 return (
                                                     <div key={idx} className="p-3 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800 flex justify-between items-center group">
                                                         <span className="font-medium text-red-900 dark:text-red-100">{cat}</span>
-                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="flex gap-1">
                                                             {!isDefault && (
                                                                 <>
                                                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditCategory(cat, 'expense')}>
@@ -1179,8 +1592,8 @@ const CompanyBudget = () => {
                                     </div>
                                 </div>
 
-                                <div className="rounded-md border">
-                                    <Table>
+                                <div className="rounded-md border overflow-x-auto w-full">
+                                    <Table className="min-w-[600px]">
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Category</TableHead>
@@ -1194,11 +1607,33 @@ const CompanyBudget = () => {
                                         <TableBody>
                                             {/* Income Categories */}
                                             {[...DEFAULT_CATEGORIES.income, ...customIncomeCategories, ...customCategories.filter(c => !DEFAULT_CATEGORIES.expense.includes(c))].map(cat => {
-                                                const actual = incomeList.filter(i => {
+                                                // Calculate Actual (This Month)
+                                                let actual = 0;
+                                                const now = new Date();
+
+                                                // 1. Manual Income
+                                                actual += incomeList.filter(i => {
                                                     const d = new Date(i.date || i.createdAt || '');
-                                                    const now = new Date();
                                                     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (i.category === cat);
                                                 }).reduce((sum, i) => sum + (i.amount || 0), 0);
+
+                                                // 2. Invoices (If Service Income)
+                                                if (cat === 'Service Income' || cat === 'Invoice Revenue') {
+                                                    actual += invoiceList.filter(inv => {
+                                                        const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                            ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                            : 0;
+                                                        if (amt <= 0) return false;
+
+                                                        const d = new Date(inv.createdAt || inv.date || '');
+                                                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                                                    }).reduce((sum, inv) => {
+                                                        const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                            ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                            : 0;
+                                                        return sum + amt;
+                                                    }, 0);
+                                                }
 
                                                 const targetObj = budgetTargets.find(t => t.category === cat && t.type === 'income');
                                                 const target = targetObj?.target || 0;

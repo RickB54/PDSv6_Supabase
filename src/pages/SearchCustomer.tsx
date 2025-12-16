@@ -90,8 +90,11 @@ const SearchCustomer = () => {
 
   const onSaveModal = async (data: ModalCustomer) => {
     try {
+      // Ensure we don't send a local/timestamp ID to Supabase UUID column
+      const safeId = data.id && data.id.length > 20 && !data.id.includes('_') ? data.id : undefined;
+
       await upsertSupabaseCustomer({
-        id: data.id,
+        id: safeId,
         name: data.name,
         email: data.email,
         phone: data.phone,

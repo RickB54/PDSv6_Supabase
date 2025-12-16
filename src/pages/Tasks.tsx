@@ -217,6 +217,51 @@ export default function Tasks() {
   return (
     <div className="p-4 overflow-x-hidden min-h-screen">
       <PageHeader title="Tasks" />
+
+      {/* Tasks Summary Header */}
+      <Card className="p-6 mb-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-full bg-blue-500/20 text-blue-400">
+              <CheckSquare className="h-8 w-8" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Task Overview</h2>
+              <p className="text-zinc-400 text-sm">Manage your team's todos and assignments</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-8 w-full md:w-auto">
+            <div className="text-center">
+              <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Total</p>
+              <p className="text-3xl font-bold text-white mt-1">{items.length}</p>
+            </div>
+            <div className="text-center border-l border-zinc-700 pl-8">
+              <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Pending</p>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <p className="text-3xl font-bold text-amber-400">
+                  {items.filter(t => t.status !== 'completed').length}
+                </p>
+                {items.some(t => {
+                  if (!t.dueDate || t.status === 'completed') return false;
+                  const due = new Date(t.dueDate + 'T' + (t.dueTime || '23:59') + ':00');
+                  return due.getTime() < Date.now();
+                }) && (
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                  )}
+              </div>
+            </div>
+            <div className="text-center border-l border-zinc-700 pl-8">
+              <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Done</p>
+              <p className="text-3xl font-bold text-emerald-400 mt-1">{items.filter(t => t.status === 'completed').length}</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
         {/* Main Content */}
         <div className="space-y-4">

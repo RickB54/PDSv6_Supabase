@@ -62,11 +62,11 @@ export async function create(input: BookingInput) {
       service_price: input.price_total,
       scheduled_at: input.date,
       status: input.status || 'pending',
-      notes: input.notes,
-      // Store add-ons? Schema didn't show it on bookings table directly, might need a generic column or related table.
-      // Assuming 'notes' or we rely on the relational structure.
-      // But the user said "Booking needs to be completed for all fields".
-      // We'll append add-ons to notes for visibility if no column exists.
+      scheduled_at: input.date,
+      status: input.status || 'pending',
+      notes: input.add_ons && input.add_ons.length > 0
+        ? (input.notes ? `${input.notes}\n\nAdd-Ons: ${input.add_ons.join(', ')}` : `Add-Ons: ${input.add_ons.join(', ')}`)
+        : input.notes,
     }).select('*').single();
 
     if (error) throw error;

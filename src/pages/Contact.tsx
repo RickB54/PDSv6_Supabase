@@ -142,6 +142,27 @@ const Contact = () => {
   // Load contact info and keep in sync with admin edits
   useEffect(() => {
     const load = async () => {
+      // 1. Try Supabase (Source of Truth)
+      if (isSupabaseEnabled()) {
+        try {
+          // Dynamic import to avoid circular dependency issues if any, or just use content service
+          const { contentService } = await import("@/lib/content");
+          const supaContact = await contentService.getContact();
+          if (supaContact) {
+            setContactInfo({
+              hours: supaContact.hours || 'Appointments daily 8 AM–6 PM',
+              phone: supaContact.phone || '(555) 123-4567',
+              address: supaContact.address || 'Methuen, MA',
+              email: supaContact.email || 'primedetailsolutions.ma.nh@gmail.com',
+            });
+            return;
+          }
+        } catch (err) {
+          console.error("Supabase contact load failed", err);
+        }
+      }
+
+      // 2. Fallback to Local API
       try {
         const res = await fetch(`http://localhost:6066/api/contact/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
         if (res.ok) {

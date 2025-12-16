@@ -211,10 +211,10 @@ export default function PackagePricing() {
           id: p.id,
           name: p.name,
           description: (p as any).description || '',
-          compact_price: getVal('package', p.id, 'compact') || (p.pricing?.compact ?? p.basePrice ?? 0),
-          midsize_price: getVal('package', p.id, 'midsize') || (p.pricing?.midsize ?? p.basePrice ?? 0),
-          truck_price: getVal('package', p.id, 'truck') || (p.pricing?.truck ?? p.basePrice ?? 0),
-          luxury_price: getVal('package', p.id, 'luxury') || (p.pricing?.luxury ?? p.basePrice ?? 0),
+          compact_price: getVal('package', p.id, 'compact') || (p.pricing?.compact ?? (p as any).basePrice ?? 0),
+          midsize_price: getVal('package', p.id, 'midsize') || (p.pricing?.midsize ?? (p as any).basePrice ?? 0),
+          truck_price: getVal('package', p.id, 'truck') || (p.pricing?.truck ?? (p as any).basePrice ?? 0),
+          luxury_price: getVal('package', p.id, 'luxury') || (p.pricing?.luxury ?? (p as any).basePrice ?? 0),
           discount_percent: null,
           discount_start: null,
           discount_end: null,
@@ -226,10 +226,10 @@ export default function PackagePricing() {
           id: a.id,
           name: a.name,
           description: (a as any).description || '',
-          compact_price: getVal('addon', a.id, 'compact') || (a.pricing?.compact ?? a.basePrice ?? 0),
-          midsize_price: getVal('addon', a.id, 'midsize') || (a.pricing?.midsize ?? a.basePrice ?? 0),
-          truck_price: getVal('addon', a.id, 'truck') || (a.pricing?.truck ?? a.basePrice ?? 0),
-          luxury_price: getVal('addon', a.id, 'luxury') || (a.pricing?.luxury ?? a.basePrice ?? 0),
+          compact_price: getVal('addon', a.id, 'compact') || (a.pricing?.compact ?? (a as any).basePrice ?? 0),
+          midsize_price: getVal('addon', a.id, 'midsize') || (a.pricing?.midsize ?? (a as any).basePrice ?? 0),
+          truck_price: getVal('addon', a.id, 'truck') || (a.pricing?.truck ?? (a as any).basePrice ?? 0),
+          luxury_price: getVal('addon', a.id, 'luxury') || (a.pricing?.luxury ?? (a as any).basePrice ?? 0),
           discount_percent: null,
           discount_start: null,
           discount_end: null,
@@ -511,7 +511,7 @@ export default function PackagePricing() {
               cloudPrices[getKey('addon', a.id, 'compact')] = String(a.compact_price || 0);
               cloudPrices[getKey('addon', a.id, 'midsize')] = String(a.midsize_price || 0);
               cloudPrices[getKey('addon', a.id, 'truck')] = String(a.truck_price || 0);
-              cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.pricing?.luxury ?? a.basePrice ?? 0); // specific fallback logic
+              cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.pricing?.luxury ?? (a as any).basePrice ?? 0); // specific fallback logic
               // fix standard map if needed:
               cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.luxury_price || 0);
 
