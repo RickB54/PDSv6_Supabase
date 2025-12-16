@@ -154,7 +154,7 @@ export function AppSidebar() {
       title: "Operations", icon: ClipboardCheck,
       items: [
         { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays },
-        { title: "Analytics", url: "/bookings?view=analytics", key: "bookings-analytics", icon: FileBarChart },
+        { title: "Analytics", url: "/bookings-analytics", key: "bookings-analytics", icon: FileBarChart },
         { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
         { title: "Tasks", url: "/tasks", badge: todoCount > 0 ? todoCount : undefined, icon: CheckSquare },
         { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users },

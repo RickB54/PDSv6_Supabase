@@ -47,6 +47,7 @@ import UserManagement from "./pages/UserManagement";
 import AdminUsers from "./pages/AdminUsers";
 import WebsiteAdministration from "./pages/WebsiteAdministration";
 import BookingsPage from "./pages/BookingsPage";
+import BookingsAnalyticsPage from "./pages/BookingsAnalyticsPage";
 import DiscountCoupons from "./pages/DiscountCoupons";
 import PackagePricing from "./pages/PackagePricing";
 import Payroll from "./pages/Payroll";
@@ -301,6 +302,11 @@ const App = () => {
                     <Route path="/bookings" element={
                       <ProtectedRoute allowedRoles={['admin', 'employee']}>
                         <BookingsPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/bookings-analytics" element={
+                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                        <BookingsAnalyticsPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/discount-coupons" element={

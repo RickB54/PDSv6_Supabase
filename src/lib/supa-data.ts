@@ -480,3 +480,47 @@ export const deleteTeamMessage = async (id: string) => {
     const { error } = await supabase.from('team_messages').delete().eq('id', id);
     if (error) throw error;
 };
+
+// ------------------------------------------------------------------
+// Bookings
+// ------------------------------------------------------------------
+
+export interface SupaBooking {
+    id: string;
+    title: string;
+    customer_name: string;
+    date: string;
+    status: string;
+    created_at?: string;
+    vehicle_info?: any;
+    vehicle_year?: string;
+    vehicle_make?: string;
+    vehicle_model?: string;
+    address?: string;
+    assigned_employee?: string;
+    notes?: string;
+    price?: number;
+    addons?: string[];
+    booked_by?: string;
+    has_reminder?: boolean;
+    reminder_frequency?: number;
+    is_archived?: boolean;
+}
+
+export const getSupabaseBookings = async (): Promise<SupaBooking[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('bookings')
+            .select('*')
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error('getSupabaseBookings error:', error);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('getSupabaseBookings exception:', err);
+        return [];
+    }
+};

@@ -14,9 +14,10 @@ import { useCartStore } from "@/store/cart";
 interface PageHeaderProps {
   title?: string;
   subtitle?: string;
+  children?: React.ReactNode;
 }
 
-export function PageHeader({ title, subtitle }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   const user = getCurrentUser();
   const navigate = useNavigate();
   const [showAbout, setShowAbout] = useState(false);
@@ -29,18 +30,19 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="flex items-center justify-between gap-3 px-3 py-3">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
+        <div className="relative flex items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-4 flex-wrap min-w-0">
             <SidebarTrigger className="text-foreground" />
-            <button onClick={() => setShowAbout(true)} className="flex items-center gap-3">
+            <button onClick={() => setShowAbout(true)} className="flex items-center gap-3 transition-opacity hover:opacity-80">
               <img src={logo} alt="Prime Detail Solutions" className="h-10 w-auto" />
             </button>
             {title && (
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">/</span>
-                  <span className="text-muted-foreground font-medium truncate max-w-[40vw] sm:max-w-[60vw]">{title}</span>
+                  <span className="text-muted-foreground/60 hidden sm:inline">/</span>
+                  <span className="text-foreground font-semibold tracking-tight truncate max-w-[40vw] sm:max-w-[60vw]">{title}</span>
                 </div>
                 {subtitle && <span className="text-xs text-muted-foreground pl-4 hidden md:block">{subtitle}</span>}
               </div>
@@ -48,10 +50,12 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
           </div>
 
           <div className="flex items-center gap-3 min-w-0">
-            <Button asChild variant="outline" size="icon" className="sm:gap-2">
+            {children}
+
+            <Button asChild variant="outline" size="icon" className="sm:gap-2 hidden sm:flex">
               <Link to="/">
                 <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">Website</span>
+                <span className="sr-only">Website</span>
               </Link>
             </Button>
 
@@ -60,16 +64,16 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 truncate max-w-[50vw] sm:max-w-none">
-                    <User className="h-4 w-4 text-purple-500" />
-                    <span className="truncate">Hi, {user.name || user.email}</span>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 truncate max-w-[50vw] sm:max-w-none hover:bg-muted/50">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="truncate hidden sm:inline">Hi, {user.name || user.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => navigate('/user-settings')}>
                     User Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="gap-2">
+                  <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-500 focus:text-red-500">
                     <LogOut className="h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
@@ -79,8 +83,7 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
           </div>
         </div>
       </header>
-      {/* Spacer to prevent overlap with sticky header on very small screens */}
-      <div className="h-16 sm:h-0" aria-hidden="true" />
+      {/* Spacer removed for sticky positioning */}
 
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </>
