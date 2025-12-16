@@ -466,10 +466,10 @@ const Accounting = () => {
   const profit = calculateProfit();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full">
       <PageHeader title="Accounting" />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
+      <main className="container mx-auto px-4 py-6 max-w-6xl w-full">
         <div className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center flex-wrap gap-2">
             <h1 className="text-3xl font-bold text-foreground">Accounting</h1>

@@ -41,7 +41,7 @@ export default function NotificationBell() {
         g.gain.value = 0.02;
         o.connect(g); g.connect(ctx.destination);
         o.start(); setTimeout(() => { o.stop(); ctx.close(); }, 180);
-      } catch {}
+      } catch { }
       setTimeout(() => setRing(false), 600);
     }
     prevUnreadRef.current = count;
@@ -51,7 +51,7 @@ export default function NotificationBell() {
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'admin_alerts') {
-        try { refresh(); } catch {}
+        try { refresh(); } catch { }
       }
       if (e.key === 'employee_notifications') {
         try {
@@ -59,23 +59,23 @@ export default function NotificationBell() {
           const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
           setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
           setEmpUnreadCount(filtered.filter(n => !n.read).length);
-        } catch {}
+        } catch { }
       }
     };
-    const onAdminLocal = (e: Event) => { try { refresh(); } catch {} };
+    const onAdminLocal = (e: Event) => { try { refresh(); } catch { } };
     const onEmpLocal = (e: Event) => {
       try {
         const list = getEmployeeNotifications();
         const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
         setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
         setEmpUnreadCount(filtered.filter(n => !n.read).length);
-      } catch {}
+      } catch { }
     };
     window.addEventListener('storage', onStorage);
     window.addEventListener('admin_alerts_updated', onAdminLocal as EventListener);
     window.addEventListener('employee_notifications_updated', onEmpLocal as EventListener);
-    try { refresh(); } catch {}
-    try { onEmpLocal(new Event('init')); } catch {}
+    try { refresh(); } catch { }
+    try { onEmpLocal(new Event('init')); } catch { }
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('admin_alerts_updated', onAdminLocal as EventListener);
@@ -109,46 +109,63 @@ export default function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <div className="px-3 py-2 text-sm font-semibold">Alerts</div>
+      <DropdownMenuContent align="end" className="w-96 max-h-[80vh] overflow-y-auto">
+        <div className="px-3 py-2 text-sm font-semibold border-b border-border">Alerts</div>
         {items.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">No alerts</div>
+          <div className="px-3 py-4 text-sm text-muted-foreground text-center">No new alerts</div>
         ) : (
           items.map(a => (
-            <DropdownMenuItem key={a.id} className="flex items-center justify-between">
-              <div className="text-sm">{a.title}</div>
-              <a
-                href={a.href}
-                className="text-xs text-blue-600 hover:underline"
-                onClick={() => {
-                  if (isEmployee) {
-                    try { markEmployeeNotificationRead(a.id); } catch {}
-                    // Refresh local state
-                    try {
-                      const list = getEmployeeNotifications();
-                      const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
-                      setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
-                      setEmpUnreadCount(filtered.filter(n => !n.read).length);
-                    } catch {}
-                  } else {
-                    markRead(a.id);
-                  }
-                }}
-              >Open</a>
-              {!isEmployee && (
-                <button className="text-xs text-muted-foreground hover:text-red-600" onClick={() => { try { useAlertsStore.getState().dismiss(a.id); } catch {} }}>Dismiss</button>
-              )}
+            <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-border/50 focus:bg-muted/50 cursor-pointer">
+              <div className="text-sm break-words w-full leading-relaxed">{a.title}</div>
+              <div className="flex items-center justify-end w-full gap-3 mt-1">
+                <a
+                  href={a.href}
+                  className="text-xs font-medium text-primary hover:underline px-2 py-1 rounded hover:bg-primary/10 transition-colors"
+                  onClick={(e) => {
+                    // Prevent closing if we want to just mark read? usually navigation closes it anyway.
+                    // e.stopPropagation(); 
+                    if (isEmployee) {
+                      try { markEmployeeNotificationRead(a.id); } catch { }
+                      // Refresh local state
+                      try {
+                        const list = getEmployeeNotifications();
+                        const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
+                        setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
+                        setEmpUnreadCount(filtered.filter(n => !n.read).length);
+                      } catch { }
+                    } else {
+                      markRead(a.id);
+                    }
+                  }}
+                >
+                  Open
+                </a>
+                {!isEmployee && (
+                  <button
+                    className="text-xs text-muted-foreground hover:text-destructive px-2 py-1 rounded hover:bg-destructive/10 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try { useAlertsStore.getState().dismiss(a.id); } catch { }
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                )}
+              </div>
             </DropdownMenuItem>
           ))
         )}
         <div className="px-3 py-2">
           {isEmployee ? (
-            <Button variant="outline" size="sm" onClick={() => { try { markAllEmployeeNotificationsRead(employeeKeys[0]); } catch {} ; try {
-              const list = getEmployeeNotifications();
-              const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
-              setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
-              setEmpUnreadCount(filtered.filter(n => !n.read).length);
-            } catch {} }} className="w-full">Mark all read</Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              try { markAllEmployeeNotificationsRead(employeeKeys[0]); } catch { }; try {
+                const list = getEmployeeNotifications();
+                const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
+                setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
+                setEmpUnreadCount(filtered.filter(n => !n.read).length);
+              } catch { }
+            }} className="w-full">Mark all read</Button>
           ) : (
             <Button variant="outline" size="sm" onClick={dismissAll} className="w-full">Dismiss all</Button>
           )}

@@ -254,15 +254,22 @@ const FileManager = () => {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="File Manager" />
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <h1 className="text-3xl font-bold text-foreground">PDF Archive</h1>
-            <div className="text-muted-foreground">
-              {filteredRecords.length} of {records.length} files
+      <main className="container mx-auto px-4 py-8 max-w-7xl space-y-8 animate-fade-in">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-red-900/20 to-black p-6 rounded-xl border border-red-900/20 shadow-2xl">
+          <div>
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">PDF Archive</h1>
+            <p className="text-zinc-400 mt-2">Manage and organize all your business documents in one secure place.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="text-right hidden md:block">
+              <div className="text-2xl font-bold text-white mb-1">{records.length}</div>
+              <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Files</div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row justify-end gap-2 w-full sm:w-auto">
+        </div>
+
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 w-full sm:w-auto">
             <Button
               variant="destructive"
               onClick={() => {

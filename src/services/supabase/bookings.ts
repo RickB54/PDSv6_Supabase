@@ -18,11 +18,13 @@ export interface BookingInput {
   price_total: number;
   status?: string;
   created_by?: string;
+  booked_by?: string; // Add this
 }
 
 export async function create(input: BookingInput) {
   try {
     // 1. Upsert Customer (Match on Email)
+    // 1. Upsert Customer (Match on Email if exists, otherwise create new)
     let customerId: string | null = null;
     if (input.email) {
       const { data: existing } = await supabase.from('customers').select('id').eq('email', input.email).single();
@@ -36,6 +38,16 @@ export async function create(input: BookingInput) {
           notes: 'Created via Book Now'
         }).select('id').single();
         if (cErr) throw cErr;
+        customerId = newCust.id;
+      }
+    } else {
+      // No email provided - Create name-only customer
+      const { data: newCust, error: cErr } = await supabase.from('customers').insert({
+        full_name: input.customer_name,
+        phone: input.phone || null,
+        notes: 'Created via Book Now (Staff Entry)'
+      }).select('id').single();
+      if (!cErr && newCust) {
         customerId = newCust.id;
       }
     }
@@ -62,8 +74,7 @@ export async function create(input: BookingInput) {
       service_price: input.price_total,
       scheduled_at: input.date,
       status: input.status || 'pending',
-      scheduled_at: input.date,
-      status: input.status || 'pending',
+      booked_by: input.booked_by || 'Customer Web',
       notes: input.add_ons && input.add_ons.length > 0
         ? (input.notes ? `${input.notes}\n\nAdd-Ons: ${input.add_ons.join(', ')}` : `Add-Ons: ${input.add_ons.join(', ')}`)
         : input.notes,

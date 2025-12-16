@@ -237,17 +237,25 @@ export default function WebsiteAdministration() {
   return (
     <div>
       <PageHeader title="Website Administration" />
-      <div className="p-4 space-y-6 max-w-screen-xl mx-auto">
-        <Card className="p-4 bg-zinc-900 border-zinc-800">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">Website Admin</h3>
-            <span className="text-xs text-zinc-400">Content management</span>
-          </div>
+      <div className="p-4 space-y-8 max-w-screen-xl mx-auto animate-fade-in">
 
-          <Accordion type="single" collapsible>
+        {/* Premium Header Block */}
+        <div className="bg-gradient-to-r from-red-950/40 via-black to-zinc-950 p-8 rounded-2xl border border-red-900/20 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Content Control</h1>
+              <p className="text-zinc-400 max-w-xl">Manage your website's content, vehicle pricing, FAQs, and more from a centralized dashboard. Changes reflect immediately.</p>
+            </div>
+          </div>
+          {/* Decorative background element */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        </div>
+
+        <Card className="p-1 bg-zinc-950/50 border-zinc-800 shadow-xl rounded-xl overflow-hidden">
+          <Accordion type="single" collapsible className="w-full space-y-1">
             {/* Vehicle Types */}
-            <AccordionItem value="vehicle-types">
-              <AccordionTrigger>Vehicle Types</AccordionTrigger>
+            <AccordionItem value="vehicle-types" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Vehicle Types</AccordionTrigger>
               <AccordionContent>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">Vehicle Types</h4>
@@ -296,8 +304,8 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             {/* FAQs */}
-            <AccordionItem value="faqs">
-              <AccordionTrigger>FAQs</AccordionTrigger>
+            <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">FAQs</AccordionTrigger>
               <AccordionContent>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">FAQs</h4>
@@ -345,8 +353,8 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             {/* Contact */}
-            <AccordionItem value="contact">
-              <AccordionTrigger>Contact</AccordionTrigger>
+            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Contact</AccordionTrigger>
               <AccordionContent>
                 <h4 className="font-semibold mb-2">Contact</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -378,8 +386,8 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             {/* About */}
-            <AccordionItem value="about">
-              <AccordionTrigger>About</AccordionTrigger>
+            <AccordionItem value="about" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">About</AccordionTrigger>
               <AccordionContent>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">About Sections</h4>
@@ -494,8 +502,8 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             {/* Services */}
-            <AccordionItem value="services">
-              <AccordionTrigger>Services</AccordionTrigger>
+            <AccordionItem value="services" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Services</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3">
                   <h4 className="font-semibold">Services</h4>

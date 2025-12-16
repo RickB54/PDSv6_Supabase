@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { getSupabaseEmployees, getSupabaseBookings } from "@/lib/supa-data";
+import { getCurrentUser } from "@/lib/auth"; // Fix: Import missing function
 import { servicePackages, addOns } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
@@ -27,6 +28,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
+import supabase from "@/lib/supabase"; // Realtime import
 
 // --- Types ---
 type ViewMode = "week" | "month" | "year" | "analytics";
@@ -65,7 +67,7 @@ export default function BookingsPage() {
     address: "",
     time: "09:00",
     assignedEmployee: "",
-    bookedBy: "",
+    bookedBy: getCurrentUser()?.name || '',
     notes: "",
     addons: [] as string[],
     hasReminder: false,
@@ -142,9 +144,12 @@ export default function BookingsPage() {
     };
     fetchEmployees();
 
+    fetchEmployees();
+
     // Fetch bookings from Supabase and sync to store
     const syncBookings = async () => {
       const supaBookings = await getSupabaseBookings();
+
       const localIds = new Set(items.map(b => b.id));
 
       supaBookings.forEach(sb => {
@@ -180,6 +185,18 @@ export default function BookingsPage() {
       });
     };
     syncBookings();
+
+    // Realtime Subscription
+    const channel = supabase
+      .channel('bookings-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+        // console.log("Realtime change:", payload);
+        syncBookings();
+        toast.info("Calendar updated from remote change");
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
 
     // Fetch customers - Load from localforage to get complete data with addresses/vehicles
     const fetchCustomers = async () => {
@@ -442,9 +459,9 @@ export default function BookingsPage() {
     // Reset validation/selection states for "New" mode
     setSelectedBooking(null); // Ensure it's treated as new
     setSelectedCustomer(customer || null);
-    setSelectedDate(new Date()); // Default to today for the new date
+    setSelectedDate(parseISO(booking.date)); // Default to the original booking date (Same Day)
     setIsAddModalOpen(true);
-    toast.info("Booking duplicated. Please select a new date.");
+    toast.info("Booking duplicated. Please select a new time.");
   };
 
   const getStatusColor = (status: string) => {
@@ -549,7 +566,11 @@ export default function BookingsPage() {
             <Button variant="ghost" size="icon" onClick={handleNext} className="h-8 w-8"><ChevronRight className="h-3 w-3" /></Button>
           </div>
 
-          <Button className="bg-primary hover:bg-primary/90 h-8 text-xs" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
+          <Button className="bg-primary hover:bg-primary/90 h-8 text-xs" onClick={() => {
+            setSelectedDate(new Date());
+            setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
+            setIsAddModalOpen(true);
+          }}>
             <Plus className="h-3 w-3 mr-1" /> New
           </Button>
         </div>
@@ -1049,11 +1070,25 @@ export default function BookingsPage() {
                     onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
                   >
                     <option value="" className="text-gray-400">Unknown</option>
+                    {/* Ensure current user defaults if not in list */}
+                    {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
+                      <option key="current-user" value={getCurrentUser()?.name} className="text-gray-300">
+                        {getCurrentUser()?.name} (You)
+                      </option>
+                    )}
                     {employees.map((emp) => (
                       <option key={emp.id || emp.email} value={emp.name} className="text-gray-300">
                         {emp.name} ({emp.role})
                       </option>
                     ))}
+                    {/* Catch-all: If the saved value isn't any of the above, show it so it doesn't look Unknown */}
+                    {formData.bookedBy &&
+                      formData.bookedBy !== getCurrentUser()?.name &&
+                      !employees.find(e => e.name === formData.bookedBy) && (
+                        <option key="saved-value" value={formData.bookedBy} className="text-gray-300">
+                          {formData.bookedBy}
+                        </option>
+                      )}
                   </select>
                 </div>
               </div>

@@ -1039,8 +1039,26 @@ const ServiceChecklist = () => {
     <div className="min-h-screen bg-background">
       <PageHeader title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="space-y-6 animate-fade-in">
+      <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
+        {/* Premium Header Block */}
+        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Service Checklist</h1>
+              <p className="text-zinc-400 max-w-xl">Track job progress, manage materials, and generate estimates for your customers.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="text-right">
+                <div className="text-2xl font-bold text-white mb-1">{progressPercent}%</div>
+                <div className="text-xs text-zinc-500 uppercase tracking-wider">Completion</div>
+              </div>
+            </div>
+          </div>
+          {/* Decorative background element */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        </div>
+
+        <div className="space-y-6">
           {/* Job Setup - Generic, no forced customer link */}
           <Card className="p-6 bg-gradient-card border-border">
             <h2 className="text-2xl font-bold text-foreground mb-4">Job Setup</h2>

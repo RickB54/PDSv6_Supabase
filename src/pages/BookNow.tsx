@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2 } from "lucide-react"; // Renamed Calendar icon
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -26,6 +26,11 @@ import * as supaAddOns from "@/services/supabase/addOns";
 import api from "@/lib/api.js";
 import { upsertSupabaseEstimate } from "@/lib/supa-data";
 import { contentService } from "@/lib/content";
+import { getCurrentUser } from "@/lib/auth";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar"; // Actual Calendar component
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const BookNow = () => {
   const { toast } = useToast();
@@ -366,22 +371,27 @@ const BookNow = () => {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    const user = getCurrentUser(); // Check if logged in (staff/admin)
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
+
+    // If NOT logged in (Regular Customer), enforce strict validation
+    if (!user) {
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Invalid email format";
+      }
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Phone is required";
+      } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
+        newErrors.phone = "Phone must be 10 digits";
+      }
+      if (!formData.make.trim()) newErrors.make = "Vehicle make is required";
+      if (!formData.model.trim()) newErrors.model = "Vehicle model is required";
+      if (!formData.year.trim()) newErrors.year = "Year is required";
+      if (!formData.package) newErrors.package = "Please select a package";
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone is required";
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = "Phone must be 10 digits";
-    }
-    if (!formData.make.trim()) newErrors.make = "Vehicle make is required";
-    if (!formData.model.trim()) newErrors.model = "Vehicle model is required";
-    if (!formData.year.trim()) newErrors.year = "Year is required";
-    if (!formData.package) newErrors.package = "Please select a package";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -447,10 +457,24 @@ const BookNow = () => {
           date: dateIso,
           notes: formData.message,
           price_total: discountedTotal,
-          status: 'pending'
+          status: 'pending',
+          booked_by: (() => {
+            const u = getCurrentUser();
+            if (!u) return 'Customer Web';
+            return u.name || u.email || 'Unknown User';
+          })()
         });
       }
-    } catch { }
+    } catch (createError) {
+      console.error("Booking Creation Failed in Supabase:", createError);
+      toast({
+        title: "Booking Error",
+        description: "Could not save to calendar. Check console for details.",
+        variant: "destructive"
+      });
+      // Don't return, allow PDF/Email to try? Or stop?
+      // For now, trace the error.
+    }
     const localBookingId = `booking_${Date.now()}`;
     addBooking({ id: localBookingId, title: bookingPayload.service || "Booking", customer: formData.name, date: dateIso, status: "pending" });
 
@@ -523,6 +547,28 @@ const BookNow = () => {
     );
   };
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const lower = val.toLowerCase();
+    if (lower === 'test booking' || lower === 'test customer') {
+      // Magic Prefill
+      setFormData(prev => ({
+        ...prev,
+        name: val,
+        email: 'test@example.com',
+        phone: '5551234567',
+        make: 'TestMake',
+        model: 'TestModel',
+        year: '2024',
+        package: prev.package || livePackages[0]?.id || "",
+        datetime: prev.datetime || new Date().toISOString().slice(0, 16) // Current time
+      }));
+      toast({ title: "Test Mode Activated", description: "Mock data prefilled." });
+    } else {
+      setFormData(prev => ({ ...prev, name: val }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -537,7 +583,7 @@ const BookNow = () => {
 
         <div className="space-y-6 animate-fade-in">
           <div className="text-center space-y-4">
-            <Calendar className="h-16 w-16 mx-auto text-primary" />
+            <CalendarIcon className="h-16 w-16 mx-auto text-primary" />
             <h1 className="text-4xl font-bold text-foreground">Book Your Detail</h1>
             <p className="text-muted-foreground text-lg">Fill out the form below to request an appointment</p>
           </div>
@@ -561,7 +607,7 @@ const BookNow = () => {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={handleNameChange}
                     required
                     className={errors.name ? "border-destructive" : ""}
                   />
@@ -592,6 +638,61 @@ const BookNow = () => {
                     className={errors.phone ? "border-destructive" : ""}
                   />
                   {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="datetime">Preferred Date & Time *</Label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal border-zinc-700 bg-zinc-900/50 text-white",
+                            !formData.datetime && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.datetime ? format(new Date(formData.datetime), "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800 z-50" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.datetime ? new Date(formData.datetime) : undefined}
+                          onSelect={(d) => {
+                            if (!d) return;
+                            const current = formData.datetime ? new Date(formData.datetime) : new Date();
+                            current.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                            setFormData({ ...formData, datetime: current.toISOString() });
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <Select
+                      value={formData.datetime ? format(new Date(formData.datetime), "HH:mm") : "09:00"}
+                      onValueChange={(t) => {
+                        const [h, m] = t.split(':').map(Number);
+                        const current = formData.datetime ? new Date(formData.datetime) : new Date();
+                        current.setHours(h, m, 0, 0);
+                        setFormData({ ...formData, datetime: current.toISOString() });
+                      }}
+                    >
+                      <SelectTrigger className="w-full sm:w-[140px] border-zinc-700 bg-zinc-900/50 text-white">
+                        <SelectValue placeholder="Time" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-950 border-zinc-800">
+                        {Array.from({ length: 13 }).map((_, i) => {
+                          const h = i + 7; // 7 AM to 7 PM
+                          const timeStr = `${h.toString().padStart(2, '0')}:00`;
+                          const label = format(new Date().setHours(h, 0, 0, 0), "h:mm a");
+                          return <SelectItem key={timeStr} value={timeStr}>{label}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

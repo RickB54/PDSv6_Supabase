@@ -138,12 +138,12 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <SidebarProvider open={!!(user && (user.role === 'admin' || user.role === 'employee'))} defaultOpen={true}>
+          <SidebarProvider defaultOpen={true}>
             <div className={`flex min-h-screen w-full ${user?.role === 'admin' || user?.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
               <ChatAudioAlert />
               <GlobalChatWidget />
               {user && <AppSidebar />}
-              <div className="flex-1">
+              <div className="flex-1 overflow-x-hidden">
                 <ErrorBoundary>
                   <Routes>
                     <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />

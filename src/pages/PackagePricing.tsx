@@ -991,14 +991,45 @@ export default function PackagePricing() {
     setNewAddonForm({ name: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
   };
 
+  const totalPkgs = [...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted).length;
+  const totalAddons = [...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted).length;
+
   return (
-    <div>
+    <div className="min-h-screen bg-background">
       <PageHeader title="Package Pricing" />
-      <div className="p-4 space-y-6 max-w-screen-xl mx-auto overflow-x-hidden">
-        {/* REORGANIZED PRICING CONTROLS */}
-        <div className="bg-zinc-900/70 backdrop-blur border border-zinc-800 rounded-xl p-6 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Edit Pricing</h2>
-          <p className="text-zinc-400 mb-6">Changes apply everywhere, including the live website.</p>
+
+      <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
+
+        {/* Premium Header Block */}
+        <div className="bg-gradient-to-r from-red-950/40 via-black to-zinc-950 p-8 rounded-2xl border border-red-900/20 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Package Pricing</h1>
+              <p className="text-zinc-400 max-w-xl">Manage your service menu, adjust pricing globally, and control website visibility.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="text-right">
+                <div className="text-3xl font-bold text-white mb-1">{totalPkgs}</div>
+                <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">Active Packages</div>
+              </div>
+              <div className="w-px h-12 bg-zinc-800 hidden sm:block"></div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-white mb-1">{totalAddons}</div>
+                <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">Active Add-Ons</div>
+              </div>
+            </div>
+          </div>
+          {/* Decorative background element */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+        </div>
+
+        {/* Pricing Controls Card */}
+        <div className="bg-gradient-card border border-border rounded-xl p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <span className="w-1 h-8 bg-red-600 rounded-full"></span>
+            Edit Pricing
+          </h2>
+          <p className="text-zinc-400 mb-6 ml-3">Changes apply everywhere, including the live website.</p>
 
           {/* Vehicle Type Selector - Front and Center */}
           <div className="mb-6 flex items-center gap-4">
@@ -1017,9 +1048,14 @@ export default function PackagePricing() {
 
           <Accordion type="multiple" className="space-y-4">
             {/* Increase % Section */}
-            <AccordionItem value="increase" className="border border-zinc-700 rounded-lg">
-              <AccordionTrigger className="px-4 text-white hover:no-underline">
-                <span className="text-lg font-semibold">Increase % by Category</span>
+            <AccordionItem value="increase" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-red-900/30 group">
+              <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-red-400 data-[state=open]:text-red-400 transition-colors">
+                <span className="text-lg font-semibold flex items-center gap-3">
+                  <span className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  </span>
+                  Increase % by Category
+                </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex items-center gap-4 flex-wrap">
@@ -1061,9 +1097,14 @@ export default function PackagePricing() {
             </AccordionItem>
 
             {/* View & Export Section */}
-            <AccordionItem value="view-export" className="border border-zinc-700 rounded-lg">
-              <AccordionTrigger className="px-4 text-white hover:no-underline">
-                <span className="text-lg font-semibold">View & Export Pricing</span>
+            <AccordionItem value="view-export" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-blue-900/30 group">
+              <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-blue-400 data-[state=open]:text-blue-400 transition-colors">
+                <span className="text-lg font-semibold flex items-center gap-3">
+                  <span className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  </span>
+                  View & Export Pricing
+                </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex items-center gap-4 flex-wrap">
@@ -1087,9 +1128,14 @@ export default function PackagePricing() {
             </AccordionItem>
 
             {/* Show Services Section */}
-            <AccordionItem value="show-services" className="border border-zinc-700 rounded-lg">
-              <AccordionTrigger className="px-4 text-white hover:no-underline">
-                <span className="text-lg font-semibold">Show Services</span>
+            <AccordionItem value="show-services" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-emerald-900/30 group">
+              <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-emerald-400 data-[state=open]:text-emerald-400 transition-colors">
+                <span className="text-lg font-semibold flex items-center gap-3">
+                  <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  </span>
+                  Show Services
+                </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -1556,7 +1602,7 @@ export default function PackagePricing() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </main>
     </div>
   );
 }

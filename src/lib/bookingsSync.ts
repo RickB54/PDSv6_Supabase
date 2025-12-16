@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { Booking } from "@/store/bookings";
 import { pushAdminAlert } from "@/lib/adminAlerts";
+import { toast } from "@/hooks/use-toast";
 
 function formatFileName(dateISO: string, customer: string, service: string) {
   const d = new Date(dateISO);
@@ -48,6 +49,11 @@ export function uploadToFileManager(fileDataUrl: string, path: string, booking: 
   savePDFToArchive("Bookings", booking.customer || "Customer", booking.id, fileDataUrl, { fileName, path });
   // Flag latest booking event for lightweight real-time UI cues
   localStorage.setItem('lastBookingEvent', JSON.stringify({ id: booking.id, ts: Date.now(), price: details?.price }));
+
+  toast({
+    title: "File Saved",
+    description: `Booking PDF saved to File Manager: ${fileName}`,
+  });
 }
 
 export function onBookingCreated(booking: Booking) {

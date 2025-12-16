@@ -203,9 +203,9 @@ const Estimates = () => {
     const acceptedCount = filteredEstimates.filter(e => (e.status || 'open') === 'accepted').length;
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <div className="min-h-screen bg-background pb-20 overflow-x-hidden w-full">
             <PageHeader title="Estimates" />
-            <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
+            <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6 w-full">
 
                 {/* Stats Card */}
                 <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg relative overflow-hidden">
@@ -358,8 +358,8 @@ const Estimates = () => {
                                 <div key={est.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/5 cursor-pointer" onClick={() => setSelectedEstimate(est)}>
                                     <div className="flex items-center gap-4 mb-4 md:mb-0">
                                         <div className={`h-12 w-12 rounded-full flex items-center justify-center border ${(est.status === 'accepted') ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
-                                                (est.status === 'declined') ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                                                    'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                                            (est.status === 'declined') ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                                                'bg-amber-500/10 border-amber-500/20 text-amber-500'
                                             }`}>
                                             <FileText className="h-5 w-5" />
                                         </div>
@@ -382,7 +382,7 @@ const Estimates = () => {
                                         <div className="text-right min-w-[100px]">
                                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Status</div>
                                             <div className={`font-medium ${(est.status || 'open') === 'accepted' ? 'text-emerald-400' :
-                                                    (est.status || 'open') === 'declined' ? 'text-red-400' : 'text-amber-400'
+                                                (est.status || 'open') === 'declined' ? 'text-red-400' : 'text-amber-400'
                                                 }`}>
                                                 {(est.status || 'open').toUpperCase()}
                                             </div>

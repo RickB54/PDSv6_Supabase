@@ -46,15 +46,16 @@ export interface Customer {
  *    - Ignores employees that exist LOCALLY but NOT in Supabase (cleans up ghosts).
  *    - Deduplicates by email.
  */
+// Singleton ephemeral client to prevent "Multiple GoTrueClient" warnings
+const anonClient = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY,
+    { auth: { persistSession: false } }
+);
+
 export const getSupabaseEmployees = async (): Promise<Employee[]> => {
     try {
-        // 1. Fetch from Supabase
-        // Use ephemeral client to bypass RLS/session issues for reliable directory listing
-        const anonClient = createClient(
-            import.meta.env.VITE_SUPABASE_URL,
-            import.meta.env.VITE_SUPABASE_ANON_KEY,
-            { auth: { persistSession: false } }
-        );
+        // 1. Fetch from Supabase using singleton anon client
 
         const { data: supaUsers, error } = await anonClient
             .from('app_users')
@@ -214,10 +215,12 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
  */
 export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { type?: string }) => {
     // 1. Prepare payload for CUSTOMERS table
+    const safeEmail = customer.email?.trim() || undefined;
+    const safePhone = customer.phone?.trim() || undefined;
     const payload: any = {
         full_name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
+        email: safeEmail,
+        phone: safePhone,
         address: customer.address,
         notes: customer.notes || '',
         type: customer.type || 'customer'
@@ -511,14 +514,26 @@ export const getSupabaseBookings = async (): Promise<SupaBooking[]> => {
     try {
         const { data, error } = await supabase
             .from('bookings')
-            .select('*')
-            .order('date', { ascending: false });
+            .select('*, customers(full_name)')
+            .order('scheduled_at', { ascending: false });
 
         if (error) {
             console.error('getSupabaseBookings error:', error);
             return [];
         }
-        return data || [];
+
+        // Map DB columns to SupaBooking interface
+        return (data || []).map((b: any) => ({
+            id: b.id,
+            title: b.service_package || 'Booking',
+            customer_name: b.customers?.full_name || 'Unknown Customer',
+            date: b.scheduled_at, // Map scheduled_at -> date
+            status: b.status,
+            vehicle_info: b.booking_vehicle, // Assuming this might be needed, or mapped from relations if needed later
+            notes: b.notes,
+            price: b.service_price,
+            addons: b.add_ons
+        }));
     } catch (err) {
         console.error('getSupabaseBookings exception:', err);
         return [];

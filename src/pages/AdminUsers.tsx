@@ -279,158 +279,216 @@ export default function AdminUsers() {
     }
   };
 
+  const totalAdmins = roleCounts.admin;
+  const totalEmployees = roleCounts.employee;
+  const totalCustomers = roleCounts.customer;
+
   return (
-    <div className="space-y-6 p-4">
+    <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Users & Roles" subtitle="Manage all users: Name, Email, Role, Last Login, Actions" />
 
-      {/* Search, Role Filters, and Refresh */}
-      <Card className="p-4 bg-zinc-900 border-zinc-800">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or email"
-            className="bg-zinc-800 border-zinc-700 text-white"
-          />
-          <div className="flex items-center gap-2">
-            {(['all', 'admin', 'employee', 'customer'] as const).map((r) => (
-              <Button key={r} variant={roleFilter === r ? 'default' : 'outline'} className={roleFilter === r ? 'bg-red-700 hover:bg-red-800' : 'border-zinc-700 text-zinc-300'} onClick={() => setRoleFilter(r as any)}>
-                {String(r).charAt(0).toUpperCase() + String(r).slice(1)}
-              </Button>
-            ))}
+      {/* Premium Header Block */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-red-950/40 via-black to-zinc-950 border-b border-red-900/20 p-8 mb-8">
+        <div className="relative z-10 container mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Users & Roles</h1>
+            <p className="text-zinc-400 max-w-xl">Manage all users: Name, Email, Role, Last Login, Actions</p>
           </div>
-          <Button variant="outline" onClick={fetchUsers} disabled={loading} className="border-zinc-700 text-zinc-300">
-            {loading ? "Refreshing..." : "Refresh"}
-          </Button>
-          <div className="text-sm text-zinc-400">
-            Admins: {roleCounts.admin} • Employees: {roleCounts.employee} • Customers: {roleCounts.customer}
+
+          {/* Colorful Stats Block */}
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-col items-center bg-zinc-900/50 backdrop-blur border border-red-900/30 p-3 rounded-xl min-w-[100px]">
+              <span className="text-xs text-red-400 font-bold uppercase tracking-wider">Admins</span>
+              <span className="text-2xl font-black text-white">{totalAdmins}</span>
+            </div>
+            <div className="flex flex-col items-center bg-zinc-900/50 backdrop-blur border border-blue-900/30 p-3 rounded-xl min-w-[100px]">
+              <span className="text-xs text-blue-400 font-bold uppercase tracking-wider">Employees</span>
+              <span className="text-2xl font-black text-white">{totalEmployees}</span>
+            </div>
+            <div className="flex flex-col items-center bg-zinc-900/50 backdrop-blur border border-emerald-900/30 p-3 rounded-xl min-w-[100px]">
+              <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Customers</span>
+              <span className="text-2xl font-black text-white">{totalCustomers}</span>
+            </div>
           </div>
         </div>
-      </Card>
 
-      {/* Unified Users Table */}
-      <Card className="p-4 bg-zinc-900 border-zinc-800">
-        <div className="w-full overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-zinc-300">Name</TableHead>
-                <TableHead className="text-zinc-300">Email</TableHead>
-                <TableHead className="text-zinc-300">Role</TableHead>
-                <TableHead className="text-zinc-300">Status</TableHead>
-                <TableHead className="text-zinc-300">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="text-white">
-                    {editId === u.id ? (
-                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{u.name}</span>
-                        {u.isPending && <span className="text-[10px] bg-yellow-900/40 text-yellow-500 border border-yellow-700/50 px-1.5 py-0.5 rounded">Pending Invite</span>}
-                        {u.isLocalOnly && <span className="text-[10px] bg-purple-900/40 text-purple-400 border border-purple-700/50 px-1.5 py-0.5 rounded flex items-center gap-1"><WifiOff className="w-3 h-3" /> Local Only</span>}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-white">{u.email}</TableCell>
-                  <TableCell className="text-white">
-                    <Select value={u.role} onValueChange={(val) => onChangeRole(u.id, val as Role)} disabled={u.isLocalOnly}>
-                      <SelectTrigger className="w-[180px] bg-zinc-800 border-zinc-700 text-white">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-zinc-300">
-                    <span className="text-xs font-mono">
-                      {u.isPending ? 'Waiting for signup' : u.isLocalOnly ? 'Device Only' : 'Active'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="space-x-2">
-                    {editId === u.id ? (
-                      <>
-                        <Button size="sm" className="bg-red-700 hover:bg-red-800" onClick={saveName}>Save</Button>
-                        <Button size="sm" variant="outline" className="border-zinc-700 text-zinc-300" onClick={() => { setEditId(null); setEditName(""); }}>Cancel</Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => { setEditId(u.id); setEditName(u.name || ""); }}>Edit</Button>
-                        <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => deleteUser(u.id, u.role)}>Delete</Button>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
+        {/* Decorative background element */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-7xl space-y-6">
+
+        {/* Search & Functionality Card */}
+        <Card className="p-6 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name or email..."
+              className="bg-zinc-950 border-zinc-800 text-white min-w-[300px] h-12"
+            />
+            <div className="flex items-center gap-2">
+              {(['all', 'admin', 'employee', 'customer'] as const).map((r) => (
+                <Button
+                  key={r}
+                  variant={roleFilter === r ? 'default' : 'outline'}
+                  className={`h-12 px-6 ${roleFilter === r ? 'bg-red-700 hover:bg-red-800 text-white shadow-lg shadow-red-900/20' : 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  onClick={() => setRoleFilter(r as any)}
+                >
+                  {String(r).charAt(0).toUpperCase() + String(r).slice(1)}
+                </Button>
               ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-zinc-400 py-8">No users found.</TableCell>
+            </div>
+            <div className="flex-1 text-right">
+              <Button variant="outline" onClick={fetchUsers} disabled={loading} className="h-12 border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                {loading ? "Refreshing..." : "Refresh List"}
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Unified Users Table */}
+        <Card className="bg-zinc-900 border-zinc-800 overflow-hidden shadow-xl">
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-zinc-950/50">
+                <TableRow className="border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-400 font-semibold py-5 pl-6">Name</TableHead>
+                  <TableHead className="text-zinc-400 font-semibold py-5">Email</TableHead>
+                  <TableHead className="text-zinc-400 font-semibold py-5">Role</TableHead>
+                  <TableHead className="text-zinc-400 font-semibold py-5">Status</TableHead>
+                  <TableHead className="text-zinc-400 font-semibold py-5 text-right pr-6">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((u) => (
+                  <TableRow key={u.id} className="border-zinc-800 hover:bg-zinc-800/30 transition-colors">
+                    <TableCell className="pl-6 py-4">
+                      {editId === u.id ? (
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border ${u.role === 'admin' ? 'bg-red-900/20 border-red-800 text-red-500' :
+                            u.role === 'employee' ? 'bg-blue-900/20 border-blue-800 text-blue-500' :
+                              'bg-emerald-900/20 border-emerald-800 text-emerald-500'
+                            }`}>
+                            {u.name?.charAt(0).toUpperCase() || "U"}
+                          </div>
+                          <div>
+                            <div className="font-medium text-white">{u.name}</div>
+                            {u.isPending && <span className="text-[10px] bg-yellow-900/40 text-yellow-500 border border-yellow-700/50 px-1.5 py-0.5 rounded">Pending Invite</span>}
+                            {u.isLocalOnly && <span className="text-[10px] bg-purple-900/40 text-purple-400 border border-purple-700/50 px-1.5 py-0.5 rounded flex items-center gap-1 mt-1 w-fit"><WifiOff className="w-3 h-3" /> Local Only</span>}
+                          </div>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-zinc-300">{u.email}</TableCell>
+                    <TableCell>
+                      <Select value={u.role} onValueChange={(val) => onChangeRole(u.id, val as Role)} disabled={u.isLocalOnly}>
+                        <SelectTrigger className="w-[140px] bg-zinc-950 border-zinc-800 text-zinc-300 h-8 text-xs focus:ring-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                          {roles.map((r) => (
+                            <SelectItem key={r} value={r} className="focus:bg-zinc-800 cursor-pointer">{r.toUpperCase()}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-zinc-400">
+                      <span className={`text-xs px-2 py-1 rounded-full border ${u.isPending ? 'border-yellow-900/50 bg-yellow-900/10 text-yellow-500' : 'border-emerald-900/50 bg-emerald-900/10 text-emerald-500'}`}>
+                        {u.isPending ? 'Invited' : u.isLocalOnly ? 'Local' : 'Active'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="space-x-2 text-right pr-6">
+                      {editId === u.id ? (
+                        <>
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={saveName}>Save</Button>
+                          <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => { setEditId(null); setEditName(""); }}>Cancel</Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-zinc-500 hover:text-white hover:bg-zinc-800" onClick={() => { setEditId(u.id); setEditName(u.name || ""); }}>
+                            <User className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-900 hover:text-red-500 hover:bg-red-950/20" onClick={() => deleteUser(u.id, u.role)}>
+                            <ShieldAlert className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-zinc-500 py-12">No users found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
 
-      {/* Add New Employee */}
-      <Card className="p-4 bg-zinc-900 border-zinc-800">
-        <h3 className="text-lg font-semibold mb-4">Add New Employee</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="text-sm text-zinc-400">Name</label>
-            <Input value={newEmpName} onChange={(e) => setNewEmpName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-          </div>
-          <div>
-            <label className="text-sm text-zinc-400">Email</label>
-            <Input value={newEmpEmail} onChange={(e) => setNewEmpEmail(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-          </div>
-          <div className="flex items-end">
-            <Button className="bg-red-700 hover:bg-red-800" onClick={() => createGeneric('employee', newEmpName, newEmpEmail)}>Authorize Employee</Button>
-          </div>
-        </div>
-      </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Add New Employee */}
+          <Card className="p-6 bg-zinc-900 border-zinc-800 shadow-lg hover:border-blue-900/30 transition-colors">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-900/20 rounded-lg text-blue-500"><UserCheck className="w-5 h-5" /></div>
+              <h3 className="text-lg font-bold text-white">Add Employee</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase">Name</label>
+                <Input value={newEmpName} onChange={(e) => setNewEmpName(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase">Email</label>
+                <Input value={newEmpEmail} onChange={(e) => setNewEmpEmail(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+              </div>
+              <Button className="w-full bg-blue-700 hover:bg-blue-600 font-semibold" onClick={() => createGeneric('employee', newEmpName, newEmpEmail)}>Authorize Access</Button>
+            </div>
+          </Card>
 
-      {/* Add New Customer */}
-      <Card className="p-4 bg-zinc-900 border-zinc-800">
-        <h3 className="text-lg font-semibold mb-4">Add New Customer</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="text-sm text-zinc-400">Name</label>
-            <Input value={newCustName} onChange={(e) => setNewCustName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-          </div>
-          <div>
-            <label className="text-sm text-zinc-400">Email</label>
-            <Input value={newCustEmail} onChange={(e) => setNewCustEmail(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-          </div>
-          <div className="flex items-end">
-            <Button className="bg-red-700 hover:bg-red-800" onClick={() => createGeneric('customer', newCustName, newCustEmail)}>Authorize Customer</Button>
-          </div>
-        </div>
-      </Card>
+          {/* Add New Customer */}
+          <Card className="p-6 bg-zinc-900 border-zinc-800 shadow-lg hover:border-emerald-900/30 transition-colors">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-emerald-900/20 rounded-lg text-emerald-500"><User className="w-5 h-5" /></div>
+              <h3 className="text-lg font-bold text-white">Add Customer</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase">Name</label>
+                <Input value={newCustName} onChange={(e) => setNewCustName(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase">Email</label>
+                <Input value={newCustEmail} onChange={(e) => setNewCustEmail(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+              </div>
+              <Button className="w-full bg-emerald-700 hover:bg-emerald-600 font-semibold" onClick={() => createGeneric('customer', newCustName, newCustEmail)}>Authorize Access</Button>
+            </div>
+          </Card>
 
-      {/* Add New Admin */}
-      <Card className="p-4 bg-zinc-900 border-zinc-800">
-        <h3 className="text-lg font-semibold mb-4">Add New Admin</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="text-sm text-zinc-400">Name</label>
-            <Input value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-          </div>
-          <div>
-            <label className="text-sm text-zinc-400">Email</label>
-            <Input value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-          </div>
-          <div className="flex items-end">
-            <Button className="bg-red-700 hover:bg-red-800" onClick={() => createGeneric('admin', newAdminName, newAdminEmail)}>Authorize Admin</Button>
-          </div>
+          {/* Add New Admin */}
+          <Card className="p-6 bg-zinc-900 border-zinc-800 shadow-lg hover:border-red-900/30 transition-colors">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-900/20 rounded-lg text-red-500"><ShieldAlert className="w-5 h-5" /></div>
+              <h3 className="text-lg font-bold text-white">Add Admin</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase">Name</label>
+                <Input value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase">Email</label>
+                <Input value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+              </div>
+              <Button className="w-full bg-red-700 hover:bg-red-600 font-semibold" onClick={() => createGeneric('admin', newAdminName, newAdminEmail)}>Grant Admin Access</Button>
+            </div>
+          </Card>
         </div>
-      </Card>
+
+      </div>
     </div>
   );
 }

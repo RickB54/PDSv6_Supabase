@@ -131,6 +131,7 @@ export function AppSidebar() {
   // Standalone Top Items (Admin Dashboard)
   const TOP_ITEMS: MenuItem[] = [
     { title: "Admin Dashboard", url: "/admin-dashboard", role: "admin", key: "admin-dashboard", icon: LayoutDashboard },
+    { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard },
   ];
 
   const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
@@ -177,7 +178,7 @@ export function AppSidebar() {
       title: "Inventory & Assets", icon: Package,
       items: [
         { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: inventoryCount > 0 ? inventoryCount : undefined, icon: Package },
-        { title: "File Manager", url: "/file-manager", key: "file-manager", badge: fileCount > 0 ? fileCount : undefined, icon: FileText },
+        { title: "File Manager", url: "/file-manager", role: "admin", key: "file-manager", badge: fileCount > 0 ? fileCount : undefined, icon: FileText },
         { title: "Reports", url: "/reports", role: "admin", key: "reports", icon: FileBarChart }
       ]
     },
