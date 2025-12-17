@@ -25,7 +25,7 @@ import Accounting from "./pages/Accounting";
 import CompanyBudget from "./pages/CompanyBudget";
 import Reports from "./pages/Reports";
 import TrainingManual from "./pages/TrainingManual";
-import EmployeeTrainingCourse from "./pages/EmployeeTrainingCourse";
+// import EmployeeTrainingCourse from "./pages/EmployeeTrainingCourse"; // Removed
 import Certificate from "./pages/Certificate";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import CompanyEmployees from "./pages/CompanyEmployees";
@@ -334,11 +334,6 @@ const App = () => {
                         <AppManual />
                       </ProtectedRoute>
                     } />
-                    <Route path="/employee-training" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <EmployeeTrainingCourse />
-                      </ProtectedRoute>
-                    } />
                     <Route path="/certificate" element={
                       <ProtectedRoute allowedRoles={['employee', 'admin']}>
                         <Certificate />
@@ -357,11 +352,6 @@ const App = () => {
                     <Route path="/cheat-sheet" element={
                       <ProtectedRoute allowedRoles={['admin']}>
                         <CheatSheet />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/training-progress" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <EmployeeTrainingCourse />
                       </ProtectedRoute>
                     } />
                     <Route path="/dashboard/employee" element={

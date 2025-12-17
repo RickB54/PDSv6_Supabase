@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
-import { getSupabaseCustomers, upsertSupabaseCustomer } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer } from "@/lib/supa-data";
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
@@ -187,14 +187,21 @@ const SearchCustomer = () => {
 
   const handleDelete = async () => {
     if (!deleteCustomerId) return;
-    await removeCustomer(deleteCustomerId);
+    try {
+      await deleteSupabaseCustomer(deleteCustomerId);
 
-    // Force refresh of stores that might hold stale data in memory
-    useBookingsStore.getState().refresh();
-    useTasksStore.getState().refresh();
+      // Also try local delete just in case
+      await removeCustomer(deleteCustomerId).catch(() => { });
 
-    await refresh();
-    toast({ title: "Deleted", description: "Records removed." });
+      // Force refresh of stores that might hold stale data in memory
+      useBookingsStore.getState().refresh();
+      useTasksStore.getState().refresh();
+
+      await refresh();
+      toast({ title: "Deleted", description: "Customer permanently removed." });
+    } catch (error: any) {
+      toast({ title: "Delete Failed", description: error?.message || "Could not delete customer.", variant: "destructive" });
+    }
     setDeleteCustomerId(null);
   };
 
@@ -213,30 +220,56 @@ const SearchCustomer = () => {
     y += 15;
 
     filteredCustomers.forEach((c) => {
-      if (y > 250) { doc.addPage(); y = 20; }
-      doc.setFillColor(59, 130, 246);
+      // Check page break with more buffer
+      if (y > 230) { doc.addPage(); y = 20; }
+
+      doc.setFillColor(59, 130, 246); // Blue header for Customers
       doc.rect(14, y, pageWidth - 28, 10, 'F');
+
       doc.setFontSize(14);
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.text(c.name || "Unknown", 18, y + 7);
       y += 15;
+
       doc.setTextColor(40, 40, 40);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
 
-      const leftX = 18; const rightX = 110; const rowHeight = 6; const startY = y;
-      doc.setFont("helvetica", "bold"); doc.text("Contact Info", leftX, y); y += rowHeight;
-      doc.setFont("helvetica", "normal");
-      doc.text(`Phone: ${c.phone || "N/A"}`, leftX, y); y += rowHeight;
-      doc.text(`Email: ${c.email || "N/A"}`, leftX, y); y += rowHeight;
+      // Detailed Layout similar to Prospects
+      // Column 1
+      doc.text(`Phone: ${c.phone || "N/A"}`, 18, y);
+      doc.text(`Email: ${c.email || "N/A"}`, 18, y + 5);
+      doc.text(`Address: ${c.address || "N/A"}`, 18, y + 10);
+      doc.text(`Acquisition: ${c.howFound || 'N/A'}${c.howFoundOther ? ` (${c.howFoundOther})` : ''}`, 18, y + 15);
 
-      let rightY = startY;
-      doc.setFont("helvetica", "bold"); doc.text("Vehicle Details", rightX, rightY); rightY += rowHeight;
-      doc.setFont("helvetica", "normal");
-      doc.text(`Vehicle: ${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`, rightX, rightY); rightY += rowHeight;
+      // Column 2 - Vehicle
+      const vehInfo = `${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`;
+      doc.text(`Vehicle: ${vehInfo}`, 110, y);
+      doc.text(`Type: ${c.vehicleType || 'N/A'}`, 110, y + 5);
+      doc.text(`Color: ${c.color || 'N/A'}`, 110, y + 10);
+      doc.text(`Mileage: ${c.mileage || 'N/A'}`, 110, y + 15);
 
-      y = Math.max(y, rightY) + 5;
+      // Condition / Notes
+      y += 25;
+      doc.setFont("helvetica", "bold");
+      doc.text("Condition / Notes:", 18, y);
+      doc.setFont("helvetica", "normal");
+
+      const conditionText = `Inside: ${c.conditionInside || 'N/A'}  |  Outside: ${c.conditionOutside || 'N/A'}`;
+      doc.text(conditionText, 18, y + 5);
+
+      // Notes wrapping
+      if (c.notes) {
+        const splitNotes = doc.splitTextToSize(c.notes, pageWidth - 40);
+        doc.text(splitNotes, 18, y + 10);
+        y += (splitNotes.length * 5) + 5;
+      } else {
+        doc.text("No additional notes.", 18, y + 10);
+        y += 10;
+      }
+
+      y += 10;
       doc.setDrawColor(200);
       doc.line(14, y, pageWidth - 14, y);
       y += 10;

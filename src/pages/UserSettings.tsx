@@ -102,7 +102,7 @@ export default function UserSettings() {
                             className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
                             onClick={() => {
                                 if (!user) return;
-                                const r = (user.role || '').toLowerCase();
+                                const r = (user.role || '').trim().toLowerCase();
                                 if (r === 'admin' || r === 'owner') navigate("/dashboard/admin");
                                 else if (r === 'employee') navigate("/employee-dashboard");
                                 else navigate("/customer-dashboard");

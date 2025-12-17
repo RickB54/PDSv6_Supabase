@@ -340,6 +340,49 @@ export default function BookingsPage() {
     setAnalyticsDefaultTab("reminders");
   };
 
+  // Helper: Notify Admin of Employee Actions
+  const notifyEmployeeChange = async (action: 'create' | 'update' | 'delete', booking: Booking | any) => {
+    // Only notify if current user is an employee (or checking role strictly)
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'employee') return;
+
+    try {
+      // 1. Push Bell Notification
+      const title = `Employee ${action.toUpperCase()} Booking`;
+      const msg = `${currentUser.name} has ${action}d a booking for ${booking.customer} on ${format(parseISO(booking.date), 'MMM d, yyyy')}.`;
+      await import("@/lib/adminAlerts").then(m => m.pushAdminAlert('info', msg, 'system', { id: booking.id }));
+
+      // 2. Generate PDF Evidence (reuse logic or simplified)
+      // We reuse the form data if it matches the booking, or use booking data
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text(`Employee Action Report: ${action.toUpperCase()}`, 20, 20);
+      doc.setFontSize(10);
+      doc.text(`Employee: ${currentUser.name} (${currentUser.email})`, 20, 30);
+      doc.text(`Timestamp: ${new Date().toLocaleString()}`, 20, 35);
+      doc.text(`Action: ${action}`, 20, 40);
+
+      doc.line(20, 45, 190, 45);
+
+      let y = 55;
+      doc.text(`Customer: ${booking.customer}`, 20, y); y += 6;
+      doc.text(`Service: ${booking.title}`, 20, y); y += 6;
+      doc.text(`Date: ${format(parseISO(booking.date), 'MMM d, yyyy')}`, 20, y); y += 6;
+      if (booking.price) { doc.text(`Price: $${booking.price}`, 20, y); y += 6; }
+
+      const pdfDataUrl = doc.output('datauristring');
+      const fileName = `Audit_${currentUser.name}_${booking.customer}_${Date.now()}.pdf`;
+
+      // Use 'Admin Updates' or 'Jobs' as category, 'Employee_Audits' was not in type
+      await savePDFToArchive('Admin Updates', booking.customer, `audit-${Date.now()}`, pdfDataUrl, { fileName });
+
+      toast.info("Admin notified of change (Audit PDF generated).");
+
+    } catch (e) {
+      console.error("Failed to notify admin change", e);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.customer || !formData.service) {
       toast.error("Customer and Service are required");
@@ -367,9 +410,11 @@ export default function BookingsPage() {
     const date = new Date(dateBase);
     date.setHours(hours, minutes, 0, 0);
 
+    let resultingBooking: any;
+
     if (selectedBooking) {
       // Update
-      update(selectedBooking.id, {
+      const updates = {
         customer: formData.customer,
         title: formData.service,
         date: date.toISOString(),
@@ -384,16 +429,22 @@ export default function BookingsPage() {
         addons: formData.addons,
         hasReminder: formData.hasReminder,
         reminderFrequency: parseInt(formData.reminderFrequency) || 0
-      });
+      };
+      update(selectedBooking.id, updates);
+      resultingBooking = { ...selectedBooking, ...updates };
+
+      // Notify Admin if Employee
+      notifyEmployeeChange('update', resultingBooking);
+
       toast.success("Booking updated");
     } else {
       // Create
-      add({
+      const newBooking = {
         id: `b-${Date.now()}`,
         customer: formData.customer,
         title: formData.service,
         date: date.toISOString(),
-        status: "confirmed",
+        status: "confirmed" as const,
         vehicle: formData.vehicle,
         vehicleYear: formData.vehicleYear,
         vehicleMake: formData.vehicleMake,
@@ -406,11 +457,17 @@ export default function BookingsPage() {
         hasReminder: formData.hasReminder,
         reminderFrequency: parseInt(formData.reminderFrequency) || 0,
         createdAt: new Date().toISOString()
-      });
+      };
+      add(newBooking as any);
+      resultingBooking = newBooking;
+
+      // Notify Admin if Employee
+      notifyEmployeeChange('create', resultingBooking);
+
       toast.success("Booking created");
     }
     // Generate and Save PDF automatically
-    handleSavePDF();
+    handleSavePDF(); // Default customer copy
 
     setIsAddModalOpen(false);
     setSelectedBooking(null);
@@ -422,6 +479,9 @@ export default function BookingsPage() {
   const handleDelete = () => {
     if (selectedBooking) {
       if (confirm("Are you sure you want to delete this booking?")) {
+        // Notify Admin if Employee BEFORE removal (so we have data)
+        notifyEmployeeChange('delete', selectedBooking);
+
         remove(selectedBooking.id);
         toast.success("Booking deleted");
         setIsAddModalOpen(false);
@@ -900,7 +960,7 @@ export default function BookingsPage() {
                     <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
                       placeholder="123 Main St, City, State"
-                      className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                      className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     />
@@ -926,7 +986,7 @@ export default function BookingsPage() {
                   <div className="relative flex-1">
                     <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
                     <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       value={formData.service}
                       onChange={(e) => setFormData({ ...formData, service: e.target.value })}
                     >
@@ -942,7 +1002,7 @@ export default function BookingsPage() {
                   <div className="flex-1">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-gray-300 h-10 px-3 font-normal">
+                        <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 font-normal">
                           <span className="truncate">
                             {formData.addons.length > 0
                               ? `${formData.addons.length} Addon${formData.addons.length > 1 ? 's' : ''}`
@@ -953,7 +1013,7 @@ export default function BookingsPage() {
                       </PopoverTrigger>
                       <PopoverContent className="w-[200px] p-0 bg-zinc-950 border-zinc-800">
                         <Command>
-                          <CommandInput placeholder="Search addons..." className="h-9" />
+                          <CommandInput placeholder="Search addons..." className="h-9 text-white" />
                           <CommandEmpty>No addon found.</CommandEmpty>
                           <CommandGroup className="max-h-64 overflow-auto">
                             {allAddons.map((addon) => (
@@ -967,7 +1027,7 @@ export default function BookingsPage() {
                                     return { ...prev, addons: [...prev.addons, addon.name] };
                                   });
                                 }}
-                                className="text-gray-300 cursor-pointer hover:bg-zinc-900"
+                                className="text-white cursor-pointer hover:bg-zinc-900"
                               >
                                 <Check
                                   className={cn(
@@ -994,7 +1054,7 @@ export default function BookingsPage() {
                       <Car className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                       <Input
                         placeholder="e.g. SUV, Sedan, Truck"
-                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                        className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                         value={formData.vehicle}
                         onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
                       />
@@ -1016,19 +1076,19 @@ export default function BookingsPage() {
                 <div className="col-span-3 grid grid-cols-3 gap-2">
                   <Input
                     placeholder="Year"
-                    className="bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                     value={formData.vehicleYear}
                     onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
                   />
                   <Input
                     placeholder="Make"
-                    className="bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                     value={formData.vehicleMake}
                     onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
                   />
                   <Input
                     placeholder="Model"
-                    className="bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                     value={formData.vehicleModel}
                     onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
                   />
@@ -1045,13 +1105,13 @@ export default function BookingsPage() {
                 <div className="col-span-3 relative">
                   <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                   <select
-                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={formData.assignedEmployee}
                     onChange={(e) => setFormData({ ...formData, assignedEmployee: e.target.value })}
                   >
                     <option value="" className="text-gray-400">Unassigned</option>
                     {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name} className="text-gray-300">
+                      <option key={emp.id} value={emp.name} className="text-white bg-zinc-900">
                         {emp.name}
                       </option>
                     ))}
@@ -1065,19 +1125,19 @@ export default function BookingsPage() {
                 <div className="col-span-3 relative">
                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                   <select
-                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={formData.bookedBy}
                     onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
                   >
                     <option value="" className="text-gray-400">Unknown</option>
                     {/* Ensure current user defaults if not in list */}
                     {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
-                      <option key="current-user" value={getCurrentUser()?.name} className="text-gray-300">
+                      <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">
                         {getCurrentUser()?.name} (You)
                       </option>
                     )}
                     {employees.map((emp) => (
-                      <option key={emp.id || emp.email} value={emp.name} className="text-gray-300">
+                      <option key={emp.id || emp.email} value={emp.name} className="text-white bg-zinc-900">
                         {emp.name} ({emp.role})
                       </option>
                     ))}

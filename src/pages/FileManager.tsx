@@ -47,7 +47,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 interface PDFRecord {
   id: string;
   fileName: string;
-  recordType: "Invoice" | "Estimate" | "Job" | "Checklist" | "Customer" | "Employee Training" | "Bookings" | "Admin Updates" | "Payroll" | "Employee Contact" | "add-Ons" | "Mock Data" | "Sub Contractors" | "Sub-Contractors" | "Package Comparisons" | "Upsell Scripts" | "Client Evaluation" | "Detailing Vendors" | "Vehicle Classification" | "Vehicle History" | "Inventory Report";
+  recordType: "Invoice" | "Estimate" | "Job" | "Checklist" | "Customer" | "Employee Training" | "Bookings" | "Admin Updates" | "Payroll" | "Employee Contact" | "add-Ons" | "Mock Data" | "Sub Contractors" | "Sub-Contractors" | "Package Comparisons" | "Upsell Scripts" | "Client Evaluation" | "Detailing Vendors" | "Vehicle Classification" | "Vehicle History" | "Inventory Report" | "Prospects";
   customerName: string;
   date: string;
   timestamp: string;
@@ -320,6 +320,7 @@ const FileManager = () => {
                   <SelectItem value="add-Ons">Add-Ons</SelectItem>
                   <SelectItem value="Vehicle History">Vehicle History</SelectItem>
                   <SelectItem value="Inventory Report">Inventory Report</SelectItem>
+                  <SelectItem value="Prospects">Prospects</SelectItem>
                 </SelectContent>
               </Select>
 

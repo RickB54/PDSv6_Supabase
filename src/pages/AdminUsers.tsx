@@ -9,7 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import localforage from "localforage";
-import { UserCheck, ShieldAlert, User, WifiOff } from "lucide-react";
+import { UserCheck, ShieldAlert, User, WifiOff, Plus } from "lucide-react";
+import CustomerModal, { Customer as ModalCustomer } from "@/components/customers/CustomerModal";
+import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { upsertCustomer } from "@/lib/db";
 
 type Role = "admin" | "employee" | "customer";
 type AppUser = {
@@ -43,6 +46,8 @@ export default function AdminUsers() {
 
   const [newAdminName, setNewAdminName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
+
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -450,22 +455,17 @@ export default function AdminUsers() {
           </Card>
 
           {/* Add New Customer */}
-          <Card className="p-6 bg-zinc-900 border-zinc-800 shadow-lg hover:border-emerald-900/30 transition-colors">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-emerald-900/20 rounded-lg text-emerald-500"><User className="w-5 h-5" /></div>
-              <h3 className="text-lg font-bold text-white">Add Customer</h3>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-zinc-500 uppercase">Name</label>
-                <Input value={newCustName} onChange={(e) => setNewCustName(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
+          <Card className="p-6 bg-zinc-900 border-zinc-800 shadow-lg hover:border-emerald-900/30 transition-colors flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-emerald-900/20 rounded-lg text-emerald-500"><User className="w-5 h-5" /></div>
+                <h3 className="text-lg font-bold text-white">Add Customer</h3>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-zinc-500 uppercase">Email</label>
-                <Input value={newCustEmail} onChange={(e) => setNewCustEmail(e.target.value)} className="bg-zinc-950 border-zinc-800 text-white mt-1" />
-              </div>
-              <Button className="w-full bg-emerald-700 hover:bg-emerald-600 font-semibold" onClick={() => createGeneric('customer', newCustName, newCustEmail)}>Authorize Access</Button>
+              <p className="text-zinc-400 text-sm mb-4">Create a new customer profile with vehicle details, notes, and conditions.</p>
             </div>
+            <Button className="w-full bg-emerald-700 hover:bg-emerald-600 font-semibold" onClick={() => setCustomerModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Add Customer
+            </Button>
           </Card>
 
           {/* Add New Admin */}
@@ -489,6 +489,38 @@ export default function AdminUsers() {
         </div>
 
       </div>
+
+      <CustomerModal
+        open={customerModalOpen}
+        onOpenChange={setCustomerModalOpen}
+        defaultType="customer"
+        onSave={async (data) => {
+          try {
+            // Create User Profile in Supabase by using upsertSupabaseCustomer (which handles vehicles etc)
+            await upsertSupabaseCustomer({
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              address: data.address,
+              notes: data.notes,
+              type: 'customer',
+              vehicle_info: {
+                make: data.vehicle,
+                model: data.model,
+                year: data.year,
+                type: data.vehicleType,
+                color: data.color
+              }
+            });
+            toast({ title: "Customer Added", description: `${data.name} has been added.` });
+            setCustomerModalOpen(false);
+            fetchUsers();
+          } catch (e: any) {
+            console.error(e);
+            toast({ title: "Error", description: String(e.message), variant: "destructive" });
+          }
+        }}
+      />
     </div>
   );
 }

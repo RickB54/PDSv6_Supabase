@@ -84,16 +84,16 @@ export default function NotificationBell() {
   }, [refresh, employeeKeys.join('|')]);
 
   const items = useMemo(() => {
-    if (isEmployee) return [...empItems].reverse().slice(0, 10);
-    return [...latest].reverse().slice(0, 10);
+    if (isEmployee) return [...(empItems || [])].reverse().slice(0, 10);
+    return [...(latest || [])].reverse().slice(0, 10);
   }, [latest, empItems, isEmployee]);
   // Compute important unread using full AdminAlert objects, not mapped UI items
   const importantUnreadActual = useMemo(() => {
     if (isEmployee) return 0; // employee notifications are all treated equally for now
-    return alerts.filter(a => !a.read && (a.type === 'exam_reminder' || a.type === 'admin_message')).length;
+    return (alerts || []).filter(a => !a.read && (a.type === 'exam_reminder' || a.type === 'admin_message')).length;
   }, [alerts, isEmployee]);
   const importantUnread = isFileManagerView ? 0 : importantUnreadActual;
-  const displayUnreadCount = isFileManagerView ? 0 : (isEmployee ? empUnreadCount : unreadCount);
+  const displayUnreadCount = isFileManagerView ? 0 : (isEmployee ? empUnreadCount : (unreadCount || 0));
   const bellColorClass = importantUnread > 0 ? "text-yellow-400" : (displayUnreadCount > 0 ? "text-white" : "text-red-500");
 
   return (
@@ -115,18 +115,15 @@ export default function NotificationBell() {
           <div className="px-3 py-4 text-sm text-muted-foreground text-center">No new alerts</div>
         ) : (
           items.map(a => (
-            <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-border/50 focus:bg-muted/50 cursor-pointer">
-              <div className="text-sm break-words w-full leading-relaxed">{a.title}</div>
+            <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-border/50 focus:bg-zinc-800 focus:text-white cursor-pointer group">
+              <div className="text-sm break-words w-full leading-relaxed group-hover:text-white">{a.title}</div>
               <div className="flex items-center justify-end w-full gap-3 mt-1">
                 <a
                   href={a.href}
-                  className="text-xs font-medium text-primary hover:underline px-2 py-1 rounded hover:bg-primary/10 transition-colors"
+                  className="text-xs font-medium text-primary hover:text-white hover:underline px-2 py-1 rounded hover:bg-primary transition-colors bg-zinc-900 border border-zinc-700"
                   onClick={(e) => {
-                    // Prevent closing if we want to just mark read? usually navigation closes it anyway.
-                    // e.stopPropagation(); 
                     if (isEmployee) {
                       try { markEmployeeNotificationRead(a.id); } catch { }
-                      // Refresh local state
                       try {
                         const list = getEmployeeNotifications();
                         const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
@@ -142,7 +139,7 @@ export default function NotificationBell() {
                 </a>
                 {!isEmployee && (
                   <button
-                    className="text-xs text-muted-foreground hover:text-destructive px-2 py-1 rounded hover:bg-destructive/10 transition-colors"
+                    className="text-xs text-muted-foreground hover:text-red-400 px-2 py-1 rounded hover:bg-zinc-900 transition-colors"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();

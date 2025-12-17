@@ -7,33 +7,71 @@ import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import { getOrientationExamModule, upsertTrainingModule, TrainingModule } from "@/lib/supa-data";
 
 type ExamQ = { q: string; options: string[]; correct: number };
+// LocalStorage fallback key only
 const EXAM_CUSTOM_KEY = "training_exam_custom";
 
 export default function ExamAdmin() {
   const { toast } = useToast();
   const [questions, setQuestions] = useState<ExamQ[]>([]);
   const [issues, setIssues] = useState<Record<number, string[]>>({});
+  const [moduleId, setModuleId] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(EXAM_CUSTOM_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setQuestions(parsed);
-          return;
+    const load = async () => {
+      try {
+        const mod = await getOrientationExamModule();
+        if (mod) {
+          setModuleId(mod.id);
+          const k = mod.quiz_data;
+          if (Array.isArray(k) && k.length > 0) {
+            setQuestions(k);
+            return;
+          }
         }
-      }
-    } catch { }
-    // Seed with detailed 50-question exam derived from Auto Detailing Handbook
-    const defaults = generateDefaultQuestions();
-    setQuestions(defaults);
-    try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(defaults)); } catch { }
+      } catch (e) { console.error(e); }
+
+      // Fallback: LocalStorage or Defaults
+      try {
+        const raw = localStorage.getItem(EXAM_CUSTOM_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setQuestions(parsed);
+            return;
+          }
+        }
+      } catch { }
+
+      const defaults = generateDefaultQuestions();
+      setQuestions(defaults);
+    };
+    load();
   }, []);
 
-  const save = () => {
+  const saveToSupabase = async (qs: ExamQ[]) => {
+    try {
+      // Upsert based on Title if ID unknown, or ID if known
+      const payload: Partial<TrainingModule> = {
+        title: 'Final Orientation Exam',
+        category: 'General',
+        video_url: '',
+        description: 'The comprehensive final exam for employee certification.',
+        quiz_data: qs
+      };
+      if (moduleId) payload.id = moduleId;
+      const saved = await upsertTrainingModule(payload);
+      if (saved?.id) setModuleId(saved.id);
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  };
+
+  const save = async () => {
     // Validate with guardrails before saving
     const result = validateExam(questions);
     setIssues(result.issuesByIndex);
@@ -44,18 +82,22 @@ export default function ExamAdmin() {
     }
     // Optionally balance correct letters if skewed
     const finalQs = result.skewedCorrectLetters ? enforceCorrectVariety(questions) : questions;
-    try {
-      localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(finalQs));
+
+    // Save to Supabase
+    const ok = await saveToSupabase(finalQs);
+    if (ok) {
+      // Also update localstorage as backup/cache
+      try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(finalQs)); } catch { }
       pushAdminAlert('admin_message' as any, 'Exam updated by admin', 'admin', { count: finalQs.length });
-      toast({ title: "Saved", description: result.skewedCorrectLetters ? "Saved and balanced correct answers across A–E." : "Custom exam saved. Employees will see updated questions." });
-    } catch {
-      toast({ title: "Error", description: "Failed to save exam.", variant: "destructive" });
+      toast({ title: "Saved", description: result.skewedCorrectLetters ? "Saved to Supabase and balanced correct answers." : "Exam saved to database." });
+    } else {
+      toast({ title: "Error", description: "Failed to save to Supabase. Check connection.", variant: "destructive" });
     }
   };
 
   const addQuestion = () => setQuestions(prev => [...prev, { q: `Question ${prev.length + 1}`, options: ["Option A", "Option B", "Option C", "Option D", "Option E"], correct: 0 }]);
 
-  const randomize = () => {
+  const randomize = async () => {
     setQuestions(prev => {
       // Deep copy
       const arr: ExamQ[] = prev.map(q => ({ q: q.q, options: [...q.options], correct: q.correct }));
@@ -64,12 +106,11 @@ export default function ExamAdmin() {
         const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
       }
-      // Shuffle options per question and recompute correct indices
+      // Shuffle options per question
       const distribution: number[] = [0, 0, 0, 0, 0];
       arr.forEach((q, qi) => {
         const opts = [...q.options];
         const indices = [0, 1, 2, 3, 4];
-        // Fisher-Yates shuffle for options
         for (let i = indices.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -80,11 +121,11 @@ export default function ExamAdmin() {
         q.correct = newCorrect;
         distribution[newCorrect]++;
       });
-      // If distribution is too skewed (e.g., all same letter), rotate some to spread correct indices
+      // Balance
       const allSame = distribution.some(c => c === arr.length) || distribution.filter(c => c > 0).length === 1;
       if (allSame) {
         arr.forEach((q, i) => {
-          const shift = i % 5; // guarantees variety across A–E
+          const shift = i % 5;
           if (shift > 0) {
             const rotated = [...q.options.slice(shift), ...q.options.slice(0, shift)];
             q.options = rotated;
@@ -92,9 +133,17 @@ export default function ExamAdmin() {
           }
         });
       }
-      try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(arr)); } catch { }
-      pushAdminAlert('exam_randomized', 'Exam questions and answers randomized by admin', 'admin', { count: arr.length });
-      toast({ title: 'Randomized', description: 'Questions and answer letters shuffled to prevent patterns.' });
+
+      // Async save wrapper
+      saveToSupabase(arr).then(ok => {
+        if (ok) {
+          toast({ title: 'Randomized & Saved', description: 'Exam shuffled and saved to database.' });
+          try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(arr)); } catch { }
+        } else {
+          toast({ title: "Randomization Local Only", description: "Could not save to Supabase.", variant: "destructive" });
+        }
+      });
+
       return arr;
     });
   };

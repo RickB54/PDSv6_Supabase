@@ -52,7 +52,9 @@ const BookNow = () => {
     year: "",
     datetime: "",
     package: urlPackage || preselectedServices[0] || "",
-    message: ""
+    message: "",
+    conditionInside: "",
+    conditionOutside: ""
   });
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
   const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
@@ -375,6 +377,10 @@ const BookNow = () => {
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
 
+    // Validate Conditions
+    if (!formData.conditionInside) newErrors.package = "Please rate Inside Condition";
+    if (!formData.conditionOutside) newErrors.package = "Please rate Outside Condition";
+
     // If NOT logged in (Regular Customer), enforce strict validation
     if (!user) {
       if (!formData.email.trim()) {
@@ -427,6 +433,11 @@ const BookNow = () => {
 
     // 1) Save booking to API and local store for instant calendar
     const dateIso = formData.datetime ? new Date(formData.datetime).toISOString() : new Date().toISOString();
+
+    // Append Condition to Message/Notes
+    const conditionNote = `\n\n[Vehicle Condition]\nInside: ${formData.conditionInside}/5\nOutside: ${formData.conditionOutside}/5`;
+    const finalNotes = (formData.message || "") + conditionNote;
+
     const bookingPayload = {
       customer: { name: formData.name, email: formData.email, phone: formData.phone },
       vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
@@ -437,7 +448,7 @@ const BookNow = () => {
       }),
       date: dateIso,
       total: discountedTotal,
-      notes: formData.message,
+      notes: finalNotes,
     };
     try {
       await api('/api/bookings', { method: 'POST', body: JSON.stringify(bookingPayload) });
@@ -455,7 +466,7 @@ const BookNow = () => {
           package: bookingPayload.service || formData.package,
           add_ons: addOns,
           date: dateIso,
-          notes: formData.message,
+          notes: finalNotes,
           price_total: discountedTotal,
           status: 'pending',
           booked_by: (() => {
@@ -534,7 +545,9 @@ const BookNow = () => {
       year: "",
       datetime: "",
       package: "",
-      message: ""
+      message: "",
+      conditionInside: "",
+      conditionOutside: ""
     });
     setAddOns([]);
     setErrors({});
@@ -741,6 +754,47 @@ const BookNow = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Condition (Inside) *</Label>
+                  <Select
+                    value={formData.conditionInside}
+                    onValueChange={(v) => setFormData({ ...formData, conditionInside: v })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Rate 1-5" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 - Extremely Bad</SelectItem>
+                      <SelectItem value="2">2 - Poor</SelectItem>
+                      <SelectItem value="3">3 - Average</SelectItem>
+                      <SelectItem value="4">4 - Good</SelectItem>
+                      <SelectItem value="5">5 - Pristine</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Condition (Outside) *</Label>
+                  <Select
+                    value={formData.conditionOutside}
+                    onValueChange={(v) => setFormData({ ...formData, conditionOutside: v })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Rate 1-5" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 - Extremely Bad</SelectItem>
+                      <SelectItem value="2">2 - Poor</SelectItem>
+                      <SelectItem value="3">3 - Average</SelectItem>
+                      <SelectItem value="4">4 - Good</SelectItem>
+                      <SelectItem value="5">5 - Pristine</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">

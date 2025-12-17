@@ -239,13 +239,13 @@ const EmployeeDashboard = () => {
             </Link>
 
             {/* Orientation box (orange) */}
-            <button type="button" onClick={() => setOrientationOpen(true)} className="block text-left">
+            <Link to="/exam" className="block text-left">
               <Card className="p-6 bg-orange-600 text-white rounded-xl">
-                <div className="text-2xl font-bold">ORIENTATION</div>
-                <div className="text-sm opacity-90">Company overview • Policies • Getting started</div>
+                <div className="text-2xl font-bold">ORIENTATION (EXAM)</div>
+                <div className="text-sm opacity-90">Company overview • Policies • Final Exam</div>
                 <div className="mt-3 inline-block px-3 py-1 rounded-full bg-orange-800 text-xs">New Employee</div>
               </Card>
-            </button>
+            </Link>
 
             <Link to="/services" className="block">
               <Card className="p-6 bg-blue-700 text-white rounded-xl">

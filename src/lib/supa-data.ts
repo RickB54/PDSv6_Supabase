@@ -167,7 +167,9 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 
         // 1. Process Supabase Data
         (data || []).forEach((c: any) => {
-            const key = `${c.name?.trim().toLowerCase()}|${c.phone?.trim()}`;
+            const safeName = (c.full_name || c.name || '').trim().toLowerCase();
+            const safePhone = (c.phone || '').trim();
+            const key = `${safeName}|${safePhone}`;
             if (!seenMap.has(key)) {
                 const v = c.vehicles && c.vehicles[0] ? c.vehicles[0] : {};
                 uniqueCustomers.push({
@@ -279,6 +281,16 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     }
 
     return { id: customerId, ...payload };
+};
+
+export const deleteSupabaseCustomer = async (id: string) => {
+    try {
+        const { error } = await supabase.from('customers').delete().eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseCustomer error:', err);
+        throw err;
+    }
 };
 // ------------------------------------------------------------------
 // Team Chat
@@ -538,4 +550,68 @@ export const getSupabaseBookings = async (): Promise<SupaBooking[]> => {
         console.error('getSupabaseBookings exception:', err);
         return [];
     }
+};
+
+// ------------------------------------------------------------------
+// Training Center
+// ------------------------------------------------------------------
+
+export interface TrainingModule {
+    id: string;
+    title: string;
+    category: string;
+    video_url: string;
+    description: string;
+    quiz_data: any[]; // { question, options, correctIndex }
+    created_at?: string;
+}
+
+export interface TrainingProgress {
+    id?: string;
+    user_id: string;
+    module_id: string;
+    status: 'started' | 'completed';
+    score: number;
+    completed_at?: string;
+    answers?: number[];
+}
+
+export const getTrainingModules = async (): Promise<TrainingModule[]> => {
+    try {
+        const { data, error } = await supabase.from('training_modules').select('*').order('created_at', { ascending: false });
+        if (error) { console.error('getTrainingModules error:', error); return []; }
+        return data || [];
+    } catch (e) { console.error(e); return []; }
+};
+
+export const upsertTrainingModule = async (module: Partial<TrainingModule>) => {
+    // If ID is random local string (from previous localforage), remove it to let Supabase gen UUID, OR keep it if it's valid UUID.
+    const payload = { ...module };
+    if (payload.id && payload.id.startsWith('vid_')) delete payload.id;
+
+    const { data, error } = await supabase.from('training_modules').upsert(payload as any).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const deleteTrainingModule = async (id: string) => {
+    const { error } = await supabase.from('training_modules').delete().eq('id', id);
+    if (error) throw error;
+};
+
+export const getTrainingProgress = async (userId: string) => {
+    const { data, error } = await supabase.from('training_progress').select('*').eq('user_id', userId);
+    if (error) { console.error('getTrainingProgress error:', error); return []; }
+    return data || [];
+};
+
+export const upsertTrainingProgress = async (progress: Partial<TrainingProgress>) => {
+    const { data, error } = await supabase.from('training_progress').upsert(progress as any).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const getOrientationExamModule = async (): Promise<TrainingModule | null> => {
+    const { data } = await supabase.from('training_modules').select('*').eq('title', 'Final Orientation Exam').single();
+    return data;
 };

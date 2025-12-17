@@ -795,7 +795,7 @@ export default function AdminDashboard() {
                   <ClipboardCheck className="w-3.5 h-3.5 text-orange-600" />
                   <span>Employee Handbook</span>
                 </button>
-                <Link to="/employee-dashboard?startExam=1" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
+                <Link to="/exam" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
                   <ClipboardCheck className="w-3.5 h-3.5 text-green-600" />
                   <span>Take Exam</span>
                 </Link>

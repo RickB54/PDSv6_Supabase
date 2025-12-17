@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import supabase, { isSupabaseConfigured } from './supabase';
 
 export interface User {
+  id?: string;
   email: string;
   role: 'customer' | 'employee' | 'admin';
   name: string;
@@ -182,19 +183,28 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
 
     if (shouldUpsert) {
       // console.log("finalizeSupabaseSession: attempting upsert...", { id: u.id, role });
+      const newName = u.user_metadata?.full_name || profile?.name || email.split('@')[0];
       try {
         const { error } = await timeoutPromise(
           supabase.from('app_users').upsert({
             id: u.id,
             email: email,
             role: role,
-            name: (u.user_metadata?.full_name || email.split('@')[0]),
+            name: newName,
             updated_at: new Date().toISOString()
           }, { onConflict: 'id' }),
           3000,
           "finalizeSupabaseSession-upsert"
         );
         if (error) console.log("finalizeSupabaseSession: upsert error (ignoring if RLS)", error);
+
+        // UPDATE LOCAL PROFILE WITH NEW DATA TO AVOID RETURNING STALE NAME
+        // If upsert "succeeded" (or we tried), we assume the source of truth is now what we tried to write.
+        if (!error) {
+          if (!profile) profile = { role, name: newName } as any;
+          else profile.name = newName;
+        }
+
       } catch (err) {
         console.warn("finalizeSupabaseSession: upsert timed out or failed", err);
       }
@@ -209,9 +219,13 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     // FIX: Use 'role' which contains the authoritative role (either from profile, or the override we just applied)
     // We ignore 'profile.role' here because 'profile' might be stale (pre-update)
     const finalRole = role || profile?.role || 'customer';
+
+    // Safety: ensure we return the freshest name we have
+    const finalName = profile?.name || u.user_metadata?.full_name || (email || '').split('@')[0];
+
     const mapped: User = {
       email,
-      name: profile?.name || (email || '').split('@')[0],
+      name: finalName,
       role: finalRole as any
     };
 

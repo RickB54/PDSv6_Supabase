@@ -54,6 +54,7 @@ interface Customer {
 const Prospects = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -67,6 +68,7 @@ const Prospects = () => {
   }, []);
 
   const refresh = async () => {
+    setLoading(true);
     try {
       const list = await getUnifiedCustomers();
       const prospects = (list as Customer[]).filter(c => c.type === 'prospect');
@@ -80,6 +82,8 @@ const Prospects = () => {
       } catch (err2) {
         setCustomers([]);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -190,9 +194,12 @@ const Prospects = () => {
     y += 15;
 
     filteredCustomers.forEach((c) => {
-      if (y > 250) { doc.addPage(); y = 20; }
-      doc.setFillColor(168, 85, 247); // Purple
+      // Check page break with more buffer for larger items
+      if (y > 230) { doc.addPage(); y = 20; }
+
+      doc.setFillColor(168, 85, 247); // Purple header
       doc.rect(14, y, pageWidth - 28, 10, 'F');
+
       doc.setFontSize(14);
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
@@ -203,12 +210,39 @@ const Prospects = () => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
 
+      // Column 1
       doc.text(`Phone: ${c.phone || "N/A"}`, 18, y);
       doc.text(`Email: ${c.email || "N/A"}`, 18, y + 5);
-      doc.text(`Vehicle: ${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`, 110, y);
-      doc.text(`Acquisition: ${c.howFound || 'N/A'}`, 110, y + 5);
+      doc.text(`Address: ${c.address || "N/A"}`, 18, y + 10);
+      doc.text(`Acquisition: ${c.howFound || 'N/A'}${c.howFoundOther ? ` (${c.howFoundOther})` : ''}`, 18, y + 15);
 
-      y += 15;
+      // Column 2 - Vehicle
+      const vehInfo = `${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`;
+      doc.text(`Vehicle: ${vehInfo}`, 110, y);
+      doc.text(`Type: ${c.vehicleType || 'N/A'}`, 110, y + 5);
+      doc.text(`Color: ${c.color || 'N/A'}`, 110, y + 10);
+      doc.text(`Mileage: ${c.mileage || 'N/A'}`, 110, y + 15);
+
+      // Condition
+      y += 25;
+      doc.setFont("helvetica", "bold");
+      doc.text("Condition / Notes:", 18, y);
+      doc.setFont("helvetica", "normal");
+
+      const conditionText = `Inside: ${c.conditionInside || 'N/A'}  |  Outside: ${c.conditionOutside || 'N/A'}`;
+      doc.text(conditionText, 18, y + 5);
+
+      // Notes wrapping
+      if (c.notes) {
+        const splitNotes = doc.splitTextToSize(c.notes, pageWidth - 40);
+        doc.text(splitNotes, 18, y + 10);
+        y += (splitNotes.length * 5) + 5;
+      } else {
+        doc.text("No additional notes.", 18, y + 10);
+        y += 10;
+      }
+
+      y += 10;
       doc.setDrawColor(200);
       doc.line(14, y, pageWidth - 14, y);
       y += 10;
@@ -219,7 +253,7 @@ const Prospects = () => {
       doc.save(fileName);
       try {
         const dataUrl = doc.output('datauristring');
-        savePDFToArchive('Prospects', 'Admin', `prospects-${Date.now()}`, dataUrl, { fileName });
+        savePDFToArchive('Prospects', 'Prospects', `prospects-${Date.now()}`, dataUrl, { fileName });
         toast({ title: 'Archived', description: 'Saved to File Manager' });
       } catch (e) { }
     } else {
@@ -302,40 +336,54 @@ const Prospects = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
-                {filteredCustomers.map(c => (
-                  <tr key={c.id} className="hover:bg-purple-500/5 transition-colors group">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-zinc-200">{c.name}</div>
-                      <div className="text-xs text-zinc-500">{c.phone}</div>
-                      <div className="text-xs text-zinc-500">{c.email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-300">
-                      {c.year} {c.vehicle} {c.model}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">
-                      <span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs">
-                        {c.howFound === 'other' ? c.howFoundOther : c.howFound || '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400 max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={c.is_archived ? "Restore" : "Archive"}>
-                          {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
-                        {!c.is_archived && (
-                          <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 ml-2">
-                            <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}&vehicleYear=${encodeURIComponent(c.year || '')}&vehicleMake=${encodeURIComponent(c.vehicle || '')}&vehicleModel=${encodeURIComponent(c.model || '')}`}>Convert</Link>
-                          </Button>
-                        )}
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-zinc-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <RotateCcw className="h-6 w-6 animate-spin text-purple-500" />
+                        <p>Loading prospects...</p>
                       </div>
                     </td>
                   </tr>
-                ))}
-                {filteredCustomers.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-500">No prospects found.</td></tr>
+                ) : filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-zinc-500">
+                      No prospects found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCustomers.map(c => (
+                    <tr key={c.id} className="hover:bg-purple-500/5 transition-colors group">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-zinc-200">{c.name || "Unknown"}</div>
+                        <div className="text-xs text-zinc-500">{c.phone}</div>
+                        <div className="text-xs text-zinc-500">{c.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-300">
+                        {c.year} {c.vehicle} {c.model}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400">
+                        <span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs">
+                          {c.howFound === 'other' ? c.howFoundOther : c.howFound || '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400 max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={c.is_archived ? "Restore" : "Archive"}>
+                            {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                          {!c.is_archived && (
+                            <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 ml-2">
+                              <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}&vehicleYear=${encodeURIComponent(c.year || '')}&vehicleMake=${encodeURIComponent(c.vehicle || '')}&vehicleModel=${encodeURIComponent(c.model || '')}`}>Convert</Link>
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
