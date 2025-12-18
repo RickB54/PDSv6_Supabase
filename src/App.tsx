@@ -99,6 +99,14 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
     return <Navigate to="/login" replace />;
   }
 
+  // SECURITY FIX: Actually check the role!
+  if (user && allowedRoles.length > 0 && user.role) {
+    if (!allowedRoles.includes(user.role)) {
+      // User is logged in but doesn't have permission -> Send to Home or Dashboard
+      return <Navigate to="/" replace />;
+    }
+  }
+
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     // If admin tries to access employee, or vice versa
     // Allow Admin to access Employee routes? usually yes, but code says !includes.
