@@ -424,7 +424,17 @@ export default function AdminUsers() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {filtered.length === 0 && (
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-zinc-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-6 h-6 border-2 border-zinc-600 border-t-zinc-400 rounded-full animate-spin" />
+                        <p className="text-sm">Loading users...</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-zinc-500 py-12">No users found.</TableCell>
                   </TableRow>

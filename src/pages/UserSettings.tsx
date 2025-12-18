@@ -111,6 +111,14 @@ export default function UserSettings() {
                             <LayoutDashboard className="mr-2 h-4 w-4" />
                             My Dashboard
                         </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-muted-foreground hover:text-primary"
+                            onClick={() => navigate("/employee-dashboard")}
+                        >
+                            Employee Access
+                        </Button>
                     </div>
 
                     <div className="space-y-6">

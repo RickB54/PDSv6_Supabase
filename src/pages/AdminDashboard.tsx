@@ -81,7 +81,7 @@ const MENU_REGISTRY: { key: string; label: string }[] = [
   { key: 'package-pricing', label: 'Package Pricing' },
   { key: 'settings', label: 'Settings' },
   { key: 'discount-coupons', label: 'Discount Coupons' },
-  { key: 'training-manual', label: 'Quick Detailing Manual' },
+  { key: 'training-manual', label: 'Prime Training Center' },
   { key: 'company-employees', label: 'Company Employees' },
   { key: 'jobs-completed-admin', label: 'Jobs Completed by Admin' },
   { key: 'book-new-job', label: 'Book Now via website' },
@@ -798,6 +798,10 @@ export default function AdminDashboard() {
                 <Link to="/exam" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
                   <ClipboardCheck className="w-3.5 h-3.5 text-green-600" />
                   <span>Take Exam</span>
+                </Link>
+                <Link to="/training-manual" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-purple-500 text-purple-500 hover:bg-purple-500/10 w-fit">
+                  <BookOpen className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Prime Training Center</span>
                 </Link>
                 <Link to="/app-manual" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-cyan-500 text-cyan-500 hover:bg-cyan-500/10 w-fit">
                   <BookOpen className="w-3.5 h-3.5 text-cyan-500" />

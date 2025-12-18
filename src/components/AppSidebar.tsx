@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, finalizeSupabaseSession } from "@/lib/auth";
+import supabase from "@/lib/supabase";
 import logo from "@/assets/logo-3inch.png";
 import { getAdminAlerts } from "@/lib/adminAlerts";
 import api from "@/lib/api";
@@ -58,7 +59,50 @@ export function AppSidebar() {
     window.addEventListener('auth-changed', updateUser as any);
     const bump = () => setTick(t => t + 1);
     window.addEventListener('admin_alerts_updated', bump as any);
+    window.addEventListener('admin_alerts_updated', bump as any);
     window.addEventListener('pdf_archive_updated', bump as any);
+
+    // Force refresh role on mount to fix stale "customer" state
+    const refreshRole = async () => {
+      // 1. Standard Auth Check
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData.user) {
+
+        // 2. AGGRESSIVE DB CHECK (Bypass Session)
+        // We fetch the row directly to see the REAL role
+        const { data: dbUser, error } = await supabase
+          .from('app_users')
+          .select('role, name')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (dbUser && !error) {
+          console.log("AppSidebar Self-Heal: DB says", dbUser.role);
+          // If DB role differs from current local role, FORCE UPDATE
+          const currentUser = getCurrentUser();
+          if (currentUser?.role !== dbUser.role) {
+            console.warn(`Role Mismatch! Local: ${currentUser?.role}, DB: ${dbUser.role}. Forcing update.`);
+
+            // Manually update the user object
+            const fixedUser = { ...currentUser, role: dbUser.role, name: dbUser.name || currentUser.name };
+
+            // Write to Auth System
+            await finalizeSupabaseSession(authData.user, fixedUser as any);
+
+            // Force local state update
+            setUser(fixedUser as any);
+            return; // Exit, we updated
+          }
+        } else {
+          console.error("AppSidebar Self-Heal: Failed to read DB role", error);
+        }
+
+        // Standard Fallback
+        await finalizeSupabaseSession(authData.user);
+      }
+    };
+    refreshRole();
+
     return () => {
       window.removeEventListener('storage', onStorage as any);
       window.removeEventListener('auth-changed', updateUser as any);
@@ -140,6 +184,7 @@ export function AppSidebar() {
       items: [
         { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red" },
         { title: "Website", url: "/", role: "all", icon: Globe },
+        { title: "Prime Training Center", url: "/training-manual", icon: GraduationCap },
       ]
     },
     {
@@ -183,12 +228,20 @@ export function AppSidebar() {
       ]
     },
     {
-      title: "Staff & Training", icon: Users,
+      title: "Prime Training Center", icon: GraduationCap,
+      items: [
+        { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
+        { title: "Learning Library", url: "/training-manual?tab=library", key: "learn-lib", icon: BookOpen },
+        { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
+        { title: "SOPs & Resources", url: "/training-manual?tab=process", key: "sops-res", icon: FileText },
+      ]
+    },
+    {
+      title: "Staff Management", icon: Users,
       items: [
         { title: "Users & Roles", url: "/admin/users", role: "admin", icon: Users },
         { title: "Employee Dashboard", url: "/employee-dashboard", key: "employee-dashboard", icon: LayoutDashboard },
         { title: "Company Employees", url: "/company-employees", role: "admin", key: "company-employees", icon: Users },
-        { title: "Quick Detailing Manual", url: "/training-manual", key: "training-manual", icon: BookOpen },
         { title: "App Manual", url: "/app-manual", key: "app-manual", icon: BookOpen },
       ]
     },
@@ -323,15 +376,21 @@ export function AppSidebar() {
                           {validItems.map((item) => (
                             <SidebarMenuSubItem key={item.url}>
                               <SidebarMenuSubButton asChild onClick={handleNavClick}>
-                                <NavLink
+                                <Link
                                   to={item.url}
-                                  className={({ isActive }) => {
-                                    let base = "flex items-center gap-2";
+                                  className={`flex items-center gap-2 ${(() => {
+                                    // STRICT EXACT MATCH for sub-items with queries
+                                    const currentFull = location.pathname + location.search;
+                                    const isActive = item.url === currentFull ||
+                                      (item.url === '/training-manual' && currentFull === '/training-manual') || // Handle base case
+                                      (!item.url.includes('?') && currentFull === item.url); // Handle normal routes
+
+                                    let base = "";
                                     if (item.highlight === 'red') base += isActive ? ' text-red-500 font-semibold' : ' text-red-600 hover:text-red-700';
                                     else if (item.highlight === 'green') base += isActive ? ' text-green-500 font-semibold' : ' text-green-600 hover:text-green-700';
-                                    else base += isActive ? ' text-blue-400' : '';
+                                    else base += isActive ? ' text-blue-400 font-semibold' : '';
                                     return base;
-                                  }}
+                                  })()}`}
                                 >
                                   {item.icon && <item.icon className="h-4 w-4 mr-2" />}
                                   <span>{item.title}</span>
@@ -340,7 +399,7 @@ export function AppSidebar() {
                                       {item.badge}
                                     </span>
                                   )}
-                                </NavLink>
+                                </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
@@ -354,6 +413,19 @@ export function AppSidebar() {
           )}
         </SidebarMenu>
       </SidebarContent>
-    </Sidebar>
+      {/* DEBUG FOOTER */}
+      <div className="p-2 border-t border-border mt-auto">
+        <div className="text-[10px] text-zinc-500 font-mono text-center">
+          {user ? (
+            <>
+              <span className={user.role === 'admin' ? 'text-red-500' : user.role === 'employee' ? 'text-blue-500' : 'text-emerald-500'}>
+                {user.role?.toUpperCase() || 'UNKNOWN'}
+              </span>
+              <span className="block truncate px-1" title={user.email}>{user.email}</span>
+            </>
+          ) : "Logged Out"}
+        </div>
+      </div>
+    </Sidebar >
   );
 }

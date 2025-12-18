@@ -1,3 +1,4 @@
+import Orientation from "./pages/Orientation";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -367,6 +368,11 @@ const App = () => {
                     <Route path="/mobile-setup" element={
                       <ProtectedRoute allowedRoles={['admin']}>
                         <MobileSetup />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/orientation" element={
+                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
+                        <Orientation />
                       </ProtectedRoute>
                     } />
                     <Route path="/vehicle-classification" element={

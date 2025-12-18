@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,8 @@ import { upsertExpense } from "@/lib/db";
 import { servicePackages, addOns } from "@/lib/services";
 import DateRangeFilter from "@/components/filters/DateRangeFilter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import supabase from "@/lib/supabase";
+import { getTrainingModules, getTrainingBadges, type TrainingModule, type TrainingBadge } from "@/lib/supa-data";
 
 interface Employee {
   email: string;
@@ -85,6 +87,10 @@ const CompanyEmployees = () => {
 
   const [workHistoryDateRange, setWorkHistoryDateRange] = useState<{ from?: Date; to?: Date }>({});
 
+  // Training State
+  const [trainingMap, setTrainingMap] = useState<Record<string, { status: string; score: number; date?: string }>>({});
+  const [employeeBadges, setEmployeeBadges] = useState<Record<string, TrainingBadge[]>>({});
+
   useEffect(() => {
     if (user?.role !== 'admin') {
       window.location.href = '/';
@@ -100,6 +106,55 @@ const CompanyEmployees = () => {
     setJobRecords(completed);
     const history = (await localforage.getItem<any[]>('payroll-history')) || [];
     setPayrollHistory(history);
+
+    // Fetch Full Training Data
+    try {
+      const [modules, badges] = await Promise.all([
+        getTrainingModules(),
+        getTrainingBadges()
+      ]);
+
+      // Needed for badges: matching user -> completed modules -> badge reward
+      const { data: allProgress } = await supabase.from('training_progress').select(`
+          user_id, status, score, completed_at, module_id,
+          users:user_id ( email ) 
+      `);
+
+      if (allProgress) {
+        // 1. Map Orientation Exam Status (Specific legacy requirement)
+        const orientationMod = modules.find(m => m.title === 'Final Orientation Exam');
+        const examMap: Record<string, any> = {};
+
+        // 2. Map Badges
+        const badgeMap: Record<string, TrainingBadge[]> = {};
+
+        allProgress.forEach((p: any) => {
+          const email = p.users?.email;
+          if (!email) return;
+
+          // Exam Status
+          if (orientationMod && p.module_id === orientationMod.id) {
+            examMap[email] = { status: p.status, score: p.score, date: p.completed_at };
+          }
+
+          // Badge Checks
+          if (p.status === 'completed') {
+            const startMod = modules.find(m => m.id === p.module_id);
+            if (startMod && startMod.badge_reward_id) {
+              const items = badgeMap[email] || [];
+              const badge = badges.find(b => b.id === startMod.badge_reward_id);
+              if (badge && !items.find(existing => existing.id === badge.id)) {
+                items.push(badge);
+              }
+              badgeMap[email] = items;
+            }
+          }
+        });
+
+        setTrainingMap(examMap);
+        setEmployeeBadges(badgeMap);
+      }
+    } catch (e) { console.error(e); }
   };
 
   const saveEmployees = async (list: Employee[]) => {
@@ -273,6 +328,8 @@ const CompanyEmployees = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {employees.map(emp => {
             const owed = owedMap[emp.email] || 0;
+            const myBadges = employeeBadges[emp.email] || [];
+
             return (
               <Card key={emp.email} className="bg-zinc-900 border-zinc-800 hover:border-indigo-500/30 transition-all p-5 flex flex-col gap-4">
                 <div className="flex justify-between items-start">
@@ -304,6 +361,30 @@ const CompanyEmployees = () => {
                     <span className="text-zinc-500 text-xs block">Pay Type</span>
                     <span className="text-zinc-300">{emp.paymentByJob ? 'Per Job' : 'Hourly'}</span>
                   </div>
+                </div>
+
+                {/* Training & Badges */}
+                <div className="mt-2 space-y-2">
+                  {trainingMap[emp.email] ? (
+                    <div className={`text-xs px-2 py-1 rounded inline-flex items-center gap-1 font-medium ${trainingMap[emp.email].score >= 38 ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
+                      trainingMap[emp.email].status === 'completed' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                        'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                      }`}>
+                      {trainingMap[emp.email].score >= 38 ? <CheckCircle2 className="w-3 h-3" /> : null}
+                      {trainingMap[emp.email].score >= 38 ? `Orientation Passed` :
+                        trainingMap[emp.email].status === 'completed' ? `Orientation Failed` : 'Orientation Started'}
+                    </div>
+                  ) : null}
+
+                  {myBadges.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {myBadges.map(b => (
+                        <div key={b.id} className={`text-[10px] px-2 py-0.5 rounded-full border bg-${b.color}-500/10 text-${b.color}-500 border-${b.color}-500/30 flex items-center gap-1`}>
+                          <ShieldCheck className="w-3 h-3" /> {b.title}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mt-auto pt-2 border-t border-zinc-800">

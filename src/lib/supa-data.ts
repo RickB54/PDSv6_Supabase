@@ -556,6 +556,15 @@ export const getSupabaseBookings = async (): Promise<SupaBooking[]> => {
 // Training Center
 // ------------------------------------------------------------------
 
+
+export interface TrainingBadge {
+    id: string;
+    title: string;
+    description: string;
+    icon_name: string;
+    color: string;
+}
+
 export interface TrainingModule {
     id: string;
     title: string;
@@ -564,6 +573,13 @@ export interface TrainingModule {
     description: string;
     quiz_data: any[]; // { question, options, correctIndex }
     created_at?: string;
+    // New Fields
+    prerequisite_ids?: string[];
+    sop_link?: string;
+    is_safety?: boolean;
+    badge_reward_id?: string;
+    // Joined Badge (readonly)
+    badge?: TrainingBadge;
 }
 
 export interface TrainingProgress {
@@ -574,20 +590,39 @@ export interface TrainingProgress {
     score: number;
     completed_at?: string;
     answers?: number[];
+    // New Fields
+    video_position?: number;
+    acknowledged_at?: string;
 }
 
 export const getTrainingModules = async (): Promise<TrainingModule[]> => {
     try {
-        const { data, error } = await supabase.from('training_modules').select('*').order('created_at', { ascending: false });
+        // Join with badges to get badge details
+        const { data, error } = await supabase
+            .from('training_modules')
+            .select('*, badge:training_badges(*)')
+            .order('created_at', { ascending: false });
         if (error) { console.error('getTrainingModules error:', error); return []; }
-        return data || [];
+        // Flatten or map if necessary, but Supabase returns object for single relation usually
+        return (data || []).map((m: any) => ({
+            ...m,
+            badge: m.badge // Supabase returns single object or null
+        }));
     } catch (e) { console.error(e); return []; }
 };
 
+export const getTrainingBadges = async (): Promise<TrainingBadge[]> => {
+    try {
+        const { data } = await supabase.from('training_badges').select('*');
+        return data || [];
+    } catch { return []; }
+}
+
 export const upsertTrainingModule = async (module: Partial<TrainingModule>) => {
-    // If ID is random local string (from previous localforage), remove it to let Supabase gen UUID, OR keep it if it's valid UUID.
     const payload = { ...module };
     if (payload.id && payload.id.startsWith('vid_')) delete payload.id;
+    // Remove joined object before upsert
+    delete payload.badge;
 
     const { data, error } = await supabase.from('training_modules').upsert(payload as any).select().single();
     if (error) throw error;
@@ -606,7 +641,12 @@ export const getTrainingProgress = async (userId: string) => {
 };
 
 export const upsertTrainingProgress = async (progress: Partial<TrainingProgress>) => {
-    const { data, error } = await supabase.from('training_progress').upsert(progress as any).select().single();
+    // If we have an ID, upsert by ID. If not, upsert by user_id+module_id
+    const conflict = progress.id ? 'id' : 'user_id, module_id';
+    const { data, error } = await supabase.from('training_progress')
+        .upsert(progress as any, { onConflict: conflict })
+        .select()
+        .single();
     if (error) throw error;
     return data;
 };

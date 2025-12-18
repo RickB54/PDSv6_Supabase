@@ -2,9 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import supabase, { isSupabaseConfigured } from './supabase';
 
 export interface User {
-  id?: string;
+  id: string;
   email: string;
-  role: 'customer' | 'employee' | 'admin';
+  role: 'customer' | 'employee' | 'admin' | 'guest';
   name: string;
 }
 
@@ -93,7 +93,7 @@ async function getSupabaseUserProfile(userId: string): Promise<{ role: 'admin' |
     // We cast to any because the Supabase builder is a "Thenable", not a strict Promise in all TS versions
     const res: any = await timeoutPromise(
       supabase.from('app_users').select('role,name').eq('id', userId).maybeSingle() as any,
-      3000,
+      10000,
       "getSupabaseUserProfile"
     );
 
@@ -224,6 +224,7 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     const finalName = profile?.name || u.user_metadata?.full_name || (email || '').split('@')[0];
 
     const mapped: User = {
+      id: u.id,
       email,
       name: finalName,
       role: finalRole as any
@@ -320,14 +321,18 @@ export async function signupSupabase(email: string, password: string, name?: str
 }
 
 export async function logout(): Promise<void> {
+  // Always clear local state immediately to give UI feedback
+  localStorage.removeItem('customerProfile');
+  localStorage.removeItem('session_user_id');
+  setCurrentUser(null);
+
   if (isSupabaseEnabled()) {
     try {
-      await supabase.auth.signOut();
-    } catch (e) { console.error("Logout error", e); }
-    localStorage.removeItem('customerProfile');
-    localStorage.removeItem('session_user_id');
-    setCurrentUser(null);
-  } else {
-    setCurrentUser(null);
+      // Attempt server logout but don't block UI if it hangs
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_, reject) => setTimeout(() => reject('timeout'), 2000))
+      ]);
+    } catch (e) { console.warn("Logout (server) warning", e); }
   }
 }
