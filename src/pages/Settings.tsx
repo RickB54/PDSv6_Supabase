@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key } from "lucide-react";
+import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon } from "lucide-react";
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
@@ -23,12 +23,15 @@ import { savePDFToArchive } from '@/lib/pdfArchive';
 import { pushAdminAlert } from '@/lib/adminAlerts';
 import supabase, { isSupabaseConfigured } from '@/lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useFullScreen } from "@/hooks/useFullScreen";
 
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const user = getCurrentUser();
+  const { isFullScreen, toggleFullScreen } = useFullScreen();
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
+  // ... (rest of state)
   const [timeRange, setTimeRange] = useState("");
   const [preview, setPreview] = useState<{ tables: { name: string; count: number }[] } | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -495,6 +498,23 @@ const Settings = () => {
       <PageHeader title="System Settings" />
 
       <main className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
+
+        {/* App Preferences */}
+        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-3">
+              <SettingsIcon className="w-5 h-5 text-blue-400" />
+              <CardTitle className="text-lg font-bold text-white">Display Preferences</CardTitle>
+            </div>
+            <Button
+              variant={isFullScreen ? "destructive" : "secondary"}
+              onClick={toggleFullScreen}
+              className="h-8 text-xs mb-0"
+            >
+              {isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+            </Button>
+          </CardHeader>
+        </Card>
 
         {/* Supabase Diagnostics */}
         <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">

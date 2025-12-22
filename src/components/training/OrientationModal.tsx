@@ -11,6 +11,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import jsPDF from "jspdf";
 import api from "@/lib/api";
+import { getOrientationExamModule, getTrainingProgress, upsertTrainingProgress } from "@/lib/supa-data";
 
 type OrientationModalProps = { open: boolean; onOpenChange: (v: boolean) => void; startExamOnOpen?: boolean };
 
@@ -117,38 +118,76 @@ const handbookSections: HandbookSection[] = (() => {
 // Exam questions: 50 multiple-choice (A–E)
 type ExamQ = { q: string; options: string[]; correct: number };
 const EXAM_CUSTOM_KEY = "training_exam_custom";
-const EXAM_QUESTIONS: ExamQ[] = (() => {
-  // If admin customized the exam, use that
-  try {
-    const custom = JSON.parse(localStorage.getItem(EXAM_CUSTOM_KEY) || "null");
-    if (custom && Array.isArray(custom) && custom.every((c: any) => typeof c.q === 'string' && Array.isArray(c.options) && typeof c.correct === 'number')) {
-      return custom.slice(0, 50);
-    }
-  } catch { }
-  // Build 50 hard questions directly tied to handbook chapters
-  const all = handbookSections.flatMap((sec) => sec.items.map((it) => ({ sec: sec.name, title: it.title, desc: it.desc })));
-  const N = all.length;
-  const pickIdx = (i: number) => Math.abs((i * 37 + 13) % N); // deterministic spread
-  const qs: ExamQ[] = [];
-  for (let i = 0; i < 50; i++) {
-    const idx = pickIdx(i * Math.max(1, Math.floor(N / 50)));
-    const item = all[idx];
-    const distractorIdxs = [idx + 7, idx + 13, idx + 23, idx + 31].map(j => j % N);
-    const distractors = distractorIdxs.map(j => all[j].desc).filter(d => d !== item.desc);
-    while (distractors.length < 4) distractors.push("Unrelated technique not recommended in this chapter.");
-    const baseOptions = [item.desc, distractors[0], distractors[1], distractors[2], distractors[3]];
-    // Rotate options deterministically to avoid always 'A'
-    const shift = (idx * 7) % 5;
-    const options = baseOptions.map((_, k) => baseOptions[(k + shift) % 5]);
-    const correct = (5 - shift) % 5; // index of original first element after rotation
-    qs.push({
-      q: `In "${item.sec}", what is the primary purpose of "${item.title}"?`,
-      options,
-      correct,
-    });
-  }
-  return qs;
-})();
+// Helper to generate default questions if DB fails
+function generateDefaultQuestions(): ExamQ[] {
+  const add = (q: string, correctText: string, distractors: string[]): ExamQ => {
+    const base = [correctText, ...distractors.slice(0, 4)];
+    const correctIndex = Math.floor(Math.random() * Math.min(5, base.length));
+    const rotate = (arr: string[], k: number) => [...arr.slice(k), ...arr.slice(0, k)];
+    const options = rotate(base, correctIndex);
+    return { q, options, correct: correctIndex };
+  };
+  const items: { q: string; a: string; d: string[] }[] = [
+    { q: 'Intake photos — exterior purpose?', a: 'Document pre-existing vehicle condition consistently', d: ['Speed up washing for time savings', 'Social media content for marketing', 'Warm panels for polishing work', 'Replace customer notes entirely'] },
+    { q: 'Intake photos — interior purpose?', a: 'Record seats, carpets, console, and trunk condition', d: ['Plan steam cleaner purchase only', 'Skip customer walkthrough process', 'Confirm customer address data', 'Reset infotainment settings'] },
+    { q: 'Customer notes review purpose?', a: 'Highlight specific requests and concerns before work', d: ['Upsell coatings regardless of needs', 'Eliminate maintenance plans entirely', 'Ignore unusual odors and stains', 'Disable owner reminders'] },
+    { q: 'Vehicle walkaround identifies?', a: 'Heavy soil, tar, bug splatter, trim condition', d: ['Wheel alignment problems', 'Engine ECU faults', 'Ozone level inside cabin', 'Insurance claim eligibility'] },
+    { q: 'Safety & PPE requirement?', a: 'Use gloves, eye protection; respirator when needed', d: ['Open-toe footwear near machines', 'No gloves to improve feel', 'Use acid without ventilation', 'Skip eyewear to save time'] },
+    { q: 'Keys & electronics check objective?', a: 'Secure keys and protect locks/windows from product', d: ['Pair phones with Bluetooth', 'Reset radio presets for customer', 'Replace fuses proactively', 'Disable automatic windows'] },
+    { q: 'Pre-rinse benefit?', a: 'Remove loose dirt to reduce marring risk', d: ['Dry vehicle faster without towels', 'Warm paint for faster polishing', 'Harden bugs prior to washing', 'Strip coatings unintentionally'] },
+    { q: 'Two-bucket method achieves?', a: 'Separate rinse and wash to reduce grit transfer', d: ['Double soap concentration always', 'Dramatically increase foam thickness', 'Shorten rinse steps only', 'Polish wheels automatically'] },
+    { q: 'Foam pre-wash provides?', a: 'Lubrication and dwell to soften contaminants', d: ['Tinted coating layer', 'Rapid panel heating', 'Drying without towels', 'Decontamination of interior glass'] },
+    { q: 'Iron remover purpose?', a: 'Dissolve ferrous particles like rail/brake dust', d: ['Add gloss to coatings', 'Fix scratching instantly', 'Clean leather pores', 'Remove window stickers'] },
+    { q: 'Clay bar function?', a: 'Mechanical decon for bonded contaminants', d: ['Chemical oxidation removal only', 'Add permanent sealant', 'Repair clear coat cracks', 'Remove high spots from coating'] },
+    { q: 'Test spot goal?', a: 'Safely dial pad/polish combo before full pass', d: ['Warm panels for wax', 'Check towel inventory', 'Skip taping sensitive trim', 'Speed up product cure'] },
+    { q: 'Inspection lighting reveals?', a: 'Swirls, RIDS, holograms and defects clearly', d: ['Mileage on odometer', 'Ozone quantity in cabin', 'Brake dust composition', 'Surface temperature gradients only'] },
+    { q: 'Masking trim prevents?', a: 'Staining and edge damage during polishing', d: ['Pad saturation only', 'Battery drain during curing', 'Wheel face pitting', 'Carpet wicking under seats'] },
+    { q: 'IPA wipe before coating?', a: 'Removes oils to improve bonding to paint', d: ['Adds long-term protection', 'Creates immediate high spots', 'Removes clear coat entirely', 'Levels coatings using heat'] },
+    { q: 'Level high spots ensures?', a: 'Uniform finish and proper coating curing', d: ['Faster carpet drying', 'Dust attraction for ammonia', 'Sticker residue removal', 'Matte finish on trim'] },
+    { q: 'Vacuum first because?', a: 'Remove loose debris prior to wet work', d: ['Dry seats quickly', 'Polish leather safely', 'Replace steaming entirely', 'Add fragrance coverage'] },
+    { q: 'Steam used to?', a: 'Sanitize and lift embedded interior dirt', d: ['Tint windows permanently', 'Dry carpets without fans', 'Melt plastic trim', 'Remove clear coat'] },
+    { q: 'Ozone treatment for?', a: 'Eliminate persistent interior odors', d: ['Correct paint defects', 'Remove wax residues', 'Polish window glass', 'Clean brake components'] },
+    { q: 'Leather care best practice?', a: 'Use pH-appropriate cleaner and protectant', d: ['Use harsh solvent routinely', 'Bleach for dye transfer', 'Sandpaper on scuffs', 'Dry brushing only method'] },
+    { q: 'Tire dressing longevity improves when?', a: 'Applied to dry, clean tires evenly', d: ['Applied onto wet tire sidewalls', 'Sprayed over brake discs', 'Mixed with wax product', 'Put on rubber floor mats'] },
+    { q: 'Trim care objective?', a: 'Revive and protect exterior plastics', d: ['Make trim intentionally slippery', 'Clean wheels automatically', 'Add swirl marks to paint', 'Soften clear coat layers'] },
+    { q: 'Final inspection purpose?', a: 'Confirm quality under proper lighting', d: ['Skip when schedule tight', 'Perform in total darkness', 'Only check interior panels', 'Only inspect wheels quickly'] },
+    { q: 'Touchpoints sanitize includes?', a: 'Steering wheel, shifter, door handles', d: ['Exhaust tips only', 'Exterior paint panels', 'Only window glass', 'Only tires and rims'] },
+    { q: 'Tools & bottles storage after job?', a: 'Clean and organize for next job', d: ['Ignore spills intentionally', 'Leave in customer vehicle', 'Seal wet pads in bags', 'Throw away all chemicals'] },
+    { q: 'Inventory check ensures?', a: 'Consumables and equipment are restocked', d: ['Customer buys products', 'Only towels are counted', 'Random items ordered', 'Polish stock ignored'] },
+    { q: 'Care guide review purpose?', a: 'Educate customer on maintenance and care', d: ['Upsell coatings exclusively', 'Skip all questions asked', 'Discuss unrelated services', 'Verify VIN and title'] },
+    { q: 'CRM update helps?', a: 'Keep records with photos and notes', d: ['Erase job history', 'Change warranty terms', 'Auto-send spam emails', 'Hide service outcomes'] },
+    { q: 'Invoice finalize requires?', a: 'Confirm payment and send receipt', d: ['Guess totals loosely', 'Delay 30 days always', 'Cash-only policy enforced', 'Ignore tax calculations'] },
+    { q: 'Follow-up appointment offers?', a: 'Maintenance plan slot to keep results', d: ['Paint removal service', 'Nothing additional offered', 'Interior replacement service', 'Brake inspection program'] },
+    { q: 'Measure paint thickness to?', a: 'Choose safe correction strategy', d: ['Tint windows faster', 'Wax panels quickly', 'Remove clear coat', 'Change vehicle color'] },
+    { q: 'Avoid swirls during washing by?', a: 'Proper technique using clean tools', d: ['Use dirty towels', 'Dry brushing panels', 'No-rinse always', 'Steel wool mitt method'] },
+    { q: 'Manage panel temperature to?', a: 'Avoid overheating and paint damage', d: ['Keep panels always hot', 'Freeze panels between sets', 'Only interior matters', 'Skip thermal checks'] },
+    { q: 'Clean wheels order typically?', a: 'Wheels/tires first to prevent splatter', d: ['Body first always', 'Interior first for speed', 'Coating first immediately', 'Trim first every time'] },
+    { q: 'Glass cleaning tip?', a: 'Use clean towel and streak-free cleaner', d: ['Use greasy dressing', 'Use clay bar only', 'Skip entirely for time', 'Use wax for shine'] },
+    { q: 'Coating maintenance requires?', a: 'pH-neutral shampoo and gentle technique', d: ['Abrasives weekly on panels', 'Brake cleaner on paint', 'Strong acid on clearcoat', 'Heat gun curing daily'] },
+    { q: 'Pad cleaning during polishing?', a: 'Clean or swap pads to maintain cut', d: ['Never needed at all', 'Only wash end of day', 'Dress pads with oils', 'Vacuum pads constantly'] },
+    { q: 'Rinse after iron remover to?', a: 'Remove residues before next steps', d: ['Add contamination back', 'Dry panels instantly', 'Melt tires nearby', 'Polish glass quickly'] },
+    { q: 'Decon order generally?', a: 'Chemical then mechanical for thoroughness', d: ['Mechanical then chemical', 'Coating then polish', 'Polish then wash', 'Wax then clay only'] },
+    { q: 'Taping trim requires?', a: 'Protect edges and sensitive areas', d: ['Cover vents only', 'Use no tape anywhere', 'Use duct tape only', 'Apply tape when wet'] },
+    { q: 'Dedicated interior tools help?', a: 'Prevent cross-contamination and damage', d: ['Make kit heavier', 'Slow team intentionally', 'Increase swirl marks', 'Reduce working time drastically'] },
+    { q: 'Final walkaround lets you?', a: 'Show results and answer questions', d: ['Hide defects strategically', 'Skip customer handoff', 'Demand tips outright', 'Upsell only relentlessly'] },
+    { q: 'Pre-rinse + foam combo goal?', a: 'Lubricate and lift grime before contact', d: ['Polish glass immediately', 'Dry vehicle without towels', 'Generate colored foam patterns', 'Warm panels for wax layer'] },
+    { q: 'Trim protection after wash?', a: 'Revive color and shield UV exposure', d: ['Promote slickness on handles', 'Protect wheels from brake dust', 'Create matte on glass', 'Seal exhaust tips'] },
+    { q: 'Interior odor remediation uses?', a: 'Ozone treatment post-cleaning if needed', d: ['Brake cleaner mist', 'Solvent dressing spray', 'Panel wipe solution', 'Wax vapor trials'] },
+    { q: 'Customer Q&A during handoff?', a: 'Explain care and answer maintenance questions', d: ['Avoid technical topics', 'Skip discussion entirely', 'Focus on upsell only', 'Discuss unrelated repairs'] },
+    { q: 'Coating high spot check?', a: 'Level uneven areas during cure', d: ['Force-cure with heat gun', 'Ignore until next visit', 'Sand without light', 'Apply dressing on paint'] },
+    { q: 'Photo documentation helps?', a: 'Evidence of condition and results', d: ['Social media only use', 'Warranty transfer only', 'Replace invoice document', 'Remove customer notes'] },
+    { q: 'Steam and vacuum sequencing?', a: 'Vacuum first then targeted steam', d: ['Steam first on loose debris', 'Skip vacuum entirely', 'Dry carpets with steam', 'Wax fabric after steam'] },
+    { q: 'Wheel/tire prep before dress?', a: 'Clean and dry thoroughly first', d: ['Dress on wet rubber', 'Dress on dirty wheels', 'Use wax as dressing', 'Skip drying completely'] },
+  ];
+  // Build exam; pad if fewer than 50 by reusing with slight distractor variation (no generic labels)
+  const variations = (base: string[]) => [
+    ...base,
+    'Contradict handbook standard operating procedure'
+  ];
+  const Q: ExamQ[] = items.slice(0, 50).map(it => add(it.q, it.a, variations(it.d)));
+  return Q;
+}
+
 
 export default function OrientationModal({ open, onOpenChange, startExamOnOpen = false }: OrientationModalProps) {
   const user = getCurrentUser();
@@ -166,10 +205,15 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
 
   // Exam modal
   const [examOpen, setExamOpen] = useState(false);
+  const [questions, setQuestions] = useState<ExamQ[]>([]);
   const [examIdx, setExamIdx] = useState(0);
-  const [examAnswers, setExamAnswers] = useState<number[]>(() => Array(EXAM_QUESTIONS.length).fill(-1));
-  const [lockedAnswers, setLockedAnswers] = useState<boolean[]>(() => Array(EXAM_QUESTIONS.length).fill(false));
-  const examProgress = useMemo(() => Math.round(((examIdx + 1) / EXAM_QUESTIONS.length) * 100), [examIdx]);
+  const [examAnswers, setExamAnswers] = useState<number[]>(() => Array(50).fill(-1));
+  const [lockedAnswers, setLockedAnswers] = useState<boolean[]>(() => Array(50).fill(false));
+  const [moduleId, setModuleId] = useState<string | null>(null);
+  const examProgress = useMemo(() => {
+    if (questions.length === 0) return 0;
+    return Math.round(((examIdx + 1) / questions.length) * 100);
+  }, [examIdx, questions.length]);
   const EXAM_STORAGE_KEY = "training_exam_progress";
   const EXAM_SCHEDULE_KEY = "training_exam_schedule";
   const [scheduleConfirmOpen, setScheduleConfirmOpen] = useState(false);
@@ -177,14 +221,67 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
   const [scheduledAt, setScheduledAt] = useState<string>("");
 
   useEffect(() => {
-    if (open) {
+    // Initialize exam questions and progress
+    const init = async () => {
+      let loadedQs: ExamQ[] = [];
+      let modId: string | null = null;
       try {
-        const saved = JSON.parse(localStorage.getItem(EXAM_STORAGE_KEY) || "null");
-        if (saved && Array.isArray(saved.answers) && typeof saved.index === "number") {
-          setExamAnswers(saved.answers.slice(0, EXAM_QUESTIONS.length).concat(Array(Math.max(0, EXAM_QUESTIONS.length - saved.answers.length)).fill(-1)));
-          setExamIdx(Math.min(Math.max(0, saved.index), EXAM_QUESTIONS.length - 1));
+        const mod = await getOrientationExamModule();
+        if (mod) {
+          modId = mod.id;
+          setModuleId(mod.id);
+          if (Array.isArray(mod.quiz_data) && mod.quiz_data.length > 0) loadedQs = mod.quiz_data;
         }
-      } catch { }
+      } catch (e) { console.error("Failed to load exam module:", e); }
+
+      // Filter out dummy/incomplete data (e.g. the 6-question placeholder)
+      // If the questions are fewer than 10, assume it's the bad seed data and fallback to hardcoded defaults.
+      if (loadedQs.length < 10) {
+        // console.log("Discarding incomplete exam data from DB, using defaults.");
+        loadedQs = [];
+      }
+
+      if (loadedQs.length === 0) {
+        // Local fallback
+        try {
+          const raw = localStorage.getItem(EXAM_CUSTOM_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) loadedQs = parsed;
+          }
+        } catch { }
+      }
+      if (loadedQs.length === 0) loadedQs = generateDefaultQuestions();
+      setQuestions(loadedQs);
+
+      // Load progress
+      if (user?.id && modId) {
+        try {
+          const progressList = await getTrainingProgress(user.id);
+          const myP = progressList.find(x => x.module_id === modId);
+          if (myP && Array.isArray(myP.answers)) {
+            const merged = [...myP.answers];
+            while (merged.length < loadedQs.length) merged.push(-1);
+            setExamAnswers(merged);
+            // We don't forcefully restore idx to allow user to start where they want, typically 0 or first pending
+            const firstUn = merged.indexOf(-1);
+            if (firstUn !== -1) setExamIdx(firstUn);
+          }
+        } catch { }
+      } else {
+        // Fallback to localstorage if not logged in or no Supabase module
+        try {
+          const saved = JSON.parse(localStorage.getItem(EXAM_STORAGE_KEY) || "null");
+          if (saved && Array.isArray(saved.answers)) {
+            setExamAnswers(saved.answers.slice(0, loadedQs.length).concat(Array(Math.max(0, loadedQs.length - saved.answers.length)).fill(-1)));
+            if (typeof saved.index === 'number') setExamIdx(Math.min(Math.max(0, saved.index), loadedQs.length - 1));
+          }
+        } catch { }
+      }
+    };
+    init();
+
+    if (open) {
       try {
         const sched = localStorage.getItem(EXAM_SCHEDULE_KEY);
         if (sched) setScheduledAt(sched);
@@ -194,7 +291,7 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
         setExamOpen(true);
       }
     }
-  }, [open, startExamOnOpen]);
+  }, [open, startExamOnOpen, user?.id]);
 
   const startHandbook = () => {
     try {
@@ -252,19 +349,36 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
     try {
       localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify({ index: examIdx, answers: examAnswers }));
     } catch { }
-    try {
-      await api('/api/training/exam-progress', { method: 'POST', body: JSON.stringify({ employeeId, index: examIdx, answers: examAnswers }) });
-    } catch { }
+    // Supabase sync
+    if (user?.id && moduleId) {
+      await upsertTrainingProgress({
+        user_id: user.id,
+        module_id: moduleId,
+        answers: examAnswers,
+        status: 'started',
+        score: 0
+      });
+    }
     pushAdminAlert('exam_paused' as any, `Employee ${employeeName} paused exam`, employeeName, { recordType: 'Employee Training' });
   };
 
   const submitExam = async () => {
-    const correctCount = examAnswers.reduce((acc, a, i) => acc + (a === EXAM_QUESTIONS[i].correct ? 1 : 0), 0);
-    const percent = Math.round((correctCount / EXAM_QUESTIONS.length) * 100);
+    if (questions.length === 0) return;
+    const correctCount = examAnswers.reduce((acc, a, i) => acc + (a === questions[i].correct ? 1 : 0), 0);
+    const percent = Math.round((correctCount / questions.length) * 100);
     const pass = percent >= 75;
-    try {
-      await api('/api/training/exam-submit', { method: 'POST', body: JSON.stringify({ employeeId, answers: examAnswers, score: correctCount, percent, pass }) });
-    } catch { }
+
+    if (user?.id && moduleId) {
+      await upsertTrainingProgress({
+        user_id: user.id,
+        module_id: moduleId,
+        answers: examAnswers,
+        status: 'completed',
+        score: correctCount,
+        completed_at: new Date().toISOString()
+      });
+    }
+
     pushAdminAlert(pass ? 'exam_passed' : 'exam_failed', `Employee ${employeeName} exam score: ${percent}% - ${pass ? 'Passed' : 'Failed'}`, employeeName, { score: correctCount, percent });
     // PDF report
     const dateStr = new Date().toLocaleDateString();
@@ -274,9 +388,9 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
     doc.setFontSize(12);
     doc.text(`Employee: ${employeeName}`, 20, 32);
     doc.text(`Date: ${dateStr}`, 20, 40);
-    doc.text(`Score: ${correctCount}/${EXAM_QUESTIONS.length} (${percent}%)`, 20, 48);
+    doc.text(`Score: ${correctCount}/${questions.length} (${percent}%)`, 20, 48);
     let y = 60;
-    EXAM_QUESTIONS.forEach((q, i) => {
+    questions.forEach((q, i) => {
       const sel = examAnswers[i];
       const corr = q.correct;
       const letter = (idx: number) => String.fromCharCode(65 + idx);
@@ -588,39 +702,41 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
 
           <div className="p-4 border-b border-purple-800 bg-[#4b0082] shrink-0 space-y-2">
             <div className="flex justify-between text-sm text-purple-200">
-              <span>Question {examIdx + 1} of {EXAM_QUESTIONS.length}</span>
+              <span>Question {examIdx + 1} of {questions.length}</span>
               <span>{examProgress}% Completed</span>
             </div>
             <Progress value={examProgress} className="h-2 bg-purple-900 [&>div]:bg-yellow-400" />
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 bg-[#5a189a]">
-            <Card className="p-6 bg-[#4b0082] text-white border-purple-900 shadow-lg">
-              <div className="font-medium text-lg mb-6 leading-relaxed">{examIdx + 1}. {EXAM_QUESTIONS[examIdx].q}</div>
-              <div className="flex flex-col gap-3">
-                {EXAM_QUESTIONS[examIdx].options.map((opt, oi) => (
-                  <label key={oi} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${examAnswers[examIdx] === oi ? 'bg-purple-600 border-yellow-400' : 'bg-purple-900/50 border-purple-800 hover:bg-purple-800'}`}>
-                    <div className="pt-0.5">
-                      <input
-                        type="radio"
-                        name={`q-${examIdx}`}
-                        disabled={lockedAnswers[examIdx]}
-                        checked={examAnswers[examIdx] === oi}
-                        onChange={() => setExamAnswers(prev => { const n = [...prev]; n[examIdx] = oi; return n; })}
-                        className="w-4 h-4 accent-yellow-400"
-                      />
-                    </div>
-                    <span className="text-base leading-snug">{String.fromCharCode(65 + oi)}. {opt}</span>
-                  </label>
-                ))}
-              </div>
-            </Card>
+            {questions[examIdx] && (
+              <Card className="p-6 bg-[#4b0082] text-white border-purple-900 shadow-lg">
+                <div className="font-medium text-lg mb-6 leading-relaxed">{examIdx + 1}. {questions[examIdx].q}</div>
+                <div className="flex flex-col gap-3">
+                  {questions[examIdx].options.map((opt, oi) => (
+                    <label key={oi} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${examAnswers[examIdx] === oi ? 'bg-purple-600 border-yellow-400' : 'bg-purple-900/50 border-purple-800 hover:bg-purple-800'}`}>
+                      <div className="pt-0.5">
+                        <input
+                          type="radio"
+                          name={`q-${examIdx}`}
+                          disabled={lockedAnswers[examIdx]}
+                          checked={examAnswers[examIdx] === oi}
+                          onChange={() => setExamAnswers(prev => { const n = [...prev]; n[examIdx] = oi; return n; })}
+                          className="w-4 h-4 accent-yellow-400"
+                        />
+                      </div>
+                      <span className="text-base leading-snug">{String.fromCharCode(65 + oi)}. {opt}</span>
+                    </label>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
 
           <div className="shrink-0 p-4 bg-[#3c0068] border-t border-purple-800 flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2 w-full sm:w-auto justify-center">
               <Button className="bg-blue-600 text-white hover:bg-blue-700 min-w-[80px]" onClick={() => setExamIdx(i => Math.max(0, i - 1))} disabled={examIdx === 0}>Previous</Button>
-              <Button className="bg-blue-600 text-white hover:bg-blue-700 min-w-[80px]" onClick={() => setExamIdx(i => Math.min(EXAM_QUESTIONS.length - 1, i + 1))} disabled={examIdx === EXAM_QUESTIONS.length - 1}>Next</Button>
+              <Button className="bg-blue-600 text-white hover:bg-blue-700 min-w-[80px]" onClick={() => setExamIdx(i => Math.min(questions.length - 1, i + 1))} disabled={examIdx === questions.length - 1}>Next</Button>
             </div>
 
             <div className="flex gap-2 w-full sm:w-auto justify-center">

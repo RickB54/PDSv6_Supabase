@@ -272,6 +272,14 @@ const EmployeeDashboard = () => {
                 <div className="text-sm opacity-90">Quick professional reminders to reduce rework.</div>
               </Card>
             </button>
+
+            {/* App Team Chat (green) */}
+            <Link to="/team-chat" className="block">
+              <Card className="p-6 bg-green-700 text-white rounded-xl">
+                <div className="text-2xl font-bold">APP TEAM CHAT</div>
+                <div className="text-sm opacity-90">Communicate with your team in real-time.</div>
+              </Card>
+            </Link>
           </div>
 
           {/* Quick actions */}
@@ -375,7 +383,7 @@ const EmployeeDashboard = () => {
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex items-center justify-between w-full pr-4">
                         <span className="text-left font-bold text-purple-200">{tip.title}</span>
-                        {isAdmin && (
+                        {user?.role === 'admin' && ( // Explicit check
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-orange-400" onClick={() => startEdit(tip)}>
                               <Pencil className="w-3 h-3" />

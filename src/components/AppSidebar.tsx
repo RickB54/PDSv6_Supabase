@@ -24,6 +24,7 @@ import { getCurrentUser, finalizeSupabaseSession } from "@/lib/auth";
 import supabase from "@/lib/supabase";
 import logo from "@/assets/logo-3inch.png";
 import { getAdminAlerts } from "@/lib/adminAlerts";
+import { getMenuGroups, TOP_ITEMS as CONFIGURED_TOP_ITEMS } from "@/components/menu-config";
 import api from "@/lib/api";
 import { isViewed } from "@/lib/viewTracker";
 import localforage from "localforage"; // Using localforage for payroll check
@@ -87,7 +88,7 @@ export function AppSidebar() {
             const fixedUser = { ...currentUser, role: dbUser.role, name: dbUser.name || currentUser.name };
 
             // Write to Auth System
-            await finalizeSupabaseSession(authData.user, fixedUser as any);
+            await finalizeSupabaseSession(authData.user);
 
             // Force local state update
             setUser(fixedUser as any);
@@ -169,90 +170,44 @@ export function AppSidebar() {
     localStorage.setItem('sidebar_groups', JSON.stringify(next));
   };
 
+  // Auto-expand groups based on active route
+  useEffect(() => {
+    const updatedGroups = { ...openGroups };
+    let changed = false;
+
+    MENU_GROUPS.forEach(group => {
+      const match = group.items.find(item => {
+        const currentFull = location.pathname + location.search;
+        return item.url === currentFull ||
+          (!item.url.includes('?') && location.pathname === item.url);
+      });
+
+      if (match && !updatedGroups[group.title]) {
+        updatedGroups[group.title] = true;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setOpenGroups(updatedGroups);
+      localStorage.setItem('sidebar_groups', JSON.stringify(updatedGroups));
+    }
+  }, [location.pathname, location.search]);
+
   // Menu Definition
   type MenuItem = { title: string; url: string; icon?: any; role?: string; key?: string; badge?: number; highlight?: 'red' | 'green' };
 
-  // Standalone Top Items (Admin Dashboard)
-  const TOP_ITEMS: MenuItem[] = [
-    { title: "Admin Dashboard", url: "/admin-dashboard", role: "admin", key: "admin-dashboard", icon: LayoutDashboard },
-    { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard },
-  ];
+  // Standalone Top Items (Use shared config)
+  const TOP_ITEMS = CONFIGURED_TOP_ITEMS;
 
-  const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
-    {
-      title: "Website Admin", icon: Shield,
-      items: [
-        { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red" },
-        { title: "Website", url: "/", role: "all", icon: Globe },
-        { title: "Prime Training Center", url: "/training-manual", icon: GraduationCap },
-      ]
-    },
-    {
-      title: "Customer Intake", icon: UserPlus,
-      items: [
-        { title: "Package Comparison", url: "/package-selection", role: "admin", icon: Package },
-        { title: "Vehicle Classification", url: "/vehicle-classification", role: "admin", icon: FileText },
-        { title: "Client Evaluation", url: "/client-evaluation", role: "admin", icon: ClipboardCheck },
-        { title: "Addon Upsell Script", url: "/addon-upsell-script", role: "admin", icon: FileText },
-      ]
-    },
-    {
-      title: "Operations", icon: ClipboardCheck,
-      items: [
-        { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays },
-        { title: "Analytics", url: "/bookings-analytics", key: "bookings-analytics", icon: FileBarChart },
-        { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
-        { title: "Tasks", url: "/tasks", badge: todoCount > 0 ? todoCount : undefined, icon: CheckSquare },
-        { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users },
-        { title: "Prospects", url: "/prospects", key: "prospects", icon: Users }
-      ]
-    },
-    {
-      title: "Finance & Sales", icon: DollarSign,
-      items: [
-        { title: "Estimates", url: "/estimates", role: "admin", highlight: "green", icon: FileText },
-        { title: "Invoicing", url: "/invoicing", role: "admin", key: "invoicing", icon: FileText },
-        { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator },
-        { title: "Payroll", url: "/payroll", role: "admin", key: "payroll", badge: payrollDueCount > 0 ? payrollDueCount : undefined, icon: DollarSign },
-        { title: "Company Budget", url: "/company-budget", role: "admin", key: "company-budget", icon: DollarSign },
-        { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent },
-        { title: "Package Pricing", url: "/package-pricing", role: "admin", key: "package-pricing", icon: DollarSign },
-      ]
-    },
-    {
-      title: "Inventory & Assets", icon: Package,
-      items: [
-        { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: inventoryCount > 0 ? inventoryCount : undefined, icon: Package },
-        { title: "File Manager", url: "/file-manager", role: "admin", key: "file-manager", badge: fileCount > 0 ? fileCount : undefined, icon: FileText },
-        { title: "Reports", url: "/reports", role: "admin", key: "reports", icon: FileBarChart }
-      ]
-    },
-    {
-      title: "Prime Training Center", icon: GraduationCap,
-      items: [
-        { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
-        { title: "Learning Library", url: "/training-manual?tab=library", key: "learn-lib", icon: BookOpen },
-        { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
-        { title: "SOPs & Resources", url: "/training-manual?tab=process", key: "sops-res", icon: FileText },
-      ]
-    },
-    {
-      title: "Staff Management", icon: Users,
-      items: [
-        { title: "Users & Roles", url: "/admin/users", role: "admin", icon: Users },
-        { title: "Employee Dashboard", url: "/employee-dashboard", key: "employee-dashboard", icon: LayoutDashboard },
-        { title: "Company Employees", url: "/company-employees", role: "admin", key: "company-employees", icon: Users },
-        { title: "App Manual", url: "/app-manual", key: "app-manual", icon: BookOpen },
-      ]
-    },
-    {
-      title: "Settings", icon: Settings,
-      items: [
-        { title: "User Settings", url: "/user-settings", key: "user-settings", icon: Users },
-        { title: "System Settings", url: "/settings", key: "settings", icon: Settings }
-      ]
-    }
-  ];
+  // --- MENU CONFIG ---
+  // Using shared config to ensure Sidebar and Section Landing pages match
+  const MENU_GROUPS = useMemo(() => getMenuGroups({
+    todoCount,
+    payrollDueCount,
+    inventoryCount,
+    fileCount
+  }), [todoCount, payrollDueCount, inventoryCount, fileCount, tick]);
 
   // Helper: Are ANY groups open?
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
@@ -323,13 +278,16 @@ export function AppSidebar() {
               {/* Top Items (Admin Dashboard) */}
               {TOP_ITEMS.map((item) => {
                 if (item.role === 'admin' && !isAdmin) return null;
+                // Strict active check to prevent overlap
+                const isActive = location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'));
+
                 return (
                   <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick}>
-                      <NavLink to={item.url} className={({ isActive }) => (isActive ? 'font-semibold text-blue-400' : 'hover:text-white')}>
-                        <item.icon className="h-4 w-4" />
+                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
+                      <Link to={item.url} className={isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors'}>
+                        <item.icon className="h-4 w-4 mr-2" />
                         <span>{item.title}</span>
-                      </NavLink>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -358,51 +316,76 @@ export function AppSidebar() {
                     className="group/collapsible"
                   >
                     <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={group.title}>
-                          <group.icon className="h-4 w-4" />
-                          <span>{group.title}</span>
-                          {/* Show badge on parent if closed and count > 0 */}
-                          {!isOpen && groupBadgeCount > 0 && (
-                            <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
-                              {groupBadgeCount}
-                            </span>
-                          )}
-                          <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      {/* Header: Link + Trigger */}
+                      <div className="flex items-center w-full group-data-[state=open]/collapsible:mb-1">
+                        <SidebarMenuButton asChild tooltip={group.title} className="flex-1">
+                          <Link
+                            to={`/section/${group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                            className={`flex items-center gap-2 ${validItems.some(item => location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'))) ? 'text-blue-500 font-semibold' : 'text-zinc-400'}`}
+                          >
+                            <group.icon className="h-4 w-4" />
+                            <span>{group.title}</span>
+                            {/* Batch count on parent */}
+                            {!isOpen && groupBadgeCount > 0 && (
+                              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
+                                {groupBadgeCount}
+                              </span>
+                            )}
+                          </Link>
                         </SidebarMenuButton>
-                      </CollapsibleTrigger>
+                        <CollapsibleTrigger asChild>
+                          <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-400 transition-colors">
+                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                          </button>
+                        </CollapsibleTrigger>
+                      </div>
+
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {validItems.map((item) => (
-                            <SidebarMenuSubItem key={item.url}>
-                              <SidebarMenuSubButton asChild onClick={handleNavClick}>
-                                <Link
-                                  to={item.url}
-                                  className={`flex items-center gap-2 ${(() => {
-                                    // STRICT EXACT MATCH for sub-items with queries
-                                    const currentFull = location.pathname + location.search;
-                                    const isActive = item.url === currentFull ||
-                                      (item.url === '/training-manual' && currentFull === '/training-manual') || // Handle base case
-                                      (!item.url.includes('?') && currentFull === item.url); // Handle normal routes
+                          {validItems.map((item) => {
+                            const currentFull = location.pathname + location.search;
+                            // Strict match for exact links, or partial match if needed (usually exact is better for sidebar)
+                            const isActive = item.url === location.pathname ||
+                              item.url === currentFull ||
+                              (item.url !== '/' && location.pathname.startsWith(item.url + '/'));
 
-                                    let base = "";
-                                    if (item.highlight === 'red') base += isActive ? ' text-red-500 font-semibold' : ' text-red-600 hover:text-red-700';
-                                    else if (item.highlight === 'green') base += isActive ? ' text-green-500 font-semibold' : ' text-green-600 hover:text-green-700';
-                                    else base += isActive ? ' text-blue-400 font-semibold' : '';
-                                    return base;
-                                  })()}`}
-                                >
-                                  {item.icon && <item.icon className="h-4 w-4 mr-2" />}
-                                  <span>{item.title}</span>
-                                  {item.badge !== undefined && (
-                                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
-                                      {item.badge}
-                                    </span>
-                                  )}
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
+                            let className = "flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors bg-transparent";
+
+                            // Styling logic:
+                            // Active: Blue text, font-semibold (User requested: "text only turning blue", no background)
+                            // Inactive: Zinc text, hover white + dark bg
+                            if (isActive) {
+                              className += " text-blue-500 font-semibold";
+                            } else {
+                              className += " text-zinc-400 hover:text-white hover:bg-zinc-800";
+                            }
+
+                            // Highlights (Red/Green) logic - usually for inactive items or critical items.
+                            // If active, blue dominates. If inactive, check highlight.
+                            if (!isActive) {
+                              if (item.highlight === 'red') className = className.replace('text-zinc-400', 'text-red-600 hover:text-red-500');
+                              else if (item.highlight === 'green') className = className.replace('text-zinc-400', 'text-green-600 hover:text-green-500');
+                            }
+
+                            return (
+                              <SidebarMenuSubItem key={item.url}>
+                                <SidebarMenuSubButton asChild onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
+                                  <Link
+                                    to={item.url}
+                                    className={className}
+                                  >
+                                    {item.icon && <item.icon className="h-4 w-4 mr-2" />}
+                                    <span>{item.title}</span>
+                                    {item.badge !== undefined && (
+                                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
+                                        {item.badge}
+                                      </span>
+                                    )}
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            );
+                          })}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>

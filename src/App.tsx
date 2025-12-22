@@ -30,6 +30,8 @@ import TrainingManual from "./pages/TrainingManual";
 import Certificate from "./pages/Certificate";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import CompanyEmployees from "./pages/CompanyEmployees";
+import UserManagement from "./pages/UserManagement";
+import StaffSchedule from "./pages/StaffSchedule";
 import FileManager from "./pages/FileManager";
 import MobileSetup from "./pages/MobileSetup";
 import Settings from "./pages/Settings";
@@ -44,7 +46,6 @@ import CustomerAccount from "./pages/CustomerAccount";
 import CustomerProfile from "./pages/CustomerProfile";
 import Portal from "./pages/Portal";
 import AdminDashboard from "./pages/AdminDashboard";
-import UserManagement from "./pages/UserManagement";
 import AdminUsers from "./pages/AdminUsers";
 import WebsiteAdministration from "./pages/WebsiteAdministration";
 import BookingsPage from "./pages/BookingsPage";
@@ -67,12 +68,24 @@ import PackageSelection from "./pages/PackageSelection";
 import Prospects from "./pages/Prospects";
 import AppManual from "./pages/AppManual";
 import UserSettings from "./pages/UserSettings";
+import SectionLanding from "./pages/SectionLanding";
+import LearningLibrary from "./pages/LearningLibrary";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
 import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
 import { ChatAudioAlert } from "@/components/chat/ChatAudioAlert";
+import { useLocation as useRouterLocation } from "react-router-dom";
 
 const queryClient = new QueryClient();
+
+// Helper component to conditionally show GlobalChatWidget based on route
+function ConditionalGlobalChat() {
+  const location = useRouterLocation();
+  const isTeamChatPage = location.pathname === '/team-chat';
+  if (isTeamChatPage) return null;
+  return <GlobalChatWidget />;
+}
+
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
   const user = getCurrentUser();
@@ -147,15 +160,20 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ConditionalGlobalChat />
           <SidebarProvider defaultOpen={true}>
             <div className={`flex min-h-screen w-full ${user?.role === 'admin' || user?.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
               <ChatAudioAlert />
-              <GlobalChatWidget />
               {user && <AppSidebar />}
               <div className="flex-1 overflow-x-hidden">
                 <ErrorBoundary>
                   <Routes>
                     <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
+                    <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+                    <Route path="/company-employees" element={<ProtectedRoute allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
+                    <Route path="/staff-schedule" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
+                    <Route path="/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
+                    <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
                     {/* Login route removed */}
                     {/* QuickLogin removed: Supabase-only authentication */}
                     {/* Public homepage routes */}
@@ -413,6 +431,11 @@ const App = () => {
                     <Route path="/user-settings" element={
                       <ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}>
                         <UserSettings />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/section/:sectionId" element={
+                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                        <SectionLanding />
                       </ProtectedRoute>
                     } />
                   </Routes>

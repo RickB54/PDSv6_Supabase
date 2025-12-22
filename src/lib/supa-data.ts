@@ -296,6 +296,13 @@ export const deleteSupabaseCustomer = async (id: string) => {
 // Team Chat
 // ------------------------------------------------------------------
 
+export interface OnlineUser {
+    email: string;
+    name: string;
+    role?: string;
+    lastSeen: string;
+}
+
 export interface TeamMessage {
     id: string;
     created_at: string;
@@ -655,3 +662,85 @@ export const getOrientationExamModule = async (): Promise<TrainingModule | null>
     const { data } = await supabase.from('training_modules').select('*').eq('title', 'Final Orientation Exam').single();
     return data;
 };
+
+// ------------------------------------------------------------------
+// Learning Library
+// ------------------------------------------------------------------
+
+export interface LibraryItem {
+    id: string;
+    title: string;
+    description: string;
+    type: 'video' | 'pdf' | 'article';
+    duration?: string;
+    category: string;
+    thumbnail_url?: string;
+    resource_url?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/**
+ * Get all learning library items from Supabase
+ */
+export async function getLibraryItems(): Promise<LibraryItem[]> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_items')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('Error fetching library items:', err);
+        return [];
+    }
+}
+
+/**
+ * Create or update a learning library item
+ */
+export async function upsertLibraryItem(item: LibraryItem): Promise<LibraryItem | null> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_items')
+            .upsert({
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                type: item.type,
+                duration: item.duration,
+                category: item.category,
+                thumbnail_url: item.thumbnail_url,
+                resource_url: item.resource_url,
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('Error upserting library item:', err);
+        return null;
+    }
+}
+
+/**
+ * Delete a learning library item
+ */
+export async function deleteLibraryItem(id: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('learning_library_items')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting library item:', err);
+        return false;
+    }
+}

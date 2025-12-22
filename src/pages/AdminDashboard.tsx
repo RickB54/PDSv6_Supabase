@@ -793,7 +793,7 @@ export default function AdminDashboard() {
                 </Link>
                 <button type="button" onClick={() => setOrientationOpen(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-orange-600 text-orange-600 hover:bg-orange-600/10 w-fit">
                   <ClipboardCheck className="w-3.5 h-3.5 text-orange-600" />
-                  <span>Employee Handbook</span>
+                  <span>Auto Detailing Handbook</span>
                 </button>
                 <Link to="/exam" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
                   <ClipboardCheck className="w-3.5 h-3.5 text-green-600" />

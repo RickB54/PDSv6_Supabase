@@ -79,11 +79,12 @@ const CompanyEmployees = () => {
     name: string;
     email: string;
     role: string;
+    password?: string; // Added for Auth creation
     flatRate: string;
     bonuses: string;
     paymentByJob: boolean;
     jobRates: Record<string, string>;
-  }>({ name: "", email: "", role: "Employee", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
+  }>({ name: "", email: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
 
   const [workHistoryDateRange, setWorkHistoryDateRange] = useState<{ from?: Date; to?: Date }>({});
 
@@ -246,12 +247,39 @@ const CompanyEmployees = () => {
   };
 
   const openAdd = () => {
-    setForm({ name: "", email: "", role: "Employee", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
+    setForm({ name: "", email: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
     setIsEditMode(false);
     setModalOpen(true);
   };
 
   const handleSave = async () => {
+    // 1. Auth Creation (New Users)
+    if (!isEditMode && form.email && form.password) {
+      try {
+        const { data, error } = await supabase.functions.invoke("create-employee", {
+          body: { name: form.name, email: form.email, password: form.password, role: form.role.toLowerCase() },
+        });
+        if (error || !data?.ok) throw error || new Error("create_employee_failed");
+        toast({ title: "Auth Created", description: "User account created in Supabase Auth." });
+      } catch (e) {
+        console.error("Auth Create Error", e);
+        toast({ title: "Auth Note", description: "Created local profile, but Auth creation failed (or requires Admin API)." });
+      }
+    }
+
+    // 2. Profile Data (DB)
+    // We try to upsert to 'app_users' directly to ensure data persistence beyond local
+    try {
+      if (form.email) {
+        await supabase.from('app_users').upsert({
+          email: form.email,
+          name: form.name,
+          role: form.role.toLowerCase(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'email' });
+      }
+    } catch { }
+
     const payload: Employee = {
       name: form.name, email: form.email, role: form.role,
       flatRate: parseFloat(form.flatRate) || undefined,
@@ -446,6 +474,9 @@ const CompanyEmployees = () => {
           <div className="space-y-4 py-2">
             <div><Label className="text-zinc-400">Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-zinc-950 border-zinc-800" /></div>
             <div><Label className="text-zinc-400">Email</Label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-zinc-950 border-zinc-800" disabled={isEditMode} /></div>
+            {!isEditMode && (
+              <div><Label className="text-zinc-400">Initial Password</Label><Input value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-zinc-950 border-zinc-800" placeholder="For App Login" /></div>
+            )}
             <div><Label className="text-zinc-400">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                 <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>

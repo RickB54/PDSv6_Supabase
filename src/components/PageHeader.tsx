@@ -2,14 +2,15 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getCurrentUser, logout } from "@/lib/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AboutDialog from "@/components/AboutDialog";
 import { useState } from "react";
-import { LogOut, Globe, User } from "lucide-react";
+import { LogOut, Globe, User, ArrowLeft, Maximize2, Minimize2 } from "lucide-react";
 import logo from "@/assets/logo-3inch.png";
 import NotificationBell from "@/components/NotificationBell";
 import { Link } from "react-router-dom";
 import { useCartStore } from "@/store/cart";
+import { useFullScreen } from "@/hooks/useFullScreen";
 
 interface PageHeaderProps {
   title?: string;
@@ -20,13 +21,18 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   const user = getCurrentUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showAbout, setShowAbout] = useState(false);
+  const { isFullScreen, toggleFullScreen } = useFullScreen();
 
   const handleLogout = async () => {
     useCartStore.getState().clear();
     await logout();
     navigate('/login');
   };
+
+  // Show back button if we are not at root or dashboard root
+  const showBackButton = location.pathname !== '/' && location.pathname !== '/dashboard/employee' && location.pathname !== '/admin-dashboard';
 
   return (
     <>
@@ -35,6 +41,13 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         <div className="relative flex items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-4 flex-wrap min-w-0">
             <SidebarTrigger className="text-foreground" />
+
+            {showBackButton && (
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-zinc-400 hover:text-white" title="Go Back">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+
             <button onClick={() => setShowAbout(true)} className="flex items-center gap-3 transition-opacity hover:opacity-80">
               <img src={logo} alt="Prime Detail Solutions" className="h-10 w-auto" />
             </button>
@@ -51,6 +64,11 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
 
           <div className="flex items-center gap-3 min-w-0">
             {children}
+
+            {/* Full Screen Toggle (Mobile/Tablet Friendly) */}
+            <Button variant="ghost" size="icon" onClick={toggleFullScreen} className="text-zinc-400 hover:text-white" title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}>
+              {isFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </Button>
 
             <Button asChild variant="outline" size="icon" className="sm:gap-2 hidden sm:flex">
               <Link to="/">

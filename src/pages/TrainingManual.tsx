@@ -107,7 +107,11 @@ const YoutubePlayer = ({ url, title, initialTime = 0, onProgress, onEnded }: {
     );
 };
 
-const TrainingManual = () => {
+interface TrainingManualProps {
+    mode?: "default" | "library";
+}
+
+export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
     const { toast } = useToast();
     // Use state for user to allow updates
     const [currentUser, setCurrentUser] = useState(getCurrentUser());
@@ -144,7 +148,8 @@ const TrainingManual = () => {
 
     // UI State
     const [searchParams, setSearchParams] = useSearchParams();
-    const activeTab = searchParams.get("tab") || "videos";
+    // If mode is library, force "library" tab. Otherwise use URL param or default to "videos"
+    const activeTab = mode === "library" ? "library" : (searchParams.get("tab") || "videos");
     const [activeCategory, setActiveCategory] = useState<string>("All");
     const [videoModalOpen, setVideoModalOpen] = useState(false);
 
@@ -523,7 +528,7 @@ const TrainingManual = () => {
                                         Everything you need to know about certification and system management.
                                     </DialogDescription>
                                 </DialogHeader>
-                                
+
                                 <Tabs defaultValue="employee" className="mt-4">
                                     <TabsList className="bg-zinc-900 border border-zinc-800 w-full justify-start">
                                         <TabsTrigger value="employee" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
@@ -601,10 +606,10 @@ const TrainingManual = () => {
                                                         <h4 className="font-bold text-zinc-200">Quiz Builder</h4>
                                                         <p className="text-xs text-zinc-500">
                                                             Inside the Module Editor, use the **Quiz Builder** tab.
-                                                            <br/>1. Click "Add Question".
-                                                            <br/>2. Type the Question and 4 options.
-                                                            <br/>3. <span className="text-red-400 font-bold underline">CRITICAL:</span> You MUST select the Correct Answer using the radio button next to the option.
-                                                            <br/>4. Click "Save Quiz" to lock it in.
+                                                            <br />1. Click "Add Question".
+                                                            <br />2. Type the Question and 4 options.
+                                                            <br />3. <span className="text-red-400 font-bold underline">CRITICAL:</span> You MUST select the Correct Answer using the radio button next to the option.
+                                                            <br />4. Click "Save Quiz" to lock it in.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -644,7 +649,7 @@ const TrainingManual = () => {
                                         // Dynamic import to avoid circular dependencies if any, or just import at top if safe.
                                         // Using global 'supabase' from window if checking raw, but better to use auth lib.
                                         // We'll just trigger the same checkUser logic but harder:
-                                        const { data } = await import("@/lib/supa-data").then(m => m.supabase.auth.getSession());
+                                        const { data } = await import("@/lib/supabase").then(m => m.default.auth.getSession());
                                         if (data.session?.user) {
                                             const { finalizeSupabaseSession } = await import("@/lib/auth");
                                             const u = await finalizeSupabaseSession(data.session.user);
@@ -695,29 +700,11 @@ const TrainingManual = () => {
                     </div>
                 )}
 
-                <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} className="w-full space-y-6">
-                    <TabsList className="flex flex-wrap h-auto w-full bg-zinc-900/50 p-2 rounded-xl border border-zinc-800">
-                        <TabsTrigger value="videos" className="flex-1 min-w-[120px] data-[state=active]:bg-purple-600 data-[state=active]:text-white"><Video className="w-4 h-4 mr-2" />Certification</TabsTrigger>
-                        <TabsTrigger value="library" className="flex-1 min-w-[120px] data-[state=active]:bg-blue-600 data-[state=active]:text-white"><PlayCircle className="w-4 h-4 mr-2" />Learning Lib</TabsTrigger>
-                        <TabsTrigger value="process" className="flex-1 min-w-[120px]">SOPs</TabsTrigger>
-                        <TabsTrigger value="hardware" className="flex-1 min-w-[120px]">Hardware</TabsTrigger>
-                        <TabsTrigger value="chemicals" className="flex-1 min-w-[120px]">Chemicals</TabsTrigger>
-                        <TabsTrigger value="materials" className="flex-1 min-w-[120px]">Materials</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="videos" className="space-y-6">
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                            {["All", "Exterior", "Interior", "Paint", "Business", "Hardware", "Chemicals", "Materials"].map(cat => (
-                                <Button key={cat} variant={activeCategory === cat ? "default" : "outline"} onClick={() => setActiveCategory(cat)} className={`rounded-full ${activeCategory === cat ? 'bg-white text-black' : 'border-zinc-700 text-zinc-400'}`} size="sm">{cat}</Button>
-                            ))}
-                        </div>
-                        <VideoGrid list={currentList} />
-                    </TabsContent>
-
-                    <TabsContent value="library" className="space-y-6">
+                {mode === "library" ? (
+                    <div className="space-y-6">
                         <div className="bg-blue-900/20 border border-blue-800/50 p-4 rounded-xl mb-4">
                             <h3 className="text-blue-400 font-bold flex items-center gap-2"><Lightbulb className="w-5 h-5" /> Learning Library</h3>
-                            <p className="text-zinc-400 text-sm">Optional resources for ongoing learning. These do not affect your certification status.</p>
+                            <p className="text-zinc-400 text-sm">Optional resources for ongoing learning.</p>
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
                             {["All", "Exterior", "Interior", "Paint", "Business", "Hardware", "Chemicals", "Materials"].map(cat => (
@@ -725,21 +712,61 @@ const TrainingManual = () => {
                             ))}
                         </div>
                         <VideoGrid list={learningList} isLearning={true} />
-                    </TabsContent>
+                    </div>
+                ) : (
+                    <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} className="w-full space-y-6">
+                        <TabsList className="flex flex-wrap h-auto w-full bg-zinc-900/50 p-2 rounded-xl border border-zinc-800">
+                            <TabsTrigger value="videos" className="flex-1 min-w-[120px] data-[state=active]:bg-purple-600 data-[state=active]:text-white"><Video className="w-4 h-4 mr-2" />Certification</TabsTrigger>
+                            {/* Library Tab removed from main view as requested, accessible via separate page */}
+                            {/* <TabsTrigger value="library" className="flex-1 min-w-[120px] data-[state=active]:bg-blue-600 data-[state=active]:text-white"><PlayCircle className="w-4 h-4 mr-2" />Learning Lib</TabsTrigger> */}
+                            <TabsTrigger value="process" className="flex-1 min-w-[120px]">SOPs</TabsTrigger>
+                            <TabsTrigger value="hardware" className="flex-1 min-w-[120px]">Hardware</TabsTrigger>
+                            <TabsTrigger value="chemicals" className="flex-1 min-w-[120px]">Chemicals</TabsTrigger>
+                            <TabsTrigger value="materials" className="flex-1 min-w-[120px]">Materials</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="videos" className="space-y-6">
+                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                                {["All", "Exterior", "Interior", "Paint", "Business", "Hardware", "Chemicals", "Materials"].map(cat => (
+                                    <Button key={cat} variant={activeCategory === cat ? "default" : "outline"} onClick={() => setActiveCategory(cat)} className={`rounded-full ${activeCategory === cat ? 'bg-white text-black' : 'border-zinc-700 text-zinc-400'}`} size="sm">{cat}</Button>
+                                ))}
+                            </div>
+                            <VideoGrid list={currentList} />
+                        </TabsContent>
+
+                        <TabsContent value="library" className="space-y-6">
+                            {/* Fallback if navigated via URL */}
+                            <div className="bg-blue-900/20 border border-blue-800/50 p-4 rounded-xl mb-4">
+                                <h3 className="text-blue-400 font-bold flex items-center gap-2"><Lightbulb className="w-5 h-5" /> Learning Library</h3>
+                                <p className="text-zinc-400 text-sm">Moved to dedicated "Learning Library" page.</p>
+                                <Button size="sm" onClick={() => window.location.href = '/learning-library'}>Go to Library</Button>
+                            </div>
+                        </TabsContent>
 
 
-                    <TabsContent value="process" className="space-y-6">
-                        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
-                            <p>Standard Operating Procedures content goes here...</p>
-                        </div>
-                    </TabsContent>
+                        <TabsContent value="process" className="space-y-6">
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
+                                <p>Standard Operating Procedures content goes here...</p>
+                            </div>
+                        </TabsContent>
 
-                    <TabsContent value="materials" className="space-y-6">
-                        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
-                            <p>Materials reference content goes here...</p>
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                        <TabsContent value="materials" className="space-y-6">
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
+                                <p>Materials reference content goes here...</p>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="hardware" className="space-y-6">
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
+                                <p>Hardware reference content goes here...</p>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="chemicals" className="space-y-6">
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
+                                <p>Chemicals reference content goes here...</p>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+                )}
             </main>
 
             {/* ADMIN EDITOR */}

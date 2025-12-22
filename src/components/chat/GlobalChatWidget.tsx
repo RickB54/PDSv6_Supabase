@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, X, Send, User } from 'lucide-react';
+import { MessageCircle, X, Send, User, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
+import { UserSelector } from '@/components/chat/UserSelector';
 
 export function GlobalChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
@@ -15,8 +16,23 @@ export function GlobalChatWidget() {
     const [messages, setMessages] = useState<TeamMessage[]>([]);
     const [inputText, setInputText] = useState('');
     const [hasUnread, setHasUnread] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Load messages function
+    const loadMessages = async () => {
+        setIsLoading(true);
+        try {
+            const all = await getTeamMessages();
+            setMessages(all);
+        } catch (error) {
+            console.error('Failed to load messages:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Load identity from storage or auth
     useEffect(() => {
@@ -41,10 +57,7 @@ export function GlobalChatWidget() {
         if (!isIdentified) return;
 
         // Initial load
-        (async () => {
-            const all = await getTeamMessages();
-            setMessages(all);
-        })();
+        loadMessages();
 
         // Subscribe
         const channel = supabase
@@ -80,13 +93,29 @@ export function GlobalChatWidget() {
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
+
+        // Create optimistic message
+        const optimisticMessage: TeamMessage = {
+            id: `temp-${Date.now()}`,
+            content: inputText,
+            sender_email: guestEmail,
+            sender_name: guestName,
+            recipient_email: null,
+            created_at: new Date().toISOString()
+        };
+
+        // Add to UI immediately
+        setMessages(prev => [...prev, optimisticMessage]);
+        const messageToSend = inputText;
+        setInputText('');
+
         try {
-            // Guest sends to NULL (Public Team Inbox)
-            // If we wanted to target a specific admin, we'd need their email. For now, NULL is "Everyone".
-            await sendTeamMessage(inputText, guestEmail, guestName, null);
-            setInputText('');
+            await sendTeamMessage(messageToSend, guestEmail, guestName, selectedRecipient);
         } catch (err) {
             console.error(err);
+            // Remove optimistic message on error
+            setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+            setInputText(messageToSend);
         }
     };
 
@@ -134,20 +163,30 @@ export function GlobalChatWidget() {
                         </div>
                         <div className="flex items-center gap-1">
                             {isIdentified && (
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10"
-                                    onClick={() => {
-                                        localStorage.removeItem('guest_identity');
-                                        setIsIdentified(false);
-                                        setGuestName('');
-                                        setGuestEmail('');
-                                        setMessages([]);
-                                    }}
-                                >
-                                    End
-                                </Button>
+                                <>
+                                    <button
+                                        onClick={loadMessages}
+                                        disabled={isLoading}
+                                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                        title="Refresh messages"
+                                    >
+                                        <RefreshCw className={`h-4 w-4 text-white/80 ${isLoading ? 'animate-spin' : ''}`} />
+                                    </button>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10"
+                                        onClick={() => {
+                                            localStorage.removeItem('guest_identity');
+                                            setIsIdentified(false);
+                                            setGuestName('');
+                                            setGuestEmail('');
+                                            setMessages([]);
+                                        }}
+                                    >
+                                        End
+                                    </Button>
+                                </>
                             )}
                             <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-primary-foreground/20 text-white" onClick={() => setIsOpen(false)}>
                                 <X className="h-5 w-5" />
@@ -189,6 +228,16 @@ export function GlobalChatWidget() {
                                         )
                                     })}
                                 </div>
+
+                                {/* Recipient Selector */}
+                                <div className="mb-2 px-1">
+                                    <UserSelector
+                                        currentUserEmail={guestEmail}
+                                        onSelectRecipient={setSelectedRecipient}
+                                        selectedRecipient={selectedRecipient}
+                                    />
+                                </div>
+
                                 <div className="mt-4 flex gap-2 pt-2 border-t">
                                     <Input
                                         placeholder="Type a message..."

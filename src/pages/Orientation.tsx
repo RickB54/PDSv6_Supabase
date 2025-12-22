@@ -1,11 +1,15 @@
-
+import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, CheckSquare, GraduationCap } from "lucide-react";
+import OrientationModal from "@/components/training/OrientationModal";
 
 export default function Orientation() {
+    const [open, setOpen] = useState(false);
+    const [startExam, setStartExam] = useState(false);
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <PageHeader title="New Hire Orientation" />
@@ -22,7 +26,12 @@ export default function Orientation() {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Employee Handbook</h2>
                         <p className="text-zinc-400 mb-6">Read the full policy manual and operating procedures.</p>
-                        <Button className="w-full bg-purple-600 hover:bg-purple-700">View Handbook</Button>
+                        <Button
+                            className="w-full bg-purple-600 hover:bg-purple-700"
+                            onClick={() => { setStartExam(false); setOpen(true); }}
+                        >
+                            View Handbook
+                        </Button>
                     </Card>
 
                     <Card className="p-6 bg-zinc-900 border-zinc-800 flex flex-col items-center text-center hover:border-blue-500/50 transition-colors">
@@ -31,7 +40,13 @@ export default function Orientation() {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Orientation Exam</h2>
                         <p className="text-zinc-400 mb-6">Test your knowledge after reading the handbook.</p>
-                        <Button variant="outline" className="w-full border-zinc-700 hover:bg-zinc-800 text-white">Start Exam</Button>
+                        <Button
+                            variant="outline"
+                            className="w-full border-zinc-700 hover:bg-zinc-800 text-white"
+                            onClick={() => { setStartExam(true); setOpen(true); }}
+                        >
+                            Start Exam
+                        </Button>
                     </Card>
 
                     <Card className="p-6 bg-zinc-900 border-zinc-800 flex flex-col items-center text-center hover:border-green-500/50 transition-colors md:col-span-2">
@@ -47,6 +62,12 @@ export default function Orientation() {
                     </Card>
                 </div>
             </main>
+
+            <OrientationModal
+                open={open}
+                onOpenChange={setOpen}
+                startExamOnOpen={startExam}
+            />
         </div>
     );
 }

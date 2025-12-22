@@ -3,10 +3,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, Send, User } from 'lucide-react';
+import { MessageCircle, Send, User, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
+import { UserSelector } from '@/components/chat/UserSelector';
 
 export default function TeamChat() {
     const [guestName, setGuestName] = useState('');
@@ -14,11 +15,26 @@ export default function TeamChat() {
     const [isIdentified, setIsIdentified] = useState(false);
     const [messages, setMessages] = useState<TeamMessage[]>([]);
     const [inputText, setInputText] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
 
     // Auth user if available
     const [authUser, setAuthUser] = useState(getCurrentUser());
 
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Load messages function
+    const loadMessages = async () => {
+        setIsLoading(true);
+        try {
+            const all = await getTeamMessages();
+            setMessages(all);
+        } catch (error) {
+            console.error('Failed to load messages:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Load identity
     useEffect(() => {
@@ -46,21 +62,45 @@ export default function TeamChat() {
     useEffect(() => {
         if (!isIdentified) return;
 
-        (async () => {
-            const all = await getTeamMessages();
-            setMessages(all);
-        })();
+        loadMessages();
 
+        // Enhanced real-time subscription with logging
         const channel = supabase
-            .channel('public:team_messages_page')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
-                const newMsg = payload.new as TeamMessage;
-                setMessages(prev => [...prev, newMsg]);
+            .channel('team_messages_realtime', {
+                config: {
+                    broadcast: { self: true }, // Receive own messages too
+                    presence: { key: guestEmail }
+                }
             })
-            .subscribe();
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'team_messages'
+            }, (payload) => {
+                console.log('📨 Real-time message received:', payload);
+                const newMsg = payload.new as TeamMessage;
+                // Avoid duplicate if we already have it from optimistic update
+                setMessages(prev => {
+                    const exists = prev.some(m => m.id === newMsg.id);
+                    if (exists) {
+                        console.log('⚠️ Message already exists, skipping duplicate');
+                        return prev;
+                    }
+                    return [...prev, newMsg];
+                });
+            })
+            .subscribe((status) => {
+                console.log('🔌 Subscription status:', status);
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Successfully subscribed to team_messages');
+                }
+            });
 
-        return () => { supabase.removeChannel(channel); };
-    }, [isIdentified]);
+        return () => {
+            console.log('🔌 Unsubscribing from team_messages');
+            supabase.removeChannel(channel);
+        };
+    }, [isIdentified, guestEmail]);
 
     // Auto-scroll
     useEffect(() => {
@@ -77,12 +117,32 @@ export default function TeamChat() {
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
+
+        // Create optimistic message
+        const optimisticMessage: TeamMessage = {
+            id: `temp-${Date.now()}`,
+            content: inputText,
+            sender_email: guestEmail,
+            sender_name: guestName,
+            recipient_email: null,
+            created_at: new Date().toISOString()
+        };
+
+        // Add to UI immediately
+        setMessages(prev => [...prev, optimisticMessage]);
+        const messageToSend = inputText;
+        setInputText('');
+
         try {
-            // Null recipient = Public Team Channel for now
-            await sendTeamMessage(inputText, guestEmail, guestName, null);
-            setInputText('');
+            // Send to Supabase with selected recipient
+            await sendTeamMessage(messageToSend, guestEmail, guestName, selectedRecipient);
+            // Real-time listener will add the confirmed message
+            // Remove optimistic once real one arrives (handled by subscription)
         } catch (err) {
             console.error(err);
+            // Remove optimistic message on error
+            setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+            setInputText(messageToSend); // Restore text
         }
     };
 
@@ -123,7 +183,7 @@ export default function TeamChat() {
     return (
         <div className="flex flex-col h-screen max-w-6xl mx-auto w-full">
             <div className="p-4 shrink-0">
-                <PageHeader title="Team Chat" description="Collaborate with your team instantly." />
+                <PageHeader title="Team Chat" />
             </div>
 
             <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-0">
@@ -137,11 +197,21 @@ export default function TeamChat() {
                                 <p className="text-xs text-zinc-400">Public messages visible to all staff</p>
                             </div>
                         </div>
-                        {isIdentified && (
-                            <div className="text-xs text-zinc-500">
-                                Signed in as <span className="text-emerald-400">{guestName}</span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={loadMessages}
+                                disabled={isLoading}
+                                className="p-2 hover:bg-zinc-700 rounded transition-colors"
+                                title="Refresh messages"
+                            >
+                                <RefreshCw className={`h-4 w-4 text-zinc-400 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                            {isIdentified && (
+                                <div className="text-xs text-zinc-500">
+                                    Signed in as <span className="text-emerald-400">{guestName}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Chat Area */}
@@ -180,8 +250,8 @@ export default function TeamChat() {
                                         return (
                                             <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
                                                 <div className={`max-w-[80%] md:max-w-[60%] rounded-2xl px-5 py-3 shadow-md ${isMe
-                                                        ? 'bg-emerald-600 text-white rounded-br-sm'
-                                                        : 'bg-zinc-800 text-zinc-100 rounded-bl-sm border border-zinc-700'
+                                                    ? 'bg-emerald-600 text-white rounded-br-sm'
+                                                    : 'bg-zinc-800 text-zinc-100 rounded-bl-sm border border-zinc-700'
                                                     }`}>
                                                     {!isMe && <p className="text-[11px] font-bold text-emerald-400 mb-1">{m.sender_name}</p>}
                                                     <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
@@ -195,6 +265,14 @@ export default function TeamChat() {
                                 </div>
 
                                 <div className="p-4 bg-[#0f1629] border-t border-zinc-800 shrink-0">
+                                    {/* Recipient Selector */}
+                                    <div className="mb-3">
+                                        <UserSelector
+                                            currentUserEmail={guestEmail}
+                                            onSelectRecipient={setSelectedRecipient}
+                                            selectedRecipient={selectedRecipient}
+                                        />
+                                    </div>
                                     <div className="flex gap-3 max-w-4xl mx-auto">
                                         <Input
                                             placeholder="Type a message..."

@@ -32,7 +32,6 @@ export default function UserManagement() {
       const { data, error } = await supabase
         .from("app_users")
         .select("id,email,name,role,updated_at")
-        .eq("role", "employee")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       setEmployees((data || []) as any[]);

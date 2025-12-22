@@ -285,10 +285,17 @@ const ServiceChecklist = () => {
       try {
         const cur = getCurrentUser();
         const listWithAdmin = Array.isArray(emps) ? [...(emps as any[])] : [];
-        if (cur && cur.role === 'admin') {
-          const hasAdmin = listWithAdmin.some((e: any) => String(e.name || e.id).toLowerCase() === 'admin');
-          if (!hasAdmin) {
-            listWithAdmin.unshift({ id: 'Admin', name: 'Admin', email: cur.email, role: 'admin' });
+
+        // Ensure current user is in the list
+        if (cur) {
+          const alreadyListed = listWithAdmin.some((e: any) => e.email === cur.email || e.id === cur.id);
+          if (!alreadyListed) {
+            listWithAdmin.unshift({
+              id: cur.id || 'current-user',
+              name: cur.name || 'Admin',
+              email: cur.email,
+              role: cur.role
+            });
           }
         }
         setEmployees(listWithAdmin as any[]);

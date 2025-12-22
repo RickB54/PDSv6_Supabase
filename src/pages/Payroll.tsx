@@ -85,6 +85,16 @@ const Payroll = () => {
   }, []);
 
   useEffect(() => {
+    // 1. Handle Tab Switching and Pre-filling from URL
+    const tabParam = params.get('tab');
+    if (tabParam === 'checks') setTab('checks');
+
+    const empParam = params.get('employee');
+    if (empParam && tabParam === 'checks') {
+      setCheckEmployee(empParam);
+    }
+
+    // 2. Handle Modal / Job Pre-filling (Existing Logic)
     const modal = params.get('modal');
     if (modal !== '1') return;
     const emp = params.get('employee') || '';
@@ -239,7 +249,7 @@ const Payroll = () => {
         <div className="flex flex-wrap gap-2 p-1 bg-zinc-900/50 rounded-full border border-zinc-800 w-fit">
           {renderTabButton('current', 'Current Payroll', <Wallet className="h-4 w-4" />)}
           {renderTabButton('history', 'History', <Clock className="h-4 w-4" />)}
-          {renderTabButton('checks', 'Write Checks', <CreditCard className="h-4 w-4" />)}
+          {renderTabButton('checks', 'Process Payment', <CreditCard className="h-4 w-4" />)}
         </div>
 
         {tab === 'current' && (
@@ -356,20 +366,59 @@ const Payroll = () => {
 
         {tab === 'checks' && (
           <Card className="p-8 bg-zinc-900 border-zinc-800">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><CreditCard className="h-5 w-5 text-indigo-400" /> Write Check</h3>
-            {/* Check Form Simplified for this layout update */}
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Wallet className="h-5 w-5 text-green-400" /> Process Payment / Write Checks</h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div><Label className="text-zinc-400">Payee</Label><Input value={checkEmployee} onChange={e => setCheckEmployee(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="Name" /></div>
-                <div><Label className="text-zinc-400">Amount</Label><Input value={checkAmount} onChange={e => setCheckAmount(e.target.value)} type="number" className="bg-zinc-950 border-zinc-800 font-mono text-lg" placeholder="0.00" /></div>
+                <div><Label className="text-zinc-400">Payee</Label><Input value={checkEmployee} onChange={e => setCheckEmployee(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="Name or Business" /></div>
+                <div><Label className="text-zinc-400">Amount</Label><Input value={checkAmount} onChange={e => setCheckAmount(e.target.value)} type="number" className="bg-zinc-950 border-zinc-800 font-mono text-lg text-green-400 font-bold" placeholder="0.00" /></div>
+                <div>
+                  <Label className="text-zinc-400">Payment Method</Label>
+                  <Select value={checkType} onValueChange={(v: any) => setCheckType(v)}>
+                    <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Check">Check</SelectItem>
+                      <SelectItem value="Direct Deposit">Direct Deposit</SelectItem>
+                      <SelectItem value="Venmo">Venmo</SelectItem>
+                      <SelectItem value="PayPal">PayPal</SelectItem>
+                      <SelectItem value="Zelle">Zelle</SelectItem>
+                      <SelectItem value="CashApp">CashApp</SelectItem>
+                      <SelectItem value="Stripe">Stripe</SelectItem>
+                      <SelectItem value="Apple Pay">Apple Pay</SelectItem>
+                      <SelectItem value="Google Pay">Google Pay</SelectItem>
+                      <SelectItem value="Wire Transfer">Wire Transfer</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-4">
-                <div><Label className="text-zinc-400">Check Number</Label><Input value={checkNumber} onChange={e => setCheckNumber(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="1001" /></div>
-                <div><Label className="text-zinc-400">Memo</Label><Input value={checkMemo} onChange={e => setCheckMemo(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="Memo" /></div>
+                <div><Label className="text-zinc-400">Reference / Check Number</Label><Input value={checkNumber} onChange={e => setCheckNumber(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="e.g. 1001 or Trans ID" /></div>
+                <div><Label className="text-zinc-400">Date</Label><Input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)} className="bg-zinc-950 border-zinc-800" /></div>
+                <div><Label className="text-zinc-400">Memo / Notes</Label><Input value={checkMemo} onChange={e => setCheckMemo(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="Reason for payment" /></div>
               </div>
             </div>
-            <div className="mt-8 flex justify-end">
-              <Button className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto">Generate Check PDF</Button>
+
+            <div className="mt-8 flex justify-end gap-4">
+              {checkType === 'Check' && <Button variant="outline" className="text-zinc-300 border-zinc-700 hover:bg-zinc-800">Preview Check PDF</Button>}
+              <Button className="bg-green-600 hover:bg-green-700 min-w-[150px]" onClick={async () => {
+                if (!checkEmployee || !checkAmount) {
+                  toast({ title: "Error", description: "Missing Payee or Amount", variant: "destructive" });
+                  return;
+                }
+                await upsertExpense({
+                  amount: parseFloat(checkAmount),
+                  description: `${checkMemo} (${checkType} #${checkNumber})`.trim(),
+                  category: 'Payroll',
+                  createdAt: new Date(checkDate).toISOString(),
+                  paymentMethod: checkType,
+                  payee: checkEmployee
+                } as any);
+                toast({ title: "Payment Recorded", description: `${checkType} to ${checkEmployee} saved.` });
+                setCheckAmount(''); setCheckMemo(''); setCheckNumber('');
+              }}>
+                <CheckCircle className="w-4 h-4 mr-2" /> Record Payment
+              </Button>
             </div>
           </Card>
         )}
