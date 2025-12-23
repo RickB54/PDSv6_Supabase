@@ -13,7 +13,8 @@ import {
     TicketPercent,
     Package,
     Globe,
-    GraduationCap
+    GraduationCap,
+    Truck
 } from "lucide-react";
 
 export type MenuItem = {
@@ -101,6 +102,7 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
+                { title: "Rick's F150 Setup", url: "/f150-setup", key: "f150-setup", icon: Truck },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
             ]
         },

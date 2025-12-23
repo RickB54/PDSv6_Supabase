@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Added
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2 } from "lucide-react";
+import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck } from "lucide-react"; // Added Truck
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem } from "@/lib/supa-data";
 
 export default function LearningLibrary() {
+    const navigate = useNavigate(); // Added
     const { toast } = useToast();
     const user = getCurrentUser();
     const isAdmin = user?.role === 'admin';
@@ -219,6 +221,27 @@ export default function LearningLibrary() {
                             <Plus className="w-4 h-4 mr-2" /> Add New Resource
                         </Button>
                     )}
+                </div>
+
+                {/* Featured Section: Rick's F150 Setup */}
+                <div onClick={() => navigate('/f150-setup')} className="cursor-pointer group relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-zinc-900 to-zinc-950 p-6 mb-8 hover:border-primary/50 transition-all shadow-lg hover:shadow-primary/5">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Truck className="w-32 h-32 text-primary" />
+                    </div>
+                    <div className="relative z-10 flex items-center gap-6">
+                        <div className="p-4 bg-primary/20 rounded-full border border-primary/20 group-hover:bg-primary/30 transition-colors">
+                            <Truck className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">Rick's F150 Detailing Setup</h3>
+                            <p className="text-zinc-400 max-w-2xl">
+                                Explore the ultimate mobile detailing rig. View the professional photo gallery and video tours of the custom build, water systems, and tool organization.
+                            </p>
+                        </div>
+                        <Button className="ml-auto bg-primary text-primary-foreground hover:bg-primary/90 hidden md:flex">
+                            View Setup
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -704,7 +704,7 @@ export interface LibraryItem {
     id: string;
     title: string;
     description: string;
-    type: 'video' | 'pdf' | 'article';
+    type: 'video' | 'pdf' | 'article' | 'image';
     duration?: string;
     category: string;
     thumbnail_url?: string;
@@ -775,5 +775,37 @@ export async function deleteLibraryItem(id: string): Promise<boolean> {
     } catch (err) {
         console.error('Error deleting library item:', err);
         return false;
+    }
+}
+
+/**
+ * Upload a file to Supabase storage
+ */
+export async function uploadLibraryFile(file: File): Promise<string | null> {
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+        const filePath = `library/${fileName}`;
+
+        // Attempt upload to 'images' bucket
+        const { error: uploadError } = await supabase.storage
+            .from('images')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            // Fallback to 'public' if images doesn't exist or permissions fail
+            console.log("Upload to 'images' failed, trying 'public' bucket...", uploadError);
+            const { error: fallbackError } = await supabase.storage
+                .from('public')
+                .upload(filePath, file);
+
+            if (fallbackError) throw uploadError; // Throw original error if both fail
+        }
+
+        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+        return data.publicUrl;
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        return null;
     }
 }

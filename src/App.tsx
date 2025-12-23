@@ -70,6 +70,7 @@ import AppManual from "./pages/AppManual";
 import UserSettings from "./pages/UserSettings";
 import SectionLanding from "./pages/SectionLanding";
 import LearningLibrary from "./pages/LearningLibrary";
+import F150Setup from "./pages/F150Setup";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
 import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
@@ -174,6 +175,7 @@ const App = () => {
                     <Route path="/staff-schedule" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
                     <Route path="/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
                     <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
+                    <Route path="/f150-setup" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><F150Setup /></ProtectedRoute>} />
                     {/* Login route removed */}
                     {/* QuickLogin removed: Supabase-only authentication */}
                     {/* Public homepage routes */}
