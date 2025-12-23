@@ -8,7 +8,7 @@ import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "
 import { getUnifiedCustomers } from "@/lib/customers";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   AlertDialog,
@@ -49,6 +49,11 @@ interface Customer {
   howFoundOther?: string;
   type?: 'customer' | 'prospect';
   is_archived?: boolean;
+  generalPhotos?: string[];
+  beforePhotos?: string[];
+  afterPhotos?: string[];
+  videoUrl?: string;
+  learningCenterUrl?: string;
 }
 
 const Prospects = () => {
@@ -111,7 +116,13 @@ const Prospects = () => {
           year: data.year,
           type: data.vehicleType,
           color: data.color
-        }
+        },
+        generalPhotos: data.generalPhotos,
+        beforePhotos: data.beforePhotos,
+        afterPhotos: data.afterPhotos,
+        videoUrl: data.videoUrl,
+        learningCenterUrl: data.learningCenterUrl,
+        videoNote: data.videoNote
       });
       await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();
@@ -354,10 +365,45 @@ const Prospects = () => {
                 ) : (
                   filteredCustomers.map(c => (
                     <tr key={c.id} className="hover:bg-purple-500/5 transition-colors group">
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-zinc-200">{c.name || "Unknown"}</div>
-                        <div className="text-xs text-zinc-500">{c.phone}</div>
-                        <div className="text-xs text-zinc-500">{c.email}</div>
+                      <td className="px-4 py-3 flex items-center gap-3">
+                        <div
+                          className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
+                          onClick={(e) => { e.stopPropagation(); openEdit(c); }}
+                        >
+                          {(c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]) ? (
+                            <img
+                              src={c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]}
+                              alt={c.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span>{c.name.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-zinc-200">{c.name || "Unknown"}</div>
+                          <div className="text-xs text-zinc-500">{c.phone}</div>
+                          <div className="text-xs text-zinc-500">{c.email}</div>
+                          {c.videoUrl && (
+                            <div className="mt-2 text-sm">
+                              <Link to={`/learning-library?videoUrl=${encodeURIComponent(c.videoUrl)}`} className="flex items-center gap-2 text-blue-400 hover:text-blue-300">
+                                <Video className="h-4 w-4" /> Watch Video
+                              </Link>
+                            </div>
+                          )}
+                          {c.learningCenterUrl && (
+                            <div className="mt-2 text-sm">
+                              <Link to={`/learning-library?videoUrl=${encodeURIComponent(c.learningCenterUrl)}`} className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
+                                <Video className="h-4 w-4" /> Learning Center
+                              </Link>
+                            </div>
+                          )}
+                          {c.videoNote && (
+                            <div className="mt-2 p-2 rounded bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 italic">
+                              Note: {c.videoNote}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-zinc-300">
                         {c.year} {c.vehicle} {c.model}
@@ -395,9 +441,25 @@ const Prospects = () => {
           {filteredCustomers.map(c => (
             <div key={c.id} className="bg-zinc-900 border border-purple-500/20 p-4 rounded-xl space-y-3">
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-zinc-200 text-lg">{c.name}</h3>
-                  <p className="text-zinc-400 text-sm">{c.phone}</p>
+                <div className="flex items-start gap-3">
+                  <div
+                    className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
+                    onClick={(e) => { e.stopPropagation(); openEdit(c); }}
+                  >
+                    {(c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]) ? (
+                      <img
+                        src={c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]}
+                        alt={c.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span>{c.name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-zinc-200 text-lg">{c.name}</h3>
+                    <p className="text-zinc-400 text-sm">{c.phone}</p>
+                  </div>
                 </div>
                 {!c.is_archived && (
                   <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 bg-purple-500/10">

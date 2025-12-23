@@ -25,6 +25,7 @@ import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as
 import { getCustomPackages, getCustomAddOns, getPackageMeta, getAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { Progress } from "@/components/ui/progress";
 import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
+import { getSupabaseEmployees } from "@/lib/supa-data";
 
 type DisplayService = {
   id: string;
@@ -68,6 +69,8 @@ function buildAddOnServices(): DisplayService[] {
 
 const ServiceChecklist = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
   const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
   // Dynamic vehicle types (store slug key directly)
@@ -94,10 +97,25 @@ const ServiceChecklist = () => {
   const [estimatedTime, setEstimatedTime] = useState<string>("");
   const [employeeAssigned, setEmployeeAssigned] = useState<string>("");
   const [employees, setEmployees] = useState<any[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(true);
   const [checklistId, setChecklistId] = useState<string>("");
   const [customerSearch, setCustomerSearch] = useState<string>("");
   const [customerSearchResults, setCustomerSearchResults] = useState<CustomerType[]>([]);
   const [vehicleTypeOther, setVehicleTypeOther] = useState<string>("");
+
+  // Read employee from URL params (from Staff Schedule "Start Job")
+  useEffect(() => {
+    const employeeParam = searchParams.get('employee');
+    const employeeIdParam = searchParams.get('employeeId');
+    if (employeeParam && employeeIdParam) {
+      // Auto-select the employee
+      setEmployeeAssigned(employeeIdParam);
+      toast({
+        title: "Employee Auto-Selected",
+        description: `Job assigned to ${employeeParam}`,
+      });
+    }
+  }, [searchParams]);
 
   /* Accordion states for Materials Used & Discount */
   const [materialsAccordion, setMaterialsAccordion] = useState({ chemicals: false, materials: false, tools: false });
@@ -280,27 +298,33 @@ const ServiceChecklist = () => {
       if (addonsParam) {
         setSelectedAddOns(addonsParam.split(','));
       }
-      // Load employees for assignment
-      const emps = (await localforage.getItem('company-employees')) || [];
+      // Load employees from Supabase (same as Staff Schedule) with caching
+      setEmployeesLoading(true);
       try {
-        const cur = getCurrentUser();
-        const listWithAdmin = Array.isArray(emps) ? [...(emps as any[])] : [];
-
-        // Ensure current user is in the list
-        if (cur) {
-          const alreadyListed = listWithAdmin.some((e: any) => e.email === cur.email || e.id === cur.id);
-          if (!alreadyListed) {
-            listWithAdmin.unshift({
-              id: cur.id || 'current-user',
-              name: cur.name || 'Admin',
-              email: cur.email,
-              role: cur.role
-            });
+        // Try cache first for faster loading
+        const cached = sessionStorage.getItem('cached_employees');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Date.now() - parsed.timestamp < 60000) { // Cache for 1 minute
+            setEmployees(parsed.data || []);
+            setEmployeesLoading(false);
           }
         }
-        setEmployees(listWithAdmin as any[]);
-      } catch {
-        setEmployees(emps as any[]);
+
+        // Load fresh data
+        const emps = await getSupabaseEmployees();
+        setEmployees(emps || []);
+
+        // Update cache
+        sessionStorage.setItem('cached_employees', JSON.stringify({
+          data: emps,
+          timestamp: Date.now()
+        }));
+      } catch (err) {
+        console.error('Failed to load employees:', err);
+        setEmployees([]);
+      } finally {
+        setEmployeesLoading(false);
       }
       // Load live add-ons via API
       const live = await api('/api/addons/live', { method: 'GET' });

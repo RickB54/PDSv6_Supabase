@@ -9,7 +9,7 @@ import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer } 
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -49,6 +49,11 @@ interface Customer {
   howFoundOther?: string;
   type?: 'customer' | 'prospect';
   is_archived?: boolean;
+  generalPhotos?: string[];
+  beforePhotos?: string[];
+  afterPhotos?: string[];
+  videoUrl?: string;
+  learningCenterUrl?: string;
 }
 
 const SearchCustomer = () => {
@@ -108,7 +113,13 @@ const SearchCustomer = () => {
           year: data.year,
           type: data.vehicleType,
           color: data.color
-        }
+        },
+        generalPhotos: data.generalPhotos,
+        beforePhotos: data.beforePhotos,
+        afterPhotos: data.afterPhotos,
+        videoUrl: data.videoUrl,
+        learningCenterUrl: data.learningCenterUrl,
+        videoNote: data.videoNote
       });
       await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();
@@ -345,6 +356,20 @@ const SearchCustomer = () => {
                   <div className="p-4 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between cursor-pointer hover:bg-blue-500/10 transition-colors gap-4" onClick={() => toggleCustomer(customer.id!)}>
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
+                      <div
+                        className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center text-zinc-400 font-bold"
+                        onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                      >
+                        {(customer.generalPhotos?.[0] || customer.beforePhotos?.[0] || customer.afterPhotos?.[0]) ? (
+                          <img
+                            src={customer.generalPhotos?.[0] || customer.beforePhotos?.[0] || customer.afterPhotos?.[0]}
+                            alt={customer.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{customer.name.charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
                       <div><h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3><div className="flex gap-3 text-sm text-zinc-400"><span>{customer.phone || 'No phone'}</span><span className="hidden sm:inline">•</span><span className="hidden sm:inline">{customer.vehicle} {customer.model}</span></div></div>
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -387,6 +412,54 @@ const SearchCustomer = () => {
                             </div>
                           </section>
                           {customer.notes && (<section className="bg-amber-900/10 border border-amber-500/20 p-3 rounded"><div className="text-amber-500 text-xs font-bold mb-1">Notes</div><div className="text-amber-200/80 text-sm italic">{customer.notes}</div></section>)}
+
+                          {/* Media Gallery Section */}
+                          {((customer.generalPhotos && customer.generalPhotos.length > 0) ||
+                            (customer.beforePhotos && customer.beforePhotos.length > 0) ||
+                            (customer.afterPhotos && customer.afterPhotos.length > 0) ||
+                            customer.videoUrl) && (
+                              <section>
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"><ImageIcon className="h-3 w-3" /> Media Gallery</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                  {customer.generalPhotos?.map((p, i) => (
+                                    <div key={`g-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
+                                      <img src={p} alt="General" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                  {customer.beforePhotos?.map((p, i) => (
+                                    <div key={`b-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
+                                      <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">Before</div>
+                                      <img src={p} alt="Before" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                  {customer.afterPhotos?.map((p, i) => (
+                                    <div key={`a-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
+                                      <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">After</div>
+                                      <img src={p} alt="After" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                </div>
+                                {customer.videoUrl && (
+                                  <div className="mt-2 text-sm">
+                                    <a href={customer.videoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-400 hover:text-blue-300">
+                                      <Video className="h-4 w-4" /> Watch Video
+                                    </a>
+                                  </div>
+                                )}
+                                {customer.learningCenterUrl && (
+                                  <div className="mt-2 text-sm">
+                                    <Link to={`/learning-library?videoUrl=${encodeURIComponent(customer.learningCenterUrl)}`} className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
+                                      <Video className="h-4 w-4" /> Learning Center
+                                    </Link>
+                                  </div>
+                                )}
+                                {customer.videoNote && (
+                                  <div className="mt-2 p-2 rounded bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 italic">
+                                    Note: {customer.videoNote}
+                                  </div>
+                                )}
+                              </section>
+                            )}
                         </div>
 
                         <div>
@@ -408,27 +481,30 @@ const SearchCustomer = () => {
                         </div>
                       </div>
                     </div>
-                  )}
+                  )
+                  }
                 </div>
               );
             })}
         </div>
 
-        {filteredCustomers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-zinc-900 mb-4 text-zinc-600"><Search className="h-8 w-8" /></div>
-            <h3 className="text-lg font-medium text-zinc-300">No {showArchived ? 'archived' : 'active'} customers found</h3>
-            <Button className="mt-4 bg-blue-600 hover:bg-blue-500 text-white" onClick={openAdd}>Add Customer</Button>
-          </div>
-        )}
-      </main>
+        {
+          filteredCustomers.length === 0 && (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center p-4 rounded-full bg-zinc-900 mb-4 text-zinc-600"><Search className="h-8 w-8" /></div>
+              <h3 className="text-lg font-medium text-zinc-300">No {showArchived ? 'archived' : 'active'} customers found</h3>
+              <Button className="mt-4 bg-blue-600 hover:bg-blue-500 text-white" onClick={openAdd}>Add Customer</Button>
+            </div>
+          )
+        }
+      </main >
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Permanently?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
       <CustomerModal open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open && new URLSearchParams(location.search).has("add")) navigate(location.pathname, { replace: true }); }} initial={editing} onSave={async (data) => { await onSaveModal(data); if (new URLSearchParams(location.search).has("add")) navigate(location.pathname, { replace: true }); }} />
-    </div>
+    </div >
   );
 };
 

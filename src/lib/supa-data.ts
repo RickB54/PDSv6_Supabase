@@ -29,6 +29,27 @@ export interface Customer {
     created_at?: string;
     type?: string;
     is_archived?: boolean; // New field
+    generalPhotos?: string[];
+    beforePhotos?: string[];
+    afterPhotos?: string[];
+    videoUrl?: string;
+    learningCenterUrl?: string;
+    videoNote?: string;
+    // Frontend-specific fields that might be packed into vehicle_info or notes
+    vehicle?: string;
+    model?: string;
+    year?: string;
+    color?: string;
+    mileage?: string;
+    vehicleType?: string;
+    conditionInside?: string;
+    conditionOutside?: string;
+    services?: string[];
+    lastService?: string;
+    duration?: string;
+    howFound?: string;
+    howFoundOther?: string;
+    shortVideos?: string[];
 }
 
 // ------------------------------------------------------------------
@@ -183,6 +204,12 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                     created_at: c.created_at,
                     type: c.type || 'customer',
                     is_archived: c.is_archived || false,
+                    generalPhotos: c.general_photos || [],
+                    beforePhotos: c.before_photos || [],
+                    afterPhotos: c.after_photos || [],
+                    videoUrl: c.video_url || '',
+                    learningCenterUrl: c.learning_center_url || '',
+                    videoNote: c.video_note || ''
                 } as any);
                 seenMap.add(key);
             }
@@ -225,7 +252,13 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         phone: safePhone,
         address: customer.address,
         notes: customer.notes || '',
-        type: customer.type || 'customer'
+        type: customer.type || 'customer',
+        general_photos: customer.generalPhotos,
+        before_photos: customer.beforePhotos,
+        after_photos: customer.afterPhotos,
+        video_url: customer.videoUrl,
+        learning_center_url: customer.learningCenterUrl,
+        video_note: customer.videoNote
     };
 
     let customerId = customer.id;

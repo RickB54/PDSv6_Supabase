@@ -1,37 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { upsertCustomer } from "@/lib/db";
-import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem } from "@/lib/supa-data";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera } from "lucide-react";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 
-export interface Customer {
-  id?: string;
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
-  vehicle: string;
-  model: string;
-  year: string;
-  color: string;
-  mileage: string;
-  vehicleType: string;
-  conditionInside: string;
-  conditionOutside: string;
-  services: string[];
-  lastService: string;
-  duration: string;
-  notes: string;
-  howFound?: string;
-  howFoundOther?: string;
-  type?: 'customer' | 'prospect';
-}
+
 
 interface Props {
   open: boolean;
@@ -43,7 +23,27 @@ interface Props {
 
 export default function CustomerModal({ open, onOpenChange, initial, onSave, defaultType = 'customer' }: Props) {
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState(0);
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [showMap, setShowMap] = useState(false);
+
+  // File upload refs
+  const generalPhotoRef = useRef<HTMLInputElement>(null);
+  const generalPhotoCameraRef = useRef<HTMLInputElement>(null);
+  const beforePhoto1Ref = useRef<HTMLInputElement>(null);
+  const beforePhoto1CameraRef = useRef<HTMLInputElement>(null);
+  const beforePhoto2Ref = useRef<HTMLInputElement>(null);
+  const afterPhoto1Ref = useRef<HTMLInputElement>(null);
+  const afterPhoto1CameraRef = useRef<HTMLInputElement>(null);
+  const afterPhoto2Ref = useRef<HTMLInputElement>(null);
+  const video1Ref = useRef<HTMLInputElement>(null);
+  const video2Ref = useRef<HTMLInputElement>(null);
+  const video3Ref = useRef<HTMLInputElement>(null);
+  const generalPhoto1Ref = useRef<HTMLInputElement>(null);
+  const generalPhoto2Ref = useRef<HTMLInputElement>(null);
+  const generalPhoto3Ref = useRef<HTMLInputElement>(null);
+  const generalPhoto4Ref = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<Customer>({
     id: undefined,
@@ -66,50 +66,75 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     howFound: "",
     howFoundOther: "",
     type: defaultType,
+    generalPhotos: [],
+    beforePhotos: [],
+    afterPhotos: [],
+    shortVideos: [],
+    videoUrl: "",
+    learningCenterUrl: "",
   });
 
   const isProspect = form.type === 'prospect';
 
   useEffect(() => {
-    if (initial) {
-      let cIn = "";
-      let cOut = "";
-      const noteStr = initial.notes || "";
-      const match = noteStr.match(/\[Vehicle Condition\]\s*Inside:\s*([0-5])\/5\s*Outside:\s*([0-5])\/5/i);
-      if (match) {
-        cIn = match[1];
-        cOut = match[2];
-      }
+    const initForm = () => {
+      if (initial) {
+        let cIn = "";
+        let cOut = "";
+        const noteStr = initial.notes || "";
+        const match = noteStr.match(/\[Vehicle Condition\]\s*Inside:\s*([0-5])\/5\s*Outside:\s*([0-5])\/5/i);
+        if (match) {
+          cIn = match[1];
+          cOut = match[2];
+        }
 
-      setForm({
-        ...initial,
-        services: initial.services || [],
-        type: initial.type || defaultType,
-        conditionInside: initial.conditionInside || cIn,
-        conditionOutside: initial.conditionOutside || cOut
-      });
-    } else {
-      setForm({
-        id: undefined,
-        name: "",
-        address: "",
-        phone: "",
-        email: "",
-        vehicle: "",
-        model: "",
-        year: "",
-        color: "",
-        mileage: "",
-        vehicleType: "",
-        conditionInside: "",
-        conditionOutside: "",
-        services: [],
-        lastService: "",
-        duration: "",
-        notes: "",
-        type: defaultType
-      });
-    }
+        setForm({
+          ...initial,
+          services: initial.services || [],
+          type: initial.type || defaultType,
+          conditionInside: initial.conditionInside || cIn,
+          conditionOutside: initial.conditionOutside || cOut,
+          generalPhotos: initial.generalPhotos || [],
+          beforePhotos: initial.beforePhotos || [],
+          afterPhotos: initial.afterPhotos || [],
+          shortVideos: initial.shortVideos || [],
+          videoUrl: initial.videoUrl || "",
+          learningCenterUrl: initial.learningCenterUrl || "",
+          videoNote: initial.videoNote || ""
+        });
+      } else {
+        setForm({
+          id: undefined,
+          name: "",
+          address: "",
+          phone: "",
+          email: "",
+          vehicle: "",
+          model: "",
+          year: "",
+          color: "",
+          mileage: "",
+          vehicleType: "",
+          conditionInside: "",
+          conditionOutside: "",
+          services: [],
+          lastService: "",
+          duration: "",
+          notes: "",
+          type: defaultType,
+          generalPhotos: [],
+          beforePhotos: [],
+          afterPhotos: [],
+          shortVideos: [],
+          videoUrl: "",
+          learningCenterUrl: "",
+          videoNote: ""
+        });
+      }
+    };
+
+    initForm();
+    getLibraryItems().then(items => setLibraryItems(items || []));
   }, [initial, open, defaultType]);
 
   const handleChange = (key: keyof Customer, value: string) => {
@@ -137,6 +162,104 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }));
   };
 
+  // File upload handlers
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Resize if too large
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Convert to compressed base64
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileUpload = async (file: File, type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number) => {
+    try {
+      console.log('handleFileUpload called:', { file: file.name, type, index });
+
+      if (!file) {
+        toast.error("Upload Failed", { description: "No file selected" });
+        return;
+      }
+
+      // Check file size (10MB limit for videos, 5MB for images)
+      const maxSize = type === 'shortVideos' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error("File Too Large", {
+          description: `File is ${(file.size / 1024 / 1024).toFixed(2)}MB. Max: ${maxSize / 1024 / 1024}MB`
+        });
+        return;
+      }
+
+      // Compress images for better performance
+      if (type !== 'shortVideos' && file.type.startsWith('image/')) {
+        toast.info("Uploading...", { description: "Compressing image..." });
+        const compressed = await compressImage(file);
+        console.log('Image compressed, updating form');
+        setForm(prev => {
+          const current = prev[type] || [];
+          const updated = [...current];
+          updated[index] = compressed;
+          console.log('Form updated with compressed image');
+          return { ...prev, [type]: updated };
+        });
+        toast.success("Success!", { description: "Image uploaded" });
+      } else {
+        // Videos
+        toast.info("Uploading...", { description: "Processing video..." });
+        const reader = new FileReader();
+        reader.onerror = () => {
+          toast.error("Upload Failed", { description: "Error reading file" });
+        };
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          setForm(prev => {
+            const current = prev[type] || [];
+            const updated = [...current];
+            updated[index] = base64;
+            return { ...prev, [type]: updated };
+          });
+          toast.success("Success!", { description: "Video uploaded" });
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error("Upload Failed", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  const removeMedia = (type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number) => {
+    setForm(prev => {
+      const current = prev[type] || [];
+      const updated = [...current];
+      updated[index] = '';
+      return { ...prev, [type]: updated };
+    });
+  };
+
   const handleSubmit = async () => {
     const payload = { ...form };
     if (!payload.id) delete payload.id;
@@ -149,14 +272,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }
     payload.notes = cleanNotes;
 
+    // Delegate save to parent component (which handles fallback to local storage)
     try {
-      const saved = await upsertSupabaseCustomer(payload);
-      onSave(saved as any);
-      toast.success(`${isProspect ? 'Prospect' : 'Customer'} saved to Supabase!`);
+      await onSave(payload as any);
       onOpenChange(false);
     } catch (err: any) {
-      console.error("Supabase Save Failed:", err);
-      toast.error("Save failed: " + (err?.message || String(err)));
+      console.error("Save Error:", err);
+      toast.error("Save failed");
     }
   };
 
@@ -411,6 +533,235 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 </div>
               </>
             )}
+
+            <div className="h-px bg-zinc-800" />
+
+            {/* Media Gallery - Simplified for speed */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                Job Photos (Before/After)
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Before Photo */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">Before Photo</Label>
+                  <div className="relative aspect-square rounded-md bg-zinc-800/50 border border-zinc-700 overflow-hidden">
+                    {form.beforePhotos?.[0] ? (
+                      <>
+                        <img src={form.beforePhotos[0]} alt="Before" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeMedia('beforePhotos', 0)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full"
+                        >
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      </>
+                    ) : (
+                      <div
+                        onClick={() => beforePhoto1Ref.current?.click()}
+                        className="w-full h-full flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors"
+                      >
+                        <div className="text-center p-2">
+                          <ImageIcon className="h-8 w-8 mx-auto text-zinc-600 mb-1" />
+                          <p className="text-[10px] text-zinc-500">Click to upload</p>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={beforePhoto1Ref}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'beforePhotos', 0)}
+                    />
+                    <input
+                      ref={beforePhoto1CameraRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'beforePhotos', 0)}
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); beforePhoto1CameraRef.current?.click(); }}
+                      className="absolute -bottom-2 -right-2 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-900 shadow-lg z-10"
+                      title="Take Photo"
+                    >
+                      <Camera className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* General Photo */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">General Photo</Label>
+                  <div className="relative aspect-square rounded-md bg-zinc-800/50 border border-zinc-700 overflow-hidden">
+                    {form.generalPhotos?.[0] ? (
+                      <>
+                        <img src={form.generalPhotos[0]} alt="General" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeMedia('generalPhotos', 0)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full"
+                        >
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      </>
+                    ) : (
+                      <div
+                        onClick={() => generalPhotoRef.current?.click()}
+                        className="w-full h-full flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors"
+                      >
+                        <div className="text-center p-2">
+                          <ImageIcon className="h-8 w-8 mx-auto text-zinc-600 mb-1" />
+                          <p className="text-[10px] text-zinc-500">Click to upload</p>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={generalPhotoRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'generalPhotos', 0)}
+                    />
+                    <input
+                      ref={generalPhotoCameraRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'generalPhotos', 0)}
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); generalPhotoCameraRef.current?.click(); }}
+                      className="absolute -bottom-2 -right-2 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-900 shadow-lg z-10"
+                      title="Take Photo"
+                    >
+                      <Camera className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* After Photo */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-zinc-400">After Photo</Label>
+                  <div className="relative aspect-square rounded-md bg-zinc-800/50 border border-zinc-700 overflow-hidden">
+                    {form.afterPhotos?.[0] ? (
+                      <>
+                        <img src={form.afterPhotos[0]} alt="After" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeMedia('afterPhotos', 0)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full"
+                        >
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      </>
+                    ) : (
+                      <div
+                        onClick={() => afterPhoto1Ref.current?.click()}
+                        className="w-full h-full flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors"
+                      >
+                        <div className="text-center p-2">
+                          <ImageIcon className="h-8 w-8 mx-auto text-zinc-600 mb-1" />
+                          <p className="text-[10px] text-zinc-500">Click to upload</p>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={afterPhoto1Ref}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'afterPhotos', 0)}
+                    />
+                    <input
+                      ref={afterPhoto1CameraRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'afterPhotos', 0)}
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); afterPhoto1CameraRef.current?.click(); }}
+                      className="absolute -bottom-2 -right-2 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-900 shadow-lg z-10"
+                      title="Take Photo"
+                    >
+                      <Camera className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Video URL Link */}
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400 flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" />
+                  Video Link (Optional)
+                </Label>
+                <div className="relative">
+                  <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                  <Input
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                    value={form.videoUrl || ""}
+                    onChange={(e) => handleChange("videoUrl", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Learning Center URL Link */}
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400 flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" />
+                  Learning Center Video (Job Instructions)
+                </Label>
+                <div className="relative">
+                  <Select
+                    value={form.learningCenterUrl}
+                    onValueChange={(val) => handleChange("learningCenterUrl", val)}
+                  >
+                    <SelectTrigger className="w-full bg-zinc-900 border-zinc-800 text-white">
+                      <SelectValue placeholder="Select a video from Learning Library..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white max-h-[300px]">
+                      {libraryItems.length > 0 ? (
+                        libraryItems.map((item) => (
+                          <SelectItem key={item.id} value={item.resource_url || ""}>
+                            {item.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-xs text-zinc-500 text-center">No videos available</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-[10px] text-zinc-500 italic mt-1">
+                  Link to a video in the Prime Training Center showing how to perform this job
+                </p>
+              </div>
+
+              {/* Video Note */}
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400">Video Note (Origin/Instructions)</Label>
+                <Input
+                  placeholder="e.g. Origin of this video, why it's here..."
+                  className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                  value={form.videoNote || ""}
+                  onChange={(e) => handleChange("videoNote", e.target.value)}
+                />
+              </div>
+            </div>
+
 
             <div className="h-px bg-zinc-800" />
 

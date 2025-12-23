@@ -27,6 +27,7 @@ interface Chemical {
   costPerBottle: number;
   threshold: number;
   currentStock: number;
+  imageUrl?: string;
 }
 
 interface UsageHistory {
@@ -52,6 +53,7 @@ interface Tool {
   price: number;
   lifeExpectancy: string;
   notes: string;
+  imageUrl?: string;
 }
 
 const InventoryControl = () => {
@@ -69,6 +71,7 @@ const InventoryControl = () => {
     notes?: string;
     lowThreshold?: number;
     createdAt: string;
+    imageUrl?: string;
   };
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
@@ -339,9 +342,12 @@ const InventoryControl = () => {
                   <TableBody>
                     {chemicals.map(c => (
                       <TableRow key={c.id} className="border-yellow-500/10 hover:bg-yellow-500/5">
-                        <TableCell className="font-medium">{c.name}</TableCell>
-                        <TableCell>{c.bottleSize}</TableCell>
-                        <TableCell>${c.costPerBottle.toFixed(2)}</TableCell>
+                        <TableCell className="font-medium flex items-center gap-2 text-white">
+                          {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
+                          {c.name}
+                        </TableCell>
+                        <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
+                        <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock <= c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
                             {c.currentStock} remaining
@@ -364,8 +370,11 @@ const InventoryControl = () => {
                   <div key={c.id} className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-bold text-yellow-100">{c.name}</div>
-                        <div className="text-sm text-zinc-400">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
+                        <div className="font-bold text-white flex items-center gap-2">
+                          {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
+                          {c.name}
+                        </div>
+                        <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock <= c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
                         {c.currentStock} left
@@ -434,9 +443,12 @@ const InventoryControl = () => {
                   <TableBody>
                     {materials.map(m => (
                       <TableRow key={m.id} className="border-blue-500/10 hover:bg-blue-500/5">
-                        <TableCell className="font-medium">{m.name}</TableCell>
-                        <TableCell>{m.category}</TableCell>
-                        <TableCell>${(m.costPerItem || 0).toFixed(2)}</TableCell>
+                        <TableCell className="font-medium flex items-center gap-2 text-white">
+                          {m.imageUrl && <img src={m.imageUrl} alt={m.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
+                          {m.name}
+                        </TableCell>
+                        <TableCell className="text-zinc-300">{m.category}</TableCell>
+                        <TableCell className="text-zinc-300">${(m.costPerItem || 0).toFixed(2)}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                             {m.quantity} units
@@ -459,8 +471,11 @@ const InventoryControl = () => {
                   <div key={m.id} className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-bold text-blue-100">{m.name}</div>
-                        <div className="text-sm text-zinc-400">{m.category} • ${(m.costPerItem || 0).toFixed(2)}</div>
+                        <div className="font-bold text-white flex items-center gap-2">
+                          {m.imageUrl && <img src={m.imageUrl} alt={m.name} className="h-8 w-8 rounded object-cover" />}
+                          {m.name}
+                        </div>
+                        <div className="text-sm text-zinc-300">{m.category} • ${(m.costPerItem || 0).toFixed(2)}</div>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                         {m.quantity} units
@@ -524,10 +539,13 @@ const InventoryControl = () => {
                   <TableBody>
                     {tools.map(t => (
                       <TableRow key={t.id} className="border-purple-500/10 hover:bg-purple-500/5">
-                        <TableCell className="font-medium">{t.name}</TableCell>
-                        <TableCell>{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell>${(t.price || 0).toFixed(2)}</TableCell>
-                        <TableCell><span className="text-xs text-muted-foreground truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
+                        <TableCell className="font-medium flex items-center gap-2 !text-white">
+                          {t.imageUrl && <img src={t.imageUrl} alt={t.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
+                          {t.name}
+                        </TableCell>
+                        <TableCell className="text-zinc-300">{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell className="text-zinc-300">${(t.price || 0).toFixed(2)}</TableCell>
+                        <TableCell><span className="text-xs text-zinc-300 truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id, 'tool', t.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
@@ -545,11 +563,14 @@ const InventoryControl = () => {
                   <div key={t.id} className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-bold text-purple-100">{t.name}</div>
-                        <div className="text-sm text-zinc-400">${(t.price || 0).toFixed(2)} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
+                        <div className="font-bold text-white flex items-center gap-2">
+                          {t.imageUrl && <img src={t.imageUrl} alt={t.name} className="h-8 w-8 rounded object-cover" />}
+                          {t.name}
+                        </div>
+                        <div className="text-sm text-zinc-300">${(t.price || 0).toFixed(2)} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
                       </div>
                     </div>
-                    {t.notes && <div className="text-xs text-zinc-500">{t.notes}</div>}
+                    {t.notes && <div className="text-xs text-zinc-300">{t.notes}</div>}
                     <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8">
                         <FileText className="h-4 w-4 mr-2" /> Edit

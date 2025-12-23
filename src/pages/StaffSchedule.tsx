@@ -430,7 +430,7 @@ export default function StaffSchedule() {
                                         <DollarSign className="w-4 h-4 mr-2" /> Pay
                                     </Button>
                                     <Button variant="ghost" size="sm" className="bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 w-full" onClick={() => {
-                                        navigate(`/service-checklist`);
+                                        navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
                                     }}>
                                         <CheckSquare className="w-4 h-4 mr-2" /> Start Job
                                     </Button>

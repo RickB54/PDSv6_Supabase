@@ -36,6 +36,36 @@ export default function LearningLibrary() {
     const loadItems = async () => {
         const data = await getLibraryItems();
         setItems(data);
+
+        // Check for deep link
+        const params = new URLSearchParams(window.location.search);
+        const videoUrl = params.get('videoUrl');
+        const videoId = params.get('videoId');
+
+        if (videoId) {
+            const item = data.find(i => i.id === videoId);
+            if (item) {
+                setPlayingItem(item);
+                setIsPlayerOpen(true);
+            }
+        } else if (videoUrl) {
+            // Find item by URL or create temporary wrapper
+            const item = data.find(i => i.resource_url === videoUrl);
+            if (item) {
+                setPlayingItem(item);
+            } else {
+                // Formatting fallback for raw URL viewing
+                setPlayingItem({
+                    id: 'temp',
+                    title: 'Instructional Video',
+                    description: 'Direct link from customer card',
+                    type: 'video',
+                    category: 'General',
+                    resource_url: videoUrl
+                });
+            }
+            setIsPlayerOpen(true);
+        }
     };
 
     const handleAddNew = () => {

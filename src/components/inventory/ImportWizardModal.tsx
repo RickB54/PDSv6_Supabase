@@ -180,14 +180,15 @@ export default function ImportWizardModal({
                     id: c.id,
                     name: c.name,
                     bottleSize: c.bottleSize || c.unitOfMeasure,
-                    costPerBottle: c.suggestedPrice,
-                    threshold: c.threshold,
+                    costPerBottle: c.suggestedPrice || 0,
+                    threshold: c.threshold || 2,
                     currentStock: 0,
-                    unitOfMeasure: c.unitOfMeasure,
-                    consumptionRate: c.consumptionRatePerJob,
-                    category: c.category,
-                    subcategory: c.subcategory,
-                    description: c.description,
+                    unitOfMeasure: c.unitOfMeasure || "oz",
+                    consumptionRatePerJob: c.consumptionRatePerJob || 0,
+                    category: c.category || "General",
+                    subcategory: c.subcategory || "",
+                    description: c.description || "",
+                    imageUrl: "", // Ensure field exists
                 }));
 
                 if (chemicalsToImport.length > 0) {
@@ -207,12 +208,17 @@ export default function ImportWizardModal({
                     name: t.name,
                     warranty: t.warranty || "N/A",
                     purchaseDate: new Date().toISOString().split("T")[0],
-                    price: t.suggestedPrice,
+                    price: t.suggestedPrice || 0,
+                    cost: t.suggestedPrice || 0, // Alias
+                    quantity: 1, // Default to 1
+                    threshold: 0,
                     lifeExpectancy: t.lifeExpectancy || "N/A",
-                    notes: t.description,
-                    category: t.category,
-                    subcategory: t.subcategory,
+                    notes: t.description || "",
+                    category: t.category || "Tool",
+                    subcategory: t.subcategory || "",
                     unitOfMeasure: "unit",
+                    consumptionRatePerJob: 0,
+                    imageUrl: "", // Ensure field exists
                 }));
 
                 if (toolsToImport.length > 0) {
@@ -230,13 +236,16 @@ export default function ImportWizardModal({
                 ).map((m) => ({
                     id: m.id,
                     name: m.name,
-                    type: m.type,
-                    subtype: m.subtype,
-                    costPerItem: m.suggestedPrice,
-                    quantity: m.quantity,
-                    threshold: m.threshold,
-                    description: m.description,
+                    category: m.type || "Material",
+                    subtype: m.subtype || "",
+                    costPerItem: m.suggestedPrice || 0,
+                    quantity: m.quantity || 0, // Default to 0
+                    threshold: m.threshold || 5, // Default threshold
+                    lowThreshold: m.threshold || 5, // Alias for older logic
+                    notes: m.description || "",
                     unitOfMeasure: "unit",
+                    consumptionRatePerJob: 0,
+                    imageUrl: "", // Ensure field exists
                 }));
 
                 if (materialsToImport.length > 0) {
