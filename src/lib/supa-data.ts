@@ -778,34 +778,47 @@ export async function deleteLibraryItem(id: string): Promise<boolean> {
     }
 }
 
+import { compressImage } from './imageUtils';
+
 /**
- * Upload a file to Supabase storage
+ * Upload a file to Supabase storage with compression and robust fallback
  */
-export async function uploadLibraryFile(file: File): Promise<string | null> {
+export async function uploadLibraryFile(file: File): Promise<{ url: string | null, error: string | null }> {
     try {
-        const fileExt = file.name.split('.').pop();
+        // 1. Compress Image
+        const compressedFile = await compressImage(file);
+
+        const fileExt = compressedFile.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
         const filePath = `library/${fileName}`;
 
-        // Attempt upload to 'images' bucket
-        const { error: uploadError } = await supabase.storage
-            .from('images')
-            .upload(filePath, file);
+        // 2. Try multiple common bucket names
+        const buckets = ['images', 'public', 'files', 'storage', 'uploads'];
+        let lastError: any = null;
 
-        if (uploadError) {
-            // Fallback to 'public' if images doesn't exist or permissions fail
-            console.log("Upload to 'images' failed, trying 'public' bucket...", uploadError);
-            const { error: fallbackError } = await supabase.storage
-                .from('public')
-                .upload(filePath, file);
+        for (const bucket of buckets) {
+            console.log(`Attempting upload to bucket: ${bucket}`);
+            const { error: uploadError } = await supabase.storage
+                .from(bucket)
+                .upload(filePath, compressedFile);
 
-            if (fallbackError) throw uploadError; // Throw original error if both fail
+            if (!uploadError) {
+                // Success! Get URL.
+                const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+                return { url: data.publicUrl, error: null };
+            }
+
+            console.warn(`Upload to '${bucket}' failed:`, uploadError.message);
+            lastError = uploadError;
         }
 
-        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-        return data.publicUrl;
-    } catch (error) {
+        return {
+            url: null,
+            error: `All buckets failed. Last error: ${lastError?.message || 'Unknown'}`
+        };
+
+    } catch (error: any) {
         console.error('Error uploading file:', error);
-        return null;
+        return { url: null, error: error?.message || "Unknown exception during upload" };
     }
 }

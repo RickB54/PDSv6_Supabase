@@ -22,6 +22,7 @@ export default function F150Setup() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<string>("");
     const [formData, setFormData] = useState<Partial<LibraryItem>>({
         category: 'F150 Setup',
         type: 'image'
@@ -39,6 +40,7 @@ export default function F150Setup() {
 
     const handleAddNew = (type: 'image' | 'video') => {
         setEditingItem(null);
+        setUploadStatus("");
         setFormData({
             category: 'F150 Setup',
             type: type,
@@ -51,6 +53,7 @@ export default function F150Setup() {
 
     const handleEdit = (item: LibraryItem) => {
         setEditingItem(item);
+        setUploadStatus("");
         setFormData({ ...item });
         setIsEditModalOpen(true);
     };
@@ -72,14 +75,20 @@ export default function F150Setup() {
         if (!file) return;
 
         setIsUploading(true);
-        const url = await uploadLibraryFile(file);
+        setUploadStatus("Compressing & Uploading...");
+
+        const { url, error } = await uploadLibraryFile(file);
+
         setIsUploading(false);
 
         if (url) {
             setFormData(prev => ({ ...prev, resource_url: url }));
+            setUploadStatus("✅ Success!");
             toast({ title: "Uploaded", description: "Image uploaded successfully." });
         } else {
-            toast({ title: "Error", description: "Upload failed. Please try again.", variant: "destructive" });
+            console.error(error);
+            setUploadStatus(`❌ Error: ${error}`);
+            toast({ title: "Error", description: error || "Upload failed", variant: "destructive" });
         }
     };
 
@@ -282,7 +291,12 @@ export default function F150Setup() {
                                     />
                                     {isUploading && <Loader2 className="animate-spin w-5 h-5 text-primary mt-2" />}
                                 </div>
-                                <p className="text-xs text-muted-foreground">Select a file or use your camera.</p>
+                                {uploadStatus && (
+                                    <p className={`text-sm mt-1 font-medium ${uploadStatus.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+                                        {uploadStatus}
+                                    </p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">Select a file or use your camera.</p>
                             </div>
                         )}
 
