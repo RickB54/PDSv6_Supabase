@@ -284,7 +284,7 @@ export default function F150Setup() {
                                     <Input
                                         type="file"
                                         accept="image/*"
-                                        capture="environment"
+                                        /* capture="environment" removed to allow Gallery access */
                                         onChange={handleFileUpload}
                                         className="bg-zinc-900 border-zinc-800"
                                         disabled={isUploading}
