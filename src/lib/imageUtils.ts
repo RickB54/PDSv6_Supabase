@@ -11,61 +11,65 @@ export async function compressImage(file: File, maxWidth = 1280, quality = 0.8):
             return;
         }
 
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                try {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.src = objectUrl;
 
-                    // Aggressively resize if huge to save memory
-                    if (width > maxWidth) {
-                        height = Math.round(height * (maxWidth / width));
-                        width = maxWidth;
-                    }
+        img.onload = () => {
+            // Clean up the URL object immediately to free memory
+            URL.revokeObjectURL(objectUrl);
 
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
+            try {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
 
-                    if (!ctx) {
-                        console.warn("Canvas context creation failed");
-                        resolve(file); // Fallback to original
+                // Aggressively resize if huge to save memory
+                if (width > maxWidth) {
+                    height = Math.round(height * (maxWidth / width));
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                if (!ctx) {
+                    console.warn("Canvas context creation failed");
+                    resolve(file); // Fallback to original
+                    return;
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        console.warn("Canvas blob creation failed");
+                        resolve(file);
                         return;
                     }
+                    // Create new file from blob
+                    const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+                        type: 'image/jpeg',
+                        lastModified: Date.now(),
+                    });
 
-                    ctx.drawImage(img, 0, 0, width, height);
+                    // Explicitly clear canvas references
+                    canvas.width = 0;
+                    canvas.height = 0;
 
-                    canvas.toBlob((blob) => {
-                        if (!blob) {
-                            console.warn("Canvas blob creation failed");
-                            resolve(file);
-                            return;
-                        }
-                        // Create new file from blob
-                        const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
-                            type: 'image/jpeg',
-                            lastModified: Date.now(),
-                        });
-                        resolve(newFile);
-                    }, 'image/jpeg', quality);
-                } catch (e) {
-                    console.error("Compression failed (likely OOM), using original", e);
-                    resolve(file); // Failsafe: return original
-                }
-            };
-            img.onerror = (err) => {
-                console.error("Image load error during compression", err);
-                resolve(file); // Return original on error
-            };
+                    resolve(newFile);
+                }, 'image/jpeg', quality);
+            } catch (e) {
+                console.error("Compression failed (likely OOM), using original", e);
+                resolve(file); // Failsafe: return original
+            }
         };
-        reader.onerror = (err) => {
-            console.error("FileReader error", err);
-            resolve(file);
+
+        img.onerror = (err) => {
+            console.error("Image load error during compression", err);
+            URL.revokeObjectURL(objectUrl);
+            resolve(file); // Return original on error
         };
     });
 }
