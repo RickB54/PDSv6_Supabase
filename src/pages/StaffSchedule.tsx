@@ -18,36 +18,16 @@ import {
     AlertCircle,
     X
 } from "lucide-react";
-import {
-    format,
-    addDays,
-    startOfWeek,
-    endOfWeek,
-    startOfMonth,
-    endOfMonth,
-    eachDayOfInterval,
-    isSameDay,
-    isSameMonth,
-    addMonths,
-    addWeeks,
-    parseISO,
-    startOfYear,
-    endOfYear,
-    addYears,
-    eachMonthOfInterval,
-    differenceInMinutes,
-    setHours,
-    setMinutes
-} from "date-fns";
-import localforage from "localforage";
+import { startOfWeek, endOfWeek, format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addDays, addWeeks, addMonths, addYears, parseISO } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabaseEmployees } from "@/lib/supa-data";
+import { getSupabaseEmployees, getStaffShifts, createStaffShift, updateStaffShift, deleteStaffShift, StaffShift } from "@/lib/supa-data";
 import { useNavigate } from "react-router-dom";
+import { getCurrentUser } from "@/lib/auth";
 
 // Types
 type ViewMode = 'day' | 'week' | 'month' | 'year';
@@ -65,13 +45,16 @@ interface Shift {
     status?: 'scheduled' | 'sick' | 'no-show' | 'late'; // New status field
 }
 
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
+const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 AM to 12 AM (Midnight)
 
 export default function StaffSchedule() {
     const { toast } = useToast();
     const navigate = useNavigate();
 
     // State
+    const user = getCurrentUser();
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<ViewMode>('week');
     const [shifts, setShifts] = useState<Shift[]>([]);
@@ -91,21 +74,41 @@ export default function StaffSchedule() {
     useEffect(() => {
         loadShifts();
         loadEmployees();
-    }, []);
+    }, [currentDate, view]); // Reload when view changes (simple vs range opt)
 
     const loadShifts = async () => {
-        const list = await localforage.getItem<Shift[]>('staff_schedule_shifts') || [];
-        setShifts(list);
+        // Simple fetch all for now, or range based
+        const start = format(startOfWeek(currentDate), 'yyyy-MM-dd');
+        const end = format(endOfWeek(currentDate), 'yyyy-MM-dd');
+
+        // Improve: fetch wider range for month view? For now fetch all or just enough.
+        // Let's rely on supa-data to handle range if needed, or pass generous range.
+        // Actually, to avoid complexity, let's fetch a wide window or *all* if dataset small.
+        // Passing arbitrary wide range for month view support:
+        const rangeStart = format(addMonths(currentDate, -1), 'yyyy-MM-dd');
+        const rangeEnd = format(addMonths(currentDate, 2), 'yyyy-MM-dd');
+
+        const dbShifts = await getStaffShifts(rangeStart, rangeEnd);
+
+        // Map DB to UI
+        const mapped: Shift[] = dbShifts.map(d => ({
+            id: d.id!,
+            employeeId: d.employee_id,
+            employeeName: d.employee_name,
+            date: d.date,
+            startTime: d.start_time,
+            endTime: d.end_time,
+            role: d.role,
+            notes: d.notes,
+            color: d.color,
+            status: d.status as any
+        }));
+        setShifts(mapped);
     };
 
     const loadEmployees = async () => {
         const list = await getSupabaseEmployees();
         setEmployees(list || []);
-    };
-
-    const saveShifts = async (newShifts: Shift[]) => {
-        await localforage.setItem('staff_schedule_shifts', newShifts);
-        setShifts(newShifts);
     };
 
     // Actions
@@ -130,11 +133,15 @@ export default function StaffSchedule() {
     };
 
     const handleDeleteShift = async (id: string) => {
-        const next = shifts.filter(s => s.id !== id);
-        await saveShifts(next);
-        setIsShiftModalOpen(false);
-        setSelectedShiftId(null);
-        toast({ title: "Shift Deleted" });
+        try {
+            await deleteStaffShift(id);
+            setShifts(prev => prev.filter(s => s.id !== id));
+            setIsShiftModalOpen(false);
+            setSelectedShiftId(null);
+            toast({ title: "Shift Deleted" });
+        } catch (e) {
+            toast({ title: "Error", description: "Failed to delete shift.", variant: "destructive" });
+        }
     };
 
     const handleSaveShift = async () => {
@@ -146,39 +153,63 @@ export default function StaffSchedule() {
         const emp = employees.find(e => e.email === formData.employeeId || e.id === formData.employeeId);
         const empName = emp ? (emp.name || emp.email) : 'Unknown';
 
-        const newShift: Shift = {
-            id: editingShift ? editingShift.id : `shift_${Date.now()}`,
-            employeeId: formData.employeeId,
-            employeeName: empName,
+        // Prepare DB Object
+        const shiftPayload: StaffShift = {
+            employee_id: formData.employeeId,
+            employee_name: empName,
             date: formData.date,
-            startTime: formData.startTime,
-            endTime: formData.endTime,
+            start_time: formData.startTime,
+            end_time: formData.endTime,
             role: formData.role || 'Detailer',
             notes: formData.notes,
             color: formData.color,
-            status: formData.status as any || 'scheduled'
+            status: formData.status || 'scheduled'
         };
 
-        let next = [...shifts];
-        if (editingShift) {
-            next = next.map(s => s.id === editingShift.id ? newShift : s);
-        } else {
-            next.push(newShift);
-        }
+        try {
+            let savedDbShift;
+            if (editingShift) {
+                // Update
+                savedDbShift = await updateStaffShift(editingShift.id, shiftPayload);
+                // Update UI State optimistically or use response
+                setShifts(prev => prev.map(s => s.id === editingShift.id ? { ...s, ...formData, employeeName: empName } as Shift : s));
+            } else {
+                // Create
+                savedDbShift = await createStaffShift(shiftPayload);
+                if (savedDbShift) {
+                    const newShiftUI: Shift = {
+                        id: savedDbShift.id!,
+                        employeeId: savedDbShift.employee_id,
+                        employeeName: savedDbShift.employee_name,
+                        date: savedDbShift.date,
+                        startTime: savedDbShift.start_time,
+                        endTime: savedDbShift.end_time,
+                        role: savedDbShift.role,
+                        notes: savedDbShift.notes,
+                        color: savedDbShift.color,
+                        status: savedDbShift.status as any
+                    };
+                    setShifts(prev => [...prev, newShiftUI]);
+                    setSelectedShiftId(newShiftUI.id);
+                }
+            }
 
-        await saveShifts(next);
-        setIsShiftModalOpen(false);
-        setSelectedShiftId(newShift.id);
-        toast({ title: "Shift Saved", description: `${empName} scheduled.` });
+            setIsShiftModalOpen(false);
+            toast({ title: "Shift Saved", description: `${empName} scheduled.` });
+            if (editingShift) setSelectedShiftId(editingShift.id);
+
+        } catch (e: any) {
+            console.error(e);
+            toast({ title: "Error saving shift", description: e.message, variant: "destructive" });
+        }
     };
 
     // Derived
     const selectedShift = useMemo(() => shifts.find(s => s.id === selectedShiftId), [shifts, selectedShiftId]);
 
     // Helpers for Timeline
-    const getTopOffset = (timeStr: string) => {
-        const [h, m] = timeStr.split(':').map(Number);
-        // Start at 6 AM = 0px
+    const getTopOffset = (time: string) => {
+        const [h, m] = time.split(':').map(Number);
         const startHour = 6;
         const totalMinutes = (h * 60 + m) - (startHour * 60);
         // 60px per hour height
@@ -250,7 +281,7 @@ export default function StaffSchedule() {
     );
 
     const renderTimeline = (days: Date[]) => (
-        <div className="flex flex-1 overflow-hidden h-[600px] border border-zinc-800 rounded-lg bg-zinc-950 relative">
+        <div className="flex flex-1 border border-zinc-800 rounded-lg bg-zinc-950 relative min-h-max">
             {/* Time Labels Column */}
             <div className="w-12 flex-shrink-0 border-r border-zinc-800 bg-zinc-900/50 z-10">
                 <div className="h-8 border-b border-zinc-800" /> {/* Header spacer */}
@@ -287,8 +318,8 @@ export default function StaffSchedule() {
                                     <div
                                         key={h}
                                         className="h-[60px] border-b border-zinc-800/10 hover:bg-white/5 cursor-pointer transition-colors"
-                                        title={`Add shift at ${h}:00`}
-                                        onClick={() => handleAddShift(format(day, 'yyyy-MM-dd'), `${String(h).padStart(2, '0')}:00`)}
+                                        title={isAdmin ? `Add shift at ${h}:00` : ''}
+                                        onClick={() => isAdmin && handleAddShift(format(day, 'yyyy-MM-dd'), `${String(h).padStart(2, '0')}:00`)}
                                     />
                                 ))}
                             </div>
@@ -344,7 +375,7 @@ export default function StaffSchedule() {
                     const dayShifts = shifts.filter(s => s.date === format(d, 'yyyy-MM-dd'));
                     const isDiff = !isSameMonth(d, monthStart);
                     return (
-                        <div key={d.toISOString()} className={`bg-zinc-950 p-1 min-h-[80px] hover:bg-zinc-900 cursor-pointer ${isDiff ? 'opacity-30' : ''}`} onClick={() => handleAddShift(format(d, 'yyyy-MM-dd'))}>
+                        <div key={d.toISOString()} className={`bg-zinc-950 p-1 min-h-[80px] ${isAdmin ? 'hover:bg-zinc-900 cursor-pointer' : ''} ${isDiff ? 'opacity-30' : ''}`} onClick={() => isAdmin && handleAddShift(format(d, 'yyyy-MM-dd'))}>
                             <div className="text-right text-[10px] text-zinc-500 mb-1">{format(d, 'd')}</div>
                             {dayShifts.slice(0, 3).map(s => (
                                 <div key={s.id} className="text-[9px] bg-zinc-900 border-l border-blue-500 px-1 rounded-sm mb-0.5 truncate text-zinc-300">
@@ -424,18 +455,25 @@ export default function StaffSchedule() {
 
                                 {/* Actions */}
                                 <div className="flex flex-col gap-2 justify-center ml-4 min-w-[140px]">
-                                    <Button variant="ghost" size="sm" className="bg-green-900/20 text-green-400 hover:bg-green-900/40 hover:text-green-300 w-full" onClick={() => {
-                                        navigate(`/payroll?tab=checks&employee=${encodeURIComponent(selectedShift.employeeName)}`);
-                                    }}>
-                                        <DollarSign className="w-4 h-4 mr-2" /> Pay
-                                    </Button>
+                                    {isAdmin && (
+                                        <Button variant="ghost" size="sm" className="bg-green-900/20 text-green-400 hover:bg-green-900/40 hover:text-green-300 w-full" onClick={() => {
+                                            navigate(`/payroll?tab=checks&employee=${encodeURIComponent(selectedShift.employeeName)}`);
+                                        }}>
+                                            <DollarSign className="w-4 h-4 mr-2" /> Pay
+                                        </Button>
+                                    )}
                                     <Button variant="ghost" size="sm" className="bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 w-full" onClick={() => {
                                         navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
                                     }}>
                                         <CheckSquare className="w-4 h-4 mr-2" /> Start Job
                                     </Button>
                                     <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditShift(selectedShift)}>Edit</Button>
+                                        {isAdmin && (
+                                            <>
+                                                <Button variant="destructive" size="sm" className="px-2" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
+                                                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditShift(selectedShift)}>Edit</Button>
+                                            </>
+                                        )}
                                         <Button variant="ghost" size="sm" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4" /></Button>
                                     </div>
                                 </div>
@@ -502,11 +540,7 @@ export default function StaffSchedule() {
                     </div>
                     <DialogFooter className="flex justify-between w-full">
                         {editingShift ? (
-                            (new Date(`${editingShift.date}T${editingShift.endTime}`) > new Date()) ? (
-                                <Button variant="destructive" onClick={() => handleDeleteShift(editingShift.id!)}>Delete</Button>
-                            ) : (
-                                <span className="text-xs text-zinc-500 italic flex items-center">Past shift cannot be deleted</span>
-                            )
+                            <Button variant="destructive" onClick={() => handleDeleteShift(editingShift.id!)}>Delete</Button>
                         ) : <div></div>}
                         <div className="flex gap-2">
                             <Button variant="ghost" onClick={() => setIsShiftModalOpen(false)}>Cancel</Button>

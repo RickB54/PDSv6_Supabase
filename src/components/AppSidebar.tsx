@@ -63,6 +63,14 @@ export function AppSidebar() {
     window.addEventListener('admin_alerts_updated', bump as any);
     window.addEventListener('pdf_archive_updated', bump as any);
 
+    // Chat Alert Listener
+    const handleChatAlert = () => {
+      // You might want to persist this in localStorage or just keep ephemeral
+      localStorage.setItem('has_unread_chat', 'true');
+      setTick(t => t + 1);
+    };
+    window.addEventListener('new-chat-alert', handleChatAlert);
+
     // Force refresh role on mount to fix stale "customer" state
     const refreshRole = async () => {
       // 1. Standard Auth Check
@@ -150,6 +158,11 @@ export function AppSidebar() {
         setPayrollDueCount(pendingCount);
       } catch (error) { setPayrollDueCount(0); }
     })();
+  }, [tick]);
+
+  const chatUnread = useMemo(() => {
+    // Check ephemeral storage or global state
+    return localStorage.getItem('has_unread_chat') === 'true';
   }, [tick]);
 
   const handleNavClick = () => setOpenMobile(false);
@@ -280,13 +293,15 @@ export function AppSidebar() {
                 if (item.role === 'admin' && !isAdmin) return null;
                 // Strict active check to prevent overlap
                 const isActive = location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'));
+                const isChatAlert = item.url === '/team-chat' && chatUnread;
 
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
-                      <Link to={item.url} className={isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors'}>
-                        <item.icon className="h-4 w-4 mr-2" />
+                      <Link to={item.url} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors')}>
+                        <item.icon className={`h-4 w-4 mr-2 ${isChatAlert ? 'text-red-500' : ''}`} />
                         <span>{item.title}</span>
+                        {isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -349,6 +364,8 @@ export function AppSidebar() {
                               item.url === currentFull ||
                               (item.url !== '/' && location.pathname.startsWith(item.url + '/'));
 
+                            const isChatAlert = item.url === '/team-chat' && chatUnread;
+
                             let className = "flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors bg-transparent";
 
                             // Styling logic:
@@ -358,26 +375,22 @@ export function AppSidebar() {
                               className += " text-blue-500 font-semibold";
                             } else {
                               className += " text-zinc-400 hover:text-white hover:bg-zinc-800";
-                            }
-
-                            // Highlights (Red/Green) logic - usually for inactive items or critical items.
-                            // If active, blue dominates. If inactive, check highlight.
-                            if (!isActive) {
                               if (item.highlight === 'red') className = className.replace('text-zinc-400', 'text-red-600 hover:text-red-500');
                               else if (item.highlight === 'green') className = className.replace('text-zinc-400', 'text-green-600 hover:text-green-500');
                             }
 
                             return (
-                              <SidebarMenuSubItem key={item.url}>
-                                <SidebarMenuSubButton asChild onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
+                              <SidebarMenuSubItem key={item.title}>
+                                <SidebarMenuSubButton asChild isActive={isActive} onClick={handleNavClick} className="ring-0 outline-none">
                                   <Link
                                     to={item.url}
                                     className={className}
                                   >
-                                    {item.icon && <item.icon className="h-4 w-4 mr-2" />}
+                                    {item.icon && <item.icon className={`h-4 w-4 mr-2 ${isChatAlert ? 'text-red-500' : ''}`} />}
                                     <span>{item.title}</span>
-                                    {item.badge !== undefined && (
-                                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
+                                    {isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
+                                    {item.badge !== undefined && !isChatAlert && (
+                                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">
                                         {item.badge}
                                       </span>
                                     )}

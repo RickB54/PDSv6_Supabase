@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper } from "lucide-react";
+import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar } from "lucide-react";
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
@@ -311,7 +311,8 @@ const Settings = () => {
           'customCategories',
           'customExpenseCategories',
           'customIncomeCategories',
-          'category-colors-map'
+          'category-colors-map',
+          'staff_schedule_shifts'
         ];
         for (const key of volatileLfKeys) {
           try { await localforage.removeItem(key); } catch { }
@@ -487,7 +488,15 @@ const Settings = () => {
         else if (deleteDialog === 'invoices') setPreview(await previewDeleteInvoices(d));
         else if (deleteDialog === 'accounting') setPreview(await previewDeleteExpenses(d));
         else if (deleteDialog === 'inventory') setPreview(await previewDeleteInventory(d));
-        else if (deleteDialog === 'all') setPreview(await previewDeleteAll(d));
+        else if (deleteDialog === 'all') {
+          const previewData = await previewDeleteAll(d);
+          // Add local staff schedule check
+          try {
+            const localShifts: any[] = await localforage.getItem('staff_schedule_shifts') || [];
+            previewData.tables.push({ name: 'staff_schedule', count: localShifts.length });
+          } catch { }
+          setPreview(previewData);
+        }
       } catch { setPreview(null); }
     };
     load();
@@ -725,6 +734,8 @@ const Settings = () => {
                             <li>Local Accounting (Expenses/Income)</li>
                             <li>Local App Preferences</li>
                             <li>Local/Mock Customer & Employee Profiles</li>
+                            <li>Staff Schedule</li>
+                            <li>Team Chat Messages (via separate tool below)</li>
                           </ul>
                         </div>
                         <div>
@@ -751,6 +762,66 @@ const Settings = () => {
                     >
                       <AlertTriangle className="h-5 w-5 mr-2" />
                       DELETE LOCAL DATA
+                    </Button>
+                  </div>
+                </div>
+
+
+                {/* CHAT HISTORY RESET */}
+                <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-red-500 flex items-center gap-2 text-lg">
+                        <MessageCircle className="h-5 w-5" />
+                        Reset Chat History
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-1 max-w-xl">
+                        Permanently delete ALL messages from the team chat. This deletes data from the cloud database.
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100"
+                      onClick={() => {
+                        if (confirm("Are you SURE you want to delete ALL team chat messages? This cannot be undone.")) {
+                          import("@/services/supabase/adminOps").then(({ deleteAllTeamMessages }) => {
+                            deleteAllTeamMessages()
+                              .then((count) => toast({ title: "Chat Cleared", description: `Deleted ${count} messages.` }))
+                              .catch((e) => toast({ title: "Error", description: e.message, variant: "destructive" }));
+                          });
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 mr-2" /> Delete All Messages
+                    </Button>
+                  </div>
+                </div>
+
+                {/* STAFF SCHEDULE RESET */}
+                <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-red-500 flex items-center gap-2 text-lg">
+                        <Calendar className="h-5 w-5" />
+                        Reset Staff Schedule
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-1 max-w-xl">
+                        Clear all shifts from the local staff schedule.
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100"
+                      onClick={async () => {
+                        if (confirm("Clear the entire staff schedule?")) {
+                          await localforage.removeItem('staff_schedule_shifts');
+                          toast({ title: "Schedule Cleared", description: "All shifts have been removed." });
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 mr-2" /> Clear Schedule
                     </Button>
                   </div>
                 </div>

@@ -5,7 +5,7 @@ import { getCurrentUser } from '@/lib/auth';
 function dbg(label: string, payload?: any) {
   try {
     console.debug(`[adminOps] ${label}`, payload ?? '');
-  } catch {}
+  } catch { }
 }
 
 function toIsoCutoff(daysStr: string | null | undefined): string | null {
@@ -35,7 +35,7 @@ async function requireAdminOrEmployee() {
   } catch (e) {
     dbg('requireAdminOrEmployee:role_sync_error', e);
   }
-  if (!['admin','employee'].includes(role)) {
+  if (!['admin', 'employee'].includes(role)) {
     throw new Error('Insufficient role');
   }
   dbg('requireAdminOrEmployee', { sessionUserId: auth.user.id, role });
@@ -55,8 +55,8 @@ export async function previewDeleteCustomers(days: string) {
   await requireAdminOrEmployee();
   return {
     tables: [
-      { name: 'customers', count: await count('customers', (q:any)=> q.lt('created_at', cutoff)) + await count('customers', (q:any)=> q.lt('updated_at', cutoff)) },
-      { name: 'app_users', count: await count('app_users', (q:any)=> q.eq('role','customer').lt('created_at', cutoff)) + await count('app_users', (q:any)=> q.eq('role','customer').lt('updated_at', cutoff)) },
+      { name: 'customers', count: await count('customers', (q: any) => q.lt('created_at', cutoff)) + await count('customers', (q: any) => q.lt('updated_at', cutoff)) },
+      { name: 'app_users', count: await count('app_users', (q: any) => q.eq('role', 'customer').lt('created_at', cutoff)) + await count('app_users', (q: any) => q.eq('role', 'customer').lt('updated_at', cutoff)) },
     ],
   };
 }
@@ -79,11 +79,11 @@ export async function deleteCustomersOlderThan(days: string): Promise<void> {
     if (custUpdatedDel.error) { dbg('deleteCustomersOlderThan:customers(updated_at):error', custUpdatedDel.error); throw custUpdatedDel.error; }
     dbg('deleteCustomersOlderThan:customers(updated_at):count', custUpdatedDel.count);
 
-    const appUsersCreatedDel = await supabase.from('app_users').delete().eq('role','customer').lt('created_at', cutoff);
+    const appUsersCreatedDel = await supabase.from('app_users').delete().eq('role', 'customer').lt('created_at', cutoff);
     if (appUsersCreatedDel.error) { dbg('deleteCustomersOlderThan:app_users(created_at):error', appUsersCreatedDel.error); throw appUsersCreatedDel.error; }
     dbg('deleteCustomersOlderThan:app_users(created_at):count', appUsersCreatedDel.count);
 
-    const appUsersUpdatedDel = await supabase.from('app_users').delete().eq('role','customer').lt('updated_at', cutoff);
+    const appUsersUpdatedDel = await supabase.from('app_users').delete().eq('role', 'customer').lt('updated_at', cutoff);
     if (appUsersUpdatedDel.error) { dbg('deleteCustomersOlderThan:app_users(updated_at):error', appUsersUpdatedDel.error); throw appUsersUpdatedDel.error; }
     dbg('deleteCustomersOlderThan:app_users(updated_at):count', appUsersUpdatedDel.count);
   } else {
@@ -95,7 +95,7 @@ export async function deleteCustomersOlderThan(days: string): Promise<void> {
     if (custDel.error) { dbg('deleteCustomersOlderThan:customers:error', custDel.error); throw custDel.error; }
     dbg('deleteCustomersOlderThan:customers:count(all)', custDel.count);
 
-    const auDel = await supabase.from('app_users').delete().eq('role','customer');
+    const auDel = await supabase.from('app_users').delete().eq('role', 'customer');
     if (auDel.error) { dbg('deleteCustomersOlderThan:app_users:error', auDel.error); throw auDel.error; }
     dbg('deleteCustomersOlderThan:app_users:count(all)', auDel.count);
   }
@@ -110,15 +110,15 @@ export async function deleteEmployeesOlderThan(days: string): Promise<void> {
   const cutoff = toIsoCutoff(days);
   dbg('deleteEmployeesOlderThan:start', { cutoff });
   if (cutoff) {
-    const createdDel = await supabase.from('app_users').delete().eq('role','employee').lt('created_at', cutoff);
+    const createdDel = await supabase.from('app_users').delete().eq('role', 'employee').lt('created_at', cutoff);
     if (createdDel.error) { dbg('deleteEmployeesOlderThan:app_users(created_at):error', createdDel.error); throw createdDel.error; }
     dbg('deleteEmployeesOlderThan:app_users(created_at):count', createdDel.count);
 
-    const updatedDel = await supabase.from('app_users').delete().eq('role','employee').lt('updated_at', cutoff);
+    const updatedDel = await supabase.from('app_users').delete().eq('role', 'employee').lt('updated_at', cutoff);
     if (updatedDel.error) { dbg('deleteEmployeesOlderThan:app_users(updated_at):error', updatedDel.error); throw updatedDel.error; }
     dbg('deleteEmployeesOlderThan:app_users(updated_at):count', updatedDel.count);
   } else {
-    const delAll = await supabase.from('app_users').delete().eq('role','employee');
+    const delAll = await supabase.from('app_users').delete().eq('role', 'employee');
     if (delAll.error) { dbg('deleteEmployeesOlderThan:app_users(all):error', delAll.error); throw delAll.error; }
     dbg('deleteEmployeesOlderThan:app_users(all):count', delAll.count);
   }
@@ -207,11 +207,11 @@ export async function deleteEverything(): Promise<void> {
     dbg(`deleteEverything:${table}:count`, res.count);
   }
   // Delete customer app_users separately with role filter
-  const au = await supabase.from('app_users').delete().eq('role','customer');
+  const au = await supabase.from('app_users').delete().eq('role', 'customer');
   if (au.error) { dbg('deleteEverything:app_users:error', au.error); throw au.error; }
   dbg('deleteEverything:app_users:count', au.count);
   // Delete employees but preserve admins
-  const emp = await supabase.from('app_users').delete().eq('role','employee');
+  const emp = await supabase.from('app_users').delete().eq('role', 'employee');
   if (emp.error) { dbg('deleteEverything:employees:error', emp.error); throw emp.error; }
   dbg('deleteEverything:employees:count', emp.count);
   const audit = await logDelete({ type: 'all' });
@@ -221,25 +221,29 @@ export async function deleteEverything(): Promise<void> {
 export async function previewDeleteInvoices(days: string) {
   const cutoff = toIsoCutoff(days);
   await requireAdminOrEmployee();
-  return { tables: [ { name: 'invoices', count: await count('invoices', (q:any)=> q.lt('created_at', cutoff)) } ] };
+  return { tables: [{ name: 'invoices', count: await count('invoices', (q: any) => q.lt('created_at', cutoff)) }] };
 }
 
 export async function previewDeleteExpenses(days: string) {
   const cutoff = toIsoCutoff(days);
   await requireAdminOrEmployee();
-  return { tables: [
-    { name: 'expenses', count: await count('expenses', (q:any)=> q.lt('date', cutoff)) },
-    { name: 'accounting', count: await count('accounting', (q:any)=> q.lt('created_at', cutoff)) },
-  ] };
+  return {
+    tables: [
+      { name: 'expenses', count: await count('expenses', (q: any) => q.lt('date', cutoff)) },
+      { name: 'accounting', count: await count('accounting', (q: any) => q.lt('created_at', cutoff)) },
+    ]
+  };
 }
 
 export async function previewDeleteInventory(days: string) {
   const cutoff = toIsoCutoff(days);
   await requireAdminOrEmployee();
-  return { tables: [
-    { name: 'usage', count: await count('usage', (q:any)=> q.lt('date', cutoff)) },
-    { name: 'inventory_records', count: await count('inventory_records', (q:any)=> q.lt('created_at', cutoff)) },
-  ] };
+  return {
+    tables: [
+      { name: 'usage', count: await count('usage', (q: any) => q.lt('date', cutoff)) },
+      { name: 'inventory_records', count: await count('inventory_records', (q: any) => q.lt('created_at', cutoff)) },
+    ]
+  };
 }
 
 export async function previewDeleteAll(days?: string) {
@@ -247,18 +251,30 @@ export async function previewDeleteAll(days?: string) {
   await requireAdminOrEmployee();
   const entries = [] as { name: string; count: number }[];
   const tables = [
-    ['bookings','date'],
-    ['customers','created_at'],
-    ['invoices','created_at'],
-    ['expenses','date'],
-    ['usage','date'],
-    ['inventory_records','created_at'],
-    ['packages','created_at'],
-    ['add_ons','created_at'],
+    ['bookings', 'date'],
+    ['customers', 'created_at'],
+    ['invoices', 'created_at'],
+    ['expenses', 'date'],
+    ['usage', 'date'],
+    ['inventory_records', 'created_at'],
+    ['packages', 'created_at'],
+    ['add_ons', 'created_at'],
   ] as const;
   for (const [name, col] of tables) {
-    const c = await count(name, (q:any)=> cutoff ? q.lt(col, cutoff) : q.neq('id', null));
+    const c = await count(name, (q: any) => cutoff ? q.lt(col, cutoff) : q.neq('id', null));
     entries.push({ name, count: c });
   }
   return { tables: entries };
+}
+
+export async function deleteAllTeamMessages(): Promise<number> {
+  await requireAdminOrEmployee();
+  // Delete all messages
+  const { count, error } = await supabase.from('team_messages').delete().neq('id', 0);
+  // Note: .neq('id', 0) is a hack if id is uuid and not null. better: .neq('content', 'THIS_STRING_WONT_EXIST') or just .neq('id', '00000000-0000-0000-0000-000000000000')
+  // Actually, standard way for "Delete All" in Supabase is usually just .delete().neq('id', null) if ID is PK.
+  // Let's use logic from deleteEverything
+  const res = await supabase.from('team_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (res.error) throw res.error;
+  return res.count || 0;
 }

@@ -69,6 +69,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Operations", icon: ClipboardCheck,
             items: [
+                { title: "Staff Schedule", url: "/staff-schedule", role: "employee", icon: CalendarDays },
                 { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays },
                 { title: "Analytics", url: "/bookings-analytics", key: "bookings-analytics", icon: FileBarChart },
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },

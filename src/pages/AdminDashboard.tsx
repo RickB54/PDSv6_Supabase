@@ -739,7 +739,6 @@ export default function AdminDashboard() {
                 {!isMenuHidden('book-new-job') && (
                   <RedBox accent="orange" title="Book Now via website" href="/book-now" Icon={ClipboardCheck} />
                 )}
-                <RedBox accent="indigo" title="Prime Blog" href="/f150-setup" Icon={Newspaper} />
                 <RedBox accent="orange" title="Bookings" href="/bookings?add=true" Icon={CalendarDays} />
                 <RedBox accent="orange" title="Analytics" href="/bookings?view=analytics" Icon={FileBarChart} />
                 <button
@@ -878,6 +877,7 @@ export default function AdminDashboard() {
                 {!isMenuHidden('service-checklist') && (
                   <RedBox accent="zinc" title="Todo" href="/tasks" Icon={CheckSquare} badgeCount={badgeByType('todo_overdue')} />
                 )}
+                <RedBox accent="indigo" title="Prime Blog" href="/f150-setup" Icon={Newspaper} />
                 <Link to="/team-chat" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
                   <Users className="w-3.5 h-3.5 text-blue-600" />
                   <span>Team Chat</span>

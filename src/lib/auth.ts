@@ -4,7 +4,7 @@ import supabase, { isSupabaseConfigured } from './supabase';
 export interface User {
   id: string;
   email: string;
-  role: 'customer' | 'employee' | 'admin' | 'guest';
+  role: 'customer' | 'employee' | 'admin' | 'guest' | 'owner';
   name: string;
 }
 

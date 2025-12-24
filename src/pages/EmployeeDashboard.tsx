@@ -238,6 +238,13 @@ const EmployeeDashboard = () => {
               </Card>
             </Link>
 
+            <Link to="/staff-schedule" className="block">
+              <Card className="p-6 bg-teal-700 text-white rounded-xl">
+                <div className="text-2xl font-bold">WORK SCHEDULE</div>
+                <div className="text-sm opacity-90">View your upcoming shifts and times.</div>
+              </Card>
+            </Link>
+
             {/* Orientation box (orange) */}
             {/* Prime Training Center */}
             <Link to="/training-manual" className="block text-left">

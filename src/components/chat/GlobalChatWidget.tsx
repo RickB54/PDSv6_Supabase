@@ -74,7 +74,16 @@ export function GlobalChatWidget() {
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
+        // Listen for global audio alerts (triggered by ChatAudioAlert hidden component)
+        const handleGlobalAlert = () => {
+            if (!isOpen) setHasUnread(true);
+        };
+        window.addEventListener('new-chat-alert', handleGlobalAlert);
+
+        return () => {
+            supabase.removeChannel(channel);
+            window.removeEventListener('new-chat-alert', handleGlobalAlert);
+        };
     }, [isIdentified, guestEmail, isOpen]);
 
     // Auto-scroll
@@ -256,16 +265,23 @@ export function GlobalChatWidget() {
                 </Card>
             )}
 
-            {/* Launcher */}
+            {/* Launcher with Priority Alert */}
             {!isOpen && (
                 <Button
                     size="icon"
-                    className="h-14 w-14 rounded-full shadow-xl bg-primary hover:bg-primary/90 transition-transform hover:scale-105 relative"
+                    className={`h-14 w-14 rounded-full shadow-xl transition-all hover:scale-105 relative
+                        ${hasUnread
+                            ? 'animate-[pulse_0.5s_cubic-bezier(0.4,0,0.6,1)_infinite] bg-red-600 hover:bg-red-700 ring-4 ring-offset-2 ring-blue-500' // Flashing Red/Blue effect handled via rapid pulse + ring
+                            : 'bg-primary hover:bg-primary/90'
+                        }
+                    `}
                     onClick={() => setIsOpen(true)}
                 >
-                    <MessageCircle className="h-7 w-7" />
+                    <MessageCircle className={`h-7 w-7 ${hasUnread ? 'text-white' : ''}`} />
                     {hasUnread && (
-                        <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold">
+                            !
+                        </span>
                     )}
                 </Button>
             )}

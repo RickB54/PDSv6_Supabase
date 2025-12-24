@@ -20,25 +20,37 @@ export function ChatAudioAlert() {
                 audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
             }
             const ctx = audioCtxRef.current;
+            const t = ctx.currentTime;
 
-            // Create oscillator for "Ring"
+            // Create oscillator for "Digital Phone Ring" - Louder & High Pitch
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
-            osc.frequency.setValueAtTime(1108, ctx.currentTime + 0.1); // C#6
-            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2); // A5
-            osc.frequency.setValueAtTime(1108, ctx.currentTime + 0.3); // C#6
+            osc.type = 'square'; // Sharper sound than sine
 
-            gain.gain.setValueAtTime(0.5, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+            // Pattern: High-High ... High-High
+            osc.frequency.setValueAtTime(880, t); // A5
+            osc.frequency.setValueAtTime(880, t + 0.1);
+            osc.frequency.setValueAtTime(0, t + 0.11); // Silence
+            osc.frequency.setValueAtTime(1108, t + 0.2); // C#6
+            osc.frequency.setValueAtTime(1108, t + 0.3);
+            osc.frequency.setValueAtTime(0, t + 0.31);
+            osc.frequency.setValueAtTime(1108, t + 0.4); // Repeat C#6
+            osc.frequency.setValueAtTime(1108, t + 0.5);
+
+            // Volume Envelope
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.linearRampToValueAtTime(0.3, t + 0.5);
+            gain.gain.linearRampToValueAtTime(0.01, t + 0.6);
 
             osc.connect(gain);
             gain.connect(ctx.destination);
 
             osc.start();
-            osc.stop(ctx.currentTime + 1);
+            osc.stop(t + 0.7);
+
+            // Dispatch Event for Visuals
+            window.dispatchEvent(new CustomEvent('new-chat-alert'));
 
         } catch (e) {
             console.error("Audio Alert Failed", e);

@@ -536,6 +536,78 @@ export const deleteTeamMessage = async (id: string) => {
     if (error) throw error;
 };
 
+export const deleteAllTeamMessages = async () => {
+    const { error, count } = await supabase.from('team_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+    if (error) throw error;
+    return count;
+};
+
+
+
+// ------------------------------------------------------------------
+// Staff Schedule (Cloud)
+// ------------------------------------------------------------------
+
+export interface StaffShift {
+    id?: string;
+    employee_id: string; // references app_users.id or email
+    employee_name: string;
+    date: string; // YYYY-MM-DD
+    start_time: string; // HH:mm
+    end_time: string; // HH:mm
+    role: string;
+    notes?: string;
+    color?: string;
+    status?: string;
+}
+
+export const getStaffShifts = async (start: string, end: string) => {
+    // Determine range or fetch all. For now, fetch all relative to date range, or just all for simplicity if dataset small.
+    // Let's filter by date string range for efficiency.
+    const { data, error } = await supabase
+        .from('staff_shifts')
+        .select('*')
+        .gte('date', start)
+        .lte('date', end);
+
+    if (error) {
+        console.error('getStaffShifts error:', error);
+        return [];
+    }
+    return data || [];
+};
+
+export const createStaffShift = async (shift: StaffShift) => {
+    const { data, error } = await supabase
+        .from('staff_shifts')
+        .insert([shift])
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const updateStaffShift = async (id: string, updates: Partial<StaffShift>) => {
+    const { data, error } = await supabase
+        .from('staff_shifts')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const deleteStaffShift = async (id: string) => {
+    const { error } = await supabase
+        .from('staff_shifts')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
+};
+
 // ------------------------------------------------------------------
 // Bookings
 // ------------------------------------------------------------------
