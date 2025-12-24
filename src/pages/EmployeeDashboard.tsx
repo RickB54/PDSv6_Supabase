@@ -305,6 +305,11 @@ const EmployeeDashboard = () => {
                 <div className="font-semibold text-white">APP MANUAL</div>
               </Card>
             </Link>
+            <Link to="/f150-setup" className="block">
+              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
+                <div className="font-semibold text-white">BLOG</div>
+              </Card>
+            </Link>
           </div>
 
           {/* Notify Admin */}

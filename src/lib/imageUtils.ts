@@ -3,7 +3,7 @@
  * Converts to JPG with reduced quality and resizing.
  * optimized for mobile memory constraints.
  */
-export async function compressImage(file: File, maxWidth = 1280, quality = 0.8): Promise<File> {
+export async function compressImage(file: File, maxWidth = 1024, quality = 0.7): Promise<File> {
     return new Promise((resolve) => {
         // If not an image, return original
         if (!file.type.startsWith('image/')) {

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon } from "lucide-react";
+import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper } from "lucide-react";
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
@@ -752,6 +752,65 @@ const Settings = () => {
                       <AlertTriangle className="h-5 w-5 mr-2" />
                       DELETE LOCAL DATA
                     </Button>
+                  </div>
+                </div>
+
+                {/* BLOG CONTENT RESET */}
+                <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-red-500 flex items-center gap-2 text-lg">
+                        <Newspaper className="h-5 w-5" />
+                        Reset Blog Content
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-1 max-w-xl">
+                        Bulk delete blog posts by type. This action cannot be undone.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100"
+                        onClick={() => {
+                          if (confirm("Permanently delete ALL VIDEO posts?")) {
+                            import("@/lib/supa-data").then(({ deleteLibraryItems }) => {
+                              deleteLibraryItems('video').then(({ count }) => toast({ title: "Deleted", description: `Removed ${count} video posts.` }));
+                            })
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3 mr-2" /> Delete Videos
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100"
+                        onClick={() => {
+                          if (confirm("Permanently delete ALL PICTURE posts?")) {
+                            import("@/lib/supa-data").then(({ deleteLibraryItems }) => {
+                              deleteLibraryItems('image').then(({ count }) => toast({ title: "Deleted", description: `Removed ${count} picture posts.` }));
+                            })
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3 mr-2" /> Delete Photos
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-500 text-white font-bold"
+                        onClick={() => {
+                          if (confirm("WARNING: Permanently delete ALL blog posts (Videos & Photos)?")) {
+                            import("@/lib/supa-data").then(({ deleteLibraryItems }) => {
+                              deleteLibraryItems('all').then(({ count }) => toast({ title: "Deleted", description: `Removed all ${count} blog posts.` }));
+                            })
+                          }
+                        }}
+                      >
+                        <AlertTriangle className="w-3 h-3 mr-2" /> Delete All Posts
+                      </Button>
+                    </div>
                   </div>
                 </div>
 

@@ -711,6 +711,7 @@ export interface LibraryItem {
     resource_url?: string;
     created_at?: string;
     updated_at?: string;
+    created_by?: string; // Email of the user who created it
 }
 
 /**
@@ -724,39 +725,185 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data || [];
+
+        // Parse Metadata from Description
+        const parsedData = (data || []).map((item: any) => {
+            const desc = item.description || '';
+            const createdByMatch = desc.match(/\[meta:created_by=([^\]]+)\]/);
+            const originalTypeMatch = desc.match(/\[meta:original_type=([^\]]+)\]/);
+
+            // Clean description for display
+            const cleanDesc = desc
+                .replace(/\[meta:created_by=[^\]]+\]/g, '')
+                .replace(/\[meta:original_type=[^\]]+\]/g, '')
+                .trim();
+
+            return {
+                ...item,
+                description: cleanDesc,
+                created_by: createdByMatch ? createdByMatch[1] : undefined,
+                // Restore type if it was mapped
+                type: originalTypeMatch ? originalTypeMatch[1] : item.type
+            };
+        });
+
+        return parsedData as LibraryItem[];
     } catch (err) {
         console.error('Error fetching library items:', err);
         return [];
     }
 }
 
-/**
- * Create or update a learning library item
- */
-export async function upsertLibraryItem(item: LibraryItem): Promise<LibraryItem | null> {
+// Comments Management
+// ------------------------------------------------------------------
+export interface LibraryComment {
+    id: string;
+    post_id: string;
+    author: string;
+    avatar_url?: string;
+    text: string;
+    created_at: string;
+}
+
+export async function getComments(postId: string): Promise<LibraryComment[]> {
     try {
         const { data, error } = await supabase
-            .from('learning_library_items')
-            .upsert({
-                id: item.id,
-                title: item.title,
-                description: item.description,
-                type: item.type,
-                duration: item.duration,
-                category: item.category,
-                thumbnail_url: item.thumbnail_url,
-                resource_url: item.resource_url,
-                updated_at: new Date().toISOString()
-            })
+            .from('learning_library_comments')
+            .select('*')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        return data as LibraryComment[];
+    } catch (error) {
+        console.error("Error fetching comments:", error);
+        return [];
+    }
+}
+
+export async function addComment(comment: Omit<LibraryComment, 'id' | 'created_at'>): Promise<LibraryComment | null> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_comments')
+            .insert([comment])
             .select()
             .single();
 
         if (error) throw error;
         return data;
+    } catch (error) {
+        console.error("Error adding comment:", error);
+        return null;
+    }
+}
+
+export async function getAllCommentCounts(): Promise<Record<string, number>> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_comments')
+            .select('post_id');
+
+        if (error) throw error;
+
+        const counts: Record<string, number> = {};
+        data?.forEach((c: any) => {
+            counts[c.post_id] = (counts[c.post_id] || 0) + 1;
+        });
+        return counts;
+    } catch (error) {
+        console.error("Error fetching comment counts:", error);
+        return {};
+    }
+}
+
+/**
+ * Rename a category across all posts
+ */
+export async function renameLibraryCategory(oldName: string, newName: string): Promise<{ success: boolean; count: number }> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_items')
+            .update({ category: newName })
+            .eq('category', oldName)
+            .select();
+
+        if (error) throw error;
+        return { success: true, count: data ? data.length : 0 };
+    } catch (error) {
+        console.error("Error renaming category:", error);
+        return { success: false, count: 0 };
+    }
+}
+
+/**
+ * Delete a category (Reassign posts to 'General')
+ */
+export async function deleteLibraryCategory(targetCategory: string): Promise<{ success: boolean; count: number }> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_items')
+            .update({ category: 'General' })
+            .eq('category', targetCategory)
+            .select();
+
+        if (error) throw error;
+        return { success: true, count: data ? data.length : 0 };
+    } catch (error) {
+        console.error("Error deleting category:", error);
+        return { success: false, count: 0 };
+    }
+}
+
+/**
+ * Create or update a learning library item
+ */
+export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: boolean; data?: LibraryItem; error?: any }> {
+    try {
+        // Pack metadata into description for persistence
+        // We use the raw description + the tag
+        let descriptionToSave = item.description || '';
+
+        // Handle OWNER metadata (created_by)
+        if (item.created_by) {
+            descriptionToSave = descriptionToSave.replace(/\[meta:created_by=([^\]]+)\]/g, '').trim();
+            descriptionToSave += `\n\n[meta:created_by=${item.created_by}]`;
+        }
+
+        // Handle TYPE mapping (DB only allows video, pdf, article)
+        // We map 'image' -> 'article' and add metadata
+        let typeToSave = item.type;
+        if (item.type === 'image') {
+            typeToSave = 'article';
+            descriptionToSave = descriptionToSave.replace(/\[meta:original_type=([^\]]+)\]/g, '').trim();
+            descriptionToSave += `\n\n[meta:original_type=image]`;
+        }
+
+        const payload: any = {
+            id: item.id || crypto.randomUUID(),
+            title: item.title,
+            description: descriptionToSave,
+            type: typeToSave,
+            duration: item.duration,
+            category: item.category,
+            thumbnail_url: item.thumbnail_url,
+            resource_url: item.resource_url,
+            updated_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('learning_library_items')
+            .upsert(payload)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Supabase Upsert Error:", error);
+            return { success: false, error };
+        }
+        return { success: true, data };
     } catch (err) {
         console.error('Error upserting library item:', err);
-        return null;
+        return { success: false, error: err };
     }
 }
 
@@ -778,6 +925,45 @@ export async function deleteLibraryItem(id: string): Promise<boolean> {
     }
 }
 
+/**
+ * Bulk delete library items by type (or all).
+ * This is a destructive admin action.
+ */
+export async function deleteLibraryItems(targetType: 'video' | 'image' | 'all'): Promise<{ success: boolean; count: number }> {
+    try {
+        // 1. Fetch all items (so we can parse metadata to identify 'image' types correctly)
+        const allItems = await getLibraryItems();
+
+        let toDelete: LibraryItem[] = [];
+
+        if (targetType === 'all') {
+            toDelete = allItems;
+        } else {
+            toDelete = allItems.filter(item => item.type === targetType);
+        }
+
+        if (toDelete.length === 0) {
+            return { success: true, count: 0 };
+        }
+
+        const ids = toDelete.map(i => i.id);
+
+        // 2. Perform Delete
+        const { error } = await supabase
+            .from('learning_library_items')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+
+        return { success: true, count: ids.length };
+
+    } catch (err) {
+        console.error('deleteLibraryItems error:', err);
+        return { success: false, count: 0 };
+    }
+}
+
 import { compressImage } from './imageUtils';
 
 /**
@@ -792,55 +978,74 @@ export async function uploadLibraryFile(file: File): Promise<{ url: string | nul
         const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
         const filePath = `library/${fileName}`;
 
-        // 2. Try multiple common bucket names
-        const buckets = ['images', 'public', 'files', 'storage', 'uploads'];
-        let lastError: any = null;
+        // 2. Dynamic Bucket Discovery
+        // Instead of guessing, check what buckets actually exist
+        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
 
-        for (const bucket of buckets) {
-            console.log(`Attempting upload to bucket: ${bucket}`);
-            const { error: uploadError } = await supabase.storage
-                .from(bucket)
-                .upload(filePath, compressedFile);
+        let targetBucket = 'images';
+        let availableBuckets: string[] = [];
 
-            if (!uploadError) {
-                // Success! Get URL.
-                const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-                return { url: data.publicUrl, error: null };
+        if (buckets && buckets.length > 0) {
+            // Prefer 'images', 'public', or just the first public one
+            const publicBuckets = buckets.filter(b => b.public);
+            if (publicBuckets.length > 0) {
+                const preferred = publicBuckets.find(b => b.name === 'images' || b.name === 'public');
+                targetBucket = preferred ? preferred.name : publicBuckets[0].name;
+                availableBuckets = publicBuckets.map(b => b.name);
+            } else {
+                // Try non-public if that's all there is
+                targetBucket = buckets[0].name;
             }
+        } else {
+            console.log("No buckets found via listBuckets().");
+        }
 
-            console.warn(`Upload to '${bucket}' failed:`, uploadError.message);
+        console.log(`Dynamic Bucket Selection: Found ${buckets?.length || 0} buckets. Target: ${targetBucket}`);
 
-            // AUTO-FIX: If bucket not found, try to create 'images' and retry
-            if (bucket === 'images' && (uploadError.message.includes('not found') || uploadError.message.includes('Bucket'))) {
-                console.log("Bucket 'images' missing. Attempting to create...");
-                const { data: bucketData, error: createError } = await supabase.storage.createBucket('images', {
-                    public: true,
-                    fileSizeLimit: 5242880, // 5MB
-                    allowedMimeTypes: ['image/*', 'video/*']
-                });
+        // 3. Attempt Upload
+        // We focus on the target bucket, but if it fails (and we didn't find it in the list), we try to create it.
+        const { error: uploadError } = await supabase.storage
+            .from(targetBucket)
+            .upload(filePath, compressedFile);
 
-                if (!createError) {
-                    console.log("Bucket 'images' created successfully! Retrying upload...", bucketData);
-                    // Retry upload to the newly created bucket
-                    const { error: retryError } = await supabase.storage
-                        .from('images')
-                        .upload(filePath, compressedFile);
+        if (!uploadError) {
+            const { data } = supabase.storage.from(targetBucket).getPublicUrl(filePath);
+            return { url: data.publicUrl, error: null };
+        }
 
-                    if (!retryError) {
-                        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-                        return { url: data.publicUrl, error: null };
-                    }
-                } else {
-                    console.error("Failed to auto-create bucket:", createError);
+        console.warn(`Upload to '${targetBucket}' failed:`, uploadError.message);
+
+        // AUTO-FIX: Create bucket if missing (and we know it's missing)
+        if (uploadError.message.includes('not found') || uploadError.message.includes('Bucket')) {
+            console.log(`Bucket '${targetBucket}' missing. Attempting to create...`);
+            const { data: bucketData, error: createError } = await supabase.storage.createBucket('images', {
+                public: true,
+                fileSizeLimit: 5242880, // 5MB
+                allowedMimeTypes: ['image/*', 'video/*']
+            });
+
+            if (!createError) {
+                console.log("Bucket 'images' created successfully! Retrying upload...", bucketData);
+                const { error: retryError } = await supabase.storage
+                    .from('images')
+                    .upload(filePath, compressedFile);
+
+                if (!retryError) {
+                    const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+                    return { url: data.publicUrl, error: null };
                 }
+            } else {
+                console.error("Failed to auto-create bucket. User permission likely insufficient.", createError);
+                return {
+                    url: null,
+                    error: `Storage Error: No storage buckets found. Auto-creation failed (User not authorized). Please go to Supabase Dashboard -> Storage and create a public bucket named 'images'.`
+                };
             }
-
-            lastError = uploadError;
         }
 
         return {
             url: null,
-            error: `All buckets failed. Last error: ${lastError?.message || 'Unknown'}`
+            error: `Upload failed: ${uploadError?.message} (Target Bucket: ${targetBucket})`
         };
 
     } catch (error: any) {

@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart } from "lucide-react";
+import { AlertTriangle, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -739,6 +739,7 @@ export default function AdminDashboard() {
                 {!isMenuHidden('book-new-job') && (
                   <RedBox accent="orange" title="Book Now via website" href="/book-now" Icon={ClipboardCheck} />
                 )}
+                <RedBox accent="indigo" title="Prime Blog" href="/f150-setup" Icon={Newspaper} />
                 <RedBox accent="orange" title="Bookings" href="/bookings?add=true" Icon={CalendarDays} />
                 <RedBox accent="orange" title="Analytics" href="/bookings?view=analytics" Icon={FileBarChart} />
                 <button

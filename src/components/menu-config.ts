@@ -14,7 +14,8 @@ import {
     Package,
     Globe,
     GraduationCap,
-    Truck
+    Truck,
+    Newspaper
 } from "lucide-react";
 
 export type MenuItem = {
@@ -102,7 +103,6 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
-                { title: "Rick's F150 Setup", url: "/f150-setup", key: "f150-setup", icon: Truck },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
             ]
         },
@@ -113,6 +113,12 @@ export const getMenuGroups = (counts: {
                 { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users },
                 { title: "Company Employees", url: "/company-employees", role: "admin", key: "company-employees", icon: Users },
                 { title: "App Team Chat", url: "/team-chat", role: "admin", key: "team-chat", icon: Users },
+            ]
+        },
+        {
+            title: "Company Blog", icon: Newspaper,
+            items: [
+                { title: "Prime Blog", url: "/f150-setup", key: "blog", icon: Newspaper },
             ]
         },
         {
