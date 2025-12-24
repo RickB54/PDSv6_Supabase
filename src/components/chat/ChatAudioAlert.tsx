@@ -1,100 +1,172 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
 import { toast } from '@/components/ui/use-toast';
 
-// Simple "Phone Ring" sound effect (base64 to avoid external dependency issues)
-// This is a short digital ring tone.
-const RING_SOUND = "data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU...";
-// NOTE: The above is truncated. I will use a simple Beep URL or a cleaner implementation.
-// Better: Use a reliable CDN or just a simple Oscillator if possible? 
-// Oscillator is best for zero-dependency "Loud Ring".
-
 export function ChatAudioAlert() {
-    const audioCtxRef = useRef<AudioContext | null>(null);
+    const [user, setUser] = useState(getCurrentUser());
 
-    const playRing = () => {
+    // Sync auth
+    useEffect(() => {
+        const update = () => setUser(getCurrentUser());
+        window.addEventListener('auth-changed', update);
+        update();
+        return () => window.removeEventListener('auth-changed', update);
+    }, []);
+
+    const playSound = () => {
         try {
-            if (!audioCtxRef.current) {
-                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            }
-            const ctx = audioCtxRef.current;
-            const t = ctx.currentTime;
+            // Web Audio API Oscillator (replaces Base64 file which might be silent/corrupt)
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
 
-            // Create oscillator for "Digital Phone Ring" - Louder & High Pitch
+            const ctx = new AudioContext();
+
+            // Resume context if suspended (browser autoplay policy)
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
-            osc.type = 'square'; // Sharper sound than sine
+            // "Digital Ring" parameters
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // High pitch (A5)
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(0, ctx.currentTime + 0.11); // Gap
+            osc.frequency.setValueAtTime(1108, ctx.currentTime + 0.2); // Higher pitch (C#6)
 
-            // Pattern: High-High ... High-High
-            osc.frequency.setValueAtTime(880, t); // A5
-            osc.frequency.setValueAtTime(880, t + 0.1);
-            osc.frequency.setValueAtTime(0, t + 0.11); // Silence
-            osc.frequency.setValueAtTime(1108, t + 0.2); // C#6
-            osc.frequency.setValueAtTime(1108, t + 0.3);
-            osc.frequency.setValueAtTime(0, t + 0.31);
-            osc.frequency.setValueAtTime(1108, t + 0.4); // Repeat C#6
-            osc.frequency.setValueAtTime(1108, t + 0.5);
-
-            // Volume Envelope
-            gain.gain.setValueAtTime(0.3, t);
-            gain.gain.linearRampToValueAtTime(0.3, t + 0.5);
-            gain.gain.linearRampToValueAtTime(0.01, t + 0.6);
+            // Volume control
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
 
             osc.connect(gain);
             gain.connect(ctx.destination);
 
             osc.start();
-            osc.stop(t + 0.7);
+            osc.stop(ctx.currentTime + 0.5);
 
-            // Dispatch Event for Visuals
-            window.dispatchEvent(new CustomEvent('new-chat-alert'));
+            console.log("🔊 Audio Alert Attempted");
+
+            // Clean up context after a second
+            setTimeout(() => {
+                try { ctx.close(); } catch { }
+            }, 1000);
 
         } catch (e) {
-            console.error("Audio Alert Failed", e);
+            console.error("Audio generation error", e);
         }
     };
 
+    // Request Notification Permission on mount/interaction
     useEffect(() => {
-        const user = getCurrentUser();
-        // Only admins/employees should hear the ring for "Incoming Support"
-        if (!user || user.role === 'customer') return;
+        if ("Notification" in window && Notification.permission === "default") {
+            const request = () => Notification.requestPermission();
+            document.addEventListener('click', request, { once: true });
+            return () => document.removeEventListener('click', request);
+        }
+    }, []);
+
+    // Trigger Desktop Notification
+    const sendDesktopNotification = (title: string, body: string) => {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, {
+                body,
+                icon: '/favicon.ico', // Optional: requires valid path
+                silent: true // We play our own sound
+            });
+        }
+    };
+
+    // Test Alert Listener
+    useEffect(() => {
+        const handleTest = () => {
+            console.log("🔔 TEST TRIGGERED");
+            playSound();
+            toast({ title: "Test Alert", description: "This is a test notification." });
+            sendDesktopNotification("Test Notification", "This is how alerts will appear outside the browser.");
+        };
+        window.addEventListener('test-chat-alert', handleTest);
+        return () => window.removeEventListener('test-chat-alert', handleTest);
+    }, []);
+
+    // Main Subscription
+    useEffect(() => {
+        // user state might be null if we are a Guest, so check localStorage too
+        const checkIdentity = () => {
+            const u = getCurrentUser();
+            if (u) return { email: u.email, name: u.name || '' };
+
+            const raw = localStorage.getItem('guest_identity');
+            if (raw) {
+                try {
+                    return JSON.parse(raw); // { name, email }
+                } catch { }
+            }
+            return null;
+        };
 
         const channel = supabase
-            .channel('public:team_messages:alert')
+            .channel('global_chat_alerts')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
                 const newMsg = payload.new as TeamMessage;
+                const currentIdentity = checkIdentity();
 
-                // Logic: Ring if:
-                // 1. I am NOT the sender.
-                // 2. It is meant for ME or the PUBLIC (support channel).
-                const myEmail = user.email.toLowerCase();
-                const sender = (newMsg.sender_email || '').toLowerCase();
-                const recipient = (newMsg.recipient_email || '').toLowerCase();
+                if (!currentIdentity) return;
 
-                if (sender !== myEmail) {
-                    // Check if it's relevant
-                    if (!recipient || recipient === myEmail) {
-                        // IT IS A NEW MESSAGE!
-                        console.log("Incoming Chat Alert!");
-                        playRing();
+                const myEmail = currentIdentity.email.toLowerCase().trim();
+                const sender = (newMsg.sender_email || '').toLowerCase().trim();
+                const recipient = (newMsg.recipient_email || '').toLowerCase().trim();
 
-                        // Visual Toast as well
+                // Logic Check
+                const isSenderMe = sender === myEmail;
+                const isDirectlyForMe = recipient === myEmail;
+                const isPublic = !recipient;
+
+                if (!isSenderMe) {
+                    if (isDirectlyForMe || isPublic) {
+                        console.log("🔔 NOTIFICATION MATCHED!", { myEmail, sender });
+
+                        // 1. Audio
+                        playSound();
+
+                        // 2. Desktop Notification
+                        sendDesktopNotification(
+                            "New Message",
+                            `From: ${newMsg.sender_name || 'Guest'}\n${newMsg.content}`
+                        );
+
+                        // 3. Window Event
+                        window.dispatchEvent(new CustomEvent('new-chat-alert'));
+
+                        // 4. Toast (The Real One)
                         toast({
-                            title: "Incoming Message!",
+                            title: "New Message",
                             description: `From: ${newMsg.sender_name || 'Guest'}`,
-                            duration: 5000,
-                            className: "bg-emerald-500 text-white font-bold border-2 border-white shadow-xl"
+                            className: "bg-emerald-600 text-white border-none",
+                            duration: 4000
                         });
+
+                        // 5. Tab Blink
+                        let count = 0;
+                        const original = document.title;
+                        const interval = setInterval(() => {
+                            document.title = count % 2 === 0 ? "🔔 New Message!" : original;
+                            count++;
+                            if (count > 6) {
+                                clearInterval(interval);
+                                document.title = original;
+                            }
+                        }, 800);
                     }
                 }
             })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, []);
+    }, [user?.email]);
 
-    return null; // Headless
+    return null;
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, X, Send, User, RefreshCw } from 'lucide-react';
+import { MessageCircle, X, Send, User, RefreshCw, Bell } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
@@ -18,6 +18,7 @@ export function GlobalChatWidget() {
     const [hasUnread, setHasUnread] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
+    const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +65,26 @@ export function GlobalChatWidget() {
             .channel('public:team_messages')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
                 const newMsg = payload.new as TeamMessage;
-                setMessages(prev => [...prev, newMsg]);
+                setMessages(prev => {
+                    // 1. Check if we already have this exact ID
+                    if (prev.some(m => m.id === newMsg.id)) return prev;
+
+                    // 2. Check for optimistic match (same content, sender, and is temp)
+                    // We look for a temp message from ME with same content
+                    const optimisticMatch = prev.find(m =>
+                        m.id.startsWith('temp-') &&
+                        m.content === newMsg.content &&
+                        m.sender_email === newMsg.sender_email
+                    );
+
+                    if (optimisticMatch) {
+                        // Replace the optimistic one with the real one
+                        return prev.map(m => m.id === optimisticMatch.id ? newMsg : m);
+                    }
+
+                    // 3. Otherwise append
+                    return [...prev, newMsg];
+                });
 
                 // If closed and msg is for me (or public), show badge
                 const myEmail = guestEmail.toLowerCase();
@@ -85,6 +105,46 @@ export function GlobalChatWidget() {
             window.removeEventListener('new-chat-alert', handleGlobalAlert);
         };
     }, [isIdentified, guestEmail, isOpen]);
+
+    // Presence Tracking (Global)
+    useEffect(() => {
+        if (!isIdentified || !guestEmail) return;
+
+        const channel = supabase.channel('online-users', {
+            config: {
+                presence: {
+                    key: guestEmail,
+                },
+            },
+        });
+
+        channel
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState();
+                const users: any[] = [];
+                Object.keys(state).forEach((key) => {
+                    state[key].forEach((u: any) => users.push(u));
+                });
+                // Deduplicate by email
+                const unique = users.filter((v, i, a) => a.findIndex(t => t.email === v.email) === i);
+                setOnlineUsers(unique);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    const user = getCurrentUser();
+                    await channel.track({
+                        email: guestEmail,
+                        name: guestName || guestEmail.split('@')[0],
+                        role: user?.role || 'guest',
+                        online_at: new Date().toISOString(),
+                    });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isIdentified, guestEmail, guestName]);
 
     // Auto-scroll
     useEffect(() => {
@@ -174,6 +234,13 @@ export function GlobalChatWidget() {
                             {isIdentified && (
                                 <>
                                     <button
+                                        onClick={() => window.dispatchEvent(new CustomEvent('test-chat-alert'))}
+                                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                        title="Test Notification Sound"
+                                    >
+                                        <Bell className="h-4 w-4 text-white/80" />
+                                    </button>
+                                    <button
                                         onClick={loadMessages}
                                         disabled={isLoading}
                                         className="p-1.5 hover:bg-white/10 rounded transition-colors"
@@ -186,11 +253,13 @@ export function GlobalChatWidget() {
                                         variant="ghost"
                                         className="h-7 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10"
                                         onClick={() => {
-                                            localStorage.removeItem('guest_identity');
-                                            setIsIdentified(false);
-                                            setGuestName('');
-                                            setGuestEmail('');
-                                            setMessages([]);
+                                            if (window.confirm("Are you sure you want to end this chat?")) {
+                                                localStorage.removeItem('guest_identity');
+                                                setIsIdentified(false);
+                                                setGuestName('');
+                                                setGuestEmail('');
+                                                setMessages([]);
+                                            }
                                         }}
                                     >
                                         End
@@ -218,12 +287,12 @@ export function GlobalChatWidget() {
                         ) : (
                             <>
                                 <div className="flex-1 overflow-y-auto space-y-4 pr-2" ref={scrollRef}>
-                                    {myMessages.length === 0 && (
+                                    {visibleMessages.length === 0 && (
                                         <div className="text-center py-10 text-muted-foreground text-sm">
                                             No messages yet. Say hi!
                                         </div>
                                     )}
-                                    {myMessages.map(m => {
+                                    {visibleMessages.map(m => {
                                         const isMe = (m.sender_email || '').toLowerCase() === guestEmail.toLowerCase();
                                         return (
                                             <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -244,6 +313,7 @@ export function GlobalChatWidget() {
                                         currentUserEmail={guestEmail}
                                         onSelectRecipient={setSelectedRecipient}
                                         selectedRecipient={selectedRecipient}
+                                        onlineUsers={onlineUsers}
                                     />
                                 </div>
 
