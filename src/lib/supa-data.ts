@@ -809,6 +809,32 @@ export async function uploadLibraryFile(file: File): Promise<{ url: string | nul
             }
 
             console.warn(`Upload to '${bucket}' failed:`, uploadError.message);
+
+            // AUTO-FIX: If bucket not found, try to create 'images' and retry
+            if (bucket === 'images' && (uploadError.message.includes('not found') || uploadError.message.includes('Bucket'))) {
+                console.log("Bucket 'images' missing. Attempting to create...");
+                const { data: bucketData, error: createError } = await supabase.storage.createBucket('images', {
+                    public: true,
+                    fileSizeLimit: 5242880, // 5MB
+                    allowedMimeTypes: ['image/*', 'video/*']
+                });
+
+                if (!createError) {
+                    console.log("Bucket 'images' created successfully! Retrying upload...", bucketData);
+                    // Retry upload to the newly created bucket
+                    const { error: retryError } = await supabase.storage
+                        .from('images')
+                        .upload(filePath, compressedFile);
+
+                    if (!retryError) {
+                        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+                        return { url: data.publicUrl, error: null };
+                    }
+                } else {
+                    console.error("Failed to auto-create bucket:", createError);
+                }
+            }
+
             lastError = uploadError;
         }
 

@@ -22,6 +22,7 @@ export default function F150Setup() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(12); // Pagination limit
     const [uploadStatus, setUploadStatus] = useState<string>("");
     const [formData, setFormData] = useState<Partial<LibraryItem>>({
         category: 'F150 Setup',
@@ -161,8 +162,9 @@ export default function F150Setup() {
                     {/* Gallery Tab */}
                     <TabsContent value="gallery" className="space-y-6">
                         {galleryImages.length === 0 && <div className="text-center py-12 text-muted-foreground">No photos yet. Click "Add Photo" to start.</div>}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {galleryImages.map((img) => (
+                            {galleryImages.slice(0, visibleCount).map((img) => (
                                 <Card
                                     key={img.id}
                                     className="group overflow-hidden border-zinc-800 bg-zinc-900/50 cursor-pointer hover:border-primary/50 transition-all duration-300 relative"
@@ -180,6 +182,7 @@ export default function F150Setup() {
                                         <img
                                             src={img.resource_url}
                                             alt={img.title}
+                                            loading="lazy"
                                             className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-700"
                                         />
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
@@ -195,6 +198,18 @@ export default function F150Setup() {
                                 </Card>
                             ))}
                         </div>
+
+                        {galleryImages.length > visibleCount && (
+                            <div className="flex justify-center py-8">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setVisibleCount(prev => prev + 12)}
+                                    className="min-w-[200px]"
+                                >
+                                    Load More Photos ({galleryImages.length - visibleCount} remaining)
+                                </Button>
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Videos Tab */}
