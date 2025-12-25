@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import localforage from "localforage";
 import { Trash2, Upload, X, ImageIcon, Info, Save, Camera } from "lucide-react";
 import browserImageCompression from "browser-image-compression";
+import { supabase } from "@/lib/supa-data";
 
 type Mode = 'chemical' | 'material' | 'tool';
 
@@ -62,27 +63,7 @@ type Props = {
   onSaved?: () => Promise<void> | void;
 };
 
-// Helper for image compression
-const compressImage = async (file: File) => {
-  const options = {
-    maxSizeMB: 0.5,
-    maxWidthOrHeight: 1200,
-    useWebWorker: true,
-    fileType: 'image/webp'
-  };
-  try {
-    const compressedFile = await browserImageCompression(file, options);
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(compressedFile);
-    });
-  } catch (error) {
-    console.error("Compression failed:", error);
-    throw error;
-  }
-};
+
 
 export default function UnifiedInventoryModal({ mode, open, onOpenChange, initial, onSaved }: Props) {
   const [form, setForm] = useState<ChemicalForm & MaterialForm & ToolForm>({
@@ -109,6 +90,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
   const photoRef = useRef<HTMLInputElement>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (initial) {
@@ -163,13 +145,41 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
+      setIsUploading(true);
       try {
-        toast.info("Compressing image...");
-        const base64 = await compressImage(e.target.files[0]);
-        setForm(prev => ({ ...prev, imageUrl: base64 }));
-        toast.success("Image added");
-      } catch (err) {
-        toast.error("Failed to process image");
+        toast.info("Processing image...");
+        const file = e.target.files[0];
+
+        // Compress
+        const compressedFile = await browserImageCompression(file, {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true
+        });
+
+        // Upload to Supabase Storage
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+        const filePath = `inventory/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('blog-media') // Reusing bucket as per plan
+          .upload(filePath, compressedFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('blog-media')
+          .getPublicUrl(filePath);
+
+        setForm(prev => ({ ...prev, imageUrl: publicUrl }));
+        toast.success("Image uploaded to cloud");
+      } catch (err: any) {
+        console.error(err);
+        toast.error("Upload failed: " + (err.message || "Unknown error"));
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -473,7 +483,9 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         </div>
         <DialogFooter className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { try { window.location.href = '/reports?tab=inventory'; } catch { } }}>View Inventory Report</Button>
-          <Button onClick={save} className="bg-gradient-hero">Save</Button>
+          <Button onClick={save} disabled={isUploading} className="bg-gradient-hero">
+            {isUploading ? 'Uploading...' : 'Save'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

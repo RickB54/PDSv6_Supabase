@@ -14,7 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
-import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, getComments, addComment, getAllCommentCounts, renameLibraryCategory, deleteLibraryCategory } from '@/lib/supa-data';
+import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, getComments, addComment, getAllCommentCounts, renameLibraryCategory, deleteLibraryCategory, supabase } from '@/lib/supa-data';
 import { compressImage } from "@/lib/imageUtils";
 import localforage from "localforage";
 import { Badge } from "@/components/ui/badge";
@@ -139,23 +139,34 @@ export default function F150Setup() {
             // Compress
             const compressed = await compressImage(file);
 
-            setUploadStatus({ step: 'encoding', message: 'Converting to storage format...' });
+            setUploadStatus({ step: 'uploading', message: 'Uploading to cloud...' });
 
-            // Standard Base64 Encoding
-            const reader = new FileReader();
-            reader.readAsDataURL(compressed);
-            reader.onloadend = () => {
-                const base64data = reader.result as string;
-                setFormData(prev => ({ ...prev, resource_url: base64data, thumbnail_url: base64data }));
-                setUploadStatus({ step: 'done', message: 'Ready to save!' });
-                setIsUploading(false);
-            };
+            // Generate unique path
+            const ext = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+            const filePath = `uploads/${fileName}`;
 
-        } catch (err) {
-            console.error(err);
-            toast({ title: "Error", description: "Failed to process image.", variant: "destructive" });
+            // Upload to Supabase 'blog-media' bucket
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('blog-media')
+                .upload(filePath, compressed);
+
+            if (uploadError) throw uploadError;
+
+            // Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('blog-media')
+                .getPublicUrl(filePath);
+
+            setFormData(prev => ({ ...prev, resource_url: publicUrl, thumbnail_url: publicUrl }));
+            setUploadStatus({ step: 'done', message: 'Ready to save!' });
             setIsUploading(false);
-            setUploadStatus({ step: 'error', message: 'Failed to process' });
+
+        } catch (err: any) {
+            console.error(err);
+            toast({ title: "Upload Failed", description: err.message || "Failed to upload image.", variant: "destructive" });
+            setIsUploading(false);
+            setUploadStatus({ step: 'error', message: 'Upload failed' });
         }
     };
 

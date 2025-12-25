@@ -10,6 +10,8 @@ import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems
 import { toast } from "sonner";
 import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera } from "lucide-react";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
+import browserImageCompression from "browser-image-compression";
+import { supabase } from "@/lib/supa-data";
 
 
 
@@ -162,92 +164,63 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }));
   };
 
-  // File upload handlers
-  const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
 
-          // Resize if too large
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-
-          // Convert to compressed base64
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleFileUpload = async (file: File, type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number) => {
     try {
-      console.log('handleFileUpload called:', { file: file.name, type, index });
+      if (!file) return;
 
-      if (!file) {
-        toast.error("Upload Failed", { description: "No file selected" });
-        return;
-      }
-
-      // Check file size (10MB limit for videos, 5MB for images)
-      const maxSize = type === 'shortVideos' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      // Check file size (50MB video, 10MB image)
+      const maxSize = type === 'shortVideos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        toast.error("File Too Large", {
-          description: `File is ${(file.size / 1024 / 1024).toFixed(2)}MB. Max: ${maxSize / 1024 / 1024}MB`
-        });
+        toast.error("File Too Large", { description: "Max size exceeded." });
         return;
       }
 
-      // Compress images for better performance
+      setLoading(true); // Reusing existing loading state
+      toast.info("Uploading...", { description: "Processing..." });
+
+      let fileToUpload = file;
+
+      // Compress images
       if (type !== 'shortVideos' && file.type.startsWith('image/')) {
-        toast.info("Uploading...", { description: "Compressing image..." });
-        const compressed = await compressImage(file);
-        console.log('Image compressed, updating form');
-        setForm(prev => {
-          const current = prev[type] || [];
-          const updated = [...current];
-          updated[index] = compressed;
-          console.log('Form updated with compressed image');
-          return { ...prev, [type]: updated };
+        fileToUpload = await browserImageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true
         });
-        toast.success("Success!", { description: "Image uploaded" });
-      } else {
-        // Videos
-        toast.info("Uploading...", { description: "Processing video..." });
-        const reader = new FileReader();
-        reader.onerror = () => {
-          toast.error("Upload Failed", { description: "Error reading file" });
-        };
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          setForm(prev => {
-            const current = prev[type] || [];
-            const updated = [...current];
-            updated[index] = base64;
-            return { ...prev, [type]: updated };
-          });
-          toast.success("Success!", { description: "Video uploaded" });
-        };
-        reader.readAsDataURL(file);
       }
-    } catch (error) {
-      console.error('File upload error:', error);
-      toast.error("Upload Failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
+
+      // Upload key
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+      const filePath = `customers/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('blog-media')
+        .upload(filePath, fileToUpload);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('blog-media')
+        .getPublicUrl(filePath);
+
+      setForm(prev => {
+        const current = prev[type] || [];
+        const updated = [...current];
+        // Ensure array is large enough if index is out of bounds (though usually it's 0)
+        updated[index] = publicUrl;
+        return { ...prev, [type]: updated };
       });
+
+      toast.success("Uploaded successfully!");
+
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error("Upload Failed", { description: error.message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -779,7 +752,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">Save {isProspect ? 'Prospect' : 'Customer'}</Button>
+            <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90">
+              {loading ? 'Uploading...' : `Save ${isProspect ? 'Prospect' : 'Customer'}`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -75,6 +75,8 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { isSupabaseEnabled } from "@/lib/auth";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
+import browserImageCompression from "browser-image-compression";
+import { supabase } from "@/lib/supa-data";
 
 type Pricing = { compact: number; midsize: number; truck: number; luxury: number };
 type PriceMap = Record<string, string>;
@@ -781,39 +783,37 @@ export default function PackagePricing() {
   };
 
   const handleImageUpload = async (id: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = String(reader.result || "");
-      // Draw to 300x200 canvas with object-fit: cover behavior
-      try {
-        const img = new Image();
-        img.onload = async () => {
-          const targetW = 300, targetH = 200;
-          const canvas = document.createElement('canvas');
-          canvas.width = targetW; canvas.height = targetH;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            const scale = Math.max(targetW / img.width, targetH / img.height);
-            const sw = img.width * scale;
-            const sh = img.height * scale;
-            const dx = (targetW - sw) / 2;
-            const dy = (targetH - sh) / 2;
-            ctx.drawImage(img, dx, dy, sw, sh);
-            const out = canvas.toDataURL('image/jpeg', 0.92);
-            setPackageMeta(id, { imageDataUrl: out });
-            await postFullSync();
-            await refreshLiveAfterSync();
-            toast.success("Package image updated and synced");
-            return;
-          }
-          setPackageMeta(id, { imageDataUrl: dataUrl });
-        };
-        img.src = dataUrl;
-      } catch {
-        setPackageMeta(id, { imageDataUrl: dataUrl });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      toast.info("Processing image...");
+
+      const compressedFile = await browserImageCompression(file, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 800,
+        useWebWorker: true
+      });
+
+      const ext = file.name.split('.').pop();
+      const fileName = `packages/${id}_${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('blog-media')
+        .upload(fileName, compressedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('blog-media')
+        .getPublicUrl(fileName);
+
+      setPackageMeta(id, { imageDataUrl: publicUrl });
+      await postFullSync();
+      await refreshLiveAfterSync();
+      toast.success("Package image updated and synced");
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Upload failed: " + (err.message || "Unknown error"));
+    }
   };
 
   // Apply visibility immediately, also queue for UI; then full-sync and live refresh
@@ -826,13 +826,35 @@ export default function PackagePricing() {
       setAddOnMeta(id, { visible });
     }
     try {
+      if (isSupabaseEnabled()) {
+        // Sync visibility to Supabase immediately
+        const pkg = type === 'package' ? [...builtInPackages, ...getCustomPackages()].find(p => p.id === id) : null;
+        const addon = type === 'addon' ? [...builtInAddOns, ...getCustomAddOns()].find(a => a.id === id) : null;
+
+        if (type === 'package' && pkg) {
+          await supaPkgs.upsert([{
+            id: pkg.id,
+            name: pkg.name,
+            is_active: visible,
+            // minimal fields update to avoid overwriting prices with potential stale data if not careful, 
+            // but our upsert might require all fields depending on constraints. 
+            // safer to re-run saveToBackend logic for this single item or all.
+          }]);
+          // Actually, easiest is just to call saveToBackend with current saved prices
+          await saveToBackend(savedPrices);
+        } else if (type === 'addon' && addon) {
+          await saveToBackend(savedPrices);
+        }
+      }
+
       await postFullSync();
       forceWebsiteTabRefresh();
       forceBookNowTabRefresh();
       openPackagesLiveInBrowser();
-      toast.success(`${type === 'package' ? 'Package' : 'Add-On'} visibility updated live.`);
+      const statusText = visible ? "LIVE on website" : "HIDDEN from website";
+      toast.success(`${type === 'package' ? 'Package' : 'Add-On'} is now ${statusText}`);
     } catch (e) {
-      toast.error('Failed to sync visibility. Please try again.');
+      toast.error('Failed to sync. Please try again.');
     }
   };
 
@@ -908,23 +930,43 @@ export default function PackagePricing() {
   };
 
   const confirmDelete = async (type: 'package' | 'addon', id: string) => {
-    if (type === 'package') {
-      // If custom, remove; if built-in, mark deleted
-      const isCustom = !!getCustomPackages().find(p => p.id === id);
-      if (isCustom) deleteCustomPackage(id); else setPackageMeta(id, { deleted: true, visible: false, imageDataUrl: undefined });
-    } else {
-      const isCustomA = !!getCustomAddOns().find(a => a.id === id);
-      if (isCustomA) deleteCustomAddOn(id); else setAddOnMeta(id, { deleted: true, visible: false });
+    try {
+      if (type === 'package') {
+        const isCustom = !!getCustomPackages().find(p => p.id === id);
+        if (isCustom) {
+          deleteCustomPackage(id);
+          if (isSupabaseEnabled()) await supaPkgs.remove(id);
+        } else {
+          setPackageMeta(id, { deleted: true, visible: false, imageDataUrl: undefined });
+          // Built-ins aren't removed from DB, just marked inactive. saveToBackend handles this based on meta.
+        }
+      } else {
+        const isCustomA = !!getCustomAddOns().find(a => a.id === id);
+        if (isCustomA) {
+          deleteCustomAddOn(id);
+          if (isSupabaseEnabled()) await supaAddOns.remove(id);
+        } else {
+          setAddOnMeta(id, { deleted: true, visible: false });
+        }
+      }
+
+      // Sync remaining state (especially for built-ins marked deleted)
+      if (isSupabaseEnabled()) await saveToBackend(savedPrices);
+
+      await postFullSync();
+      forceWebsiteTabRefresh();
+      forceBookNowTabRefresh();
+      openPackagesLiveInBrowser();
+      toast.success("Deleted and synced");
+
+      // Refresh currentPrices to drop deleted entries visually
+      const updated: PriceMap = { ...currentPrices };
+      Object.keys(updated).forEach(k => { if (k.includes(`:${id}:`)) delete updated[k]; });
+      setCurrentPrices(updated);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete/sync to cloud.");
     }
-    await postFullSync();
-    forceWebsiteTabRefresh();
-    forceBookNowTabRefresh();
-    openPackagesLiveInBrowser();
-    toast.success("Deleted and synced");
-    // Refresh currentPrices to drop deleted entries visually
-    const updated: PriceMap = { ...currentPrices };
-    Object.keys(updated).forEach(k => { if (k.includes(`:${id}:`)) delete updated[k]; });
-    setCurrentPrices(updated);
   };
 
   const handleNewPackageSave = async () => {
@@ -1183,7 +1225,17 @@ export default function PackagePricing() {
                 <h3 className="font-semibold">{pkg.name}</h3>
                 {/* Picture Upload Area (packages only) */}
                 <div className="flex flex-col xl:flex-row xl:flex-nowrap items-start gap-3">
-                  <img src={getLiveImage(pkg.id)} alt={pkg.name} className="w-full xl:w-[300px] xl:h-[200px] object-contain xl:shrink-0 rounded border border-zinc-700 shadow" />
+                  <img
+                    src={getLiveImage(pkg.id) || packageImages[pkg.id] || packageBasic}
+                    onError={(e) => {
+                      const fallback = packageImages[pkg.id] || packageBasic;
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback;
+                      }
+                    }}
+                    alt={pkg.name}
+                    className="w-full xl:w-[300px] xl:h-[200px] object-contain xl:shrink-0 rounded border border-zinc-700 shadow"
+                  />
                   <div className="min-w-0 flex-1 w-full">
                     <Label className="text-xs text-white mb-1 block">Change Package Image</Label>
                     <input type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files && handleImageUpload(pkg.id, e.target.files[0])} />
@@ -1411,38 +1463,28 @@ export default function PackagePricing() {
             </DialogHeader>
             <div className="space-y-3">
               <div className="flex flex-wrap md:flex-nowrap items-start gap-4">
-                <img src={newPkgForm.imageDataUrl || packageBasic} className="shrink-0 w-[300px] h-[200px] object-cover rounded border shadow" />
+                <img
+                  src={newPkgForm.imageDataUrl || packageBasic}
+                  onError={(e) => { e.currentTarget.src = packageBasic; }}
+                  className="shrink-0 w-[300px] h-[200px] object-cover rounded border shadow"
+                />
                 <div className="min-w-0 flex-1">
                   <Label className="text-xs">Change Package Image</Label>
-                  <input type="file" accept="image/png,image/jpeg" onChange={(e) => {
+                  <input type="file" accept="image/png,image/jpeg" onChange={async (e) => {
                     const f = e.target.files?.[0]; if (!f) return;
-                    const r = new FileReader(); r.onload = () => {
-                      const dataUrl = String(r.result || '');
-                      try {
-                        const img = new Image();
-                        img.onload = () => {
-                          const targetW = 300, targetH = 200;
-                          const canvas = document.createElement('canvas');
-                          canvas.width = targetW; canvas.height = targetH;
-                          const ctx = canvas.getContext('2d');
-                          if (ctx) {
-                            const scale = Math.max(targetW / img.width, targetH / img.height);
-                            const sw = img.width * scale;
-                            const sh = img.height * scale;
-                            const dx = (targetW - sw) / 2;
-                            const dy = (targetH - sh) / 2;
-                            ctx.drawImage(img, dx, dy, sw, sh);
-                            const out = canvas.toDataURL('image/jpeg', 0.92);
-                            setNewPkgForm(prev => ({ ...prev, imageDataUrl: out }));
-                            return;
-                          }
-                          setNewPkgForm(prev => ({ ...prev, imageDataUrl: dataUrl }));
-                        };
-                        img.src = dataUrl;
-                      } catch {
-                        setNewPkgForm(prev => ({ ...prev, imageDataUrl: dataUrl }));
-                      }
-                    }; r.readAsDataURL(f);
+                    try {
+                      toast.info("Uploading...");
+                      const compressed = await browserImageCompression(f, { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true });
+                      const ext = f.name.split('.').pop();
+                      const fileName = `packages/new_${Date.now()}.${ext}`;
+                      const { error } = await supabase.storage.from('blog-media').upload(fileName, compressed);
+                      if (error) throw error;
+                      const { data: { publicUrl } } = supabase.storage.from('blog-media').getPublicUrl(fileName);
+                      setNewPkgForm(prev => ({ ...prev, imageDataUrl: publicUrl }));
+                      toast.success("Image ready");
+                    } catch (err) {
+                      toast.error("Upload failed");
+                    }
                   }} />
                 </div>
               </div>

@@ -1,27 +1,33 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Added
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck } from "lucide-react"; // Added Truck
+import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck, Loader2, Upload, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem } from "@/lib/supa-data";
+import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, supabase } from "@/lib/supa-data";
+import { compressImage } from "@/lib/imageUtils";
 
 export default function LearningLibrary() {
-    const navigate = useNavigate(); // Added
+    const navigate = useNavigate();
     const { toast } = useToast();
     const user = getCurrentUser();
     const isAdmin = user?.role === 'admin';
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [items, setItems] = useState<LibraryItem[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<{ step: string; message: string }>({ step: 'idle', message: '' });
+
     const [formData, setFormData] = useState<Partial<LibraryItem>>({
         type: 'video',
         category: 'General'
@@ -72,6 +78,7 @@ export default function LearningLibrary() {
 
     const handleAddNew = () => {
         setEditingItem(null);
+        setUploadStatus({ step: 'idle', message: '' });
         setFormData({
             type: 'video',
             category: 'General',
@@ -83,6 +90,7 @@ export default function LearningLibrary() {
 
     const handleEdit = (item: LibraryItem) => {
         setEditingItem(item);
+        setUploadStatus({ step: 'idle', message: '' });
         setFormData({ ...item });
         setIsModalOpen(true);
     };
@@ -98,6 +106,54 @@ export default function LearningLibrary() {
             toast({ title: "Resource Deleted", description: "Library item removed successfully." });
         } else {
             toast({ title: "Delete Failed", description: "Could not delete the resource.", variant: "destructive" });
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setUploadStatus({ step: 'uploading', message: 'Uploading to cloud...' });
+
+        try {
+            // If image, compress it. If video/pdf, use as is (for now)
+            let fileToUpload = file;
+            if (file.type.startsWith('image')) {
+                fileToUpload = await compressImage(file);
+            }
+
+            // Generate unique path
+            const ext = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+            const filePath = `learning-library/${fileName}`; // Subfolder for organization
+
+            // Upload to Supabase 'blog-media' bucket (reusing bucket)
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('blog-media')
+                .upload(filePath, fileToUpload);
+
+            if (uploadError) throw uploadError;
+
+            // Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('blog-media')
+                .getPublicUrl(filePath);
+
+            setFormData(prev => ({
+                ...prev,
+                resource_url: publicUrl,
+                thumbnail_url: file.type.startsWith('image') ? publicUrl : prev.thumbnail_url
+            }));
+
+            setUploadStatus({ step: 'done', message: 'Ready to save!' });
+            setIsUploading(false);
+
+        } catch (err: any) {
+            console.error(err);
+            toast({ title: "Upload Failed", description: err.message || "Failed to upload file.", variant: "destructive" });
+            setIsUploading(false);
+            setUploadStatus({ step: 'error', message: 'Upload failed' });
         }
     };
 
@@ -366,13 +422,45 @@ export default function LearningLibrary() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Resource URL (optional)</Label>
-                                <Input
-                                    value={formData.resource_url || ''}
-                                    onChange={(e) => setFormData({ ...formData, resource_url: e.target.value })}
-                                    placeholder="https://..."
-                                    className="bg-zinc-950 border-zinc-700"
-                                />
+                                <Label>Resource Content</Label>
+                                <Tabs defaultValue="url" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 bg-zinc-950 border border-zinc-800">
+                                        <TabsTrigger value="url">External Link / Video URL</TabsTrigger>
+                                        <TabsTrigger value="upload">Upload File</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="url" className="space-y-2 mt-2">
+                                        <Input
+                                            value={formData.resource_url || ''}
+                                            onChange={(e) => setFormData({ ...formData, resource_url: e.target.value })}
+                                            placeholder="Paste YouTube, Vimeo, or Website URL..."
+                                            className="bg-zinc-950 border-zinc-700"
+                                        />
+                                        <p className="text-xs text-zinc-500">Best for YouTube videos or external articles.</p>
+                                    </TabsContent>
+                                    <TabsContent value="upload" className="space-y-4 mt-2">
+                                        <div className="flex gap-2">
+                                            <Input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/*,video/*,application/pdf"
+                                                onChange={handleFileUpload}
+                                                className="bg-zinc-950 border-zinc-700"
+                                                disabled={isUploading}
+                                            />
+                                            {isUploading && <Loader2 className="animate-spin w-5 h-5 text-blue-500 mt-2" />}
+                                        </div>
+                                        {uploadStatus.message && (
+                                            <p className={`text-xs ${uploadStatus.step === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                                {uploadStatus.message}
+                                            </p>
+                                        )}
+                                        {formData.resource_url && formData.resource_url.includes('supabase') && (
+                                            <div className="p-2 bg-zinc-950 border border-green-900/30 rounded text-xs text-green-400 flex items-center gap-2">
+                                                <CheckCircle2 className="w-3 h-3" /> File uploaded successfully
+                                            </div>
+                                        )}
+                                    </TabsContent>
+                                </Tabs>
                             </div>
                         </div>
                     </div>
@@ -384,8 +472,8 @@ export default function LearningLibrary() {
                         )}
                         <div className="flex gap-2 ml-auto">
                             <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                                {editingItem ? 'Update' : 'Add'} Resource
+                            <Button onClick={handleSave} disabled={isUploading} className="bg-blue-600 hover:bg-blue-700">
+                                {isUploading ? 'Uploading...' : (editingItem ? 'Update' : 'Add') + ' Resource'}
                             </Button>
                         </div>
                     </DialogFooter>

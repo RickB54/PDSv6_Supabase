@@ -1,5 +1,5 @@
 
-import { supabase } from './supabase';
+export { supabase } from './supabase';
 import localforage from 'localforage';
 import { createClient } from '@supabase/supabase-js';
 
