@@ -610,6 +610,7 @@ export default function F150Setup() {
                                             ref={fileInputRef}
                                             type="file"
                                             accept="image/*"
+                                            capture="environment" // Fix: Allow camera on mobile
                                             onChange={handleFileUpload}
                                             className="bg-zinc-900 border-zinc-800"
                                             disabled={isUploading}
