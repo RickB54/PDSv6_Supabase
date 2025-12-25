@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -293,10 +294,13 @@ export default function F150Setup() {
                 <div className="container mx-auto px-4 py-8">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                                <Newspaper className="w-8 h-8 text-cyan-400" />
-                                Prime Blog
-                            </h1>
+                            <div className="flex items-center gap-2">
+                                <SidebarTrigger className="md:hidden text-white" />
+                                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                                    <Newspaper className="w-8 h-8 text-cyan-400" />
+                                    Prime Blog
+                                </h1>
+                            </div>
                             <p className="text-indigo-200 mt-2">
                                 Share your best work, detailing tips, and creative setups.
                             </p>

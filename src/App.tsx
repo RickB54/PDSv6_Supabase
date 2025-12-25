@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
 import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled } from "@/lib/auth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -57,6 +58,7 @@ import JobsCompleted from "./pages/JobsCompleted";
 import ExamPage from "./pages/ExamPage";
 import ExamAdmin from "./pages/ExamAdmin";
 import CheatSheet from "./pages/CheatSheet";
+import PersonalNotes from "./pages/PersonalNotes";
 import Tasks from "./pages/Tasks";
 import VehicleClassification from "./pages/VehicleClassification";
 import ClientEvaluation from "./pages/ClientEvaluation";
@@ -383,6 +385,11 @@ const App = () => {
                         <CheatSheet />
                       </ProtectedRoute>
                     } />
+                    <Route path="/notes" element={
+                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                        <PersonalNotes />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/dashboard/employee" element={
                       <ProtectedRoute allowedRoles={['employee', 'admin']}>
                         <EmployeeDashboard />
@@ -443,6 +450,7 @@ const App = () => {
                   </Routes>
                 </ErrorBoundary>
               </div>
+              {user && <GlobalRightSidebar />}
             </div>
           </SidebarProvider>
         </BrowserRouter>

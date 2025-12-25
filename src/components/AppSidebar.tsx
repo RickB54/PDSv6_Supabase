@@ -211,7 +211,13 @@ export function AppSidebar() {
   type MenuItem = { title: string; url: string; icon?: any; role?: string; key?: string; badge?: number; highlight?: 'red' | 'green' };
 
   // Standalone Top Items (Use shared config)
-  const TOP_ITEMS = CONFIGURED_TOP_ITEMS;
+  const TOP_ITEMS = [
+    ...CONFIGURED_TOP_ITEMS,
+    // Inject Personal Notes here if not in shared config yet, or add to shared config.
+    // User asked for it "below Employee Dashboard" which is usually in TOP_ITEMS or a group. 
+    // Usually Employee Dashboard is a top item.
+    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const }
+  ];
 
   // --- MENU CONFIG ---
   // Using shared config to ensure Sidebar and Section Landing pages match

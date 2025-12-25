@@ -415,66 +415,69 @@ export default function StaffSchedule() {
                     </div>
 
                     {/* Bottom Detail Panel */}
-                    <div className="mt-2 h-[140px] shrink-0 bg-[#0f0f13] border border-zinc-800 rounded-xl flex shadow-2xl relative overflow-hidden transition-all">
+                    <div className="mt-2 h-auto min-h-[140px] md:h-[140px] shrink-0 bg-[#0f0f13] border border-zinc-800 rounded-xl flex shadow-2xl relative overflow-hidden transition-all">
                         {!selectedShift ? (
-                            <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm italic">
+                            <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm italic py-4">
                                 Select a shift to view details, notes, and status.
                             </div>
                         ) : (
-                            <div className="flex flex-1 p-4 gap-6 animate-in slide-in-from-bottom-5">
-                                <div className="w-[4px] bg-blue-500 rounded-full h-full shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
+                            <div className="flex flex-1 p-4 gap-4 md:gap-6 animate-in slide-in-from-bottom-5">
+                                <div className="w-[4px] bg-blue-500 rounded-full self-stretch shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
 
-                                {/* Info Column */}
-                                <div className="space-y-1 min-w-[150px]">
-                                    <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold">Employee</div>
-                                    <div className="text-xl font-bold text-white flex items-center gap-2">
-                                        {selectedShift.employeeName}
-                                        {selectedShift.status === 'sick' && <Badge variant="destructive" className="text-[10px] h-5">SICK</Badge>}
-                                        {selectedShift.status === 'no-show' && <Badge variant="secondary" className="text-[10px] h-5">NO SHOW</Badge>}
+                                {/* Content Wrapper */}
+                                <div className="flex flex-1 flex-col md:flex-row gap-4 md:gap-6 min-w-0">
+                                    {/* Info Column */}
+                                    <div className="space-y-1 min-w-[150px]">
+                                        <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold">Employee</div>
+                                        <div className="text-xl font-bold text-white flex items-center gap-2">
+                                            {selectedShift.employeeName}
+                                            {selectedShift.status === 'sick' && <Badge variant="destructive" className="text-[10px] h-5">SICK</Badge>}
+                                            {selectedShift.status === 'no-show' && <Badge variant="secondary" className="text-[10px] h-5">NO SHOW</Badge>}
+                                        </div>
+                                        <div className="text-sm text-zinc-400">{selectedShift.role}</div>
                                     </div>
-                                    <div className="text-sm text-zinc-400">{selectedShift.role}</div>
-                                </div>
 
-                                {/* Time Column */}
-                                <div className="space-y-1 min-w-[150px] border-l border-zinc-800 pl-6">
-                                    <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold">Time</div>
-                                    <div className="text-lg text-zinc-200 font-mono flex items-center gap-2">
-                                        <Clock className="w-4 h-4 text-blue-400" />
-                                        {formatTime12(selectedShift.startTime)} - {formatTime12(selectedShift.endTime)}
+                                    {/* Time Column */}
+                                    <div className="space-y-1 min-w-[150px] border-t pt-4 md:border-t-0 md:pt-0 md:border-l border-zinc-800 md:pl-6">
+                                        <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold">Time</div>
+                                        <div className="text-lg text-zinc-200 font-mono flex items-center gap-2">
+                                            <Clock className="w-4 h-4 text-blue-400" />
+                                            {formatTime12(selectedShift.startTime)} - {formatTime12(selectedShift.endTime)}
+                                        </div>
+                                        <div className="text-xs text-zinc-500">{format(parseISO(selectedShift.date), 'EEEE, MMMM do')}</div>
                                     </div>
-                                    <div className="text-xs text-zinc-500">{format(parseISO(selectedShift.date), 'EEEE, MMMM do')}</div>
-                                </div>
 
-                                {/* Notes Column */}
-                                <div className="flex-1 border-l border-zinc-800 pl-6 bg-zinc-900/30 rounded-r-lg p-2">
-                                    <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-1">Shift Notes</div>
-                                    <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
-                                        {selectedShift.notes || <span className="text-zinc-600 italic">No notes added.</span>}
-                                    </p>
-                                </div>
+                                    {/* Notes Column */}
+                                    <div className="flex-1 border-t pt-4 md:border-t-0 md:pt-0 md:border-l border-zinc-800 md:pl-6 bg-transparent md:bg-zinc-900/30 rounded-r-lg md:p-2">
+                                        <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-1">Shift Notes</div>
+                                        <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                                            {selectedShift.notes || <span className="text-zinc-600 italic">No notes added.</span>}
+                                        </p>
+                                    </div>
 
-                                {/* Actions */}
-                                <div className="flex flex-col gap-2 justify-center ml-4 min-w-[140px]">
-                                    {isAdmin && (
-                                        <Button variant="ghost" size="sm" className="bg-green-900/20 text-green-400 hover:bg-green-900/40 hover:text-green-300 w-full" onClick={() => {
-                                            navigate(`/payroll?tab=checks&employee=${encodeURIComponent(selectedShift.employeeName)}`);
-                                        }}>
-                                            <DollarSign className="w-4 h-4 mr-2" /> Pay
-                                        </Button>
-                                    )}
-                                    <Button variant="ghost" size="sm" className="bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 w-full" onClick={() => {
-                                        navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
-                                    }}>
-                                        <CheckSquare className="w-4 h-4 mr-2" /> Start Job
-                                    </Button>
-                                    <div className="flex gap-2">
+                                    {/* Actions */}
+                                    <div className="flex flex-col gap-2 justify-center pt-2 md:pt-0 md:ml-4 min-w-[140px]">
                                         {isAdmin && (
-                                            <>
-                                                <Button variant="destructive" size="sm" className="px-2" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
-                                                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditShift(selectedShift)}>Edit</Button>
-                                            </>
+                                            <Button variant="ghost" size="sm" className="bg-green-900/20 text-green-400 hover:bg-green-900/40 hover:text-green-300 w-full" onClick={() => {
+                                                navigate(`/payroll?tab=checks&employee=${encodeURIComponent(selectedShift.employeeName)}`);
+                                            }}>
+                                                <DollarSign className="w-4 h-4 mr-2" /> Pay
+                                            </Button>
                                         )}
-                                        <Button variant="ghost" size="sm" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" size="sm" className="bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 w-full" onClick={() => {
+                                            navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
+                                        }}>
+                                            <CheckSquare className="w-4 h-4 mr-2" /> Start Job
+                                        </Button>
+                                        <div className="flex gap-2">
+                                            {isAdmin && (
+                                                <>
+                                                    <Button variant="destructive" size="sm" className="px-2" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
+                                                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditShift(selectedShift)}>Edit</Button>
+                                                </>
+                                            )}
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4" /></Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -482,11 +485,7 @@ export default function StaffSchedule() {
                     </div>
                 </main>
 
-                {/* Right Integration Sidebar - Collapsed state logic same as before, simplifying for length */}
-                <div className="w-12 border-l border-zinc-800 bg-zinc-950 flex flex-col items-center py-4 gap-4 z-30">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/team-chat')} title="Team Chat"><MessageSquare className="w-5 h-5 text-emerald-500" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/tasks')} title="Tasks"><CheckSquare className="w-5 h-5 text-blue-500" /></Button>
-                </div>
+                {/* Right integration sidebar removed (moved to global) */}
             </div>
 
             {/* Shift Modal */}

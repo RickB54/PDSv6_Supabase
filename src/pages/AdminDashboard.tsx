@@ -718,6 +718,10 @@ export default function AdminDashboard() {
                 {!isMenuHidden('file-manager') && (
                   <RedBox accent="yellow" title="File Manager" href="/file-manager" Icon={Folder} badgeCount={unviewedFilesCount} />
                 )}
+                <Link to="/notes" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-amber-500 text-amber-500 hover:bg-amber-500/10 w-fit">
+                  <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Personal Notes</span>
+                </Link>
               </div>
             </Card>
           </Card>
@@ -787,6 +791,7 @@ export default function AdminDashboard() {
                   <FileText className="w-3.5 h-3.5 text-purple-600" />
                   <span>Open Cheat Sheet</span>
                 </button>
+
                 <Link to="/exam-admin" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 w-fit">
                   <Cog className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Manage Exam</span>
@@ -881,6 +886,10 @@ export default function AdminDashboard() {
                 <Link to="/team-chat" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
                   <Users className="w-3.5 h-3.5 text-blue-600" />
                   <span>Team Chat</span>
+                </Link>
+                <Link to="/notes" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-amber-500 text-amber-500 hover:bg-amber-500/10 w-fit">
+                  <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Personal Notes</span>
                 </Link>
               </div>
             </Card>

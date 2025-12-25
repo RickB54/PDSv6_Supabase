@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Menu, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -196,6 +196,7 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
 
   // Handbook sub-modal
   const [handbookOpen, setHandbookOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSectionIdx, setActiveSectionIdx] = useState(0);
   const [sectionsRead, setSectionsRead] = useState<boolean[]>(() => Array(handbookSections.length).fill(false));
   const [showSkippedOnly, setShowSkippedOnly] = useState(false);
@@ -513,7 +514,12 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
       < Dialog open={handbookOpen} onOpenChange={setHandbookOpen} >
         <DialogContent className="max-w-[110rem] w-[100vw] h-[100dvh] md:w-[98vw] md:h-[95vh] bg-[#020617] text-white p-0 border border-blue-900 md:rounded-lg shadow-2xl flex flex-col overflow-hidden">
           <DialogHeader className="bg-[#172554] p-4 border-b border-blue-800 shrink-0 flex flex-row items-center justify-between">
-            <DialogTitle className="text-white">Auto Detailing Handbook</DialogTitle>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="md:hidden text-blue-200 hover:text-white" onClick={() => setMobileMenuOpen(true)}>
+                <Menu className="h-6 w-6" />
+              </Button>
+              <DialogTitle className="text-white">Auto Detailing Handbook</DialogTitle>
+            </div>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-blue-200 hover:text-white hover:bg-blue-800 h-8 w-8">
@@ -535,9 +541,20 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
           </DialogHeader>
 
           <div className="flex flex-1 overflow-hidden min-h-0">
-            {/* Table of contents - Sidebar (Visible on MD+, hidden on mobile unless toggled - wait, user wants Show Skipped back) */}
-            {/* Moving Show Skipped to Header for better visibility, but keeping sidebar structure */}
-            <div className="hidden md:flex flex-col w-64 lg:w-80 border-r border-blue-800 bg-[#0f172a]">
+            {/* Table of contents - Sidebar */}
+            <div className={`
+              fixed inset-0 z-50 bg-[#0f172a] transition-transform duration-300 transform 
+              ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+              md:relative md:inset-auto md:translate-x-0 
+              md:flex flex-col w-64 lg:w-80 border-r border-blue-800 bg-[#0f172a]
+            `}>
+              {/* Mobile Header for Sidebar */}
+              <div className="md:hidden p-4 border-b border-blue-800 flex items-center justify-between bg-[#172554]">
+                <span className="font-bold text-white">Handbook Sections</span>
+                <Button variant="ghost" size="icon" className="text-blue-200" onClick={() => setMobileMenuOpen(false)}>
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
               <div className="p-2 border-b border-blue-800 bg-[#0f172a] shrink-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-blue-200">Jump to skipped</span>
@@ -554,7 +571,10 @@ export default function OrientationModal({ open, onOpenChange, startExamOnOpen =
                       key={sec.id}
                       variant="ghost"
                       className={`w-full justify-start text-left h-auto py-2 px-3 whitespace-normal ${activeSectionIdx === idx ? 'bg-[#334155] text-white ring-1 ring-blue-400' : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'}`}
-                      onClick={() => setActiveSectionIdx(idx)}
+                      onClick={() => {
+                        setActiveSectionIdx(idx);
+                        setMobileMenuOpen(false);
+                      }}
                     >
                       <span className="flex-1 text-sm">{sec.name}</span>
                       {!sectionsRead[idx] && (

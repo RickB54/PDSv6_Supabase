@@ -317,6 +317,12 @@ const EmployeeDashboard = () => {
                 <div className="font-semibold text-white">BLOG</div>
               </Card>
             </Link>
+            <Link to="/notes" className="block">
+              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
+                <div className="font-semibold text-amber-500">MY NOTES</div>
+                <div className="text-xs text-muted-foreground">(Private)</div>
+              </Card>
+            </Link>
           </div>
 
           {/* Notify Admin */}
