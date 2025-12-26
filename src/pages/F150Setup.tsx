@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Play, ZoomIn, Truck, Wrench, Info, Plus, Edit2, Trash2, Upload, Loader2, Camera, Image as ImageIcon, Video, FolderPlus, Newspaper, User, CheckCircle2, RotateCcw, Settings } from "lucide-react";
+import { Play, ZoomIn, Truck, Wrench, Info, Plus, Edit2, Trash2, Upload, Loader2, Camera, Image as ImageIcon, Video, FolderPlus, Newspaper, User, CheckCircle2, RotateCcw, Settings, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -458,6 +458,14 @@ export default function F150Setup() {
 
                             {/* Top: Media Player */}
                             <div className="bg-black relative w-full shrink-0 flex items-center justify-center border-b border-zinc-800/50" style={{ height: '50vh', minHeight: '300px' }}>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-2 right-2 z-50 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10 w-10 h-10 backdrop-blur-md"
+                                    onClick={() => setSelectedItem(null)}
+                                >
+                                    <X className="w-6 h-6" />
+                                </Button>
                                 {selectedItem.type === 'video' || (selectedItem.resource_url && selectedItem.resource_url.includes('youtube')) ? (
                                     <iframe
                                         src={getEmbedUrl(selectedItem.resource_url)}

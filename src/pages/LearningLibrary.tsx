@@ -143,7 +143,8 @@ export default function LearningLibrary() {
             setFormData(prev => ({
                 ...prev,
                 resource_url: publicUrl,
-                thumbnail_url: file.type.startsWith('image') ? publicUrl : prev.thumbnail_url
+                thumbnail_url: file.type.startsWith('image') ? publicUrl : prev.thumbnail_url,
+                type: file.type.startsWith('image') ? 'image' : prev.type // Auto-set type
             }));
 
             setUploadStatus({ step: 'done', message: 'Ready to save!' });
@@ -201,6 +202,7 @@ export default function LearningLibrary() {
     const getIcon = (type: string) => {
         switch (type) {
             case 'video': return Video;
+            case 'image': return FileText; // or Lucide Image icon if imported
             case 'pdf': return FileText;
             case 'article': return FileText;
             default: return FileText;
@@ -325,9 +327,9 @@ export default function LearningLibrary() {
                                     </div>
                                 )}
                                 <div className="aspect-video bg-zinc-950 relative flex items-center justify-center overflow-hidden rounded-t-xl">
-                                    {item.type === 'video' && item.resource_url && getYouTubeThumbnail(item.resource_url) ? (
+                                    {((item.type === 'video' || item.type === 'image') && item.resource_url && (item.type === 'image' || getYouTubeThumbnail(item.resource_url))) ? (
                                         <img
-                                            src={getYouTubeThumbnail(item.resource_url)!}
+                                            src={item.type === 'image' ? item.resource_url : getYouTubeThumbnail(item.resource_url)!}
                                             alt={item.title}
                                             className="w-full h-full object-cover"
                                         />
@@ -375,6 +377,7 @@ export default function LearningLibrary() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="video">Video</SelectItem>
+                                        <SelectItem value="image">Image</SelectItem>
                                         <SelectItem value="pdf">PDF Document</SelectItem>
                                         <SelectItem value="article">Article</SelectItem>
                                     </SelectContent>
@@ -411,57 +414,57 @@ export default function LearningLibrary() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Duration (optional)</Label>
-                                <Input
-                                    value={formData.duration || ''}
-                                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                    placeholder="e.g., 25 mins"
-                                    className="bg-zinc-950 border-zinc-700"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Resource Content</Label>
-                                <Tabs defaultValue="url" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-2 bg-zinc-950 border border-zinc-800">
-                                        <TabsTrigger value="url">External Link / Video URL</TabsTrigger>
-                                        <TabsTrigger value="upload">Upload File</TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="url" className="space-y-2 mt-2">
+                        <div className="space-y-2 w-1/2 pr-2">
+                            <Label>Duration (optional)</Label>
+                            <Input
+                                value={formData.duration || ''}
+                                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                                placeholder="e.g., 25 mins"
+                                className="bg-zinc-950 border-zinc-700"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Resource Content</Label>
+                            <Tabs defaultValue="url" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 bg-zinc-950 border border-zinc-800">
+                                    <TabsTrigger value="url">External Link / Video URL</TabsTrigger>
+                                    <TabsTrigger value="upload">Upload File</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="url" className="space-y-2 mt-2">
+                                    <Input
+                                        value={formData.resource_url || ''}
+                                        onChange={(e) => setFormData({ ...formData, resource_url: e.target.value })}
+                                        placeholder="Paste YouTube, Vimeo, or Website URL..."
+                                        className="bg-zinc-950 border-zinc-700"
+                                    />
+                                    <p className="text-xs text-zinc-500">Best for YouTube videos or external articles.</p>
+                                </TabsContent>
+                                <TabsContent value="upload" className="space-y-4 mt-2">
+                                    <div className="flex gap-2">
                                         <Input
-                                            value={formData.resource_url || ''}
-                                            onChange={(e) => setFormData({ ...formData, resource_url: e.target.value })}
-                                            placeholder="Paste YouTube, Vimeo, or Website URL..."
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*,video/*,application/pdf"
+                                            capture="environment"
+                                            onChange={handleFileUpload}
                                             className="bg-zinc-950 border-zinc-700"
+                                            disabled={isUploading}
                                         />
-                                        <p className="text-xs text-zinc-500">Best for YouTube videos or external articles.</p>
-                                    </TabsContent>
-                                    <TabsContent value="upload" className="space-y-4 mt-2">
-                                        <div className="flex gap-2">
-                                            <Input
-                                                ref={fileInputRef}
-                                                type="file"
-                                                accept="image/*,video/*,application/pdf"
-                                                onChange={handleFileUpload}
-                                                className="bg-zinc-950 border-zinc-700"
-                                                disabled={isUploading}
-                                            />
-                                            {isUploading && <Loader2 className="animate-spin w-5 h-5 text-blue-500 mt-2" />}
+                                        {isUploading && <Loader2 className="animate-spin w-5 h-5 text-blue-500 mt-2" />}
+                                    </div>
+                                    {uploadStatus.message && (
+                                        <p className={`text-xs ${uploadStatus.step === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                            {uploadStatus.message}
+                                        </p>
+                                    )}
+                                    {formData.resource_url && formData.resource_url.includes('supabase') && (
+                                        <div className="p-2 bg-zinc-950 border border-green-900/30 rounded text-xs text-green-400 flex items-center gap-2">
+                                            <CheckCircle2 className="w-3 h-3" /> File uploaded successfully
                                         </div>
-                                        {uploadStatus.message && (
-                                            <p className={`text-xs ${uploadStatus.step === 'error' ? 'text-red-400' : 'text-green-400'}`}>
-                                                {uploadStatus.message}
-                                            </p>
-                                        )}
-                                        {formData.resource_url && formData.resource_url.includes('supabase') && (
-                                            <div className="p-2 bg-zinc-950 border border-green-900/30 rounded text-xs text-green-400 flex items-center gap-2">
-                                                <CheckCircle2 className="w-3 h-3" /> File uploaded successfully
-                                            </div>
-                                        )}
-                                    </TabsContent>
-                                </Tabs>
-                            </div>
+                                    )}
+                                </TabsContent>
+                            </Tabs>
                         </div>
                     </div>
                     <DialogFooter className="flex justify-between w-full">
