@@ -8,10 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Play, ZoomIn, Truck, Wrench, Info, Plus, Edit2, Trash2, Upload, Loader2, Camera, Image as ImageIcon, Video, FolderPlus, Newspaper, User, CheckCircle2, RotateCcw, Settings, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Link, useNavigate } from 'react-router-dom';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { MessageSquare, Send } from "lucide-react";
+
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
 import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, getComments, addComment, getAllCommentCounts, renameLibraryCategory, deleteLibraryCategory, supabase } from '@/lib/supa-data';
@@ -23,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function F150Setup() {
     const { toast } = useToast();
     const user = getCurrentUser();
+    const navigate = useNavigate();
     const isAdmin = user?.role === 'admin' || (user?.role as string) === 'owner';
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -311,8 +313,11 @@ export default function F150Setup() {
                 <div className="container mx-auto px-4 py-8">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <div className="flex items-center gap-2">
-                                <SidebarTrigger className="text-white" />
+                            <div className="flex items-center gap-3">
+                                <SidebarTrigger className="text-white shrink-0" />
+                                <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 shrink-0">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </Button>
                                 <h1 className="text-3xl font-bold text-white flex items-center gap-3">
                                     <Newspaper className="w-8 h-8 text-cyan-400" />
                                     Prime Blog
@@ -323,6 +328,9 @@ export default function F150Setup() {
                             </p>
                         </div>
                         <div className="flex gap-2">
+                            <Button variant="outline" size="icon" onClick={() => loadItems()} className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                                <RotateCcw className="w-4 h-4" />
+                            </Button>
                             <Button onClick={() => handleOpenDialog()} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold shadow-lg shadow-cyan-900/20">
                                 <Plus className="w-5 h-5 mr-2" />
                                 New Post
@@ -467,8 +475,8 @@ export default function F150Setup() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute top-2 right-2 z-50 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10 w-10 h-10 backdrop-blur-md"
                                     onClick={() => setSelectedItem(null)}
+                                    className="absolute top-4 right-4 z-[60] rounded-full bg-black/50 hover:bg-red-600 text-white border-2 border-white/20 w-12 h-12 backdrop-blur-md transition-all shadow-xl"
                                 >
                                     <X className="w-6 h-6" />
                                 </Button>
