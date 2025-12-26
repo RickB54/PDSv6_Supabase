@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
     Plus, Search, Trash2, Folder, Inbox, Briefcase, User, Menu, ArrowLeft,
-    MoreVertical, FileText, Lock, Unlock, Star, Tag, ChevronRight, ChevronDown, Edit2
+    MoreVertical, FileText, Lock, Unlock, Star, Tag, ChevronRight, ChevronDown, Edit2, Image as ImageIcon, X
 } from "lucide-react";
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -18,6 +18,9 @@ import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/lib/supa-data";
+import imageCompression from 'browser-image-compression';
+import { VoiceInput } from "@/components/VoiceInput";
 
 export default function PersonalNotes() {
     // Store
@@ -33,6 +36,9 @@ export default function PersonalNotes() {
     const [targetNotebookId, setTargetNotebookId] = useState<string | null>(null);
     const [unlockOpen, setUnlockOpen] = useState(false);
     const [tagInput, setTagInput] = useState("");
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+    const [noteImages, setNoteImages] = useState<string[]>([]);
 
     // Rename & Delete State
     const [renameOpen, setRenameOpen] = useState(false);
@@ -87,6 +93,18 @@ export default function PersonalNotes() {
     }, [store.notes, store.searchQuery, store.activeNotebookId, store.activeSectionId, store.sections]);
 
     const activeNote = useMemo(() => store.notes.find(n => n.id === store.activeNoteId), [store.notes, store.activeNoteId]);
+
+    // Extract images from note content
+    useEffect(() => {
+        if (!activeNote?.content) {
+            setNoteImages([]);
+            return;
+        }
+        const imageRegex = /!\[.*?\]\((https?:\/\/[^\)]+)\)/g;
+        const matches = [...activeNote.content.matchAll(imageRegex)];
+        const urls = matches.map(m => m[1]);
+        setNoteImages(urls);
+    }, [activeNote?.content]);
 
     // Handlers
     const handleCreateNotebook = async () => {
@@ -150,6 +168,54 @@ export default function PersonalNotes() {
         const current = activeNote.tags || [];
         if (!current.includes(tag)) {
             store.updateNote(activeNote.id, { tags: [...current, tag] });
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!activeNote || !e.target.files) return;
+        setUploadingImage(true);
+
+        try {
+            const files = Array.from(e.target.files);
+            const uploadPromises = files.map(async (file) => {
+                // Compress image
+                const compressed = await imageCompression(file, {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true
+                });
+
+                // Upload to Supabase Storage
+                const fileName = `notes/${activeNote.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${file.name}`;
+                const { data, error } = await supabase.storage
+                    .from('note-images')
+                    .upload(fileName, compressed);
+
+                if (error) throw error;
+
+                // Get public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('note-images')
+                    .getPublicUrl(fileName);
+
+                return publicUrl;
+            });
+
+            const uploadedUrls = await Promise.all(uploadPromises);
+
+            // Add image URLs to note content
+            const currentContent = activeNote.content || '';
+            const imageMarkdown = uploadedUrls.map(url => `![Image](${url})`).join('\n');
+            await store.updateNote(activeNote.id, {
+                content: currentContent + '\n' + imageMarkdown + '\n'
+            });
+
+        } catch (error: any) {
+            console.error('Image upload failed:', error);
+            alert('Failed to upload image: ' + (error.message || 'Unknown error'));
+        } finally {
+            setUploadingImage(false);
+            if (e.target) e.target.value = '';
         }
     };
 
@@ -344,6 +410,35 @@ export default function PersonalNotes() {
                                     <Button variant="ghost" size="icon" title={activeNote.is_pinned ? "Unpin" : "Pin"} onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                         <Star className={`w-4 h-4 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-400'}`} />
                                     </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Upload Image"
+                                        disabled={uploadingImage}
+                                        onClick={() => document.getElementById('note-image-upload')?.click()}
+                                    >
+                                        <ImageIcon className={`w-4 h-4 ${uploadingImage ? 'text-blue-500 animate-pulse' : 'text-zinc-400'}`} />
+                                    </Button>
+                                    <input
+                                        id="note-image-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        multiple
+                                        className="hidden"
+                                        onChange={handleImageUpload}
+                                    />
+                                    <VoiceInput
+                                        onTranscript={(text) => {
+                                            if (activeNote) {
+                                                const currentContent = activeNote.content || '';
+                                                store.updateNote(activeNote.id, {
+                                                    content: currentContent + '\n' + text
+                                                });
+                                            }
+                                        }}
+                                        className="relative"
+                                    />
                                     <Button variant="ghost" size="icon" title={activeNote.is_locked ? "Unlock" : "Lock"} onClick={toggleLock}>
                                         {activeNote.is_locked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-zinc-400" />}
                                     </Button>
@@ -411,6 +506,34 @@ export default function PersonalNotes() {
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Image Gallery */}
+                                    {noteImages.length > 0 && (
+                                        <div className="mb-6">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <ImageIcon className="w-4 h-4 text-zinc-500" />
+                                                <span className="text-sm text-zinc-500 font-medium">Images ({noteImages.length})</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                {noteImages.map((url, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="relative aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 cursor-pointer hover:border-blue-500 transition-all group"
+                                                        onClick={() => setLightboxImage(url)}
+                                                    >
+                                                        <img
+                                                            src={url}
+                                                            alt={`Image ${idx + 1}`}
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                            <ImageIcon className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Content */}
                                     <Textarea
@@ -483,6 +606,27 @@ export default function PersonalNotes() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Image Lightbox */}
+            {lightboxImage && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setLightboxImage(null)}
+                >
+                    <button
+                        className="absolute top-4 right-4 text-white hover:text-zinc-300 transition-colors"
+                        onClick={() => setLightboxImage(null)}
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+                    <img
+                        src={lightboxImage}
+                        alt="Full size"
+                        className="max-w-full max-h-full object-contain rounded-lg"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </div>
     );
 }

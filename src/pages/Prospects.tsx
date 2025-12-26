@@ -115,7 +115,8 @@ const Prospects = () => {
           model: data.model,
           year: data.year,
           type: data.vehicleType,
-          color: data.color
+          color: data.color,
+          mileage: data.mileage
         },
         generalPhotos: data.generalPhotos,
         beforePhotos: data.beforePhotos,
@@ -129,10 +130,16 @@ const Prospects = () => {
       setModalOpen(false);
       toast({ title: "Saved", description: "Prospect updated." });
     } catch (err: any) {
+      console.error('❌ Supabase upsertSupabaseCustomer failed:', err);
+      console.error('Error details:', { message: err?.message, code: err?.code, details: err?.details, hint: err?.hint });
       const saved = await upsertCustomer(data as any);
       await refresh();
       setModalOpen(false);
-      toast({ title: "Saved locally", description: "Backend unavailable; stored offline.", variant: 'default' });
+      toast({
+        title: "Saved locally",
+        description: `Backend unavailable: ${err?.message || 'Connection error'}`,
+        variant: 'default'
+      });
     }
   };
 
@@ -377,7 +384,7 @@ const Prospects = () => {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <span>{c.name.charAt(0).toUpperCase()}</span>
+                            <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
                           )}
                         </div>
                         <div>
@@ -453,7 +460,7 @@ const Prospects = () => {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span>{c.name.charAt(0).toUpperCase()}</span>
+                      <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                   <div>

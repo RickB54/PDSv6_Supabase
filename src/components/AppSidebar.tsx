@@ -2,7 +2,7 @@ import {
   Home, ClipboardCheck, Search, FileText, Calculator, BookOpen, Users,
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
   TicketPercent, GraduationCap, Shield, CheckSquare, CalendarDays,
-  ChevronRight, ChevronsUp, ChevronsDown, UserPlus
+  ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper
 } from "lucide-react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo } from "react";
@@ -216,7 +216,7 @@ export function AppSidebar() {
     // Inject Personal Notes here if not in shared config yet, or add to shared config.
     // User asked for it "below Employee Dashboard" which is usually in TOP_ITEMS or a group. 
     // Usually Employee Dashboard is a top item.
-    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const }
+    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' }
   ];
 
   // --- MENU CONFIG ---

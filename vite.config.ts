@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY || ''),
     },
     server: {
-      host: "localhost",
+      host: "0.0.0.0", // Allow access from network (for phone testing)
       port: 6066,
       strictPort: true,
     },

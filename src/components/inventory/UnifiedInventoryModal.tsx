@@ -337,11 +337,14 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
               )}
               <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
               <input ref={photoCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
-            </div>
-            {/* Camera Button for Mobile */}
-            <div className="absolute -bottom-2 -right-2 bg-blue-600 rounded-full p-2 border border-zinc-900 cursor-pointer shadow-lg hover:bg-blue-500"
-              onClick={(e) => { e.stopPropagation(); photoCameraRef.current?.click(); }}>
-              <Camera className="h-4 w-4 text-white" />
+              {/* Camera Button for Mobile - Inside relative container */}
+              <button
+                type="button"
+                className="absolute -bottom-2 -right-2 bg-blue-600 rounded-full p-2 border-2 border-zinc-900 cursor-pointer shadow-lg hover:bg-blue-500 transition-colors"
+                onClick={(e) => { e.stopPropagation(); photoCameraRef.current?.click(); }}
+              >
+                <Camera className="h-4 w-4 text-white" />
+              </button>
             </div>
           </div>
 

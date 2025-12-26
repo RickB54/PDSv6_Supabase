@@ -9,6 +9,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
 import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled } from "@/lib/auth";
+import "@/lib/storage-utils"; // Initialize all storage buckets
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -166,10 +167,10 @@ const App = () => {
           <ConditionalGlobalChat />
           <SidebarProvider defaultOpen={true}>
             <div className={`flex min-h-screen w-full ${user?.role === 'admin' || user?.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
-              <ChatAudioAlert />
-              {user && <AppSidebar />}
-              <div className="flex-1 overflow-x-hidden">
-                <ErrorBoundary>
+              <ErrorBoundary>
+                <ChatAudioAlert />
+                {user && <AppSidebar />}
+                <div className="flex-1 overflow-x-hidden">
                   <Routes>
                     <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
                     <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
@@ -448,9 +449,9 @@ const App = () => {
                       </ProtectedRoute>
                     } />
                   </Routes>
-                </ErrorBoundary>
-              </div>
-              {user && <GlobalRightSidebar />}
+                </div>
+                {user && <GlobalRightSidebar />}
+              </ErrorBoundary>
             </div>
           </SidebarProvider>
         </BrowserRouter>

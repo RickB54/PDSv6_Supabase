@@ -6,12 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { upsertCustomer } from "@/lib/db";
-import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem, supabase } from "@/lib/supa-data";
 import { toast } from "sonner";
 import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera } from "lucide-react";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
-import { supabase } from "@/lib/supa-data";
 
 
 

@@ -1,8 +1,9 @@
-
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from './supabase';
-export { supabase };
 import localforage from 'localforage';
-import { createClient } from '@supabase/supabase-js';
+// Re-export supabase so other files can import it from here if needed, 
+// but primarily so this file can use it.
+export { supabase };
 
 
 // Types
@@ -69,9 +70,17 @@ export interface Customer {
  *    - Deduplicates by email.
  */
 // Singleton ephemeral client to prevent "Multiple GoTrueClient" warnings
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Missing Supabase Environment Variables in supa-data.ts");
+}
+
+// Singleton ephemeral client to prevent "Multiple GoTrueClient" warnings
 const anonClient = createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_ANON_KEY,
+    supabaseUrl,
+    supabaseAnonKey,
     { auth: { persistSession: false } }
 );
 
@@ -200,6 +209,13 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                     email: c.email,
                     phone: c.phone,
                     address: c.address,
+                    // Flatten vehicle data for UI
+                    vehicle: v.make || '',
+                    model: v.model || '',
+                    year: v.year ? String(v.year) : '',
+                    vehicleType: v.type || '',
+                    color: v.color || '',
+                    mileage: '', // TODO: Add mileage column to vehicles table in Supabase
                     vehicle_info: { make: v.make, model: v.model, year: v.year, type: v.type, color: v.color },
                     notes: c.notes,
                     created_at: c.created_at,
@@ -258,8 +274,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         before_photos: customer.beforePhotos,
         after_photos: customer.afterPhotos,
         video_url: customer.videoUrl,
-        learning_center_url: customer.learningCenterUrl,
-        video_note: customer.videoNote
+        learning_center_url: customer.learningCenterUrl
     };
 
     let customerId = customer.id;
@@ -306,9 +321,10 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                 customer_id: customerId,
                 make: v.make,
                 model: v.model,
-                year: v.year, // ensure number or handled by db
+                year: v.year,
                 type: v.type || v.vehicleType,
                 color: v.color
+                // mileage: v.mileage // TODO: Add mileage column to vehicles table
             });
             if (vErr) console.warn("Vehicle save failed", vErr);
         }

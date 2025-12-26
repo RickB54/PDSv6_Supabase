@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Play, ZoomIn, Truck, Wrench, Info, Plus, Edit2, Trash2, Upload, Loader2, Camera, Image as ImageIcon, Video, FolderPlus, Newspaper, User, CheckCircle2, RotateCcw, Settings, X } from "lucide-react";
+import { Play, ZoomIn, Truck, Wrench, Info, Plus, Edit2, Trash2, Upload, Loader2, Camera, Image as ImageIcon, Video, FolderPlus, Newspaper, User, CheckCircle2, RotateCcw, Settings, X, ChevronLeft, MessageSquare, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from 'react-router-dom';
 import { Label } from "@/components/ui/label";

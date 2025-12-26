@@ -826,6 +826,76 @@ const Settings = () => {
                   </div>
                 </div>
 
+                {/* DELETE ALL NOTES */}
+                <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-red-500 flex items-center gap-2 text-lg">
+                        <FileText className="h-5 w-5" />
+                        Delete All Personal Notes
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-1 max-w-xl">
+                        Permanently delete ALL notes, notebooks, and sections from the Personal Notes app. This deletes data from the cloud database.
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100"
+                      onClick={async () => {
+                        if (confirm("Are you SURE you want to delete ALL personal notes, notebooks, and sections? This cannot be undone.")) {
+                          try {
+                            const user = getCurrentUser();
+                            if (!user) {
+                              toast({ title: "Error", description: "Not authenticated", variant: "destructive" });
+                              return;
+                            }
+
+                            // Delete all notes
+                            const { error: notesError, count: notesCount } = await supabase
+                              .from('personal_notes')
+                              .delete()
+                              .eq('user_id', user.id);
+
+                            // Delete all sections
+                            const { error: sectionsError, count: sectionsCount } = await supabase
+                              .from('personal_sections')
+                              .delete()
+                              .eq('user_id', user.id);
+
+                            // Delete all notebooks
+                            const { error: notebooksError, count: notebooksCount } = await supabase
+                              .from('personal_notebooks')
+                              .delete()
+                              .eq('user_id', user.id);
+
+                            if (notesError || sectionsError || notebooksError) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to delete some items",
+                                variant: "destructive"
+                              });
+                            } else {
+                              toast({
+                                title: "Notes Deleted",
+                                description: `Deleted ${notesCount || 0} notes, ${sectionsCount || 0} sections, and ${notebooksCount || 0} notebooks.`
+                              });
+                            }
+                          } catch (e: any) {
+                            toast({
+                              title: "Error",
+                              description: e.message || "Failed to delete notes",
+                              variant: "destructive"
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 mr-2" /> Delete All Notes
+                    </Button>
+                  </div>
+                </div>
+
                 {/* BLOG CONTENT RESET */}
                 <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

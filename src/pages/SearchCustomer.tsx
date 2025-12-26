@@ -112,7 +112,8 @@ const SearchCustomer = () => {
           model: data.model,
           year: data.year,
           type: data.vehicleType,
-          color: data.color
+          color: data.color,
+          mileage: data.mileage
         },
         generalPhotos: data.generalPhotos,
         beforePhotos: data.beforePhotos,
@@ -126,11 +127,17 @@ const SearchCustomer = () => {
       setModalOpen(false);
       toast({ title: "Customer Saved", description: "Record stored." });
     } catch (err: any) {
+      console.error('❌ Supabase upsertSupabaseCustomer failed:', err);
+      console.error('Error details:', { message: err?.message, code: err?.code, details: err?.details, hint: err?.hint });
       try {
         await upsertCustomer(data as any);
         await refresh();
         setModalOpen(false);
-        toast({ title: "Saved locally", description: "Backend unavailable; stored offline.", variant: 'default' });
+        toast({
+          title: "Saved locally",
+          description: `Backend unavailable: ${err?.message || 'Connection error'}`,
+          variant: 'default'
+        });
       } catch (err2: any) {
         toast({ title: "Save failed", description: err2?.message || String(err2), variant: 'destructive' });
       }
@@ -367,7 +374,7 @@ const SearchCustomer = () => {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <span>{customer.name.charAt(0).toUpperCase()}</span>
+                          <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
                         )}
                       </div>
                       <div><h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3><div className="flex gap-3 text-sm text-zinc-400"><span>{customer.phone || 'No phone'}</span><span className="hidden sm:inline">•</span><span className="hidden sm:inline">{customer.vehicle} {customer.model}</span></div></div>
