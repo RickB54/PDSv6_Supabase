@@ -804,24 +804,26 @@ const Settings = () => {
                     <div>
                       <h3 className="font-bold text-red-500 flex items-center gap-2 text-lg">
                         <Calendar className="h-5 w-5" />
-                        Reset Staff Schedule
+                        Clear Staff Schedule
                       </h3>
                       <p className="text-sm text-zinc-400 mt-1 max-w-xl">
-                        Clear all shifts from the local staff schedule.
+                        Delete shifts from the staff schedule by time range (day/week/month). Requires PIN + DELETE confirmation.
                       </p>
                     </div>
                     <Button
                       variant="destructive"
                       size="sm"
                       className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100"
-                      onClick={async () => {
-                        if (confirm("Clear the entire staff schedule?")) {
-                          await localforage.removeItem('staff_schedule_shifts');
-                          toast({ title: "Schedule Cleared", description: "All shifts have been removed." });
-                        }
+                      onClick={() => {
+                        // Navigate to Staff Schedule where they can use the Clear Schedule button
+                        navigate('/staff-schedule');
+                        toast({
+                          title: "Navigate to Staff Schedule",
+                          description: "Use the 'Clear Schedule' button in the Staff Schedule page to delete shifts by time range."
+                        });
                       }}
                     >
-                      <Trash2 className="w-3 h-3 mr-2" /> Clear Schedule
+                      <Calendar className="w-3 h-3 mr-2" /> Go to Staff Schedule
                     </Button>
                   </div>
                 </div>

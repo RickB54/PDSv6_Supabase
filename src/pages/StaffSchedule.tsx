@@ -16,7 +16,9 @@ import {
     MoreHorizontal,
     Trash2,
     AlertCircle,
-    X
+    X,
+    ShieldAlert,
+    Key
 } from "lucide-react";
 import { startOfWeek, endOfWeek, format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addDays, addWeeks, addMonths, addYears, parseISO } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -69,6 +71,13 @@ export default function StaffSchedule() {
 
     // Side Panel
     const [sidePanel, setSidePanel] = useState<'none' | 'chat' | 'tasks'>('none');
+
+    // Clear Schedule Modal
+    const [clearScheduleOpen, setClearScheduleOpen] = useState(false);
+    const [clearTimeRange, setClearTimeRange] = useState<'day' | 'week' | 'month'>('day');
+    const [clearPin, setClearPin] = useState('');
+    const [clearConfirmText, setClearConfirmText] = useState('');
+    const dangerPin = localStorage.getItem('danger-pin') || '1234';
 
     // Load Data
     useEffect(() => {
@@ -133,12 +142,23 @@ export default function StaffSchedule() {
     };
 
     const handleDeleteShift = async (id: string) => {
+        // Find the shift to get employee name for confirmation message
+        const shift = shifts.find(s => s.id === id);
+        const shiftInfo = shift
+            ? `${shift.employeeName} on ${format(parseISO(shift.date), 'MMM do, yyyy')} (${formatTime12(shift.startTime)} - ${formatTime12(shift.endTime)})`
+            : 'this shift';
+
+        // Confirmation dialog
+        if (!confirm(`Are you sure you want to delete ${shiftInfo}?\n\nThis action cannot be undone.`)) {
+            return;
+        }
+
         try {
             await deleteStaffShift(id);
             setShifts(prev => prev.filter(s => s.id !== id));
             setIsShiftModalOpen(false);
             setSelectedShiftId(null);
-            toast({ title: "Shift Deleted" });
+            toast({ title: "Shift Deleted", description: `Deleted shift for ${shift?.employeeName || 'employee'}.` });
         } catch (e) {
             toast({ title: "Error", description: "Failed to delete shift.", variant: "destructive" });
         }
@@ -204,6 +224,67 @@ export default function StaffSchedule() {
         }
     };
 
+    const handleClearSchedule = async () => {
+        // Validate PIN
+        if (clearPin !== dangerPin) {
+            toast({ title: "Invalid PIN", description: "Incorrect PIN entered.", variant: "destructive" });
+            return;
+        }
+
+        // Validate DELETE confirmation
+        if (clearConfirmText.trim().toUpperCase() !== 'DELETE') {
+            toast({ title: "Confirmation Required", description: "Type DELETE to confirm.", variant: "destructive" });
+            return;
+        }
+
+        try {
+            let startDate: Date;
+            let endDate: Date;
+
+            if (clearTimeRange === 'day') {
+                startDate = currentDate;
+                endDate = currentDate;
+            } else if (clearTimeRange === 'week') {
+                startDate = startOfWeek(currentDate);
+                endDate = endOfWeek(currentDate);
+            } else { // month
+                startDate = startOfMonth(currentDate);
+                endDate = endOfMonth(currentDate);
+            }
+
+            const startStr = format(startDate, 'yyyy-MM-dd');
+            const endStr = format(endDate, 'yyyy-MM-dd');
+
+            // Filter shifts to delete
+            const shiftsToDelete = shifts.filter(s => {
+                return s.date >= startStr && s.date <= endStr;
+            });
+
+            // Delete each shift
+            for (const shift of shiftsToDelete) {
+                await deleteStaffShift(shift.id);
+            }
+
+            // Update UI
+            setShifts(prev => prev.filter(s => !(s.date >= startStr && s.date <= endStr)));
+
+            setClearScheduleOpen(false);
+            setClearPin('');
+            setClearConfirmText('');
+
+            toast({
+                title: "Schedule Cleared",
+                description: `Deleted ${shiftsToDelete.length} shift(s) from ${clearTimeRange}.`
+            });
+        } catch (e: any) {
+            toast({
+                title: "Error",
+                description: e.message || "Failed to clear schedule",
+                variant: "destructive"
+            });
+        }
+    };
+
     // Derived
     const selectedShift = useMemo(() => shifts.find(s => s.id === selectedShiftId), [shifts, selectedShiftId]);
 
@@ -250,6 +331,19 @@ export default function StaffSchedule() {
                 <Button variant="outline" size="sm" onClick={() => navigate('/user-management')} className="h-8 text-xs">
                     <Users className="w-3 h-3 mr-2" /> Users
                 </Button>
+                {isAdmin && (
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                            setClearTimeRange(view === 'year' ? 'month' : view);
+                            setClearScheduleOpen(true);
+                        }}
+                        className="h-8 text-xs bg-red-900/70 hover:bg-red-800"
+                    >
+                        <ShieldAlert className="w-3 h-3 mr-2" /> Clear Schedule
+                    </Button>
+                )}
             </div>
 
             {/* Navigation */}
@@ -545,6 +639,119 @@ export default function StaffSchedule() {
                             <Button variant="ghost" onClick={() => setIsShiftModalOpen(false)}>Cancel</Button>
                             <Button onClick={handleSaveShift} className="bg-blue-600 hover:bg-blue-700">Save Shift</Button>
                         </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Clear Schedule Modal */}
+            <Dialog open={clearScheduleOpen} onOpenChange={(open) => {
+                setClearScheduleOpen(open);
+                if (!open) {
+                    setClearPin('');
+                    setClearConfirmText('');
+                }
+            }}>
+                <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-500">
+                            <ShieldAlert className="w-5 h-5" />
+                            Clear Schedule - Danger Zone
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            This will permanently delete all shifts for the selected time range. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Time Range Selector */}
+                        <div className="space-y-2">
+                            <Label className="text-white">Time Range to Clear</Label>
+                            <Select value={clearTimeRange} onValueChange={(val: any) => setClearTimeRange(val)}>
+                                <SelectTrigger className="bg-zinc-950 border-zinc-700">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="day">Current Day ({format(currentDate, 'MMM do, yyyy')})</SelectItem>
+                                    <SelectItem value="week">Current Week ({format(startOfWeek(currentDate), 'MMM do')} - {format(endOfWeek(currentDate), 'MMM do')})</SelectItem>
+                                    <SelectItem value="month">Current Month ({format(currentDate, 'MMMM yyyy')})</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* PIN Input */}
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-white">
+                                <Key className="w-4 h-4" />
+                                Step 1: Enter PIN
+                            </Label>
+                            <Input
+                                type="password"
+                                value={clearPin}
+                                onChange={(e) => setClearPin(e.target.value)}
+                                placeholder="Enter danger zone PIN"
+                                className="bg-zinc-950 border-zinc-700"
+                            />
+                            <p className="text-xs text-zinc-500">Default PIN: 1234 (can be changed in Settings)</p>
+                        </div>
+
+                        {/* DELETE Confirmation */}
+                        <div className="space-y-2">
+                            <Label className="text-white">Step 2: Type DELETE to confirm</Label>
+                            <Input
+                                type="text"
+                                value={clearConfirmText}
+                                onChange={(e) => setClearConfirmText(e.target.value)}
+                                placeholder="Type DELETE"
+                                className="bg-zinc-950 border-zinc-700 font-mono"
+                            />
+                        </div>
+
+                        {/* Warning Box */}
+                        <div className="bg-red-950/20 border border-red-900/50 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                <div className="text-sm text-red-200">
+                                    <p className="font-bold mb-1">Warning:</p>
+                                    <p>This will delete {shifts.filter(s => {
+                                        let startDate: Date, endDate: Date;
+                                        if (clearTimeRange === 'day') {
+                                            startDate = endDate = currentDate;
+                                        } else if (clearTimeRange === 'week') {
+                                            startDate = startOfWeek(currentDate);
+                                            endDate = endOfWeek(currentDate);
+                                        } else {
+                                            startDate = startOfMonth(currentDate);
+                                            endDate = endOfMonth(currentDate);
+                                        }
+                                        const startStr = format(startDate, 'yyyy-MM-dd');
+                                        const endStr = format(endDate, 'yyyy-MM-dd');
+                                        return s.date >= startStr && s.date <= endStr;
+                                    }).length} shift(s) from the {clearTimeRange}.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setClearScheduleOpen(false);
+                                setClearPin('');
+                                setClearConfirmText('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleClearSchedule}
+                            disabled={!clearPin || clearConfirmText.trim().toUpperCase() !== 'DELETE'}
+                            className="bg-red-700 hover:bg-red-600"
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Clear Schedule
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
