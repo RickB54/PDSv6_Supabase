@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/lib/supabase";
-import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X } from "lucide-react";
+import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -46,6 +46,9 @@ export default function UserManagement() {
   const [adminNewName, setAdminNewName] = useState("");
   const [adminNewEmail, setAdminNewEmail] = useState("");
   const [adminNewPassword, setAdminNewPassword] = useState("");
+
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   const loadEmployees = async () => {
     try {
@@ -88,10 +91,24 @@ export default function UserManagement() {
     }
   };
 
+  const refreshAll = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        loadEmployees(),
+        loadAdmins(),
+        loadCustomers()
+      ]);
+      toast({ title: "Refreshed", description: "All user data has been updated." });
+    } catch (error) {
+      toast({ title: "Refresh failed", description: "Could not refresh user data.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadEmployees();
-    loadAdmins();
-    loadCustomers();
+    refreshAll();
   }, []);
 
   const createEmployee = async () => {
@@ -196,6 +213,37 @@ export default function UserManagement() {
     }
   };
 
+  const deleteAdmin = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this administrator? This action cannot be undone.")) return;
+    try {
+      const { error } = await supabase
+        .from("app_users")
+        .delete()
+        .eq("id", id)
+        .in("role", ["admin", "owner"]);
+      if (error) throw error;
+      await loadAdmins();
+      toast({ title: "Admin deleted" });
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
+  const deleteCustomer = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this customer? This action cannot be undone.")) return;
+    try {
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      await loadCustomers();
+      toast({ title: "Customer deleted" });
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
   const filteredEmployees = employees.filter((u) => {
     const q = empSearch.trim().toLowerCase();
     const combo = `${u.name || ""} ${u.email || ""}`.toLowerCase();
@@ -219,6 +267,19 @@ export default function UserManagement() {
       <PageHeader title="Users & Roles" subtitle="Admin • Employees • Customers" />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
+
+        {/* Refresh Button */}
+        <div className="flex justify-end">
+          <Button
+            onClick={refreshAll}
+            disabled={isLoading}
+            variant="outline"
+            className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh All Users'}
+          </Button>
+        </div>
 
         {/* Search & Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -355,6 +416,7 @@ export default function UserManagement() {
                   <TableHead className="text-zinc-400">Email</TableHead>
                   <TableHead className="text-zinc-400">Role</TableHead>
                   <TableHead className="text-zinc-400">Last Update</TableHead>
+                  <TableHead className="text-zinc-400 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -377,11 +439,21 @@ export default function UserManagement() {
                     <TableCell className="text-zinc-500 text-sm">
                       {a.updated_at ? new Date(a.updated_at).toLocaleDateString() : "—"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 text-red-500 hover:text-red-400 hover:bg-red-950/30"
+                        onClick={() => deleteAdmin(a.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filteredAdmins.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-zinc-500 py-12">
+                    <TableCell colSpan={5} className="text-center text-zinc-500 py-12">
                       <p>No admins found matching your search.</p>
                     </TableCell>
                   </TableRow>
@@ -677,17 +749,27 @@ export default function UserManagement() {
                       {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
-                        onClick={() => {
-                          // Navigate to customer details or edit
-                          window.location.href = `/search-customer?id=${c.id}`;
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                          onClick={() => {
+                            // Navigate to customer details or edit
+                            window.location.href = `/search-customer?id=${c.id}`;
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-red-500 hover:text-red-400 hover:bg-red-950/30"
+                          onClick={() => deleteCustomer(c.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
