@@ -114,7 +114,18 @@ export default function LearningLibrary() {
         if (!file) return;
 
         setIsUploading(true);
-        setUploadStatus({ step: 'uploading', message: 'Uploading to cloud...' });
+        setUploadStatus({ step: 'uploading', message: 'Preparing upload...' });
+
+        // Optimistic Preview
+        if (file.type.startsWith('image/')) {
+            const previewUrl = URL.createObjectURL(file);
+            setFormData(prev => ({
+                ...prev,
+                resource_url: previewUrl,
+                thumbnail_url: previewUrl,
+                type: 'image'
+            }));
+        }
 
         try {
             // If image, compress it. If video/pdf, use as is (for now)
@@ -122,6 +133,8 @@ export default function LearningLibrary() {
             if (file.type.startsWith('image')) {
                 fileToUpload = await compressImage(file);
             }
+
+            setUploadStatus({ step: 'uploading', message: 'Uploading to cloud...' });
 
             // Generate unique path
             const ext = file.name.split('.').pop();
@@ -446,7 +459,6 @@ export default function LearningLibrary() {
                                             ref={fileInputRef}
                                             type="file"
                                             accept="image/*,video/*,application/pdf"
-                                            capture="environment"
                                             onChange={handleFileUpload}
                                             className="bg-zinc-950 border-zinc-700"
                                             disabled={isUploading}

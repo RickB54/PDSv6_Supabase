@@ -1,75 +1,35 @@
+import imageCompression from 'browser-image-compression';
+
 /**
- * Compress an image file using browser Canvas API.
- * Converts to JPG with reduced quality and resizing.
- * optimized for mobile memory constraints.
+ * Compress an image file using browser-image-compression library.
+ * Optimized for mobile to prevent OOM errors with large 50MP+ photos.
  */
-export async function compressImage(file: File, maxWidth = 1024, quality = 0.7): Promise<File> {
-    return new Promise((resolve) => {
+export async function compressImage(file: File, maxWidth = 1600, quality = 0.7): Promise<File> {
+    try {
         // If not an image, return original
         if (!file.type.startsWith('image/')) {
-            resolve(file);
-            return;
+            return file;
         }
 
-        const objectUrl = URL.createObjectURL(file);
-        const img = new Image();
-        img.src = objectUrl;
-
-        img.onload = () => {
-            // Clean up the URL object immediately to free memory
-            URL.revokeObjectURL(objectUrl);
-
-            try {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-
-                // Aggressively resize if huge to save memory
-                if (width > maxWidth) {
-                    height = Math.round(height * (maxWidth / width));
-                    width = maxWidth;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-
-                if (!ctx) {
-                    console.warn("Canvas context creation failed");
-                    resolve(file); // Fallback to original
-                    return;
-                }
-
-                ctx.drawImage(img, 0, 0, width, height);
-
-                canvas.toBlob((blob) => {
-                    if (!blob) {
-                        console.warn("Canvas blob creation failed");
-                        resolve(file);
-                        return;
-                    }
-                    // Create new file from blob
-                    const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
-                        type: 'image/jpeg',
-                        lastModified: Date.now(),
-                    });
-
-                    // Explicitly clear canvas references
-                    canvas.width = 0;
-                    canvas.height = 0;
-
-                    resolve(newFile);
-                }, 'image/jpeg', quality);
-            } catch (e) {
-                console.error("Compression failed (likely OOM), using original", e);
-                resolve(file); // Failsafe: return original
-            }
+        const options = {
+            maxSizeMB: 0.8, // Target 0.8MB max for speed
+            maxWidthOrHeight: maxWidth,
+            useWebWorker: true, // Use worker to prevent UI freeze
+            initialQuality: quality,
+            fileType: 'image/jpeg'
         };
 
-        img.onerror = (err) => {
-            console.error("Image load error during compression", err);
-            URL.revokeObjectURL(objectUrl);
-            resolve(file); // Return original on error
-        };
-    });
+        console.log(`Compressing ${file.type} (${(file.size / 1024 / 1024).toFixed(2)} MB) with options:`, options);
+
+        const compressedFile = await imageCompression(file, options);
+
+        console.log(`Compression result: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+
+        return compressedFile;
+
+    } catch (error) {
+        console.error("Compression failed:", error);
+        // Fallback: return original file if compression crashes
+        return file;
+    }
 }

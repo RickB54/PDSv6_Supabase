@@ -133,7 +133,13 @@ export default function F150Setup() {
 
         // Reset inputs
         setIsUploading(true);
-        setUploadStatus({ step: 'compressing', message: 'Compressing image...' });
+        setUploadStatus({ step: 'compressing', message: 'Preparing image...' });
+
+        // Optimistic Preview: Show image immediately
+        if (file.type.startsWith('image/')) {
+            const previewUrl = URL.createObjectURL(file);
+            setFormData(prev => ({ ...prev, resource_url: previewUrl, thumbnail_url: previewUrl, type: 'image' }));
+        }
 
         try {
             // Compress
@@ -618,7 +624,6 @@ export default function F150Setup() {
                                             ref={fileInputRef}
                                             type="file"
                                             accept="image/*"
-                                            capture="environment" // Fix: Allow camera on mobile
                                             onChange={handleFileUpload}
                                             className="bg-zinc-900 border-zinc-800"
                                             disabled={isUploading}
