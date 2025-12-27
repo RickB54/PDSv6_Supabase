@@ -11,7 +11,7 @@ import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, Chevro
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { useAlertsStore } from "@/store/alerts";
-import localforage from "localforage";
+import * as inventoryData from "@/lib/inventory-data";
 import api from "@/lib/api";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import UnifiedInventoryModal from "@/components/inventory/UnifiedInventoryModal";
@@ -20,59 +20,19 @@ import jsPDF from "jspdf";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
 import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 
-interface Chemical {
-  id: string;
-  name: string;
-  bottleSize: string;
-  costPerBottle: number;
-  threshold: number;
-  currentStock: number;
-  imageUrl?: string;
-}
 
-interface UsageHistory {
-  id: string;
-  chemicalId?: string;
-  chemicalName?: string;
-  materialId?: string;
-  materialName?: string;
-  toolId?: string;
-  toolName?: string;
-  serviceName: string;
-  date: string;
-  remainingStock?: number;
-  amountUsed?: string | number;
-  notes?: string;
-}
+// Import types from inventory-data
+type Chemical = inventoryData.Chemical;
+type UsageHistory = inventoryData.UsageHistory;
+type Tool = inventoryData.Tool;
+type MaterialItem = inventoryData.Material;
 
-interface Tool {
-  id: string;
-  name: string;
-  warranty: string;
-  purchaseDate: string;
-  price: number;
-  lifeExpectancy: string;
-  notes: string;
-  imageUrl?: string;
-}
 
 const InventoryControl = () => {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const [chemicals, setChemicals] = useState<Chemical[]>([]);
-  type MaterialItem = {
-    id: string;
-    name: string;
-    category: string;
-    subtype?: string;
-    quantity: number;
-    costPerItem?: number;
-    notes?: string;
-    lowThreshold?: number;
-    createdAt: string;
-    imageUrl?: string;
-  };
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
   const [usageHistory, setUsageHistory] = useState<UsageHistory[]>([]);
@@ -126,20 +86,31 @@ const InventoryControl = () => {
   }, [dateFilter]);
 
   const loadData = async () => {
-    const chems = (await localforage.getItem<Chemical[]>("chemicals")) || [];
-    const mats = (await localforage.getItem<MaterialItem[]>("materials")) || [];
-    const tls = (await localforage.getItem<Tool[]>("tools")) || [];
-    const usage = (await localforage.getItem<UsageHistory[]>("chemical-usage")) || [];
-    const toolUsage = (await localforage.getItem<UsageHistory[]>("tool-usage")) || [];
-    const allUsage = [...usage, ...toolUsage].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setChemicals(chems);
-    setMaterials(mats);
-    setTools(tls);
-    setUsageHistory(allUsage);
+    try {
+      const [chems, mats, tls, usage] = await Promise.all([
+        inventoryData.getChemicals(),
+        inventoryData.getMaterials(),
+        inventoryData.getTools(),
+        inventoryData.getUsageHistory()
+      ]);
+
+      setChemicals(chems);
+      setMaterials(mats);
+      setTools(tls);
+      setUsageHistory(usage);
+    } catch (error) {
+      console.error('Error loading inventory data:', error);
+      toast({
+        title: "Error Loading Data",
+        description: "Failed to load inventory from database.",
+        variant: "destructive"
+      });
+    }
   };
 
   const saveChemicals = async (data: Chemical[]) => {
-    await localforage.setItem("chemicals", data);
+    // This function is deprecated - UnifiedInventoryModal now saves directly
+    // Just update local state
     setChemicals(data);
   };
 
@@ -173,20 +144,25 @@ const InventoryControl = () => {
     const confirmed = window.confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`);
     if (!confirmed) return;
 
-    if (mode === 'chemical') {
-      const updated = chemicals.filter(c => c.id !== id);
-      await saveChemicals(updated);
-      toast({ title: "Chemical Deleted", description: `${itemName} removed from inventory.` });
-    } else if (mode === 'material') {
-      const updated = materials.filter(m => m.id !== id);
-      await localforage.setItem("materials", updated);
-      setMaterials(updated);
-      toast({ title: "Material Deleted", description: `${itemName} removed from inventory.` });
-    } else {
-      const updated = tools.filter(t => t.id !== id);
-      await localforage.setItem("tools", updated);
-      setTools(updated);
-      toast({ title: "Tool Deleted", description: `${itemName} removed from inventory.` });
+    try {
+      if (mode === 'chemical') {
+        await inventoryData.deleteChemical(id);
+        toast({ title: "Chemical Deleted", description: `${itemName} removed from inventory.` });
+      } else if (mode === 'material') {
+        await inventoryData.deleteMaterial(id);
+        toast({ title: "Material Deleted", description: `${itemName} removed from inventory.` });
+      } else {
+        await inventoryData.deleteTool(id);
+        toast({ title: "Tool Deleted", description: `${itemName} removed from inventory.` });
+      }
+      await loadData(); // Reload from database
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete item from database.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -689,22 +665,20 @@ const InventoryControl = () => {
             <Button variant="outline" onClick={() => setUsageEditOpen(false)}>Cancel</Button>
             <Button onClick={async () => {
               if (!usageEditItem) return;
-              const list = (await localforage.getItem<UsageHistory[]>('chemical-usage')) || [];
-              const idx = list.findIndex(x => x.id === usageEditItem.id);
-              if (idx !== -1) {
-                list[idx] = { ...list[idx], notes: usageEditNotes };
-                await localforage.setItem('chemical-usage', list);
-              } else {
-                const toolList = (await localforage.getItem<UsageHistory[]>('tool-usage')) || [];
-                const toolIdx = toolList.findIndex(x => x.id === usageEditItem.id);
-                if (toolIdx !== -1) {
-                  toolList[toolIdx] = { ...toolList[toolIdx], notes: usageEditNotes };
-                  await localforage.setItem('tool-usage', toolList);
-                }
+              try {
+                const updated = { ...usageEditItem, notes: usageEditNotes };
+                await inventoryData.saveUsageHistory(updated);
+                await loadData();
+                setUsageEditOpen(false);
+                toast({ title: 'Usage Updated', description: 'Notes saved.' });
+              } catch (error) {
+                console.error('Error updating usage:', error);
+                toast({
+                  title: 'Update Failed',
+                  description: 'Failed to save notes.',
+                  variant: 'destructive'
+                });
               }
-              await loadData();
-              setUsageEditOpen(false);
-              toast({ title: 'Usage Updated', description: 'Notes saved.' });
             }}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>

@@ -97,7 +97,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Inventory & Assets", icon: Package,
             items: [
-                { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount > 0 ? counts.inventoryCount : undefined, icon: Package },
+                { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, icon: Package },
                 { title: "File Manager", url: "/file-manager", role: "admin", key: "file-manager", badge: counts.fileCount > 0 ? counts.fileCount : undefined, icon: FileText },
                 { title: "Mobile Setup", url: "/mobile-setup", role: "admin", key: "mobile-setup", icon: Package },
                 { title: "Detailing Vendors", url: "/detailing-vendors", role: "admin", key: "detailing-vendors", icon: Users },

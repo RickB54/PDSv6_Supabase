@@ -205,15 +205,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         return;
       }
 
-      // Validate threshold (MANDATORY but can be 0 or -1 for ignore)
-      // Allow 0 as valid logic for "alert only when 0"
-      if (numeric(form.threshold) < 0) {
-        // Technically we can support negative if user wants to disable, but user specifically asked for 0
-        // So we just ensure it's not nonsensical.
-        // For now, let's allow 0.
-      }
-
-      const id = form.id || `${mode}-${Date.now()}`;
+      const id = form.id || crypto.randomUUID();
 
       if (mode === 'chemical') {
         const payload = {
@@ -222,57 +214,28 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
           bottleSize: form.bottleSize.trim(),
           costPerBottle: numeric(form.costPerBottle),
           currentStock: Math.round(numeric(form.currentStock)),
-          threshold: Math.round(numeric(form.threshold)), // Removed || 2 fallback to allow 0
-          unitOfMeasure: form.unitOfMeasure || "oz",
-          consumptionRatePerJob: numeric(form.consumptionRatePerJob),
+          threshold: Math.round(numeric(form.threshold)),
           imageUrl: form.imageUrl,
         };
-        try {
-          // Check if api is available/configured, otherwise fallback to local
-          // For now, chemicals use API primarily but fallback to local
-          try {
-            await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(payload) });
-          } catch {
-            // Fallback
-            throw new Error("API unavailable");
-          }
-        } catch (err) {
-          const list = (await localforage.getItem<any[]>("chemicals")) || [];
-          const existsIdx = list.findIndex((c) => c.id === id);
-          if (existsIdx >= 0) list[existsIdx] = payload; else list.push(payload);
-          await localforage.setItem("chemicals", list);
-        }
+
+        // Import inventory-data at top of file
+        const { saveChemical } = await import("@/lib/inventory-data");
+        await saveChemical(payload);
+
       } else if (mode === 'tool') {
         const payload = {
           id,
           name: form.name.trim(),
-          category: form.category || "Power Tool",
           warranty: form.warranty || "",
           purchaseDate: form.purchaseDate || "",
           price: numeric(form.price),
-          cost: numeric(form.price), // alias
-          quantity: Math.round(numeric(form.quantity) || 1),
-          threshold: Math.round(numeric(form.threshold) || 0),
           lifeExpectancy: form.lifeExpectancy || "",
           notes: form.notes || "",
-          unitOfMeasure: form.unitOfMeasure || "units",
-          consumptionRatePerJob: numeric(form.consumptionRatePerJob),
-          createdAt: new Date().toISOString(),
           imageUrl: form.imageUrl,
         };
-        console.log("Saving tool:", payload);
-        try {
-          // Save to localforage only for now as no API endpoint specified for tools
-          const list = (await localforage.getItem<any[]>("tools")) || [];
-          const existsIdx = list.findIndex((c) => c.id === id);
-          if (existsIdx >= 0) list[existsIdx] = payload; else list.push(payload);
-          await localforage.setItem("tools", list);
-          console.log("Tool saved to localforage");
-        } catch (error) {
-          console.error("LocalForage Save Error:", error);
-          toast.error("Failed to save tool locally: " + String(error));
-          return;
-        }
+
+        const { saveTool } = await import("@/lib/inventory-data");
+        await saveTool(payload);
 
       } else {
         const payload = {
@@ -284,24 +247,19 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
           costPerItem: numeric(form.costPerItem),
           notes: form.notes || undefined,
           lowThreshold: Math.round(numeric(form.threshold)),
-          unitOfMeasure: form.unitOfMeasure || "units",
-          consumptionRatePerJob: numeric(form.consumptionRatePerJob),
           createdAt: new Date().toISOString(),
           imageUrl: form.imageUrl,
         };
-        try {
-          await api('/api/inventory/materials', { method: 'POST', body: JSON.stringify(payload) });
-        } catch (err) {
-          const list = (await localforage.getItem<any[]>("materials")) || [];
-          const existsIdx = list.findIndex((c) => c.id === id);
-          if (existsIdx >= 0) list[existsIdx] = payload; else list.push(payload);
-          await localforage.setItem("materials", list);
-        }
+
+        const { saveMaterial } = await import("@/lib/inventory-data");
+        await saveMaterial(payload);
       }
+
       toast.success("Item saved");
       onOpenChange(false);
       await onSaved?.();
     } catch (err: any) {
+      console.error("Save error:", err);
       toast.error("Save failed: " + (err?.message || String(err)));
     }
   };
