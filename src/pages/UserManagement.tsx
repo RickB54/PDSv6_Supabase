@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/lib/supabase";
-import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw } from "lucide-react";
+import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -82,7 +82,7 @@ export default function UserManagement() {
     try {
       const { data, error } = await supabase
         .from("customers")
-        .select("id,full_name,email,phone,created_at")
+        .select("id,full_name,email,phone,type,created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       setCustomers((data || []) as any[]);
@@ -116,18 +116,54 @@ export default function UserManagement() {
       toast({ title: "Validation Error", description: "Name and Email are required.", variant: "destructive" });
       return;
     }
+
+    // Generate a random password if not provided
+    const password = empNewPassword || `Temp${Math.random().toString(36).slice(2)}!`;
+
     try {
-      const { data, error } = await supabase.functions.invoke("create-employee", {
-        body: { name: empNewName, email: empNewEmail, password: empNewPassword },
+      // Step 1: Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: empNewEmail.trim().toLowerCase(),
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          role: 'employee',
+          name: empNewName.trim()
+        }
       });
-      if (error || !data?.ok) throw error || new Error("create_employee_failed");
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Failed to create auth user");
+
+      // Step 2: Add to app_users table with role='employee'
+      const { error: dbError } = await supabase
+        .from('app_users')
+        .upsert({
+          id: authData.user.id,
+          email: empNewEmail.trim().toLowerCase(),
+          role: 'employee',
+          name: empNewName.trim(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (dbError) throw dbError;
+
+      // Success!
       setEmpNewName("");
       setEmpNewEmail("");
       setEmpNewPassword("");
       await loadEmployees();
-      toast({ title: "Employee created", description: `${empNewName} (${empNewEmail}) added successfully.` });
+      toast({
+        title: "Employee created",
+        description: `${empNewName} (${empNewEmail}) added successfully.${!empNewPassword ? ' Temporary password generated.' : ''}`
+      });
     } catch (e: any) {
-      toast({ title: "Failed to create employee", description: String(e?.message || e), variant: "destructive" });
+      toast({
+        title: "Failed to create employee",
+        description: e?.message || String(e),
+        variant: "destructive"
+      });
     }
   };
 
@@ -231,16 +267,41 @@ export default function UserManagement() {
 
   const deleteCustomer = async (id: string) => {
     if (!confirm("Are you sure you want to delete this customer? This action cannot be undone.")) return;
+
     try {
+      // First, check if customer has any vehicles
+      const { data: vehicles, error: vehicleCheckError } = await supabase
+        .from("vehicles")
+        .select("id")
+        .eq("customer_id", id);
+
+      if (vehicleCheckError) throw vehicleCheckError;
+
+      if (vehicles && vehicles.length > 0) {
+        toast({
+          title: "Cannot delete customer",
+          description: `This customer has ${vehicles.length} vehicle(s) linked. Please delete or reassign their vehicles first.`,
+          variant: "destructive",
+          duration: 5000
+        });
+        return;
+      }
+
+      // If no vehicles, proceed with deletion
       const { error } = await supabase
         .from("customers")
         .delete()
         .eq("id", id);
+
       if (error) throw error;
       await loadCustomers();
       toast({ title: "Customer deleted" });
-    } catch {
-      toast({ title: "Delete failed", variant: "destructive" });
+    } catch (e: any) {
+      toast({
+        title: "Delete failed",
+        description: e?.message || "An error occurred while deleting the customer.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -250,10 +311,16 @@ export default function UserManagement() {
     return !q || combo.includes(q);
   });
 
-  const filteredCustomers = customers.filter((c) => {
+  const filteredCustomers = customers.filter((u) => {
     const q = custSearch.trim().toLowerCase();
-    const combo = `${c.full_name || ""} ${c.email || ""} ${c.phone || ""}`.toLowerCase();
-    return !q || combo.includes(q);
+    const combo = `${u.full_name || ""} ${u.email || ""}`.toLowerCase();
+    return (!q || combo.includes(q)) && u.type !== 'prospect';
+  });
+
+  const filteredProspects = customers.filter((u) => {
+    const q = custSearch.trim().toLowerCase();
+    const combo = `${u.full_name || ""} ${u.email || ""}`.toLowerCase();
+    return (!q || combo.includes(q)) && u.type === 'prospect';
   });
 
   const filteredAdmins = admins.filter((a) => {
@@ -264,7 +331,7 @@ export default function UserManagement() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Users & Roles" subtitle="Admin • Employees • Customers" />
+      <PageHeader title="Users & Roles" subtitle="Admin • Employees • Customers • Prospects" />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
 
@@ -281,8 +348,126 @@ export default function UserManagement() {
           </Button>
         </div>
 
+        {/* Quick Tips Accordion */}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="quick-tips" className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl rounded-lg">
+            <AccordionTrigger className="px-6 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-blue-500" />
+                <span className="text-white text-base font-semibold">Quick Tips - When to Use Each Page</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+                {/* Users & Roles */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                      <span className="text-lg">🎯</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Users & Roles</h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 mb-2">Use for: Quick admin tasks</p>
+                  <ul className="space-y-1 text-xs text-zinc-500">
+                    <li>✅ Add new users (any type)</li>
+                    <li>✅ Delete users</li>
+                    <li>✅ View stats/overview</li>
+                    <li>❌ NOT for: Detailed info, vehicles</li>
+                  </ul>
+                </div>
+
+                {/* Customer Profiles */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                      <span className="text-lg">👥</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Customer Profiles</h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 mb-2">Use for: Customer details</p>
+                  <ul className="space-y-1 text-xs text-zinc-500">
+                    <li>✅ Search customers</li>
+                    <li>✅ Manage vehicles</li>
+                    <li>✅ View booking history</li>
+                    <li>✅ Detailed customer info</li>
+                  </ul>
+                </div>
+
+                {/* Prospects */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                      <span className="text-lg">🎯</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Prospects</h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 mb-2">Use for: Sales & leads</p>
+                  <ul className="space-y-1 text-xs text-zinc-500">
+                    <li>✅ Track leads</li>
+                    <li>✅ Lead source tracking</li>
+                    <li>✅ Follow-up management</li>
+                    <li>✅ Convert to customers</li>
+                  </ul>
+                </div>
+
+                {/* Company Employees */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <span className="text-lg">💼</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Company Employees</h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 mb-2">Use for: HR tasks</p>
+                  <ul className="space-y-1 text-xs text-zinc-500">
+                    <li>✅ Employee details</li>
+                    <li>✅ Contact information</li>
+                    <li>✅ Payroll management</li>
+                    <li>✅ Role management</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Color Guide & Pro Tips */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-zinc-800">
+                <div>
+                  <h4 className="text-sm font-bold text-white mb-3">Color Guide</h4>
+                  <div className="space-y-2 text-xs text-zinc-400">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                      <span>Amber = Admins</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      <span>Blue = Employees</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                      <span>Purple = Customers</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                      <span>Orange = Prospects</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-white mb-3">Pro Tips 💡</h4>
+                  <ul className="space-y-2 text-xs text-zinc-400">
+                    <li>• Use this page for quick adds, dedicated pages for detailed work</li>
+                    <li>• Edit buttons navigate to the appropriate detailed page</li>
+                    <li>• Can't delete customers/prospects with vehicles (safety feature)</li>
+                    <li>• Click refresh after creating users to see them immediately</li>
+                  </ul>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
         {/* Search & Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-amber-500/10 rounded-full">
@@ -313,8 +498,20 @@ export default function UserManagement() {
                 <Users className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{customers.length}</div>
+                <div className="text-2xl font-bold text-white">{filteredCustomers.length}</div>
                 <div className="text-sm text-zinc-400">Customers</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-orange-500/10 rounded-full">
+                <Users className="w-6 h-6 text-orange-400" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">{filteredProspects.length}</div>
+                <div className="text-sm text-zinc-400">Prospects</div>
               </div>
             </CardContent>
           </Card>
@@ -777,6 +974,148 @@ export default function UserManagement() {
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-zinc-500 py-12">
                       <p>No customers found matching your search.</p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+
+        {/* Prospects Section */}
+        <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
+          <CardHeader className="border-b border-zinc-800/50 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-orange-500" />
+                <CardTitle className="text-white text-lg">Prospects</CardTitle>
+                <Badge variant="outline" className="bg-orange-900/10 text-orange-400 border-orange-900/30">
+                  {filteredProspects.length} Total
+                </Badge>
+              </div>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                <Input
+                  value={custSearch}
+                  onChange={(e) => setCustSearch(e.target.value)}
+                  placeholder="Search prospects..."
+                  className="pl-9 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
+                />
+              </div>
+            </div>
+          </CardHeader>
+
+          {/* Add New Prospect Accordion */}
+          <Accordion type="single" collapsible className="border-b border-zinc-800/50">
+            <AccordionItem value="add-prospect" className="border-none">
+              <AccordionTrigger className="px-6 py-3 hover:no-underline hover:bg-zinc-800/30">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-zinc-300">Add New Prospect</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400 font-semibold uppercase">Full Name *</label>
+                    <Input
+                      value={custNewName}
+                      onChange={(e) => setCustNewName(e.target.value)}
+                      className="bg-zinc-950 border-zinc-700 text-white focus:border-orange-500/50"
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400 font-semibold uppercase">Email Address</label>
+                    <Input
+                      value={custNewEmail}
+                      onChange={(e) => setCustNewEmail(e.target.value)}
+                      className="bg-zinc-950 border-zinc-700 text-white focus:border-orange-500/50"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400 font-semibold uppercase">Phone Number</label>
+                    <Input
+                      value={custNewPhone}
+                      onChange={(e) => setCustNewPhone(e.target.value)}
+                      className="bg-zinc-950 border-zinc-700 text-white focus:border-orange-500/50"
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                  <div>
+                    <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold h-10" onClick={createCustomer}>
+                      <UserPlus className="w-4 h-4 mr-2" /> Add Prospect
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-500 mt-4">
+                  * Only name is required. Email and phone are optional but recommended for contact purposes.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-zinc-950/50">
+                <TableRow className="hover:bg-transparent border-zinc-800">
+                  <TableHead className="text-zinc-400">Name</TableHead>
+                  <TableHead className="text-zinc-400">Email</TableHead>
+                  <TableHead className="text-zinc-400">Phone</TableHead>
+                  <TableHead className="text-zinc-400">Registered</TableHead>
+                  <TableHead className="text-zinc-400 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProspects.map((p) => (
+                  <TableRow key={p.id} className="hover:bg-zinc-800/30 border-zinc-800/50">
+                    <TableCell className="text-zinc-200 font-medium py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-orange-900/20 flex items-center justify-center text-xs font-bold text-orange-400 border border-orange-900/30">
+                          {p.full_name?.charAt(0).toUpperCase() || "P"}
+                        </div>
+                        {p.full_name || "Unnamed Prospect"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-zinc-400">
+                      {p.email || "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-zinc-400">
+                      {p.phone || "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-zinc-500 text-sm">
+                      {p.created_at ? new Date(p.created_at).toLocaleDateString() : "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                          onClick={() => {
+                            // Navigate to prospects page
+                            window.location.href = `/prospects`;
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-red-500 hover:text-red-400 hover:bg-red-950/30"
+                          onClick={() => deleteCustomer(p.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredProspects.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-zinc-500 py-12">
+                      <p>No prospects found matching your search.</p>
                     </TableCell>
                   </TableRow>
                 )}

@@ -63,10 +63,11 @@ export const getMenuGroups = (counts: {
         {
             title: "Customer Intake", icon: UserPlus,
             items: [
-                { title: "Package Comparison", url: "/package-selection", role: "admin", icon: Package },
-                { title: "Vehicle Classification", url: "/vehicle-classification", role: "admin", icon: FileText },
-                { title: "Client Evaluation", url: "/client-evaluation", role: "admin", icon: ClipboardCheck },
-                { title: "Addon Upsell Script", url: "/addon-upsell-script", role: "admin", icon: FileText },
+                { title: "Package Comparison", url: "/package-selection", icon: Package },
+                { title: "Vehicle Classification", url: "/vehicle-classification", icon: FileText },
+                { title: "Client Evaluation", url: "/client-evaluation", icon: ClipboardCheck },
+                { title: "Addon Upsell Script", url: "/addon-upsell-script", icon: FileText },
+                { title: "Prospects", url: "/prospects", key: "prospects", icon: Users }
             ]
         },
         {
@@ -78,7 +79,7 @@ export const getMenuGroups = (counts: {
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
                 { title: "Tasks", url: "/tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users },
-                { title: "Prospects", url: "/prospects", key: "prospects", icon: Users }
+                { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users }
             ]
         },
         {
@@ -114,7 +115,6 @@ export const getMenuGroups = (counts: {
             title: "Staff Management", icon: Users,
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "admin", key: "staff-schedule", icon: CalendarDays },
-                { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users },
                 { title: "Company Employees", url: "/company-employees", role: "admin", key: "company-employees", icon: Users },
                 { title: "App Team Chat", url: "/team-chat", role: "admin", key: "team-chat", icon: Users },
             ]
