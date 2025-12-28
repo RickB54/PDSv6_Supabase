@@ -177,12 +177,31 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         toast.info("Processing image...");
         const file = e.target.files[0];
 
-        // Compress
-        const compressedFile = await browserImageCompression(file, {
-          maxSizeMB: 0.5,
-          maxWidthOrHeight: 1200,
-          useWebWorker: true
-        });
+        let fileToUpload = file;
+
+        // Only compress if file is ALREADY small (from library, not camera)
+        // Skip compression for large camera photos to prevent memory errors
+        const isLikelyFromCamera = file.size > 2 * 1024 * 1024; // > 2MB = probably camera
+
+        if (!isLikelyFromCamera) {
+          try {
+            // Try to compress smaller images for faster uploads
+            toast.info("Compressing...");
+            fileToUpload = await browserImageCompression(file, {
+              maxSizeMB: 0.5,
+              maxWidthOrHeight: 1200,
+              useWebWorker: true
+            });
+          } catch (compressionError) {
+            console.warn("Compression failed, uploading original:", compressionError);
+            // Fallback to original if compression fails
+            fileToUpload = file;
+          }
+        } else {
+          // Large camera photo - upload raw to avoid memory issues
+          console.log("Large camera photo detected, skipping compression");
+          toast.info("Uploading camera photo...");
+        }
 
         // Upload to Supabase Storage
         const ext = file.name.split('.').pop();
@@ -191,7 +210,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
         const { error: uploadError } = await supabase.storage
           .from('blog-media') // Reusing bucket as per plan
-          .upload(filePath, compressedFile);
+          .upload(filePath, fileToUpload);
 
         if (uploadError) throw uploadError;
 

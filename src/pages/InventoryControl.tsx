@@ -19,6 +19,7 @@ import ImportWizardModal from "@/components/inventory/ImportWizardModal";
 import jsPDF from "jspdf";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
 import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
+import localforage from "localforage";
 
 
 // Import types from inventory-data
@@ -341,14 +342,12 @@ const InventoryControl = () => {
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{chemicals.length} items</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-zinc-400">
-              <div className="hidden sm:block">
-                <span className="mr-4">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
-                {chemicals.some(c => c.currentStock < c.threshold) && (
-                  <span className="text-red-400 font-medium flex items-center gap-1 inline-flex">
-                    <AlertTriangle className="h-3 w-3" /> {chemicals.filter(c => c.currentStock < c.threshold).length} Low
-                  </span>
-                )}
-              </div>
+              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
+              {chemicals.some(c => c.currentStock < c.threshold) && (
+                <span className="text-red-400 font-medium flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {chemicals.filter(c => c.currentStock < c.threshold).length} Low
+                </span>
+              )}
               {expandedSections.chemicals ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
           </div>
@@ -442,14 +441,12 @@ const InventoryControl = () => {
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{materials.length} items</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-zinc-400">
-              <div className="hidden sm:block">
-                <span className="mr-4">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
-                {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
-                  <span className="text-red-400 font-medium flex items-center gap-1 inline-flex">
-                    <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length} Low
-                  </span>
-                )}
-              </div>
+              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
+              {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
+                <span className="text-red-400 font-medium flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length} Low
+                </span>
+              )}
               {expandedSections.materials ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
           </div>

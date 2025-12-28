@@ -8,7 +8,7 @@ import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "
 import { getUnifiedCustomers } from "@/lib/customers";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   AlertDialog,
@@ -69,6 +69,9 @@ const Prospects = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadedThisMount, setHasLoadedThisMount] = useState(false);
+  const [expandedCustomers, setExpandedCustomers] = useState<string[]>([]);
+  const [allExpanded, setAllExpanded] = useState(false);
+  const [openMaps, setOpenMaps] = useState<string[]>([]);
 
   useEffect(() => {
     // Always load fresh data on mount to ensure we see new prospects
@@ -296,6 +299,14 @@ const Prospects = () => {
     }
   };
 
+  const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
+  const toggleCustomer = (id: string) => { setExpandedCustomers(prev => (prev.includes(id) ? [] : [id])); setAllExpanded(false); };
+  const toggleAll = () => {
+    if (allExpanded) setExpandedCustomers([]);
+    else setExpandedCustomers(filteredCustomers.map(c => c.id!));
+    setAllExpanded(!allExpanded);
+  };
+
   const totalProspects = filteredCustomers.length;
   const newThisMonth = filteredCustomers.filter(c => {
     const d = c.createdAt ? new Date(c.createdAt) : new Date();
@@ -364,113 +375,150 @@ const Prospects = () => {
             <Button className="bg-purple-600 hover:bg-purple-700 text-white border-0" onClick={openAdd}>
               <Plus className="h-4 w-4 mr-2" /> Add
             </Button>
+            {filteredCustomers.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={toggleAll} className="text-zinc-400">
+                {allExpanded ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block rounded-xl border border-zinc-800 overflow-hidden bg-zinc-900/50">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-zinc-900/80 text-zinc-400 font-medium border-b border-zinc-800">
-                <tr>
-                  <th className="px-4 py-3">Name / Contact</th>
-                  <th className="px-4 py-3">Vehicle Interest</th>
-                  <th className="px-4 py-3">Source</th>
-                  <th className="px-4 py-3">Notes</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-zinc-500">
-                      <div className="flex flex-col items-center gap-2">
-                        <RotateCcw className="h-6 w-6 animate-spin text-purple-500" />
-                        <p>Loading prospects...</p>
+        {/* Accordion Cards View */}
+        <div className="space-y-4">
+          {[...filteredCustomers]
+            .sort((a, b) => { const da = a.updatedAt || ""; const db = b.updatedAt || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
+            .map((customer) => {
+              const isExpanded = expandedCustomers.includes(customer.id!);
+              if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
+
+              return (
+                <div key={customer.id} className="border border-purple-500/20 rounded-xl overflow-hidden bg-zinc-900/50 transition-all hover:border-purple-500/40">
+                  <div className="p-4 bg-purple-500/5 flex flex-col md:flex-row items-center justify-between cursor-pointer hover:bg-purple-500/10 transition-colors gap-4" onClick={() => toggleCustomer(customer.id!)}>
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                      <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-zinc-600'}`} />
+                      <div
+                        className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
+                        onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                      >
+                        {(customer.generalPhotos?.[0] || customer.beforePhotos?.[0] || customer.afterPhotos?.[0]) ? (
+                          <img
+                            src={customer.generalPhotos?.[0] || customer.beforePhotos?.[0] || customer.afterPhotos?.[0]}
+                            alt={customer.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ) : filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-zinc-500">
-                      No prospects found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredCustomers.map(c => (
-                    <tr key={c.id} className="hover:bg-purple-500/5 transition-colors group">
-                      <td className="px-4 py-3 flex items-center gap-3">
-                        <div
-                          className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
-                          onClick={(e) => { e.stopPropagation(); openEdit(c); }}
-                        >
-                          {(c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]) ? (
-                            <img
-                              src={c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]}
-                              alt={c.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-zinc-200">{c.name || "Unknown"}</div>
-                          <div className="text-xs text-zinc-500">{c.phone}</div>
-                          <div className="text-xs text-zinc-500">{c.email}</div>
-                          {c.videoUrl && (
-                            <div className="mt-2 text-sm">
-                              <Link to={`/learning-library?videoUrl=${encodeURIComponent(c.videoUrl)}`} className="flex items-center gap-2 text-blue-400 hover:text-blue-300">
-                                <Video className="h-4 w-4" /> Watch Video
-                              </Link>
-                            </div>
-                          )}
-                          {c.learningCenterUrl && (
-                            <div className="mt-2 text-sm">
-                              <Link to={`/learning-library?videoUrl=${encodeURIComponent(c.learningCenterUrl)}`} className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
-                                <Video className="h-4 w-4" /> Learning Center
-                              </Link>
-                            </div>
-                          )}
-                          {c.videoNote && (
-                            <div className="mt-2 p-2 rounded bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 italic">
-                              Note: {c.videoNote}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-zinc-300">
-                        {c.year} {c.vehicle} {c.model}
-                      </td>
-                      <td className="px-4 py-3 text-zinc-400">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs">
-                          {c.howFound === 'other' ? c.howFoundOther : c.howFound || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-zinc-400 max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={c.is_archived ? "Restore" : "Archive"}>
-                            {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                      <div><h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3><div className="flex gap-3 text-sm text-zinc-400"><span>{customer.phone || 'No phone'}</span><span className="hidden sm:inline">•</span><span className="hidden sm:inline">{customer.vehicle} {customer.model}</span></div></div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                      <div className="flex gap-1 mr-4">
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={customer.is_archived ? "Restore" : "Archive"}>
+                          {customer.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                      {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="p-6 border-t border-purple-500/10 bg-zinc-900/30 animate-in slide-in-from-top-2">
+                      <div className="flex justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
+                        {!customer.is_archived && (
+                          <Button asChild variant="outline" size="sm" className="h-9 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300">
+                            <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Convert to Customer</Link>
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
-                          {!c.is_archived && (
-                            <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 ml-2">
-                              <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}&vehicleYear=${encodeURIComponent(c.year || '')}&vehicleMake=${encodeURIComponent(c.vehicle || '')}&vehicleModel=${encodeURIComponent(c.model || '')}`}>Convert</Link>
-                            </Button>
-                          )}
+                        )}
+                        <Button asChild variant="outline" size="sm" className="h-9 border-zinc-700 hover:bg-zinc-800"><Link to={`/service-checklist?customerId=${customer.id}`}><FileBarChart className="h-4 w-4 mr-2" /> Start Service</Link></Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                          <section><h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Vehicle Details</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Vehicle</div><div className="text-zinc-200 font-medium">{customer.year} {customer.vehicle} {customer.model}</div></div>
+                              <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Type/Color</div><div className="text-zinc-200 font-medium">{customer.vehicleType || '-'} / {customer.color || '-'}</div></div>
+                              <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Mileage</div><div className="text-zinc-200 font-medium">{customer.mileage || '-'}</div></div>
+                            </div>
+                          </section>
+                          <section><h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact info</h4>
+                            <div className="space-y-3">
+                              <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Email</div><div className="text-zinc-300 text-sm">{customer.email || '—'}</div></div>
+                              <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
+                              {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
+                            </div>
+                          </section>
+                          {customer.notes && (<section className="bg-amber-900/10 border border-amber-500/20 p-3 rounded"><div className="text-amber-500 text-xs font-bold mb-1">Notes</div><div className="text-amber-200/80 text-sm italic">{customer.notes}</div></section>)}
+
+                          {/* Media Gallery Section */}
+                          {((customer.generalPhotos && customer.generalPhotos.length > 0) ||
+                            (customer.beforePhotos && customer.beforePhotos.length > 0) ||
+                            (customer.afterPhotos && customer.afterPhotos.length > 0) ||
+                            customer.videoUrl) && (
+                              <section>
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"><ImageIcon className="h-3 w-3" /> Media Gallery</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                  {customer.generalPhotos?.map((p, i) => (
+                                    <div key={`g-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
+                                      <img src={p} alt="General" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                  {customer.beforePhotos?.map((p, i) => (
+                                    <div key={`b-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
+                                      <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">Before</div>
+                                      <img src={p} alt="Before" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                  {customer.afterPhotos?.map((p, i) => (
+                                    <div key={`a-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
+                                      <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">After</div>
+                                      <img src={p} alt="After" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                </div>
+                                {customer.videoUrl && (
+                                  <div className="mt-2 text-sm">
+                                    <a href={customer.videoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-purple-400 hover:text-purple-300">
+                                      <Video className="h-4 w-4" /> Watch Video
+                                    </a>
+                                  </div>
+                                )}
+                                {customer.learningCenterUrl && (
+                                  <div className="mt-2 text-sm">
+                                    <Link to={`/learning-library?videoUrl=${encodeURIComponent(customer.learningCenterUrl)}`} className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
+                                      <Video className="h-4 w-4" /> Learning Center
+                                    </Link>
+                                  </div>
+                                )}
+                                {customer.videoNote && (
+                                  <div className="mt-2 p-2 rounded bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 italic">
+                                    Note: {customer.videoNote}
+                                  </div>
+                                )}
+                              </section>
+                            )}
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+
+                        <div>
+                          <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Prospect Info</h4>
+                          <div className="space-y-3 bg-zinc-950 p-4 rounded border border-zinc-800/50">
+                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Source:</span><span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-300">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || '—'}</span></div>
+                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Created:</span><span className="text-zinc-300 text-sm">{customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : '—'}</span></div>
+                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Last Updated:</span><span className="text-zinc-300 text-sm">{customer.updatedAt ? new Date(customer.updatedAt).toLocaleDateString() : '—'}</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
 
-        {/* Mobile View */}
+        {/* Mobile View - Keep Existing */}
         <div className="md:hidden space-y-4">
           {filteredCustomers.map(c => (
             <div key={c.id} className="bg-zinc-900 border border-purple-500/20 p-4 rounded-xl space-y-3">

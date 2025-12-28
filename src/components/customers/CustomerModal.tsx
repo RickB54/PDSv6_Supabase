@@ -200,9 +200,12 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
       // Compress images
       if (type !== 'shortVideos' && file.type.startsWith('image/')) {
         fileToUpload = await browserImageCompression(file, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true
+          maxSizeMB: 0.4,           // Reduced from 1 to prevent mobile OOM errors
+          maxWidthOrHeight: 1280,   // Reduced from 1920
+          useWebWorker: true,
+          alwaysUseWebWorker: true, // Force worker on mobile
+          initialQuality: 0.6,      // Lower quality for smaller files
+          maxIteration: 10
         });
       }
 

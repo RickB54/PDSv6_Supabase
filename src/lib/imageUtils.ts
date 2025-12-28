@@ -4,7 +4,7 @@ import imageCompression from 'browser-image-compression';
  * Compress an image file using browser-image-compression library.
  * Optimized for mobile to prevent OOM errors with large 50MP+ photos.
  */
-export async function compressImage(file: File, maxWidth = 1600, quality = 0.7): Promise<File> {
+export async function compressImage(file: File, maxWidth = 1280, quality = 0.6): Promise<File> {
     try {
         // If not an image, return original
         if (!file.type.startsWith('image/')) {
@@ -12,10 +12,12 @@ export async function compressImage(file: File, maxWidth = 1600, quality = 0.7):
         }
 
         const options = {
-            maxSizeMB: 0.8, // Target 0.8MB max for speed
-            maxWidthOrHeight: maxWidth,
-            useWebWorker: true, // Use worker to prevent UI freeze
-            initialQuality: quality,
+            maxSizeMB: 0.4, // Reduced from 0.8 to prevent mobile memory issues
+            maxWidthOrHeight: maxWidth, // Default 1280px (down from 1600)
+            useWebWorker: true,
+            alwaysUseWebWorker: true, // Force web worker on mobile
+            initialQuality: quality, // Reduced from 0.7 to 0.6
+            maxIteration: 10, // Limit compression attempts
             fileType: 'image/jpeg'
         };
 

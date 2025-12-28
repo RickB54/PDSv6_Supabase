@@ -146,6 +146,7 @@ export default function F150Setup() {
         try {
             // Compress
             const compressed = await compressImage(file);
+            console.log('✅ Compression complete:', compressed.size, 'bytes');
 
             setUploadStatus({ step: 'uploading', message: 'Uploading to cloud...' });
 
@@ -154,27 +155,49 @@ export default function F150Setup() {
             const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
             const filePath = `uploads/${fileName}`;
 
-            // Upload to Supabase 'blog-media' bucket
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('blog-media')
-                .upload(filePath, compressed);
+            console.log('📤 Starting upload to Supabase:', filePath);
 
-            if (uploadError) throw uploadError;
+            // Upload to Supabase 'blog-media' bucket with timeout
+            const uploadPromise = supabase.storage
+                .from('blog-media')
+                .upload(filePath, compressed, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            // Add 30 second timeout
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Upload timeout after 30 seconds. Try a smaller photo or check your internet connection.')), 30000)
+            );
+
+            const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any;
+
+            if (uploadError) {
+                console.error('❌ Upload error:', uploadError);
+                throw uploadError;
+            }
+
+            console.log('✅ Upload successful:', uploadData);
 
             // Get Public URL
             const { data: { publicUrl } } = supabase.storage
                 .from('blog-media')
                 .getPublicUrl(filePath);
 
+            console.log('✅ Public URL:', publicUrl);
+
             setFormData(prev => ({ ...prev, resource_url: publicUrl, thumbnail_url: publicUrl }));
             setUploadStatus({ step: 'done', message: 'Ready to save!' });
             setIsUploading(false);
+            toast({ title: "Upload Complete!", description: "Image ready to publish" });
 
         } catch (err: any) {
-            console.error(err);
+            console.error('❌ Upload failed:', err);
             toast({ title: "Upload Failed", description: err.message || "Failed to upload image.", variant: "destructive" });
             setIsUploading(false);
             setUploadStatus({ step: 'error', message: 'Upload failed' });
+            // Clear the preview on error
+            setFormData(prev => ({ ...prev, resource_url: '', thumbnail_url: '' }));
         }
     };
 
@@ -632,6 +655,7 @@ export default function F150Setup() {
                                             ref={fileInputRef}
                                             type="file"
                                             accept="image/*"
+                                            capture="environment"
                                             onChange={handleFileUpload}
                                             className="bg-zinc-900 border-zinc-800"
                                             disabled={isUploading}
