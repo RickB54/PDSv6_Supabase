@@ -12,6 +12,7 @@ import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAle
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
+import { saveBackupToSupabase, listSupabaseBackups, loadBackupFromSupabase, deleteSupabaseBackup, BackupMetadata } from '@/lib/supabase-backup';
 import { deleteCustomersOlderThan, deleteInvoicesOlderThan, deleteExpensesOlderThan, deleteInventoryUsageOlderThan, deleteBookingsOlderThan, deleteEmployeesOlderThan, deleteEverything as deleteAllSupabase, previewDeleteCustomers, previewDeleteInvoices, previewDeleteExpenses, previewDeleteInventory, previewDeleteAll } from '@/services/supabase/adminOps';
 import localforage from "localforage";
 import EnvironmentHealthModal from '@/components/admin/EnvironmentHealthModal';
@@ -44,6 +45,8 @@ const Settings = () => {
   const [mockDataOpen, setMockDataOpen] = useState(false);
   const [mockReport, setMockReport] = useState<any | null>(null);
   const [restoreDefaultsOpen, setRestoreDefaultsOpen] = useState(false);
+  const [supabaseBackups, setSupabaseBackups] = useState<BackupMetadata[]>([]);
+  const [supabaseBackupsOpen, setSupabaseBackupsOpen] = useState(false);
 
   // Supabase diagnostics block state
   const [diag, setDiag] = useState<{ authMode: string; urlPresent: boolean; keyPresent: boolean; configured: boolean; uid: string | null; appUserReadable: boolean | null; lastChecked: string }>({
@@ -206,6 +209,70 @@ const Settings = () => {
       toast({ title: "Restore Failed", description: "Could not restore pricing.", variant: "destructive" });
     }
   };
+
+  const handleBackupToSupabase = async () => {
+    try {
+      const { json } = await exportAllData();
+      const path = await saveBackupToSupabase(json);
+      if (path) {
+        toast({ title: "Backup Saved to Supabase", description: "Backup uploaded successfully to cloud storage." });
+        // Refresh backup list
+        const backups = await listSupabaseBackups();
+        setSupabaseBackups(backups);
+      } else {
+        toast({ title: "Backup Failed", description: "Could not upload to Supabase.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error("Supabase backup error:", error);
+      toast({ title: "Backup Failed", description: error?.message || "Unknown error", variant: "destructive" });
+    }
+  };
+
+  const handleRestoreFromSupabase = async (filename: string) => {
+    try {
+      const json = await loadBackupFromSupabase(filename);
+      if (json) {
+        await restoreFromJSON(json);
+        toast({ title: "Restore Complete", description: `Restored from Supabase backup: ${filename}` });
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast({ title: "Restore Failed", description: "Could not load backup from Supabase.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error("Supabase restore error:", error);
+      toast({ title: "Restore Failed", description: error?.message || "Unknown error", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteSupabaseBackup = async (filename: string) => {
+    if (!confirm(`Delete backup "${filename}"? This cannot be undone.`)) return;
+    try {
+      const success = await deleteSupabaseBackup(filename);
+      if (success) {
+        toast({ title: "Backup Deleted", description: `Deleted ${filename}` });
+        // Refresh backup list
+        const backups = await listSupabaseBackups();
+        setSupabaseBackups(backups);
+      } else {
+        toast({ title: "Delete Failed", description: "Could not delete backup.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error("Delete backup error:", error);
+      toast({ title: "Delete Failed", description: error?.message || "Unknown error", variant: "destructive" });
+    }
+  };
+
+  const handleOpenSupabaseBackups = async () => {
+    try {
+      const backups = await listSupabaseBackups();
+      setSupabaseBackups(backups);
+      setSupabaseBackupsOpen(true);
+    } catch (error: any) {
+      console.error("List backups error:", error);
+      toast({ title: "Error", description: "Could not load backups from Supabase.", variant: "destructive" });
+    }
+  };
+
 
   const deleteData = async (type: string) => {
     try {
@@ -615,6 +682,22 @@ const Settings = () => {
                 <div className="text-left">
                   <div className="font-semibold">Restore from Drive</div>
                   <div className="text-xs text-zinc-500 font-normal">Fetch and restore backup from Drive</div>
+                </div>
+              </Button>
+
+              <Button variant="outline" onClick={handleBackupToSupabase} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group">
+                <Database className="h-6 w-6 mr-3 text-emerald-500 group-hover:text-emerald-400" />
+                <div className="text-left">
+                  <div className="font-semibold">Backup to Supabase</div>
+                  <div className="text-xs text-zinc-500 font-normal">Upload backup to Supabase cloud storage</div>
+                </div>
+              </Button>
+
+              <Button variant="outline" onClick={handleOpenSupabaseBackups} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group">
+                <RefreshCw className="h-6 w-6 mr-3 text-emerald-500 group-hover:text-emerald-400" />
+                <div className="text-left">
+                  <div className="font-semibold">Restore from Supabase</div>
+                  <div className="text-xs text-zinc-500 font-normal">View and restore backups from Supabase</div>
                 </div>
               </Button>
             </div>
@@ -1235,6 +1318,65 @@ const Settings = () => {
               <span className="mr-2 text-amber-200">3.</span> Restore Everything
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Supabase Backups Dialog */}
+      <Dialog open={supabaseBackupsOpen} onOpenChange={setSupabaseBackupsOpen}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-emerald-500" />
+              Supabase Cloud Backups
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              View, restore, or delete backups stored in Supabase cloud storage
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-4">
+            {supabaseBackups.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500">
+                <Database className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No backups found in Supabase</p>
+                <p className="text-sm mt-1">Click "Backup to Supabase" to create your first backup</p>
+              </div>
+            ) : (
+              supabaseBackups.map((backup) => (
+                <div key={backup.id} className="flex items-center justify-between p-4 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-emerald-500/50 transition-colors">
+                  <div className="flex-1">
+                    <div className="font-semibold text-white">{backup.filename}</div>
+                    <div className="text-xs text-zinc-500 mt-1">
+                      {new Date(backup.created_at).toLocaleString()} • {(backup.size_bytes / 1024).toFixed(1)} KB • v{backup.schema_version}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRestoreFromSupabase(backup.filename)}
+                      className="border-emerald-700 text-emerald-400 hover:bg-emerald-950 hover:text-emerald-300"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Restore
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteSupabaseBackup(backup.filename)}
+                      className="border-red-700 text-red-400 hover:bg-red-950 hover:text-red-300"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter className="pt-4 border-t border-zinc-800">
+            <Button variant="outline" onClick={() => setSupabaseBackupsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

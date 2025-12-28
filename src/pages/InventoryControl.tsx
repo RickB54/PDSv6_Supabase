@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { useAlertsStore } from "@/store/alerts";
@@ -58,6 +58,7 @@ const InventoryControl = () => {
   const [usageEditOpen, setUsageEditOpen] = useState(false);
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -85,7 +86,21 @@ const InventoryControl = () => {
     localStorage.setItem('inventory-date-filter', dateFilter);
   }, [dateFilter]);
 
+  // Update menu badge count whenever low stock changes
+  useEffect(() => {
+    const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
+      materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length;
+    try {
+      localStorage.setItem('inventory_low_count', String(lowStockCount));
+      // Trigger sidebar refresh
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.error('Failed to update inventory badge:', e);
+    }
+  }, [chemicals, materials]);
+
   const loadData = async () => {
+    setIsRefreshing(true);
     try {
       const [chems, mats, tls, usage] = await Promise.all([
         inventoryData.getChemicals(),
@@ -105,6 +120,8 @@ const InventoryControl = () => {
         description: "Failed to load inventory from database.",
         variant: "destructive"
       });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -185,8 +202,8 @@ const InventoryControl = () => {
 
   const filteredHistory = usageHistory.filter(filterByDate);
 
-  const lowStockChemicals = chemicals.filter(c => c.currentStock <= c.threshold);
-  const lowStockMaterials = materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity <= (m.lowThreshold as number));
+  const lowStockChemicals = chemicals.filter(c => c.currentStock < c.threshold);
+  const lowStockMaterials = materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold as number));
   const lowStockTotal = lowStockChemicals.length + lowStockMaterials.length;
 
   // Push admin alert when low inventory changes (dedup by hash incl. quantities)
@@ -206,8 +223,8 @@ const InventoryControl = () => {
 
   // Metrics
   const totalItems = chemicals.length + materials.length + tools.length;
-  const lowStockCount = chemicals.filter(c => c.currentStock <= c.threshold).length +
-    materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity <= (m.lowThreshold || 0)).length;
+  const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
+    materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length;
   // Approximating value if cost exists
   const totalValue =
     chemicals.reduce((acc, c) => acc + (c.costPerBottle || 0) * (c.currentStock || 0), 0) +
@@ -267,6 +284,16 @@ const InventoryControl = () => {
 
         {/* Global Expand/Collapse Controls */}
         <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={loadData}
+            disabled={isRefreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
           <Button variant="ghost" size="sm" onClick={expandAll}>Expand All</Button>
           <Button variant="ghost" size="sm" onClick={collapseAll}>Collapse All</Button>
         </div>

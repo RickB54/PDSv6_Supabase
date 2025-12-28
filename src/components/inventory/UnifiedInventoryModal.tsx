@@ -205,6 +205,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         return;
       }
 
+      const isNew = !form.id; // Track if this is a new purchase
       const id = form.id || crypto.randomUUID();
 
       if (mode === 'chemical') {
@@ -220,7 +221,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
         // Import inventory-data at top of file
         const { saveChemical } = await import("@/lib/inventory-data");
-        await saveChemical(payload);
+        await saveChemical(payload, isNew);
 
       } else if (mode === 'tool') {
         const payload = {
@@ -235,7 +236,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         };
 
         const { saveTool } = await import("@/lib/inventory-data");
-        await saveTool(payload);
+        await saveTool(payload, isNew);
 
       } else {
         const payload = {
@@ -252,7 +253,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         };
 
         const { saveMaterial } = await import("@/lib/inventory-data");
-        await saveMaterial(payload);
+        await saveMaterial(payload, isNew);
       }
 
       toast.success("Item saved");

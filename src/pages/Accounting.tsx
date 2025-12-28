@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
   Download, Upload, RefreshCw, TrendingUp, Search,
-  Printer, TrendingDown, DollarSign // Added missing imports
+  Printer, TrendingDown, DollarSign, Package // Added Package icon
 } from "lucide-react";
 import { getSupabaseCustomers } from "@/lib/supa-data"; // NEW IMPORT
 import {
@@ -50,6 +50,7 @@ import autoTable from "jspdf-autotable";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import localforage from "localforage";
 import { getCategoryColors } from "@/lib/categoryColors";
+import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
 
 interface Invoice {
   id?: string;
@@ -120,10 +121,20 @@ const Accounting = () => {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryType, setNewCategoryType] = useState<"income" | "expense">("income");
 
+  // Inventory totals
+  const [inventoryTotals, setInventoryTotals] = useState<InventoryTotals>({
+    chemicals: 0,
+    materials: 0,
+    tools: 0,
+    total: 0,
+    itemCount: { chemicals: 0, materials: 0, tools: 0, total: 0 }
+  });
+
   useEffect(() => {
     loadData();
     loadCustomCategories();
     getSupabaseCustomers().then(setCustomers); // Load customers
+    getInventoryTotals().then(setInventoryTotals); // Load inventory
   }, [dateFilter]);
 
   const loadCustomCategories = async () => {
@@ -435,6 +446,82 @@ const Accounting = () => {
       columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
     });
 
+    // Inventory Assets Section
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY + 20;
+    if (yPos > 250) { doc.addPage(); yPos = 20; }
+
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Inventory Assets", 14, yPos);
+    yPos += 8;
+
+    const inventoryRows = [
+      ['Chemicals', `$${inventoryTotals.chemicals.toFixed(2)}`, `${inventoryTotals.itemCount.chemicals} items`],
+      ['Materials', `$${inventoryTotals.materials.toFixed(2)}`, `${inventoryTotals.itemCount.materials} items`],
+      ['Tools', `$${inventoryTotals.tools.toFixed(2)}`, `${inventoryTotals.itemCount.tools} items`],
+      ['TOTAL ASSETS', `$${inventoryTotals.total.toFixed(2)}`, `${inventoryTotals.itemCount.total} items`]
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Category', 'Value', 'Count']],
+      body: inventoryRows,
+      theme: 'grid',
+      headStyles: { fillColor: [34, 197, 94] },
+      columnStyles: {
+        1: { halign: 'right', fontStyle: 'bold' },
+        2: { halign: 'right' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.index === 3) {
+          data.cell.styles.fillColor = [34, 197, 94, 0.1];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+    // Break-Even Analysis Section
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY + 20;
+    if (yPos > 250) { doc.addPage(); yPos = 20; }
+
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Break-Even Analysis", 14, yPos);
+    yPos += 8;
+
+    const breakEvenRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue;
+    const remaining = inventoryTotals.total - breakEvenRevenue;
+    const percentRecovered = inventoryTotals.total > 0
+      ? (breakEvenRevenue / inventoryTotals.total) * 100
+      : 0;
+    const isBreakEven = remaining <= 0;
+
+    const breakEvenRows = [
+      ['Total Inventory Investment', `$${inventoryTotals.total.toFixed(2)}`],
+      ['Total Service Revenue', `$${breakEvenRevenue.toFixed(2)}`],
+      [isBreakEven ? 'Profit Beyond Investment' : 'Remaining to Break Even', `$${Math.abs(remaining).toFixed(2)}`],
+      ['Recovery Progress', `${Math.min(percentRecovered, 100).toFixed(1)}%`],
+      ['Status', isBreakEven ? '✓ Break-even achieved!' : '→ Working toward break-even']
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Metric', 'Value']],
+      body: breakEvenRows,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: {
+        1: { halign: 'right', fontStyle: 'bold' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.index === 4) {
+          data.cell.styles.textColor = isBreakEven ? [22, 163, 74] : [249, 115, 22];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+
     // Notes Section
     if (notes) {
       // @ts-ignore
@@ -484,14 +571,14 @@ const Accounting = () => {
                 </SelectContent>
               </Select>
               <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
-              <Button variant="outline" onClick={() => { try { window.location.href = '/reports?tab=accounting'; } catch { } }}>Report</Button>
+              <Button variant="outline" onClick={() => generatePDF('save')}>
+                <Save className="h-4 w-4 mr-2" />
+                Save PDF
+              </Button>
               <Button size="icon" variant="outline" onClick={() => generatePDF('print')}>
                 <Printer className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="outline" onClick={() => generatePDF('save')}>
-                <Save className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={() => { try { window.location.href = '/reports?tab=accounting'; } catch { } }}>View Accounting Report</Button>
+              <Button variant="outline" onClick={() => { try { window.location.href = '/reports?tab=accounting'; } catch { } }}>View Report</Button>
             </div>
           </div>
 
@@ -534,6 +621,163 @@ const Accounting = () => {
               </div>
             </div>
           </Card>
+
+          {/* Inventory Assets */}
+          <Card className="p-6 bg-gradient-card border-border">
+            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <Package className="h-6 w-6 text-primary" />
+              Inventory Assets
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-background/50 rounded-lg border border-border">
+                <Label className="text-muted-foreground">Chemicals</Label>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  ${inventoryTotals.chemicals.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {inventoryTotals.itemCount.chemicals} items
+                </p>
+              </div>
+              <div className="p-4 bg-background/50 rounded-lg border border-border">
+                <Label className="text-muted-foreground">Materials</Label>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  ${inventoryTotals.materials.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {inventoryTotals.itemCount.materials} items
+                </p>
+              </div>
+              <div className="p-4 bg-background/50 rounded-lg border border-border">
+                <Label className="text-muted-foreground">Tools</Label>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  ${inventoryTotals.tools.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {inventoryTotals.itemCount.tools} items
+                </p>
+              </div>
+              <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+                <Label className="text-emerald-600 dark:text-emerald-400">Total Assets</Label>
+                <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+                  ${inventoryTotals.total.toFixed(2)}
+                </p>
+                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">
+                  {inventoryTotals.itemCount.total} total items
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Break-Even Analysis */}
+          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
+            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-blue-500" />
+              Break-Even Analysis
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Track your inventory investment vs service revenue to see when you'll break even
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Total Inventory Investment */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Inventory Investment</Label>
+                <p className="text-3xl font-bold text-red-500">
+                  ${inventoryTotals.total.toFixed(2)}
+                </p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Chemicals:</span>
+                    <span className="font-medium">${inventoryTotals.chemicals.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Materials:</span>
+                    <span className="font-medium">${inventoryTotals.materials.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tools:</span>
+                    <span className="font-medium">${inventoryTotals.tools.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Service Revenue */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Service Revenue</Label>
+                <p className="text-3xl font-bold text-green-500">
+                  ${(dailyRevenue + weeklyRevenue + monthlyRevenue).toFixed(2)}
+                </p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Daily:</span>
+                    <span className="font-medium">${dailyRevenue.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Weekly:</span>
+                    <span className="font-medium">${weeklyRevenue.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Monthly:</span>
+                    <span className="font-medium">${monthlyRevenue.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Break-Even Status */}
+              <div className="space-y-2">
+                {(() => {
+                  const totalRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue;
+                  const remaining = inventoryTotals.total - totalRevenue;
+                  const percentRecovered = inventoryTotals.total > 0
+                    ? (totalRevenue / inventoryTotals.total) * 100
+                    : 0;
+                  const isBreakEven = remaining <= 0;
+
+                  return (
+                    <>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                        {isBreakEven ? 'Profit Beyond Investment' : 'Remaining to Break Even'}
+                      </Label>
+                      <p className={`text-3xl font-bold ${isBreakEven ? 'text-green-500' : 'text-orange-500'}`}>
+                        ${Math.abs(remaining).toFixed(2)}
+                      </p>
+                      <div className="space-y-3">
+                        {/* Progress Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Recovery Progress</span>
+                            <span className="font-medium">{Math.min(percentRecovered, 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-500 ${isBreakEven ? 'bg-green-500' : 'bg-orange-500'
+                                }`}
+                              style={{ width: `${Math.min(percentRecovered, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Status Message */}
+                        <div className={`text-xs p-2 rounded ${isBreakEven
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
+                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
+                          }`}>
+                          {isBreakEven ? (
+                            <p className="font-medium">✅ Break-even achieved! You're now profitable!</p>
+                          ) : (
+                            <p className="font-medium">
+                              💪 Keep going! ${remaining.toFixed(2)} more to break even
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </Card>
+
 
           {/* Accordion Sections */}
           <Accordion type="multiple" defaultValue={["ledger"]} className="space-y-4">

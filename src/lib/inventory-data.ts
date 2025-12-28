@@ -1,5 +1,6 @@
 // Inventory data layer - handles Supabase operations for inventory
 import { supabase } from './supabase';
+import { upsertExpense } from './db';
 
 export interface Chemical {
     id: string;
@@ -77,13 +78,13 @@ export async function getChemicals(): Promise<Chemical[]> {
     }));
 }
 
-export async function saveChemical(chemical: Partial<Chemical>): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean = false): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
 
     const dbData = {
         id: chemical.id,
-        user_id: user.id,
+        user_id: session.user.id,
         name: chemical.name,
         bottle_size: chemical.bottleSize,
         cost_per_bottle: chemical.costPerBottle,
@@ -98,6 +99,17 @@ export async function saveChemical(chemical: Partial<Chemical>): Promise<void> {
         .upsert(dbData);
 
     if (error) throw error;
+
+    // Record as expense in budget if this is a new purchase
+    if (isNew && chemical.costPerBottle && chemical.currentStock) {
+        const totalCost = chemical.costPerBottle * chemical.currentStock;
+        await upsertExpense({
+            amount: totalCost,
+            category: 'Supplies',
+            description: `Purchased ${chemical.name} (${chemical.currentStock} bottles @ $${chemical.costPerBottle})`,
+            createdAt: new Date().toISOString()
+        } as any);
+    }
 }
 
 export async function deleteChemical(id: string): Promise<void> {
@@ -138,13 +150,13 @@ export async function getMaterials(): Promise<Material[]> {
     }));
 }
 
-export async function saveMaterial(material: Partial<Material>): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+export async function saveMaterial(material: Partial<Material>, isNew: boolean = false): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
 
     const dbData = {
         id: material.id,
-        user_id: user.id,
+        user_id: session.user.id,
         name: material.name,
         category: material.category,
         subtype: material.subtype,
@@ -161,6 +173,17 @@ export async function saveMaterial(material: Partial<Material>): Promise<void> {
         .upsert(dbData);
 
     if (error) throw error;
+
+    // Record as expense in budget if this is a new purchase
+    if (isNew && material.costPerItem && material.quantity) {
+        const totalCost = material.costPerItem * material.quantity;
+        await upsertExpense({
+            amount: totalCost,
+            category: 'Supplies',
+            description: `Purchased ${material.name} (${material.quantity} items @ $${material.costPerItem})`,
+            createdAt: new Date().toISOString()
+        } as any);
+    }
 }
 
 export async function deleteMaterial(id: string): Promise<void> {
@@ -199,16 +222,16 @@ export async function getTools(): Promise<Tool[]> {
     }));
 }
 
-export async function saveTool(tool: Partial<Tool>): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
 
     const dbData = {
         id: tool.id,
-        user_id: user.id,
+        user_id: session.user.id,
         name: tool.name,
         warranty: tool.warranty,
-        purchase_date: tool.purchaseDate,
+        purchase_date: tool.purchaseDate && tool.purchaseDate.trim() ? tool.purchaseDate : null,
         price: tool.price,
         life_expectancy: tool.lifeExpectancy,
         notes: tool.notes,
@@ -221,6 +244,16 @@ export async function saveTool(tool: Partial<Tool>): Promise<void> {
         .upsert(dbData);
 
     if (error) throw error;
+
+    // Record as expense in budget if this is a new purchase
+    if (isNew && tool.price) {
+        await upsertExpense({
+            amount: tool.price,
+            category: 'Supplies',
+            description: `Purchased ${tool.name} - Tool`,
+            createdAt: new Date().toISOString()
+        } as any);
+    }
 }
 
 export async function deleteTool(id: string): Promise<void> {
@@ -265,12 +298,12 @@ export async function getUsageHistory(): Promise<UsageHistory[]> {
 }
 
 export async function saveUsageHistory(usage: Partial<UsageHistory>): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
 
     const dbData = {
         id: usage.id,
-        user_id: user.id,
+        user_id: session.user.id,
         chemical_id: usage.chemicalId,
         material_id: usage.materialId,
         tool_id: usage.toolId,

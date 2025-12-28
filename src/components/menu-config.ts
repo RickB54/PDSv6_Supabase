@@ -88,6 +88,7 @@ export const getMenuGroups = (counts: {
                 { title: "Estimates", url: "/estimates", role: "admin", highlight: "green", icon: FileText },
                 { title: "Invoicing", url: "/invoicing", role: "admin", key: "invoicing", icon: FileText },
                 { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator },
+                { title: "Reports", url: "/reports", role: "admin", key: "reports", icon: FileBarChart },
                 { title: "Payroll", url: "/payroll", role: "admin", key: "payroll", badge: counts.payrollDueCount > 0 ? counts.payrollDueCount : undefined, icon: DollarSign },
                 { title: "Company Budget", url: "/company-budget", role: "admin", key: "company-budget", icon: DollarSign },
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent },
