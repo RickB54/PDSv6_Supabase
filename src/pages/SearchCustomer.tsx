@@ -70,12 +70,14 @@ const SearchCustomer = () => {
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     refresh();
   }, []);
 
   const refresh = async () => {
+    setIsRefreshing(true);
     try {
       const list = await getSupabaseCustomers();
       setCustomers(Array.isArray(list) ? (list as Customer[]) : []);
@@ -87,6 +89,8 @@ const SearchCustomer = () => {
       } catch (err2) {
         setCustomers([]);
       }
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -339,8 +343,8 @@ const SearchCustomer = () => {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
           <div className="relative w-full md:w-96"><Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" /><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="pl-10 bg-zinc-950 border-zinc-800" /></div>
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
-            <Button variant="ghost" onClick={refresh} className="text-zinc-400 hover:text-white">
-              <RotateCcw className="h-4 w-4 mr-2" /> Refresh
+            <Button variant="ghost" onClick={refresh} className="text-zinc-400 hover:text-white" disabled={isRefreshing}>
+              <RotateCcw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
             </Button>
             <Button variant={showArchived ? "secondary" : "ghost"} onClick={() => setShowArchived(!showArchived)} className="text-zinc-400 hover:text-white">
               {showArchived ? "Show Active" : "Show Archived"}

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem, supabase } from "@/lib/supa-data";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2 } from "lucide-react";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
 
@@ -28,6 +28,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [photoUploadProgress, setPhotoUploadProgress] = useState(0);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [showMap, setShowMap] = useState(false);
+  const [linkedVehicles, setLinkedVehicles] = useState<any[]>([]);
 
   // File upload refs
   const generalPhotoRef = useRef<HTMLInputElement>(null);
@@ -73,12 +74,14 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     shortVideos: [],
     videoUrl: "",
     learningCenterUrl: "",
+    videoNote: "",
   });
 
   const isProspect = form.type === 'prospect';
 
   useEffect(() => {
-    const initForm = () => {
+    const initForm = async () => {
+      setLinkedVehicles([]); // Reset
       if (initial) {
         let cIn = "";
         let cOut = "";
@@ -103,6 +106,19 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           learningCenterUrl: initial.learningCenterUrl || "",
           videoNote: initial.videoNote || ""
         });
+
+        // Fetch all linked vehicles
+        if (initial.id) {
+          try {
+            const { data: vehs } = await supabase
+              .from('vehicles')
+              .select('*')
+              .eq('customer_id', initial.id);
+            if (vehs) setLinkedVehicles(vehs);
+          } catch (e) {
+            console.error("Error loading linked vehicles", e);
+          }
+        }
       } else {
         setForm({
           id: undefined,
@@ -251,6 +267,85 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     } catch (err: any) {
       console.error("Save Error:", err);
       toast.error("Save failed");
+    }
+  };
+
+  const handleDeleteLinkedVehicle = async (vehicleId: string) => {
+    if (!confirm("Are you sure you want to delete this vehicle?")) return;
+    try {
+      toast.info("Deleting vehicle dependencies...");
+      // 1. Delete Dependencies first (Bookings & Estimates) & INVOICES?
+      // Best effort - catch errors individually so we proceed
+      await supabase.from('bookings').delete().eq('vehicle_id', vehicleId).then(({ error }) => {
+        if (error) console.error("Booking delete error (ignored):", error);
+      });
+      await supabase.from('estimates').delete().eq('vehicle_id', vehicleId).then(({ error }) => {
+        if (error) console.error("Estimate delete error (ignored):", error);
+      });
+
+      // 2. Delete the Vehicle
+      toast.info("Deleting vehicle record...");
+      const { error, count: deleteCount } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', vehicleId)
+        .select('*', { count: 'exact', head: true });
+
+      if (error) throw error;
+
+      // 3. PARANOID VERIFICATION: Check if it's actually gone
+      const { count: existsCount } = await supabase
+        .from('vehicles')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', vehicleId);
+
+      if (existsCount && existsCount > 0) {
+        // DELETE FAILED (likely RLS). Try Update/Unlink fallback.
+        console.warn("Delete failed (RLS?). Attempting to unlink vehicle...");
+
+        const { error: unlinkError } = await supabase
+          .from('vehicles')
+          .update({ customer_id: null })
+          .eq('id', vehicleId);
+
+        if (unlinkError) {
+          const msg = "PERMISSION DENIED: You cannot delete or unlink this vehicle.\n\nThis usually happens because the vehicle was created by another user or a public form, and the database security prevents admins from modifying it.\n\nPlease ask the developer to check 'RLS Policies' on the 'vehicles' table.";
+          alert(msg);
+          throw new Error(msg);
+        }
+
+        toast.success("Vehicle unlinked (Permission restriction bypassed)");
+      } else {
+        toast.success("Vehicle deleted successfully");
+      }
+
+      // 4. Force specific fresh fetch to be sure UI is in sync
+      const { data: freshList } = await supabase.from('vehicles').select('*').eq('customer_id', initial.id);
+      const updatedList = freshList || [];
+      setLinkedVehicles(updatedList);
+
+      // 5. Logic to close or clear form
+      const remainingCount = updatedList.length;
+
+      // If the deleted vehicle data matches what's currently in the form inputs, clear the form
+      const deletedVehicle = linkedVehicles.find(v => v.id === vehicleId);
+      const isMatch = deletedVehicle && (
+        (form.vehicle === deletedVehicle.make && form.model === deletedVehicle.model) ||
+        remainingCount === 0
+      );
+
+      if (isMatch) {
+        setForm(prev => ({ ...prev, vehicle: "", model: "", year: "", color: "", mileage: "", vehicleType: "", conditionInside: "", conditionOutside: "" }));
+      }
+
+      // Auto-close if this was the blockage preventing customer deletion
+      if (remainingCount === 0 && confirm("Vehicle removed. The customer profile is now clear of vehicles.\n\nClose this window to proceed with deleting the customer?")) {
+        onOpenChange(false);
+      }
+
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Failed to delete vehicle", { description: e.message });
     }
   };
 
@@ -436,6 +531,36 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 </div>
               </div>
             </div>
+
+            {linkedVehicles.length > 0 && (
+              <>
+                <div className="h-px bg-zinc-800" />
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Manage Linked Vehicles ({linkedVehicles.length})</h3>
+                  <div className="space-y-2">
+                    {linkedVehicles.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Car className="h-4 w-4 text-zinc-500" />
+                          <div className="text-sm text-white">
+                            {v.year} {v.make} {v.model} <span className="text-zinc-500">({v.type})</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-red-500 hover:bg-red-950/30 hover:text-red-400"
+                          onClick={() => handleDeleteLinkedVehicle(v.id)}
+                          title="Permanently remove this vehicle"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="h-px bg-zinc-800" />
 
