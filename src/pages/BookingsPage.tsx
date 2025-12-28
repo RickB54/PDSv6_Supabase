@@ -640,7 +640,7 @@ export default function BookingsPage() {
         </div>
       </PageHeader>
 
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 mt-12 lg:mt-0">
         {/* Mobile Controls (visible only on small screens) */}
         <div className="flex flex-col gap-4 lg:hidden mb-4">
           <div className="flex items-center justify-between gap-2">

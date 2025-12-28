@@ -414,7 +414,7 @@ export default function StaffSchedule() {
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <div key={day.toISOString()} className="flex-1 min-w-[120px] border-r border-zinc-800/50 relative group">
+                        <div key={day.toISOString()} className="flex-1 min-w-[100px] md:min-w-[120px] lg:min-w-[140px] border-r border-zinc-800/50 relative group">
                             {/* Column Header */}
                             <div className={`h-8 border-b border-zinc-800 flex items-center justify-center text-xs font-semibold sticky top-0 z-10 bg-zinc-950 ${isToday ? 'text-blue-400 bg-blue-900/10' : 'text-zinc-400'}`}>
                                 {format(day, 'EEE d')}

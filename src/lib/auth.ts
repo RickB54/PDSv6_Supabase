@@ -47,8 +47,16 @@ export function getCurrentUser(): User | null {
 }
 
 export function setCurrentUser(user: User | null): void {
+  // FIX: Prevent unnecessary writes/events if data hasn't changed
+  const currentRaw = localStorage.getItem('currentUser');
+  const userString = user ? JSON.stringify(user) : null;
+
+  if (currentRaw === userString) {
+    return; // No change, do nothing
+  }
+
   if (user) {
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    localStorage.setItem('currentUser', userString);
   } else {
     localStorage.removeItem('currentUser');
   }
@@ -137,7 +145,13 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
 
     // 1. Fetch profile (with timeout protection now)
     let profile = await getSupabaseUserProfile(u.id);
-    let role: 'admin' | 'employee' | 'customer' = 'customer';
+
+    // FIX: Default to existing local role if available to prevent downgrade on fetch failure
+    const current = getCurrentUser();
+    let role: 'admin' | 'employee' | 'customer' =
+      (current && current.id === u.id && (current.role === 'admin' || current.role === 'employee'))
+        ? current.role
+        : 'customer';
 
     const email = u.email || '';
 
