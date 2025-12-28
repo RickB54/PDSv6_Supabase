@@ -67,16 +67,32 @@ const Prospects = () => {
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLoadedThisMount, setHasLoadedThisMount] = useState(false);
 
   useEffect(() => {
-    refresh();
+    // Always load fresh data on mount to ensure we see new prospects
+    // But only once per mount to avoid duplicate calls
+    if (!hasLoadedThisMount) {
+      refresh();
+      setHasLoadedThisMount(true);
+    }
   }, []);
 
   const refresh = async () => {
+    setIsRefreshing(true);
     setLoading(true);
     try {
       const list = await getUnifiedCustomers();
+      console.log('🔍 All unified customers:', list);
+      console.log('🔍 Total count:', list.length);
+      console.log('🔍 Each customer:', list.map(c => ({ name: c.name, type: c.type })));
+
       const prospects = (list as Customer[]).filter(c => c.type === 'prospect');
+      console.log('🔍 Filtered prospects:', prospects);
+      console.log('🔍 Prospects count:', prospects.length);
+      console.log('🔍 Prospect names:', prospects.map(p => p.name));
+
       setCustomers(prospects);
     } catch (err: any) {
       console.error('Refresh prospects failed:', err);
@@ -89,6 +105,7 @@ const Prospects = () => {
       }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -322,6 +339,16 @@ const Prospects = () => {
             <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="pl-10 bg-zinc-950 border-zinc-800" />
           </div>
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refresh}
+              disabled={isRefreshing}
+              className="gap-2 text-zinc-400 hover:text-white"
+            >
+              <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
             <Button
               variant={showArchived ? "secondary" : "ghost"}
               onClick={() => setShowArchived(!showArchived)}

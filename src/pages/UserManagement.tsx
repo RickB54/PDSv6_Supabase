@@ -108,6 +108,7 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
+    // Always load fresh data on mount
     refreshAll();
   }, []);
 

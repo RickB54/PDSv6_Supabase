@@ -451,8 +451,8 @@ export default function AdminDashboard() {
     ]).then(([mats, chems]) => {
       const mArr = Array.isArray(mats) ? mats : [];
       const cArr = Array.isArray(chems) ? chems : [];
-      const mCount = mArr.filter(i => typeof i.lowThreshold === 'number' && (i.quantity || 0) <= (i.lowThreshold || 0)).length;
-      const cCount = cArr.filter(c => (c.currentStock || 0) <= (c.threshold || 0)).length;
+      const mCount = mArr.filter(i => typeof i.lowThreshold === 'number' && (i.quantity || 0) < (i.lowThreshold || 0)).length;
+      const cCount = cArr.filter(c => (c.currentStock || 0) < (c.threshold || 0)).length;
       const total = mCount + cCount;
       setCriticalInventory(total);
       try { localStorage.setItem('inventory_low_count', String(total)); } catch { }
@@ -536,8 +536,8 @@ export default function AdminDashboard() {
       ]).then(([mats, chems]) => {
         const mArr = Array.isArray(mats) ? mats : [];
         const cArr = Array.isArray(chems) ? chems : [];
-        const mCount = mArr.filter(i => typeof i.lowThreshold === 'number' && (i.quantity || 0) <= (i.lowThreshold || 0)).length;
-        const cCount = cArr.filter(c => (c.currentStock || 0) <= (c.threshold || 0)).length;
+        const mCount = mArr.filter(i => typeof i.lowThreshold === 'number' && (i.quantity || 0) < (i.lowThreshold || 0)).length;
+        const cCount = cArr.filter(c => (c.currentStock || 0) < (c.threshold || 0)).length;
         const total = mCount + cCount;
         setCriticalInventory(total);
         try { localStorage.setItem('inventory_low_count', String(total)); } catch { }

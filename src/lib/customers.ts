@@ -22,8 +22,10 @@ export interface UnifiedCustomer {
 function dedupeByKey(items: UnifiedCustomer[]): UnifiedCustomer[] {
   const seen = new Map<string, UnifiedCustomer>();
   for (const c of items) {
-    const key = (c.email?.toLowerCase() || c.phone || c.name).trim();
-    if (!key) continue;
+    // Include type in the key to prevent merging prospects with customers who share phone/email
+    const baseKey = (c.email?.toLowerCase() || c.phone || c.name).trim();
+    const key = `${baseKey}|${c.type || 'customer'}`;
+    if (!baseKey) continue;
     const prev = seen.get(key);
     if (!prev) {
       seen.set(key, c);
@@ -63,7 +65,7 @@ export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
     const rawSupa = await getSupabaseCustomers();
     supaCustomers = rawSupa.map((SC: any) => ({
       id: SC.id,
-      name: SC.name,
+      name: SC.full_name || SC.name, // Supabase uses full_name column
       email: SC.email,
       phone: SC.phone,
       address: SC.address,

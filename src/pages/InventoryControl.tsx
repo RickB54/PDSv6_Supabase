@@ -61,7 +61,18 @@ const InventoryControl = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    loadData();
+    // Always load from localforage first (fast, cached data)
+    loadDataFromCache();
+
+    // Check if we've already fetched fresh data in this session
+    const hasLoaded = sessionStorage.getItem('inventory-loaded');
+
+    // Only fetch from database if we haven't loaded it yet (first visit in this session)
+    if (!hasLoaded) {
+      loadData();
+      sessionStorage.setItem('inventory-loaded', 'true');
+    }
+
     // Persist date filter
     const saved = localStorage.getItem('inventory-date-filter');
     if (saved) setDateFilter(saved as any);
@@ -98,6 +109,25 @@ const InventoryControl = () => {
       console.error('Failed to update inventory badge:', e);
     }
   }, [chemicals, materials]);
+
+  // Load data from localforage cache (instant)
+  const loadDataFromCache = async () => {
+    try {
+      const [chems, mats, tls, usage] = await Promise.all([
+        inventoryData.getChemicals(),
+        inventoryData.getMaterials(),
+        inventoryData.getTools(),
+        inventoryData.getUsageHistory()
+      ]);
+
+      setChemicals(chems);
+      setMaterials(mats);
+      setTools(tls);
+      setUsageHistory(usage);
+    } catch (error) {
+      console.error('Error loading cached data:', error);
+    }
+  };
 
   const loadData = async () => {
     setIsRefreshing(true);
@@ -305,7 +335,7 @@ const InventoryControl = () => {
             onClick={() => toggleSection('chemicals')}
           >
             <div className="flex items-center gap-3">
-              <div className={`h-2 w-2 rounded-full ${chemicals.some(c => c.currentStock <= c.threshold) ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`} />
+              <div className={`h-2 w-2 rounded-full ${chemicals.some(c => c.currentStock < c.threshold) ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`} />
               <h3 className="text-lg font-semibold text-yellow-100">Chemicals</h3>
               <HelpCircle className="h-4 w-4 text-zinc-400 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-chemicals' })); }} />
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{chemicals.length} items</span>
@@ -313,9 +343,9 @@ const InventoryControl = () => {
             <div className="flex items-center gap-4 text-sm text-zinc-400">
               <div className="hidden sm:block">
                 <span className="mr-4">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
-                {chemicals.some(c => c.currentStock <= c.threshold) && (
+                {chemicals.some(c => c.currentStock < c.threshold) && (
                   <span className="text-red-400 font-medium flex items-center gap-1 inline-flex">
-                    <AlertTriangle className="h-3 w-3" /> {chemicals.filter(c => c.currentStock <= c.threshold).length} Low
+                    <AlertTriangle className="h-3 w-3" /> {chemicals.filter(c => c.currentStock < c.threshold).length} Low
                   </span>
                 )}
               </div>
@@ -352,7 +382,7 @@ const InventoryControl = () => {
                         <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
                         <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock <= c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
                             {c.currentStock} remaining
                           </span>
                         </TableCell>
@@ -379,7 +409,7 @@ const InventoryControl = () => {
                         </div>
                         <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock <= c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
                         {c.currentStock} left
                       </span>
                     </div>
@@ -406,7 +436,7 @@ const InventoryControl = () => {
             onClick={() => toggleSection('materials')}
           >
             <div className="flex items-center gap-3">
-              <div className={`h-2 w-2 rounded-full ${materials.some(m => typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold) ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
+              <div className={`h-2 w-2 rounded-full ${materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
               <h3 className="text-lg font-semibold text-blue-100">Materials</h3>
               <HelpCircle className="h-4 w-4 text-zinc-400 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-materials' })); }} />
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{materials.length} items</span>
@@ -414,9 +444,9 @@ const InventoryControl = () => {
             <div className="flex items-center gap-4 text-sm text-zinc-400">
               <div className="hidden sm:block">
                 <span className="mr-4">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
-                {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold) && (
+                {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
                   <span className="text-red-400 font-medium flex items-center gap-1 inline-flex">
-                    <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold).length} Low
+                    <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length} Low
                   </span>
                 )}
               </div>
@@ -453,7 +483,7 @@ const InventoryControl = () => {
                         <TableCell className="text-zinc-300">{m.category}</TableCell>
                         <TableCell className="text-zinc-300">${(m.costPerItem || 0).toFixed(2)}</TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                             {m.quantity} units
                           </span>
                         </TableCell>
@@ -480,7 +510,7 @@ const InventoryControl = () => {
                         </div>
                         <div className="text-sm text-zinc-300">{m.category} • ${(m.costPerItem || 0).toFixed(2)}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity <= m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                         {m.quantity} units
                       </span>
                     </div>

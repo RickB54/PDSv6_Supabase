@@ -92,8 +92,32 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Track if user selected "Custom" for dropdowns
+  const [customSubtype, setCustomSubtype] = useState(false);
+  const [customUnit, setCustomUnit] = useState(false);
+
+  // Dropdown options
+  const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
+
+  const chemicalUnits = ["oz", "mL", "L", "Gallons", "Quarts", "Pints", "Custom"];
+  const materialUnits = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg", "Custom"];
+  const toolUnits = ["Units", "Pieces", "Sets", "Custom"];
+
+  const getUnitOptions = () => {
+    if (mode === 'chemical') return chemicalUnits;
+    if (mode === 'tool') return toolUnits;
+    return materialUnits;
+  };
+
   useEffect(() => {
     if (initial) {
+      const initialSubtype = (initial as any).subtype || "";
+      const initialUnit = (initial as any).unitOfMeasure || "";
+
+      // Check if values are custom (not in predefined lists)
+      setCustomSubtype(initialSubtype && !sizeOptions.includes(initialSubtype));
+      setCustomUnit(initialUnit && !getUnitOptions().includes(initialUnit));
+
       setForm((f) => ({
         ...f,
         id: initial.id || f.id,
@@ -103,7 +127,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         currentStock: initial?.currentStock ? String(initial.currentStock) : ((initial as any).currentStock || f.currentStock),
         threshold: (initial as any).threshold ? String((initial as any).threshold) : ((initial as any).lowThreshold ? String((initial as any).lowThreshold) : f.threshold),
         category: (initial as any).category || f.category,
-        subtype: (initial as any).subtype || "",
+        subtype: initialSubtype,
         quantity: initial?.quantity ? String(initial.quantity) : ((initial as any).quantity || f.quantity),
         costPerItem: initial?.costPerItem ? String(initial.costPerItem) : ((initial as any).costPerItem || ""),
         notes: (initial as any).notes || "",
@@ -111,9 +135,12 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         purchaseDate: (initial as any).purchaseDate || "",
         price: (initial as any).price ? String((initial as any).price) : "",
         lifeExpectancy: (initial as any).lifeExpectancy || "",
+        unitOfMeasure: initialUnit,
         imageUrl: (initial as any).imageUrl || "",
       }));
     } else {
+      setCustomSubtype(false);
+      setCustomUnit(false);
       setForm({
         id: undefined,
         name: "",
@@ -131,7 +158,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         price: "",
         cost: "",
         lifeExpectancy: "",
-        unitOfMeasure: mode === 'chemical' ? "oz" : "units",
+        unitOfMeasure: mode === 'chemical' ? "oz" : mode === 'tool' ? "Units" : "Units",
         consumptionRatePerJob: "0",
         imageUrl: "",
       });
@@ -267,18 +294,18 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-white">
             {mode === 'chemical' ? (form.id ? 'Edit Chemical' : 'Add Chemical') :
               mode === 'tool' ? (form.id ? 'Edit Tool' : 'Add Tool') :
                 (form.id ? 'Edit Material' : 'Add Material')}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
-          {/* Image Upload - Always visible at top */}
-          <div className="flex justify-center mb-4">
-            <div className="relative h-32 w-32 rounded-lg border-2 border-dashed border-zinc-700 hover:border-zinc-500 bg-zinc-900 overflow-hidden flex items-center justify-center cursor-pointer transition-colors"
+        <div className="space-y-4 py-2">
+          {/* Image Upload - Compact at top */}
+          <div className="flex justify-center">
+            <div className="relative h-24 w-24 rounded-lg border-2 border-dashed border-zinc-700 hover:border-zinc-500 bg-zinc-800 overflow-hidden flex items-center justify-center cursor-pointer transition-colors"
               onClick={() => !form.imageUrl && photoRef.current?.click()}>
               {form.imageUrl ? (
                 <>
@@ -290,162 +317,444 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
                 </>
               ) : (
                 <div className="text-center p-2">
-                  <ImageIcon className="h-8 w-8 text-zinc-600 mx-auto mb-1" />
-                  <span className="text-xs text-zinc-500">Upload Photo</span>
+                  <ImageIcon className="h-6 w-6 text-zinc-600 mx-auto mb-1" />
+                  <span className="text-xs text-zinc-500">Photo</span>
                 </div>
               )}
               <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
               <input ref={photoCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
-              {/* Camera Button for Mobile - Inside relative container */}
               <button
                 type="button"
-                className="absolute -bottom-2 -right-2 bg-blue-600 rounded-full p-2 border-2 border-zinc-900 cursor-pointer shadow-lg hover:bg-blue-500 transition-colors"
+                className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg hover:bg-blue-500 transition-colors"
                 onClick={(e) => { e.stopPropagation(); photoCameraRef.current?.click(); }}
               >
-                <Camera className="h-4 w-4 text-white" />
+                <Camera className="h-3 w-3 text-white" />
               </button>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label>Item Name</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          {/* Basic Info Section */}
+          <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Basic Information
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs text-zinc-400">Item Name</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                />
+              </div>
+              {mode === 'chemical' && (
+                <div>
+                  <Label className="text-xs text-zinc-400">Bottle Size</Label>
+                  <Input
+                    value={form.bottleSize}
+                    onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                    placeholder="e.g., 32 oz, 1 L"
+                  />
+                </div>
+              )}
+              {mode === 'material' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-zinc-400">Category</Label>
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    >
+                      <option>Rag</option>
+                      <option>Brush</option>
+                      <option>Tool</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Subtype / Size</Label>
+                    {!customSubtype ? (
+                      <select
+                        value={sizeOptions.includes(form.subtype) ? form.subtype : "Custom"}
+                        onChange={(e) => {
+                          if (e.target.value === "Custom") {
+                            setCustomSubtype(true);
+                            setForm({ ...form, subtype: "" });
+                          } else {
+                            setForm({ ...form, subtype: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select size...</option>
+                        {sizeOptions.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.subtype}
+                          onChange={(e) => setForm({ ...form, subtype: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter custom size..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCustomSubtype(false);
+                            setForm({ ...form, subtype: "" });
+                          }}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {mode === 'tool' && (
+                <div>
+                  <Label className="text-xs text-zinc-400">Category</Label>
+                  <select
+                    value={form.category || "Power Tool"}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  >
+                    <option>Power Tool</option>
+                    <option>Hand Tool</option>
+                    <option>Equipment</option>
+                    <option>Accessory</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
-          {mode === 'chemical' ? (
-            <>
-              <div className="space-y-1">
-                <Label>Bottle Size</Label>
-                <Input value={form.bottleSize} onChange={(e) => setForm({ ...form, bottleSize: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Cost per Bottle *</Label>
-                  <Input type="number" step="0.01" value={form.costPerBottle} onChange={(e) => setForm({ ...form, costPerBottle: e.target.value })} required />
+
+          {/* Stock & Pricing Section */}
+          <div className="bg-emerald-900/20 border border-emerald-700/30 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-emerald-300 mb-3">Stock & Pricing</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {mode === 'chemical' ? (
+                <>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Current Stock</Label>
+                    <Input
+                      type="number"
+                      value={form.currentStock}
+                      onChange={(e) => setForm({ ...form, currentStock: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Low Threshold *</Label>
+                    <Input
+                      type="number"
+                      value={form.threshold}
+                      onChange={(e) => setForm({ ...form, threshold: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Cost per Bottle *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.costPerBottle}
+                      onChange={(e) => setForm({ ...form, costPerBottle: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Unit of Measure</Label>
+                    {!customUnit ? (
+                      <select
+                        value={getUnitOptions().includes(form.unitOfMeasure) ? form.unitOfMeasure : "Custom"}
+                        onChange={(e) => {
+                          if (e.target.value === "Custom") {
+                            setCustomUnit(true);
+                            setForm({ ...form, unitOfMeasure: "" });
+                          } else {
+                            setForm({ ...form, unitOfMeasure: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select unit...</option>
+                        {getUnitOptions().map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.unitOfMeasure}
+                          onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter custom unit..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCustomUnit(false);
+                            setForm({ ...form, unitOfMeasure: "" });
+                          }}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : mode === 'tool' ? (
+                <>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Quantity</Label>
+                    <Input
+                      type="number"
+                      value={form.quantity}
+                      onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Low Threshold *</Label>
+                    <Input
+                      type="number"
+                      value={form.threshold}
+                      onChange={(e) => setForm({ ...form, threshold: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Price / Cost *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.price}
+                      onChange={(e) => setForm({ ...form, price: e.target.value, cost: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Unit of Measure</Label>
+                    {!customUnit ? (
+                      <select
+                        value={getUnitOptions().includes(form.unitOfMeasure) ? form.unitOfMeasure : "Custom"}
+                        onChange={(e) => {
+                          if (e.target.value === "Custom") {
+                            setCustomUnit(true);
+                            setForm({ ...form, unitOfMeasure: "" });
+                          } else {
+                            setForm({ ...form, unitOfMeasure: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select unit...</option>
+                        {getUnitOptions().map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.unitOfMeasure}
+                          onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter custom unit..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCustomUnit(false);
+                            setForm({ ...form, unitOfMeasure: "" });
+                          }}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Quantity</Label>
+                    <Input
+                      type="number"
+                      value={form.quantity}
+                      onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Low Threshold *</Label>
+                    <Input
+                      type="number"
+                      value={form.threshold}
+                      onChange={(e) => setForm({ ...form, threshold: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Cost per Item *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.costPerItem}
+                      onChange={(e) => setForm({ ...form, costPerItem: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Unit of Measure</Label>
+                    {!customUnit ? (
+                      <select
+                        value={getUnitOptions().includes(form.unitOfMeasure) ? form.unitOfMeasure : "Custom"}
+                        onChange={(e) => {
+                          if (e.target.value === "Custom") {
+                            setCustomUnit(true);
+                            setForm({ ...form, unitOfMeasure: "" });
+                          } else {
+                            setForm({ ...form, unitOfMeasure: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select unit...</option>
+                        {getUnitOptions().map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.unitOfMeasure}
+                          onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter custom unit..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCustomUnit(false);
+                            setForm({ ...form, unitOfMeasure: "" });
+                          }}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Usage Tracking Section */}
+          <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-blue-300 mb-3">Usage Tracking</h3>
+            <div>
+              <Label className="text-xs text-zinc-400">Consumption per Job</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.consumptionRatePerJob}
+                onChange={(e) => setForm({ ...form, consumptionRatePerJob: e.target.value })}
+                placeholder="e.g., 2"
+                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Tool-specific Details */}
+          {mode === 'tool' && (
+            <div className="bg-purple-900/20 border border-purple-700/30 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-purple-300 mb-3">Tool Details</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-zinc-400">Warranty Info</Label>
+                  <Input
+                    value={form.warranty}
+                    onChange={(e) => setForm({ ...form, warranty: e.target.value })}
+                    placeholder="e.g. 2 Years"
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                  />
                 </div>
-                <div className="space-y-1">
-                  <Label>Current Stock</Label>
-                  <Input type="number" value={form.currentStock} onChange={(e) => setForm({ ...form, currentStock: e.target.value })} />
+                <div>
+                  <Label className="text-xs text-zinc-400">Date Purchased</Label>
+                  <Input
+                    type="date"
+                    value={form.purchaseDate}
+                    onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs text-zinc-400">Life Expectancy</Label>
+                  <Input
+                    value={form.lifeExpectancy}
+                    onChange={(e) => setForm({ ...form, lifeExpectancy: e.target.value })}
+                    placeholder="e.g. 5 Years"
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Unit of Measure</Label>
-                  <Input value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })} placeholder="e.g., oz, mL, L" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Consumption per Job</Label>
-                  <Input type="number" step="0.01" value={form.consumptionRatePerJob} onChange={(e) => setForm({ ...form, consumptionRatePerJob: e.target.value })} placeholder="e.g., 2" />
-                </div>
-              </div>
-            </>
-          ) : mode === 'tool' ? (
-            <>
-              <div className="space-y-1">
-                <Label>Category</Label>
-                <select
-                  value={form.category || "Power Tool"}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option>Power Tool</option>
-                  <option>Hand Tool</option>
-                  <option>Equipment</option>
-                  <option>Accessory</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Quantity</Label>
-                  <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Price / Cost *</Label>
-                  <Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value, cost: e.target.value })} required />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Unit of Measure</Label>
-                  <Input value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })} placeholder="e.g., units, pieces" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Consumption per Job</Label>
-                  <Input type="number" step="0.01" value={form.consumptionRatePerJob} onChange={(e) => setForm({ ...form, consumptionRatePerJob: e.target.value })} placeholder="e.g., 1" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Warranty Info</Label>
-                  <Input value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} placeholder="e.g. 2 Years" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Date Purchased</Label>
-                  <Input type="date" value={form.purchaseDate} onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label>Life Expectancy</Label>
-                <Input value={form.lifeExpectancy} onChange={(e) => setForm({ ...form, lifeExpectancy: e.target.value })} placeholder="e.g. 5 Years" />
-              </div>
-              <div className="space-y-1">
-                <Label>Notes</Label>
-                <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-1">
-                <Label>Category</Label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option>Rag</option>
-                  <option>Brush</option>
-                  <option>Tool</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label>Subtype / Size</Label>
-                <Input value={form.subtype} onChange={(e) => setForm({ ...form, subtype: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Quantity</Label>
-                  <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Cost per Item *</Label>
-                  <Input type="number" step="0.01" value={form.costPerItem} onChange={(e) => setForm({ ...form, costPerItem: e.target.value })} required />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Unit of Measure</Label>
-                  <Input value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })} placeholder="e.g., pads, units" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Consumption per Job</Label>
-                  <Input type="number" step="0.01" value={form.consumptionRatePerJob} onChange={(e) => setForm({ ...form, consumptionRatePerJob: e.target.value })} placeholder="e.g., 5" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label>Notes</Label>
-                <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-              </div>
-            </>
+            </div>
           )}
-          <div className="space-y-1">
-            <Label>Low Inventory Threshold *</Label>
-            <Input type="number" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} required />
-          </div>
+
+          {/* Notes Section */}
+          {(mode === 'material' || mode === 'tool') && (
+            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-zinc-300 mb-3">Additional Notes</h3>
+              <div>
+                <Label className="text-xs text-zinc-400">Notes</Label>
+                <Input
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                  placeholder="Any additional information..."
+                />
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => { try { window.location.href = '/reports?tab=inventory'; } catch { } }}>View Inventory Report</Button>
-          <Button onClick={save} disabled={isUploading} className="bg-gradient-hero">
+          <Button
+            variant="outline"
+            onClick={() => { try { window.location.href = '/reports?tab=inventory'; } catch { } }}
+            className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+          >
+            View Inventory Report
+          </Button>
+          <Button
+            onClick={save}
+            disabled={isUploading}
+            className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white"
+          >
             {isUploading ? 'Uploading...' : 'Save'}
           </Button>
         </DialogFooter>

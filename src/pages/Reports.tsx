@@ -43,7 +43,11 @@ const Reports = () => {
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
+    // Always load data from localforage (fast, cached)
     loadData();
+
+    // Mark as loaded for this session
+    sessionStorage.setItem('reports-loaded', 'true');
   }, []);
 
   const loadData = async () => {
@@ -151,7 +155,7 @@ const Reports = () => {
       const total = cost * stock;
       chemicalsTotal += total;
 
-      const lowStock = stock <= chem.threshold;
+      const lowStock = stock < chem.threshold;
       const text = `${chem.name} (${chem.bottleSize})`;
       const details = `Stock: ${stock} | Cost: $${cost.toFixed(2)} | Value: $${total.toFixed(2)}`;
 
@@ -361,24 +365,24 @@ const Reports = () => {
     );
   }
 
-  const lowStockChemicals = chemicals.filter(c => c.currentStock <= c.threshold);
-  const lowStockMaterials = materials.filter(m => (m.quantity || 0) <= (m.threshold || m.lowThreshold || 0));
-  const lowStockTools = tools.filter(t => (t.quantity || 0) <= (t.threshold || 0));
+  const lowStockChemicals = chemicals.filter(c => c.currentStock < c.threshold);
+  const lowStockMaterials = materials.filter(m => (m.quantity || 0) < (m.threshold || m.lowThreshold || 0));
+  const lowStockTools = tools.filter(t => (t.quantity || 0) < (t.threshold || 0));
   const totalInventoryValue = chemicals.reduce((sum, c) => sum + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
   const totalMaterialsValue = materials.reduce((sum, m) => sum + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
   const totalToolsValue = tools.reduce((sum, t) => sum + ((t.cost || 0) * (t.quantity || 1)), 0);
   const chemicalsSorted = [...chemicals].sort((a, b) => {
-    const alow = a.currentStock <= a.threshold; const blow = b.currentStock <= b.threshold;
+    const alow = a.currentStock < a.threshold; const blow = b.currentStock < b.threshold;
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
   const materialsSorted = [...materials].sort((a, b) => {
-    const alow = (a.quantity || 0) <= (a.threshold || a.lowThreshold || 0);
-    const blow = (b.quantity || 0) <= (b.threshold || b.lowThreshold || 0);
+    const alow = (a.quantity || 0) < (a.threshold || a.lowThreshold || 0);
+    const blow = (b.quantity || 0) < (b.threshold || b.lowThreshold || 0);
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
   const toolsSorted = [...tools].sort((a, b) => {
-    const alow = (a.quantity || 0) <= (a.threshold || 0);
-    const blow = (b.quantity || 0) <= (b.threshold || 0);
+    const alow = (a.quantity || 0) < (a.threshold || 0);
+    const blow = (b.quantity || 0) < (b.threshold || 0);
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
 
@@ -573,10 +577,10 @@ const Reports = () => {
                       <TableRow key={c.id} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-medium text-zinc-200">{c.name}</TableCell>
                         <TableCell className="text-zinc-400">{c.bottleSize}</TableCell>
-                        <TableCell className={c.currentStock <= c.threshold ? "text-amber-500 font-bold" : "text-zinc-300"}>{c.currentStock}</TableCell>
+                        <TableCell className={c.currentStock < c.threshold ? "text-amber-500 font-bold" : "text-zinc-300"}>{c.currentStock}</TableCell>
                         <TableCell className="text-zinc-400">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-zinc-300">${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</TableCell>
-                        <TableCell>{c.currentStock <= c.threshold ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                        <TableCell>{c.currentStock < c.threshold ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -593,10 +597,10 @@ const Reports = () => {
                       <TableRow key={m.id} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-medium text-zinc-200">{m.name}</TableCell>
                         <TableCell className="text-zinc-400">{m.subtype || m.type || '—'}</TableCell>
-                        <TableCell className={(m.quantity || 0) <= (m.threshold || m.lowThreshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{m.quantity || 0}</TableCell>
+                        <TableCell className={(m.quantity || 0) < (m.threshold || m.lowThreshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{m.quantity || 0}</TableCell>
                         <TableCell className="text-zinc-400">${(m.costPerItem || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-zinc-300">${((m.costPerItem || 0) * (m.quantity || 0)).toFixed(2)}</TableCell>
-                        <TableCell>{(m.quantity || 0) <= (m.threshold || m.lowThreshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                        <TableCell>{(m.quantity || 0) < (m.threshold || m.lowThreshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -613,10 +617,10 @@ const Reports = () => {
                       <TableRow key={t.id} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-medium text-zinc-200">{t.name}</TableCell>
                         <TableCell className="text-zinc-400">{t.category || '—'}</TableCell>
-                        <TableCell className={(t.quantity || 0) <= (t.threshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{t.quantity || 0}</TableCell>
+                        <TableCell className={(t.quantity || 0) < (t.threshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{t.quantity || 0}</TableCell>
                         <TableCell className="text-zinc-400">${(t.cost || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-zinc-300">${((t.cost || 0) * (t.quantity || 1)).toFixed(2)}</TableCell>
-                        <TableCell>{(t.quantity || 0) <= (t.threshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                        <TableCell>{(t.quantity || 0) < (t.threshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

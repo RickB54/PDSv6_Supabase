@@ -29,6 +29,7 @@ export type MenuItem = {
     role?: string;
     key?: string;
     badge?: number;
+    badgeColor?: 'red' | 'blue'; // Color for the badge
     highlight?: 'red' | 'green';
 };
 
@@ -66,8 +67,7 @@ export const getMenuGroups = (counts: {
                 { title: "Package Comparison", url: "/package-selection", icon: Package },
                 { title: "Vehicle Classification", url: "/vehicle-classification", icon: FileText },
                 { title: "Client Evaluation", url: "/client-evaluation", icon: ClipboardCheck },
-                { title: "Addon Upsell Script", url: "/addon-upsell-script", icon: FileText },
-                { title: "Prospects", url: "/prospects", key: "prospects", icon: Users }
+                { title: "Addon Upsell Script", url: "/addon-upsell-script", icon: FileText }
             ]
         },
         {
@@ -79,6 +79,7 @@ export const getMenuGroups = (counts: {
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
                 { title: "Tasks", url: "/tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users },
+                { title: "Prospects", url: "/prospects", key: "prospects", icon: Users },
                 { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users }
             ]
         },
@@ -98,7 +99,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Inventory & Assets", icon: Package,
             items: [
-                { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, icon: Package },
+                { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package },
                 { title: "File Manager", url: "/file-manager", role: "admin", key: "file-manager", badge: counts.fileCount > 0 ? counts.fileCount : undefined, icon: FileText },
                 { title: "Mobile Setup", url: "/mobile-setup", role: "admin", key: "mobile-setup", icon: Package },
                 { title: "Detailing Vendors", url: "/detailing-vendors", role: "admin", key: "detailing-vendors", icon: Users },

@@ -208,7 +208,7 @@ export function AppSidebar() {
   }, [location.pathname, location.search]);
 
   // Menu Definition
-  type MenuItem = { title: string; url: string; icon?: any; role?: string; key?: string; badge?: number; highlight?: 'red' | 'green' };
+  type MenuItem = { title: string; url: string; icon?: any; role?: string; key?: string; badge?: number; badgeColor?: 'red' | 'blue'; highlight?: 'red' | 'green' };
 
   // Standalone Top Items (Use shared config)
   const TOP_ITEMS = [
@@ -396,7 +396,7 @@ export function AppSidebar() {
                                     <span>{item.title}</span>
                                     {isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                                     {item.badge !== undefined && !isChatAlert && (
-                                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">
+                                      <span className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white`}>
                                         {item.badge}
                                       </span>
                                     )}
