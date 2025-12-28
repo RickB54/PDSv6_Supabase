@@ -491,16 +491,20 @@ const Accounting = () => {
     yPos += 8;
 
     const breakEvenRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue;
-    const remaining = inventoryTotals.total - breakEvenRevenue;
-    const percentRecovered = inventoryTotals.total > 0
-      ? (breakEvenRevenue / inventoryTotals.total) * 100
+    // Include all expenses (inventory + operating costs)
+    const totalInvestment = inventoryTotals.total + totalExp;
+    const remaining = totalInvestment - breakEvenRevenue;
+    const percentRecovered = totalInvestment > 0
+      ? (breakEvenRevenue / totalInvestment) * 100
       : 0;
     const isBreakEven = remaining <= 0;
 
     const breakEvenRows = [
       ['Total Inventory Investment', `$${inventoryTotals.total.toFixed(2)}`],
+      ['Total Operating Expenses', `$${totalExp.toFixed(2)}`],
+      ['Combined Investment + Expenses', `$${totalInvestment.toFixed(2)}`],
       ['Total Service Revenue', `$${breakEvenRevenue.toFixed(2)}`],
-      [isBreakEven ? 'Profit Beyond Investment' : 'Remaining to Break Even', `$${Math.abs(remaining).toFixed(2)}`],
+      [isBreakEven ? 'Profit Beyond Costs' : 'Remaining to Break Even', `$${Math.abs(remaining).toFixed(2)}`],
       ['Recovery Progress', `${Math.min(percentRecovered, 100).toFixed(1)}%`],
       ['Status', isBreakEven ? '✓ Break-even achieved!' : '→ Working toward break-even']
     ];
@@ -675,28 +679,28 @@ const Accounting = () => {
               Break-Even Analysis
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Track your inventory investment vs service revenue to see when you'll break even
+              Track your total investment (inventory + expenses) vs service revenue to see when you'll break even
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Total Inventory Investment */}
+              {/* Total Investment (Inventory + Expenses) */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Inventory Investment</Label>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Investment + Expenses</Label>
                 <p className="text-3xl font-bold text-red-500">
-                  ${inventoryTotals.total.toFixed(2)}
+                  ${(inventoryTotals.total + totalSpent).toFixed(2)}
                 </p>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex justify-between">
-                    <span>Chemicals:</span>
-                    <span className="font-medium">${inventoryTotals.chemicals.toFixed(2)}</span>
+                    <span>Inventory:</span>
+                    <span className="font-medium">${inventoryTotals.total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Materials:</span>
-                    <span className="font-medium">${inventoryTotals.materials.toFixed(2)}</span>
+                    <span>Operating Expenses:</span>
+                    <span className="font-medium">${totalSpent.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tools:</span>
-                    <span className="font-medium">${inventoryTotals.tools.toFixed(2)}</span>
+                  <div className="pt-1 border-t border-muted-foreground/20 flex justify-between font-semibold">
+                    <span>Total Costs:</span>
+                    <span>${(inventoryTotals.total + totalSpent).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -727,16 +731,17 @@ const Accounting = () => {
               <div className="space-y-2">
                 {(() => {
                   const totalRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue;
-                  const remaining = inventoryTotals.total - totalRevenue;
-                  const percentRecovered = inventoryTotals.total > 0
-                    ? (totalRevenue / inventoryTotals.total) * 100
+                  const totalInvestment = inventoryTotals.total + totalSpent;
+                  const remaining = totalInvestment - totalRevenue;
+                  const percentRecovered = totalInvestment > 0
+                    ? (totalRevenue / totalInvestment) * 100
                     : 0;
                   const isBreakEven = remaining <= 0;
 
                   return (
                     <>
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-                        {isBreakEven ? 'Profit Beyond Investment' : 'Remaining to Break Even'}
+                        {isBreakEven ? 'Profit Beyond All Costs' : 'Remaining to Break Even'}
                       </Label>
                       <p className={`text-3xl font-bold ${isBreakEven ? 'text-green-500' : 'text-orange-500'}`}>
                         ${Math.abs(remaining).toFixed(2)}

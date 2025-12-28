@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy } from "lucide-react"; // Added Copy
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw } from "lucide-react"; // Added Copy, RotateCcw
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
@@ -616,6 +616,10 @@ export default function BookingsPage() {
             <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-7 text-xs px-2">Year</Button>
           </div>
 
+          <Button variant="outline" size="icon" onClick={refresh} className="h-8 w-8" title="Refresh">
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+
           <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
 
           <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
@@ -645,9 +649,14 @@ export default function BookingsPage() {
               <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-8 text-xs px-3">Month</Button>
               <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-8 text-xs px-3">Year</Button>
             </div>
-            <Button className="bg-primary hover:bg-primary/90" size="sm" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
-              <Plus className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" onClick={refresh} title="Refresh">
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+              <Button className="bg-primary hover:bg-primary/90" size="sm" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex items-center justify-between gap-2">
             <Button variant="outline" size="icon" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>

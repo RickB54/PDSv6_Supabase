@@ -523,7 +523,7 @@ export default function UserManagement() {
                 <Users className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{admins.length + employees.length + customers.length}</div>
+                <div className="text-2xl font-bold text-white">{admins.length + employees.length + filteredCustomers.length + filteredProspects.length}</div>
                 <div className="text-sm text-zinc-400">Total Users</div>
               </div>
             </CardContent>
@@ -849,7 +849,7 @@ export default function UserManagement() {
                 <Users className="w-5 h-5 text-purple-500" />
                 <CardTitle className="text-white text-lg">Customers</CardTitle>
                 <Badge variant="outline" className="bg-purple-900/10 text-purple-400 border-purple-900/30">
-                  {customers.length} Total
+                  {filteredCustomers.length} Total
                 </Badge>
               </div>
               <div className="relative w-64">

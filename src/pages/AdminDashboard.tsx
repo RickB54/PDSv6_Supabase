@@ -722,6 +722,10 @@ export default function AdminDashboard() {
                   <BookOpen className="w-3.5 h-3.5 text-amber-500" />
                   <span>Personal Notes</span>
                 </Link>
+                <Link to="/reports" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 w-fit">
+                  <FileBarChart className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Reports</span>
+                </Link>
               </div>
             </Card>
           </Card>

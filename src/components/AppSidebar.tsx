@@ -216,7 +216,8 @@ export function AppSidebar() {
     // Inject Personal Notes here if not in shared config yet, or add to shared config.
     // User asked for it "below Employee Dashboard" which is usually in TOP_ITEMS or a group. 
     // Usually Employee Dashboard is a top item.
-    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' }
+    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
+    { title: 'Reports', url: '/reports', icon: FileBarChart, role: 'admin', key: 'reports' }
   ];
 
   // --- MENU CONFIG ---

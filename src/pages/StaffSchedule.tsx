@@ -18,7 +18,8 @@ import {
     AlertCircle,
     X,
     ShieldAlert,
-    Key
+    Key,
+    RotateCcw
 } from "lucide-react";
 import { startOfWeek, endOfWeek, format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addDays, addWeeks, addMonths, addYears, parseISO } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -77,6 +78,7 @@ export default function StaffSchedule() {
     const [clearTimeRange, setClearTimeRange] = useState<'day' | 'week' | 'month'>('day');
     const [clearPin, setClearPin] = useState('');
     const [clearConfirmText, setClearConfirmText] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const dangerPin = localStorage.getItem('danger-pin') || '1234';
 
     // Load Data
@@ -86,6 +88,7 @@ export default function StaffSchedule() {
     }, [currentDate, view]); // Reload when view changes (simple vs range opt)
 
     const loadShifts = async () => {
+        setIsRefreshing(true);
         // Simple fetch all for now, or range based
         const start = format(startOfWeek(currentDate), 'yyyy-MM-dd');
         const end = format(endOfWeek(currentDate), 'yyyy-MM-dd');
@@ -113,6 +116,7 @@ export default function StaffSchedule() {
             status: d.status as any
         }));
         setShifts(mapped);
+        setIsRefreshing(false);
     };
 
     const loadEmployees = async () => {
@@ -322,6 +326,16 @@ export default function StaffSchedule() {
         <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-zinc-950/80 p-4 border-b border-zinc-800 sticky top-0 z-20 backdrop-blur-md">
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => loadShifts()}
+                    disabled={isRefreshing}
+                    className="h-8 w-8"
+                    title="Refresh"
+                >
+                    <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/employee')} className="h-8 text-xs">
                     <LayoutDashboard className="w-3 h-3 mr-2" /> Dash
                 </Button>
