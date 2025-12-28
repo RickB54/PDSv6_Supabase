@@ -36,7 +36,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="fixed top-0 left-0 right-0 z-[100] w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
         <div className="relative flex items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-4 flex-wrap min-w-0">

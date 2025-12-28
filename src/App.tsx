@@ -170,7 +170,7 @@ const App = () => {
               <ErrorBoundary>
                 <ChatAudioAlert />
                 {user && <AppSidebar />}
-                <div className="flex-1 overflow-x-hidden">
+                <div className={`flex-1 overflow-x-hidden ${user ? 'pt-20' : ''}`}>
                   <Routes>
                     <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
                     <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />

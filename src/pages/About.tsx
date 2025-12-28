@@ -84,7 +84,7 @@ const About = () => {
     return () => { mounted = false; window.removeEventListener('content-changed', onChanged as any); window.removeEventListener('storage', load); window.removeEventListener('storage', loadTestimonials); window.removeEventListener('storage', loadFeatures); };
   }, []);
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-20">
       <Navbar />
 
       {/* Hero Section with Video Background (click to open About dialog) */}

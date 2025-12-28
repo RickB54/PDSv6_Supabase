@@ -91,7 +91,7 @@ const Checkout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-20">
       <PageHeader title="Checkout" />
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="space-y-6">
@@ -153,7 +153,7 @@ const Checkout = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="md:col-span-2">
                 <Label>Amount</Label>
-                <Input type="number" value={prepayAmount} onChange={(e)=>setPrepayAmount(e.target.value)} placeholder="0.00" />
+                <Input type="number" value={prepayAmount} onChange={(e) => setPrepayAmount(e.target.value)} placeholder="0.00" />
               </div>
               <div className="flex items-end">
                 <Button className="w-full" variant="outline" onClick={() => setPrepayAmount("")}>Clear</Button>

@@ -251,7 +251,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={sidebarClass} collapsible={collapsibleMode as any}>
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border pt-20">
         {open && (
           <div className="flex items-center w-full">
             <div className="flex items-center gap-3 animate-fade-in flex-1" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
