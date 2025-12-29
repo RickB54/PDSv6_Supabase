@@ -330,7 +330,7 @@ export default function F150Setup() {
 
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <div className="min-h-screen bg-background pt-16 pb-20">
             {/* New Pictures & Videos Blog Header */}
             <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-900 border-b border-indigo-500/30">
                 <div className="container mx-auto px-4 py-8">

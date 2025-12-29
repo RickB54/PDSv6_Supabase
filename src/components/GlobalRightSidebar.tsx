@@ -24,7 +24,7 @@ export function GlobalRightSidebar() {
 
     return (
         <div className={`
-            border-l border-zinc-800 bg-zinc-950 flex flex-col items-center py-4 gap-4 z-40 shrink-0 transition-all duration-300
+            sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-20 pb-4 gap-4 z-40 shrink-0 transition-all duration-300
             ${collapsed ? 'w-12' : 'w-48 items-start px-2'}
         `}>
             {/* Toggle */}
