@@ -220,6 +220,7 @@ export default function PackagePricing() {
           discount_percent: null,
           discount_start: null,
           discount_end: null,
+          image_url: getPackageMeta(p.id)?.imageDataUrl || "",
           is_active: getPackageMeta(p.id)?.visible !== false && !getPackageMeta(p.id)?.deleted,
         }));
 
@@ -504,7 +505,8 @@ export default function PackagePricing() {
               // Sync Meta (Visibility/Deleted)
               setPackageMeta(p.id, {
                 visible: p.is_active !== false,
-                deleted: false // If it's in DB, it's not deleted (unless we add a deleted column later)
+                deleted: false, // If it's in DB, it's not deleted (unless we add a deleted column later)
+                imageDataUrl: p.image_url || ""
               });
             });
 
