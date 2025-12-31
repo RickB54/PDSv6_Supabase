@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { useAlertsStore } from "@/store/alerts";
@@ -20,7 +20,10 @@ import jsPDF from "jspdf";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
 import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import localforage from "localforage";
-
+import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
+import { LinkChemicalModal } from "@/components/inventory/LinkChemicalModal";
+import { getChemicalById } from "@/lib/chemicals";
+import { Chemical as LibraryChemical } from "@/types/chemicals";
 
 // Import types from inventory-data
 type Chemical = inventoryData.Chemical;
@@ -60,6 +63,37 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Chemical Card View State
+  const [viewCardId, setViewCardId] = useState<string | null>(null);
+  const [viewChemical, setViewChemical] = useState<LibraryChemical | null>(null);
+
+  // Linker Modal State
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkTargetItem, setLinkTargetItem] = useState<Chemical | null>(null);
+
+  useEffect(() => {
+    const handleOpenDetail = async (e: CustomEvent<string>) => {
+      const id = e.detail;
+      if (!id) return;
+      try {
+        const data = await getChemicalById(id);
+        if (data) {
+          setViewChemical(data);
+          setViewCardId(id);
+        } else {
+          toast({ title: "Error", description: "Could not load chemical card details.", variant: "destructive" });
+        }
+      } catch (err) {
+        console.error("Failed to load card", err);
+      }
+    };
+
+    window.addEventListener('open-chemical-detail', handleOpenDetail as EventListener);
+    return () => {
+      window.removeEventListener('open-chemical-detail', handleOpenDetail as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     // Always load from localforage first (fast, cached data)
@@ -381,13 +415,44 @@ const InventoryControl = () => {
                         <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
                         <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                            {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
                             {c.currentStock} remaining
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, 'chemical', c.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                          <div className="flex justify-end gap-1">
+                            {/* Link/View Button */}
+                            {c.chemicalLibraryId ? (
+                              <div className="flex items-center">
+                                <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300" onClick={() => window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId }))}>
+                                  <FileText className="h-4 w-4 mr-1" /> Card
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 ml-1"
+                                  title="Unlink Card"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!confirm('Unlink this chemical card?')) return;
+                                    await inventoryData.saveChemical({ ...c, chemicalLibraryId: null }, false);
+                                    loadData();
+                                    toast({ title: "Unlinked", description: "Card link removed." });
+                                  }}
+                                >
+                                  <UnlinkIcon className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400" onClick={() => { setLinkTargetItem(c); setLinkModalOpen(true); }}>
+                                <Plus className="h-4 w-4 mr-1" /> Link
+                              </Button>
+                            )}
+
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, 'chemical', c.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -480,7 +545,8 @@ const InventoryControl = () => {
                         <TableCell className="text-zinc-300">{m.category}</TableCell>
                         <TableCell className="text-zinc-300">${(m.costPerItem || 0).toFixed(2)}</TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                            {typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
                             {m.quantity} units
                           </span>
                         </TableCell>
@@ -685,10 +751,10 @@ const InventoryControl = () => {
           </div>
         </Card>
 
-      </main>
+      </main >
 
       {/* Usage Edit Modal */}
-      <Dialog open={usageEditOpen} onOpenChange={setUsageEditOpen}>
+      < Dialog open={usageEditOpen} onOpenChange={setUsageEditOpen} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Usage Record</DialogTitle>
@@ -736,7 +802,7 @@ const InventoryControl = () => {
             }}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       <UnifiedInventoryModal
         mode={modalMode}
@@ -745,7 +811,31 @@ const InventoryControl = () => {
         initial={editing || null}
         onSaved={async () => { await loadData(); }}
       />
+
+      <ChemicalDetail
+        chemical={viewChemical}
+        open={!!viewCardId}
+        onOpenChange={(open) => !open && setViewCardId(null)}
+        onUpdate={async () => {
+          if (viewCardId) {
+            const updated = await getChemicalById(viewCardId);
+            if (updated) setViewChemical(updated);
+          }
+        }}
+      />
+
       {/* ... keeping other modals ... */}
+
+      <LinkChemicalModal
+        open={linkModalOpen}
+        onOpenChange={setLinkModalOpen}
+        inventoryItem={linkTargetItem}
+        onLinked={(id) => {
+          loadData(); // Refresh inventory list
+          // Trigger view card
+          setTimeout(() => window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: id })), 100);
+        }}
+      />
 
       {/* Material Updates modal (Usage History) */}
       <Dialog
@@ -869,7 +959,7 @@ const InventoryControl = () => {
         />
 
       </Dialog>
-    </div>
+    </div >
   );
 };
 

@@ -78,7 +78,7 @@ function getEmailRoleOverride(email: string): 'admin' | 'employee' | null {
     const e = String(email || '').trim().toLowerCase();
     const admins = normalizeEnvList(import.meta.env.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAIL);
     const employees = normalizeEnvList(import.meta.env.VITE_EMPLOYEE_EMAILS || import.meta.env.VITE_EMPLOYEE_EMAIL);
-    const defaultAdmins = ['primedetailsolutions.ma.nh@gmail.com'];
+    const defaultAdmins = ['primedetailsolutions.ma.nh@gmail.com', 'rberube54@gmail.com'];
     const adminList = admins.length ? admins : defaultAdmins;
     if (adminList.includes(e)) return 'admin';
     if (employees.includes(e)) return 'employee';
@@ -137,13 +137,52 @@ async function getSupabaseCustomerProfile(userId: string): Promise<any | null> {
 // Now accepts the Supabase user object directly to avoid blocking getUser() calls
 export async function finalizeSupabaseSession(u: any): Promise<User | null> {
   try {
-    // console.log("finalizeSupabaseSession: starting for user", u?.id);
-    if (!u) {
-      // console.log("finalizeSupabaseSession: no user provided");
-      return null;
+    if (!u) return null;
+
+    const email = u.email || '';
+
+    // FAST PATH: Check for Admin Override immediately to prevent blocking UI
+    // This solves "slow login" and "broken UI" issues by granting access instantly based on email
+    let authorizedRole: 'admin' | 'employee' | null = null;
+    const overrideRole = getEmailRoleOverride(email);
+
+    if (overrideRole) {
+      // Optimistic User Object
+      const optimisticName = u.user_metadata?.full_name || email.split('@')[0];
+      const optimisticUser: User = {
+        id: u.id,
+        email: email,
+        name: optimisticName,
+        role: overrideRole as any
+      };
+
+      // Set Local State Immediately (Trigger UI updates)
+      setCurrentUser(optimisticUser);
+      try { localStorage.setItem('session_user_id', u.id); } catch { }
+
+      // Background Consistency Sync (Update DB without blocking User)
+      (async () => {
+        try {
+          const profile = await getSupabaseUserProfile(u.id);
+          // Only upsert if profile is missing or mismatch
+          if (!profile || profile.role !== overrideRole) {
+            await supabase.from('app_users').upsert({
+              id: u.id,
+              email: email,
+              role: overrideRole,
+              name: optimisticName,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+          }
+        } catch (e) { console.warn("Background auth sync failed", e); }
+      })();
+
+      return optimisticUser;
     }
 
-    // 1. Fetch profile (with timeout protection now)
+    // --- STANDARD PATH (For employees/customers without hardcoded overrides) ---
+
+    // 1. Fetch profile (with timeout protection)
     let profile = await getSupabaseUserProfile(u.id);
 
     // FIX: Default to existing local role if available to prevent downgrade on fetch failure
@@ -153,10 +192,7 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
         ? current.role
         : 'customer';
 
-    const email = u.email || '';
-
-    // Check for pre-authorization in authorized_users table
-    let authorizedRole: 'admin' | 'employee' | null = null;
+    // Check authorized_users if not found in profile
     try {
       const res: any = await timeoutPromise(
         supabase.from('authorized_users').select('role').eq('email', email).maybeSingle() as any,
@@ -166,37 +202,23 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
       if (res.data) authorizedRole = res.data.role as 'admin' | 'employee';
     } catch (e) { console.warn("Error checking authorized_users or timeout", e); }
 
-    const overrideRole = getEmailRoleOverride(email) || authorizedRole;
+    const finalRoleOverride = overrideRole || authorizedRole;
 
     if (profile) {
       role = profile.role;
     }
 
-    // Logic Fix: If an override exists and differs from the DB profile, use the override
-    if (overrideRole && profile && profile.role !== overrideRole) {
-      // console.log(`finalizeSupabaseSession: applying role override from ${profile.role} to ${overrideRole}`);
-      role = overrideRole;
-    } else if (overrideRole && !profile) {
-      role = overrideRole;
+    // Apply overrides
+    if (finalRoleOverride && profile && profile.role !== finalRoleOverride) {
+      role = finalRoleOverride;
+    } else if (finalRoleOverride && !profile) {
+      role = finalRoleOverride;
     }
 
-    // 3. Upsert profile if missing or needs update
-    // SAFETY FIX: If we failed to fetch the profile (profile is null), and there is NO override,
-    // we should NOT inadvertently upsert a default 'customer' role over an existing DB role.
-    // If profile is explicitly null because the table is empty, that's fine (insert).
-    // But if (res.error) occurred in getSupabaseUserProfile, profile is null, and we risk overwriting.
-    // For now, only upsert if we either have the profile (update) or we are creating a new one with a confident role.
-
-    // Logic: 
-    // - If we have an overrideRole, we enforce it -> Upsert.
-    // - If we have a profile, we check consistency -> Upsert if needed.
-    // - If we have NEITHER (profile fetch failed/timed out, and no override), we should act conservatively:
-    //   Do NOT write to DB. Use 'customer' for this session but don't persist it.
-
-    const shouldUpsert = !!overrideRole || !!profile || role !== 'customer';
+    // Upsert logic
+    const shouldUpsert = !!finalRoleOverride || !!profile || role !== 'customer';
 
     if (shouldUpsert) {
-      // console.log("finalizeSupabaseSession: attempting upsert...", { id: u.id, role });
       const newName = u.user_metadata?.full_name || profile?.name || email.split('@')[0];
       try {
         const { error } = await timeoutPromise(
@@ -210,10 +232,7 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
           3000,
           "finalizeSupabaseSession-upsert"
         );
-        if (error) console.log("finalizeSupabaseSession: upsert error (ignoring if RLS)", error);
 
-        // UPDATE LOCAL PROFILE WITH NEW DATA TO AVOID RETURNING STALE NAME
-        // If upsert "succeeded" (or we tried), we assume the source of truth is now what we tried to write.
         if (!error) {
           if (!profile) profile = { role, name: newName } as any;
           else profile.name = newName;
@@ -223,18 +242,12 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
         console.warn("finalizeSupabaseSession: upsert timed out or failed", err);
       }
 
-      // Re-fetch profile to be sure (optional, but good verification)
+      // Re-fetch profile to be sure
       if (!profile) profile = await getSupabaseUserProfile(u.id);
-    } else {
-      console.warn("finalizeSupabaseSession: skipping upsert to protect potential existing role (profile fetch failed & no override)");
     }
 
-    // Construct User object guaranteed to return even if DB failed
-    // FIX: Use 'role' which contains the authoritative role (either from profile, or the override we just applied)
-    // We ignore 'profile.role' here because 'profile' might be stale (pre-update)
+    // Construct Final User
     const finalRole = role || profile?.role || 'customer';
-
-    // Safety: ensure we return the freshest name we have
     const finalName = profile?.name || u.user_metadata?.full_name || (email || '').split('@')[0];
 
     const mapped: User = {
@@ -249,12 +262,10 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     // Non-blocking background fetch
     getSupabaseCustomerProfile(u.id).catch(() => { });
 
-    // console.log("finalizeSupabaseSession: success", mapped);
     return mapped;
   } catch (e) {
     console.error('Session Init Error', e);
-    // Emergency fallback to prevent total crash
-    return { email: u?.email || '', name: 'User', role: 'customer' };
+    return { email: u?.email || '', name: 'User', role: 'customer', id: u?.id || '' } as User;
   }
 }
 
@@ -323,7 +334,7 @@ export async function signupSupabase(email: string, password: string, name?: str
     if (data.user) {
       if (!data.session) {
         // console.log("signupSupabase: confirm email required");
-        return { email, name: name || email.split('@')[0], role: 'customer' };
+        return { id: data.user.id, email, name: name || email.split('@')[0], role: 'customer' };
       }
       return await finalizeSupabaseSession(data.user);
     }

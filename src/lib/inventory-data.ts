@@ -10,6 +10,7 @@ export interface Chemical {
     threshold: number;
     currentStock: number;
     imageUrl?: string;
+    chemicalLibraryId?: string;
 }
 
 export interface Material {
@@ -74,7 +75,9 @@ export async function getChemicals(): Promise<Chemical[]> {
         costPerBottle: item.cost_per_bottle || 0,
         threshold: item.threshold || 0,
         currentStock: item.current_stock || 0,
-        imageUrl: item.image_url
+        currentStock: item.current_stock || 0,
+        imageUrl: item.image_url,
+        chemicalLibraryId: item.chemical_library_id
     }));
 }
 
@@ -91,6 +94,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         threshold: chemical.threshold,
         current_stock: chemical.currentStock,
         image_url: chemical.imageUrl,
+        chemical_library_id: chemical.chemicalLibraryId,
         updated_at: new Date().toISOString()
     };
 

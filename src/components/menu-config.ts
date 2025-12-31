@@ -109,6 +109,7 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
+                { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
             ]
         },

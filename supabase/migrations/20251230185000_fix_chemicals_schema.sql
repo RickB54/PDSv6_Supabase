@@ -1,0 +1,20 @@
+-- Force update structure of chemicals table
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS application_guide JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS dilution_ratios JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS surface_compatibility JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS interactions JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS warnings JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS theme_color TEXT DEFAULT '#3b82f6';
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS primary_image_url TEXT;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS gallery_image_urls TEXT[] DEFAULT '{}';
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS video_urls TEXT[] DEFAULT '{}';
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS pro_tips TEXT[] DEFAULT '{}';
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS safety_info TEXT;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS sds_url TEXT;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS compatible_chemicals TEXT[] DEFAULT '{}';
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS alternative_chemicals TEXT[] DEFAULT '{}';
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS used_for TEXT[];
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS when_to_use TEXT;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS why_to_use TEXT;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS primary_uses TEXT;
+ALTER TABLE chemicals ADD COLUMN IF NOT EXISTS other_uses TEXT;

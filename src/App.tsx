@@ -74,6 +74,8 @@ import UserSettings from "./pages/UserSettings";
 import SectionLanding from "./pages/SectionLanding";
 import LearningLibrary from "./pages/LearningLibrary";
 import F150Setup from "./pages/F150Setup";
+import ChemicalsLibrary from "./pages/ChemicalsLibrary";
+import AdminChemicals from "@/pages/AdminChemicals";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
 import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
@@ -446,6 +448,17 @@ const App = () => {
                     <Route path="/section/:sectionId" element={
                       <ProtectedRoute allowedRoles={['admin', 'employee']}>
                         <SectionLanding />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/chemicals" element={
+                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                        <ChemicalsLibrary />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/chemicals" element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        {/* We will create AdminChemicals next */}
+                        <AdminChemicals />
                       </ProtectedRoute>
                     } />
                   </Routes>

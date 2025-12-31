@@ -9,6 +9,7 @@ import localforage from "localforage";
 import { Trash2, Upload, X, ImageIcon, Info, Save, Camera } from "lucide-react";
 import browserImageCompression from "browser-image-compression";
 import { supabase } from "@/lib/supa-data";
+import { getChemicals as getLibraryChemicals } from "@/lib/chemicals";
 
 type Mode = 'chemical' | 'material' | 'tool';
 
@@ -22,6 +23,7 @@ interface ChemicalForm {
   unitOfMeasure: string; // e.g., "oz", "mL"
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
+  chemicalLibraryId?: string;
 }
 
 interface MaterialForm {
@@ -86,7 +88,16 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
     unitOfMeasure: "",
     consumptionRatePerJob: "0",
     imageUrl: "",
+    chemicalLibraryId: "",
   });
+
+  const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (mode === 'chemical' && open) {
+      getLibraryChemicals().then(setLibraryOptions).catch(err => console.error("Failed to load library", err));
+    }
+  }, [mode, open]);
 
   const photoRef = useRef<HTMLInputElement>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
@@ -137,6 +148,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         lifeExpectancy: (initial as any).lifeExpectancy || "",
         unitOfMeasure: initialUnit,
         imageUrl: (initial as any).imageUrl || "",
+        chemicalLibraryId: (initial as any).chemicalLibraryId || "",
       }));
     } else {
       setCustomSubtype(false);
@@ -161,6 +173,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         unitOfMeasure: mode === 'chemical' ? "oz" : mode === 'tool' ? "Units" : "Units",
         consumptionRatePerJob: "0",
         imageUrl: "",
+        chemicalLibraryId: "",
       });
     }
   }, [initial, open, mode]);
@@ -263,6 +276,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
           currentStock: Math.round(numeric(form.currentStock)),
           threshold: Math.round(numeric(form.threshold)),
           imageUrl: form.imageUrl,
+          chemicalLibraryId: form.chemicalLibraryId || undefined,
         };
 
         // Import inventory-data at top of file
@@ -305,6 +319,14 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
       toast.success("Item saved");
       onOpenChange(false);
       await onSaved?.();
+
+      // Auto-open Card if we just linked one
+      if (mode === 'chemical' && form.chemicalLibraryId) {
+        // Small delay to ensure modal closes first
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: form.chemicalLibraryId }));
+        }, 100);
+      }
     } catch (err: any) {
       console.error("Save error:", err);
       toast.error("Save failed: " + (err?.message || String(err)));
@@ -367,6 +389,33 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
                   className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                 />
               </div>
+              {mode === 'chemical' && (
+                <div>
+                  <Label className="text-xs text-zinc-400">Main Chemical Card (Link)</Label>
+                  <select
+                    value={form.chemicalLibraryId || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm(f => {
+                        const libItem = libraryOptions.find(o => o.id === val);
+                        return {
+                          ...f,
+                          chemicalLibraryId: val,
+                          // Auto-fill name/image if empty? Optional.
+                          name: (!f.name && libItem) ? libItem.name : f.name,
+                          imageUrl: (!f.imageUrl && libItem?.primary_image_url) ? libItem.primary_image_url : f.imageUrl
+                        };
+                      });
+                    }}
+                    className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="">Select chemical card...</option>
+                    {libraryOptions.map(l => (
+                      <option key={l.id} value={l.id}>{l.name} ({l.brand})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {mode === 'chemical' && (
                 <div>
                   <Label className="text-xs text-zinc-400">Bottle Size</Label>
