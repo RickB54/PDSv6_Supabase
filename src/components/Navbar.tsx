@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, UserCog, User, ShoppingCart, Sidebar as SidebarIcon } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
-import logo from "@/assets/logo-3inch.png";
+import logo from "@/assets/logo-primary.png";
 import NotificationBell from "@/components/NotificationBell";
 import { useCartStore } from "@/store/cart";
 import { useSidebar } from "@/components/ui/sidebar"; // Import Use Sidebar
@@ -68,8 +68,7 @@ export const Navbar = () => {
               </Button>
             )}
             <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
-              <img src={logo} alt="Prime Detail Solutions" className="w-10 h-10" />
-              <span className="font-bold text-foreground hidden sm:inline">Prime Detail Solutions</span>
+              <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
             </Link>
           </div>
 

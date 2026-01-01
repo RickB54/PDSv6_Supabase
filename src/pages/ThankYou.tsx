@@ -27,7 +27,7 @@ export default function ThankYou() {
             A detailed receipt has been emailed to you.
           </p>
           <p className="text-lg text-zinc-400">
-            Prime Detail Solutions — Where Your Car Gets The Royal Treatment
+            Prime Auto Detail — Where Your Car Gets The Royal Treatment
           </p>
         </div>
         <Button

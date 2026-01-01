@@ -583,11 +583,11 @@ const BookNow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
-        <Button variant="ghost" asChild className="mb-6">
+      <main className="container mx-auto px-4 py-2 max-w-3xl">
+        <Button variant="ghost" asChild className="mb-4">
           <Link to="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Previous
@@ -596,7 +596,7 @@ const BookNow = () => {
 
         <div className="space-y-6 animate-fade-in">
           <div className="text-center space-y-4">
-            <CalendarIcon className="h-16 w-16 mx-auto text-primary" />
+            <CalendarIcon className="h-36 w-36 mx-auto text-primary" />
             <h1 className="text-4xl font-bold text-foreground">Book Your Detail</h1>
             <p className="text-muted-foreground text-lg">Fill out the form below to request an appointment</p>
           </div>
@@ -1035,7 +1035,7 @@ const BookNow = () => {
           </Card>
 
           <p className="text-center text-sm text-muted-foreground">
-            By submitting this form, you agree to be contacted by Prime Detail Solutions regarding your booking.
+            By submitting this form, you agree to be contacted by Prime Auto Detail regarding your booking.
           </p>
         </div>
       </main>

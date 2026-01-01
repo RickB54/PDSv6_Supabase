@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 import api from "@/lib/api";
 import { isSupabaseEnabled } from "@/lib/auth";
 import * as contactSvc from "@/services/supabase/contact";
-import logo from "@/assets/logo-3inch.png";
+import logo from "@/assets/logo-primary.png";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -96,7 +96,7 @@ const Contact = () => {
       `Message:\n${formData.message}\n\n` +
       `Submitted: ${new Date().toLocaleString()}\n` +
       `Portal Link (auto): ${window.location.origin}/portal?token=auto-${Date.now()}`;
-    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=primedetailsolutions.ma.nh@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(gmailLink, "_blank");
 
     toast({
@@ -153,7 +153,7 @@ const Contact = () => {
               hours: supaContact.hours || 'Appointments daily 8 AM–6 PM',
               phone: supaContact.phone || '(555) 123-4567',
               address: supaContact.address || 'Methuen, MA',
-              email: supaContact.email || 'primedetailsolutions.ma.nh@gmail.com',
+              email: supaContact.email || 'Rick.PrimeAutoDetail@gmail.com',
             });
             return;
           }
@@ -172,16 +172,16 @@ const Contact = () => {
               hours: c.hours || 'Appointments daily 8 AM–6 PM',
               phone: c.phone || '(555) 123-4567',
               address: c.address || 'Methuen, MA',
-              email: c.email || 'primedetailsolutions.ma.nh@gmail.com',
+              email: c.email || 'Rick.PrimeAutoDetail@gmail.com',
             });
           } else {
-            setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' });
+            setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
           }
         } else {
-          setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' });
+          setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
         }
       } catch {
-        setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' });
+        setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
       }
     };
     load();
@@ -193,22 +193,22 @@ const Contact = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-16 max-w-6xl">
-        <Button variant="ghost" asChild className="mb-6">
+      <main className="container mx-auto px-4 py-2 max-w-6xl">
+        <Button variant="ghost" asChild className="mb-4">
           <Link to="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Previous
           </Link>
         </Button>
 
-        <div className="text-center mb-12">
+        <div className="text-center mb-4">
           <img
             src={logo}
-            alt="Prime Detail Solutions"
-            className="mx-auto mb-4 cursor-pointer w-[3in]"
+            alt="Prime Auto Detail"
+            className="mx-auto mb-2 cursor-pointer h-48 md:h-60 w-auto"
             onClick={() => setShowAbout(true)}
           />
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Contact Us</h1>
@@ -312,12 +312,12 @@ const Contact = () => {
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">Email</h3>
                   <a
-                    href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(contactInfo?.email || 'primedetailsolutions.ma.nh@gmail.com')}&su=Website%20Inquiry`}
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(contactInfo?.email || 'Rick.PrimeAutoDetail@gmail.com')}&su=Website%20Inquiry`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    {contactInfo ? (contactInfo.email || 'primedetailsolutions.ma.nh@gmail.com') : 'Loading contact info...'}
+                    {contactInfo ? (contactInfo.email || 'Rick.PrimeAutoDetail@gmail.com') : 'Loading contact info...'}
                   </a>
                 </div>
               </div>

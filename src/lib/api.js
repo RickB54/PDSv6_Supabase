@@ -460,7 +460,7 @@ const api = async (endpoint, options = {}) => {
   if (endpoint.startsWith('/api/contact')) {
     const method = (options.method || 'GET').toUpperCase();
     const key = 'contactInfo';
-    const defaults = { hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' };
+    const defaults = { hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' };
     const ensureSeed = async () => {
       const curr = (await localforage.getItem(key)) || null;
       if (!curr) { await localforage.setItem(key, defaults); return defaults; }

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Shield, Users, Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import logo from "@/assets/logo-3inch.png";
+import logo from "@/assets/logo-primary.png";
 import api from "@/lib/api";
 import { isSupabaseEnabled } from "@/lib/auth";
 
@@ -84,31 +84,27 @@ const About = () => {
     return () => { mounted = false; window.removeEventListener('content-changed', onChanged as any); window.removeEventListener('storage', load); window.removeEventListener('storage', loadTestimonials); window.removeEventListener('storage', loadFeatures); };
   }, []);
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
       {/* Hero Section with Video Background (click to open About dialog) */}
       <section
-        className="relative h-[60vh] flex items-center justify-center overflow-hidden cursor-pointer"
-        onClick={() => setShowAbout(true)}
-        aria-label="Open About dialog"
+        className="relative h-[25vh] min-h-[250px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-zinc-900 to-slate-900 border-b border-white/10"
+        aria-label="About Header"
       >
-        <div className="absolute inset-0 bg-black/60 z-10" />
-        <video
-          preload="none"
-          muted
-          playsInline
-          poster={logo}
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src="https://cdn.pixabay.com/video/2019/10/08/27833-365006009_large.mp4" type="video/mp4" />
-        </video>
-        {/* No overlay text or logo to avoid hero overlap */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/50 via-black/80 to-black z-0" />
+        {/* Subtle grid pattern for texture */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0 mix-blend-overlay"></div>
+
+        <div className="relative z-10 text-center animate-fade-in p-4 cursor-pointer" onClick={() => setShowAbout(true)}>
+          <img src={logo} alt="Prime Auto Detail" className="h-48 md:h-60 w-auto mx-auto mb-2 hover:scale-105 transition-transform drop-shadow-lg" />
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight drop-shadow-xl">About Prime Auto Detail</h1>
+          <div className="h-1 w-24 bg-red-600 mx-auto rounded-full shadow-[0_0_15px_rgba(220,38,38,0.5)]"></div>
+        </div>
       </section>
 
-      {/* Title moved below hero to prevent overlap */}
+      {/* Title moved inside header for better clarity, secondary content here */}
       <section className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">About Prime Detail Solutions</h1>
         <p className="text-xl text-muted-foreground">Your trusted partner in premium auto care</p>
       </section>
 
@@ -124,7 +120,7 @@ const About = () => {
         <div className="space-y-16">
           {/* Mission Statement */}
           <Card className="p-8 md:p-12 bg-gradient-card border-border">
-            <h2 className="text-3xl font-bold text-center mb-6 text-foreground">Welcome to Prime Detail Solutions</h2>
+            <h2 className="text-3xl font-bold text-center mb-6 text-foreground">Welcome to Prime Auto Detail</h2>
             <p className="text-lg text-muted-foreground text-center max-w-4xl mx-auto leading-relaxed mb-8">
               Your trusted partner in premium auto care in Methuen, MA. We specialize in high-quality
               interior and exterior detailing, paint correction, ceramic coatings, and mobile services.
@@ -204,7 +200,7 @@ const About = () => {
           <Card className="p-12 bg-gradient-hero border-border text-center">
             <h2 className="text-3xl font-bold text-white mb-4">Ready to Transform Your Vehicle?</h2>
             <p className="text-white/90 mb-6 text-lg">
-              Book your detailing service today and experience the Prime Detail difference
+              Book your detailing service today and experience the Prime Auto Detail difference
             </p>
             <Link to="/">
               <Button size="lg" variant="secondary" className="group">
@@ -216,7 +212,7 @@ const About = () => {
 
           {/* Footer */}
           <div className="text-center text-muted-foreground text-sm">
-            <p>© {new Date().getFullYear()} Prime Detail Solutions. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
           </div>
         </div>
       </main>

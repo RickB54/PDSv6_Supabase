@@ -93,7 +93,7 @@ const CustomerDashboard = () => {
   const downloadInvoice = (invoice: Invoice) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("Prime Detail Solutions", 105, 20, { align: "center" });
+    doc.text("Prime Auto Detail", 105, 20, { align: "center" });
     doc.setFontSize(12);
     doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 30, { align: "center" });
     doc.text(`Date: ${invoice.date}`, 20, 50);

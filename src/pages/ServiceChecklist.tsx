@@ -685,7 +685,7 @@ const ServiceChecklist = () => {
       const doc = new jsPDF();
       const title = finalize ? 'Service Checklist — Job Completed' : 'Service Checklist — Progress Saved';
       doc.setFontSize(18);
-      doc.text('Prime Detail Solutions', 105, 18, { align: 'center' });
+      doc.text('Prime Auto Detail', 105, 18, { align: 'center' });
       doc.setFontSize(12);
       doc.text(title, 105, 26, { align: 'center' });
       doc.text(`Date: ${new Date().toLocaleString()}`, 20, 38);
@@ -884,7 +884,7 @@ const ServiceChecklist = () => {
     try {
       const doc = new jsPDF();
       doc.setFontSize(18);
-      doc.text("Prime Detail Solutions - Invoice", 20, 20);
+      doc.text("Prime Auto Detail - Invoice", 20, 20);
       doc.setFontSize(12);
       doc.text(`Customer: ${invoice.customerName}`, 20, 35);
       doc.text(`Phone: ${invoice.contact.phone || "-"}`, 20, 42);
@@ -957,7 +957,7 @@ const ServiceChecklist = () => {
     try {
       const doc = new jsPDF();
       doc.setFontSize(18);
-      doc.text("Prime Detail Solutions - Invoice", 20, 20);
+      doc.text("Prime Auto Detail - Invoice", 20, 20);
       doc.setFontSize(12);
       doc.text(`Customer: ${invoice.customerName}`, 20, 35);
       doc.text(`Phone: ${invoice.contact.phone || "-"}`, 20, 42);
@@ -1013,7 +1013,7 @@ const ServiceChecklist = () => {
     const customer = customers.find(c => c.id === selectedCustomer);
 
     doc.setFontSize(18);
-    doc.text("Prime Detail Solutions - Service Estimate", 20, 20);
+    doc.text("Prime Auto Detail - Service Estimate", 20, 20);
     doc.setFontSize(12);
     doc.text(`Customer: ${customer?.name || "N/A"}`, 20, 35);
     doc.text(`Vehicle Type: ${vehicleLabels[vehicleType] || vehicleType}`, 20, 42);

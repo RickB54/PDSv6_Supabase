@@ -95,7 +95,7 @@ export default function AppManual() {
 
                     {/* Mobile TOC / Print Header */}
                     <div className="md:hidden print:block mb-8 border-b pb-4">
-                        <h1 className="text-3xl font-bold mb-2">PDS App Manual</h1>
+                        <h1 className="text-3xl font-bold mb-2">Prime Auto Detail App Manual</h1>
                         <p className="text-zinc-400 print:text-zinc-600">Comprehensive Workflow Guide & Standard Operating Procedures</p>
                     </div>
 
@@ -105,7 +105,7 @@ export default function AppManual() {
                         </h2>
                         <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
                             <p className="mb-4 text-zinc-300 print:text-black">
-                                Welcome to the Prime Detail Solutions (PDS) Application Manual. This guide serves as the definitive reference for utilizing the PDS application to manage daily operations, finance, inventory, and staff training.
+                                Welcome to the Prime Auto Detail Application Manual. This guide serves as the definitive reference for utilizing the Prime Auto Detail application to manage daily operations, finance, inventory, and staff training.
                             </p>
                             <p className="text-zinc-300 print:text-black">
                                 Use the "Print / Save as PDF" button to save a local copy of this manual for offline reference or employee onboarding.

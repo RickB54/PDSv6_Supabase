@@ -22,7 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, finalizeSupabaseSession } from "@/lib/auth";
 import supabase from "@/lib/supabase";
-import logo from "@/assets/logo-3inch.png";
+import logo from "@/assets/logo-primary.png";
 import { getAdminAlerts } from "@/lib/adminAlerts";
 import { getMenuGroups, TOP_ITEMS as CONFIGURED_TOP_ITEMS } from "@/components/menu-config";
 import api from "@/lib/api";
@@ -255,12 +255,13 @@ export function AppSidebar() {
         {open && (
           <div className="flex items-center w-full">
             <div className="flex items-center gap-3 animate-fade-in flex-1" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
-              <img src={logo} alt="Prime Detail Solutions" className="w-10 h-10" />
+              <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
               <div>
-                <h2 className="font-bold text-foreground">Prime Detail</h2>
-                <p className="text-xs text-muted-foreground">Solutions</p>
+                <h2 className="font-bold text-foreground">Prime Auto</h2>
+                <p className="text-xs text-muted-foreground">Detail</p>
               </div>
             </div>
+
             {/* Toggle Button in Header */}
             <Button
               variant="ghost"
@@ -275,7 +276,7 @@ export function AppSidebar() {
         )}
         {!open && (
           <div className="flex flex-col items-center gap-2">
-            <img src={logo} alt="Prime Detail Solutions" className="w-8 h-8 mx-auto" onClick={handleLogoClick} style={{ cursor: 'pointer' }} />
+            <img src={logo} alt="Prime Auto Detail" className="w-10 h-auto mx-auto" onClick={handleLogoClick} style={{ cursor: 'pointer' }} />
           </div>
         )}
       </div>

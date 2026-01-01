@@ -186,7 +186,7 @@ const Invoicing = () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text("Prime Detail Solutions", 105, 20, { align: "center" });
+    doc.text("Prime Auto Detail", 105, 20, { align: "center" });
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
@@ -402,8 +402,8 @@ const Invoicing = () => {
                 <div key={invoice.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
                   <div className="flex items-center gap-4 mb-4 md:mb-0">
                     <div className={`h-12 w-12 rounded-full flex items-center justify-center border ${(invoice.paymentStatus === 'paid')
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                      : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                       }`}>
                       {(invoice.paymentStatus === 'paid') ? <CheckCircle className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                     </div>
@@ -426,7 +426,7 @@ const Invoicing = () => {
                     <div className="text-right min-w-[100px]">
                       <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Status</div>
                       <div className={`font-medium ${invoice.paymentStatus === 'paid' ? 'text-emerald-400' :
-                          invoice.paymentStatus === 'partially-paid' ? 'text-amber-400' : 'text-red-400'
+                        invoice.paymentStatus === 'partially-paid' ? 'text-amber-400' : 'text-red-400'
                         }`}>
                         {(invoice.paymentStatus || 'unpaid').toUpperCase()}
                       </div>
@@ -495,7 +495,7 @@ const Invoicing = () => {
                     Invoice #{selectedInvoice.invoiceNumber}
                     {(selectedInvoice.paymentStatus === 'paid') && <CheckCircle className="h-5 w-5 text-emerald-500" />}
                   </h2>
-                  <p className="text-zinc-400">Prime Detail Solutions</p>
+                  <p className="text-zinc-400">Prime Auto Detail</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
               </div>

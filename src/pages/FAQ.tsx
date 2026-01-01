@@ -40,11 +40,11 @@ const FAQ = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Button variant="ghost" asChild className="mb-6">
+      <main className="container mx-auto px-4 py-2 max-w-4xl">
+        <Button variant="ghost" asChild className="mb-4">
           <Link to="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Previous
@@ -52,7 +52,7 @@ const FAQ = () => {
         </Button>
 
         <div className="space-y-6 animate-fade-in">
-          <div className="text-center space-y-4 mb-8">
+          <div className="text-center space-y-2 mb-4">
             <h1 className="text-4xl font-bold text-foreground">Frequently Asked Questions</h1>
             <p className="text-muted-foreground text-lg">Everything you need to know about our services</p>
           </div>

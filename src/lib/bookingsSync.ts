@@ -26,7 +26,7 @@ export function generateBookingPDF(booking: Booking, details?: {
 }): string {
   const doc = new jsPDF();
   doc.setFontSize(18);
-  doc.text("Prime Detail Solutions", 20, 20);
+  doc.text("Prime Auto Detail", 20, 20);
   doc.setFontSize(12);
   doc.text("BOOKING CONFIRMATION", 20, 30);
   doc.text(`Created: ${new Date().toLocaleString()}`, 20, 40);

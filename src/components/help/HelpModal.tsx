@@ -54,7 +54,7 @@ export default function HelpModal({ open, onOpenChange, role }: HelpModalProps) 
       <DialogContent className="sm:max-w-[900px] h-[85vh] bg-[#0c1220] border-slate-800 text-white shadow-2xl flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-slate-800/60 shrink-0 bg-[#0f1629]">
           <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-400 text-2xl font-bold tracking-tight mb-4">
-            Prime Detail Solutions — Help Guide
+            Prime Auto Detail — Help Guide
           </DialogTitle>
 
           <div className="flex flex-col gap-3">

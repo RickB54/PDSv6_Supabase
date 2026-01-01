@@ -15,7 +15,7 @@ export default function Orientation() {
             <PageHeader title="New Hire Orientation" />
             <main className="container mx-auto px-4 py-8 max-w-5xl">
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-white mb-4">Welcome to Prime Detail Solutions</h1>
+                    <h1 className="text-4xl font-bold text-white mb-4">Welcome to Prime Auto Detail</h1>
                     <p className="text-xl text-zinc-400">Your journey starts here. Complete the orientation steps below.</p>
                 </div>
 

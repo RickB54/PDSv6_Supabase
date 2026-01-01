@@ -404,7 +404,7 @@ export default function PackagePricing() {
     win.document.write(`
       <html>
         <head>
-          <title>Current Live Pricing — Prime Detail Solutions</title>
+          <title>Current Live Pricing — Prime Auto Detail</title>
           <style>
             body{font-family:Arial, sans-serif; padding:24px;}
             h1{color:#dc2626;}
@@ -417,10 +417,10 @@ export default function PackagePricing() {
         </head>
         <body>
           <div class=\"header\">
-            <img src=\"${logoSrc}\" alt=\"Prime Detail Solutions\" style=\"height:48px\"/>
+            <img src=\"${logoSrc}\" alt=\"Prime Auto Detail\" style=\"height:48px\"/>
             <div style=\"text-align:right;color:#444\">${today}</div>
           </div>
-          <h1>Current Live Pricing — Prime Detail Solutions</h1>
+          <h1>Current Live Pricing — Prime Auto Detail</h1>
           <h2 class=\"table-title\">Packages</h2>
           <table>
             <thead>

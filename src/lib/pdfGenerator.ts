@@ -22,7 +22,7 @@ export const generateBookingPDF = (data: PDFBookingData, meta: PDFMeta): string 
     // Header
     doc.setFontSize(22);
     doc.setTextColor(40, 40, 40);
-    doc.text("PRIME DETAIL SOLUTIONS", 105, 20, { align: "center" });
+
 
     doc.setFontSize(16);
     doc.text(data.title || "Booking Confirmation", 105, 30, { align: "center" });
@@ -72,7 +72,7 @@ export const generateBookingPDF = (data: PDFBookingData, meta: PDFMeta): string 
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text('Thank you for choosing Prime Detail Solutions.', 105, 290, { align: 'center' });
+
     }
 
     return doc.output('datauristring');

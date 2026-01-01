@@ -147,7 +147,7 @@ const Estimates = () => {
         doc.text("ESTIMATE", 105, 20, { align: "center" });
         doc.setTextColor(0);
         doc.setFontSize(12);
-        doc.text("Prime Detail Solutions", 105, 28, { align: "center" });
+        doc.text("Prime Auto Detail", 105, 28, { align: "center" });
 
         doc.setFontSize(10);
         doc.text(`Estimate #${estimate.estimateNumber || 'N/A'}`, 20, 45);
@@ -438,7 +438,7 @@ const Estimates = () => {
                                     <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                                         Estimate #{selectedEstimate.estimateNumber}
                                     </h2>
-                                    <p className="text-zinc-400">Prime Detail Solutions</p>
+                                    <p className="text-zinc-400">Prime Auto Detail</p>
                                 </div>
                                 <Button variant="ghost" size="sm" onClick={() => setSelectedEstimate(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
                             </div>

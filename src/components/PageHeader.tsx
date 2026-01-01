@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import AboutDialog from "@/components/AboutDialog";
 import { useState } from "react";
 import { LogOut, Globe, User, ArrowLeft, Maximize2, Minimize2 } from "lucide-react";
-import logo from "@/assets/logo-3inch.png";
+import logo from "@/assets/logo-primary.png";
 import NotificationBell from "@/components/NotificationBell";
 import { Link } from "react-router-dom";
 import { useCartStore } from "@/store/cart";
@@ -49,8 +49,9 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
             )}
 
             <button onClick={() => setShowAbout(true)} className="flex items-center gap-3 transition-opacity hover:opacity-80">
-              <img src={logo} alt="Prime Detail Solutions" className="h-10 w-auto" />
+              <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
             </button>
+
             {title && (
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">

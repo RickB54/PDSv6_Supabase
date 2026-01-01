@@ -22,14 +22,14 @@ const Certificate = () => {
   const printableTitle = useMemo(() => "CERTIFIED DETAILER", []);
 
   const handlePrint = () => {
-    try { window.print(); } catch {}
+    try { window.print(); } catch { }
   };
 
   const handleDownloadPdf = () => {
     const dateStr = certDate || new Date().toLocaleDateString();
     const doc = new jsPDF();
     doc.setFontSize(22);
-    doc.text("Prime Detail Solutions", 105, 25, { align: "center" });
+    doc.text("Prime Auto Detail", 105, 25, { align: "center" });
     doc.setFontSize(16);
     doc.text(printableTitle, 105, 40, { align: "center" });
     doc.setFontSize(12);
@@ -47,7 +47,7 @@ const Certificate = () => {
         <Card className="p-8 max-w-2xl mx-auto text-center bg-white">
           {certDate ? (
             <div className="space-y-4">
-              <div className="text-2xl font-bold">Prime Detail Solutions</div>
+              <div className="text-2xl font-bold">Prime Auto Detail</div>
               <div className="text-xl">Certification of Completion</div>
               <div className="mt-4 text-3xl font-extrabold">{printableTitle}</div>
               <div className="mt-2 text-lg">Awarded to</div>
