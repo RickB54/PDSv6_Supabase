@@ -1,4 +1,5 @@
-// Client Evaluation Data Structures
+// Client Evaluation Data Structures - NOW USING ACTUAL PRICING SYSTEM
+import { servicePackages, addOns, type VehicleType } from "@/lib/services";
 
 export const EVALUATION_COMPLAINTS = [
     "Stains",
@@ -31,24 +32,133 @@ export const EVALUATION_GOALS = [
 export interface EvaluationService {
     id: string;
     name: string;
-    price: number;
+    packageId?: string; // Maps to actual package/addon ID
+    getPrice: (vehicleType?: VehicleType) => { price: number; priceRange?: string };
     description: string;
     category: string;
 }
 
+// Helper to get price from your ACTUAL pricing system
+function getPriceForService(packageId: string, vehicleType?: VehicleType): { price: number; priceRange?: string } {
+    // Check packages first
+    const pkg = servicePackages.find(p => p.id === packageId);
+    if (pkg) {
+        if (vehicleType) {
+            return { price: pkg.pricing[vehicleType] };
+        } else {
+            // No vehicle type - return range from lowest to highest
+            const prices = [pkg.pricing.compact, pkg.pricing.midsize, pkg.pricing.truck, pkg.pricing.luxury];
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            return { price: min, priceRange: min === max ? `$${min}` : `$${min}-$${max}` };
+        }
+    }
+
+    // Check addons
+    const addon = addOns.find(a => a.id === packageId);
+    if (addon) {
+        if (vehicleType) {
+            return { price: addon.pricing[vehicleType] };
+        } else {
+            const prices = [addon.pricing.compact, addon.pricing.midsize, addon.pricing.truck, addon.pricing.luxury];
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            return { price: min, priceRange: min === max ? `$${min}` : `$${min}-$${max}` };
+        }
+    }
+
+    return { price: 0, priceRange: "$0" };
+}
+
 export const EVALUATION_SERVICES: EvaluationService[] = [
-    { id: "carpet-extraction", name: "Carpet Extraction", price: 75, description: "Deep clean carpets and remove embedded stains", category: "Interior" },
-    { id: "ozone-treatment", name: "Ozone Odor Treatment", price: 100, description: "Eliminate odors at the molecular level", category: "Interior" },
-    { id: "paint-correction", name: "Paint Correction", price: 300, description: "Remove scratches and swirl marks", category: "Exterior" },
-    { id: "pet-hair-removal", name: "Pet Hair Removal Add-On", price: 50, description: "Thorough pet hair extraction", category: "Interior" },
-    { id: "express-interior", name: "Express Interior Detail", price: 120, description: "Quick but thorough interior cleaning", category: "Interior" },
-    { id: "polish-wax", name: "Polish & Wax", price: 150, description: "Restore shine and add protection", category: "Exterior" },
-    { id: "ceramic-coating", name: "Ceramic Coating", price: 500, description: "Long-term paint protection", category: "Exterior" },
-    { id: "leather-conditioning", name: "Leather Conditioning", price: 80, description: "Restore and protect leather surfaces", category: "Interior" },
-    { id: "headlight-restoration", name: "Headlight Restoration", price: 60, description: "Clear foggy headlights", category: "Exterior" },
-    { id: "engine-bay-detail", name: "Engine Bay Detail", price: 90, description: "Clean and dress engine compartment", category: "Engine" },
-    { id: "full-interior-detail", name: "Full Interior Detail", price: 200, description: "Complete interior restoration", category: "Interior" },
-    { id: "clay-bar-treatment", name: "Clay Bar Treatment", price: 75, description: "Remove contaminants from paint", category: "Exterior" }
+    {
+        id: "full-interior",
+        name: "Full Interior Detail",
+        packageId: "interior-cleaning",
+        getPrice: (vt) => getPriceForService("interior-cleaning", vt),
+        description: "Complete interior restoration",
+        category: "Interior"
+    },
+    {
+        id: "full-detail",
+        name: "Full Detail Package",
+        packageId: "full-detail",
+        getPrice: (vt) => getPriceForService("full-detail", vt),
+        description: "Complete interior and exterior detail",
+        category: "Package"
+    },
+    {
+        id: "leather-conditioning",
+        name: "Leather Conditioning",
+        packageId: "leather-conditioning",
+        getPrice: (vt) => getPriceForService("leather-conditioning", vt),
+        description: "Restore and protect leather surfaces",
+        category: "Interior"
+    },
+    {
+        id: "pet-hair-removal",
+        name: "Pet Hair Removal",
+        packageId: "pet-hair-removal",
+        getPrice: (vt) => getPriceForService("pet-hair-removal", vt),
+        description: "Specialized pet hair extraction",
+        category: "Interior"
+    },
+    {
+        id: "odor-eliminator",
+        name: "Odor Eliminator",
+        packageId: "odor-eliminator",
+        getPrice: (vt) => getPriceForService("odor-eliminator", vt),
+        description: "Professional odor neutralization",
+        category: "Interior"
+    },
+    {
+        id: "headlight-restoration",
+        name: "Headlight Restoration",
+        packageId: "headlight-restoration",
+        getPrice: (vt) => getPriceForService("headlight-restoration", vt),
+        description: "Clear foggy headlights",
+        category: "Exterior"
+    },
+    {
+        id: "clay-bar",
+        name: "Clay Bar Decontamination",
+        packageId: "clay-bar-decon",
+        getPrice: (vt) => getPriceForService("clay-bar-decon", vt),
+        description: "Remove bonded contaminants from paint",
+        category: "Exterior"
+    },
+    {
+        id: "paint-sealant",
+        name: "Paint Sealant",
+        packageId: "paint-sealant",
+        getPrice: (vt) => getPriceForService("paint-sealant", vt),
+        description: "Durable synthetic paint protection",
+        category: "Exterior"
+    },
+    {
+        id: "engine-bay",
+        name: "Engine Bay Cleaning",
+        packageId: "engine-bay",
+        getPrice: (vt) => getPriceForService("engine-bay", vt),
+        description: "Degrease and dress engine compartment",
+        category: "Engine"
+    },
+    {
+        id: "ceramic-trim",
+        name: "Ceramic Trim Coat",
+        packageId: "ceramic-trim-coat",
+        getPrice: (vt) => getPriceForService("ceramic-trim-coat", vt),
+        description: "Restore faded exterior plastics",
+        category: "Exterior"
+    },
+    {
+        id: "wheel-detailing",
+        name: "Wheel & Rim Detailing",
+        packageId: "wheel-rim-detailing",
+        getPrice: (vt) => getPriceForService("wheel-rim-detailing", vt),
+        description: "Detailed wheel cleaning and polishing",
+        category: "Exterior"
+    }
 ];
 
 // Recommendation Engine for Client Evaluation
@@ -66,42 +176,28 @@ export function generateEvaluationRecommendations(
             case "Stains":
             case "Carpet Stains":
             case "Seat Stains":
-                recommendations.add("carpet-extraction");
-                recommendations.add("full-interior-detail");
+            case "Sticky Spills":
+            case "Mud / Dirt buildup":
+                recommendations.add("full-interior");
                 break;
             case "Bad Odor":
             case "Smoke Smell":
-                recommendations.add("ozone-treatment");
-                recommendations.add("full-interior-detail");
+            case "Mold / Mildew":
+                recommendations.add("odor-eliminator");
+                recommendations.add("full-interior");
                 break;
             case "Scratches":
-                recommendations.add("paint-correction");
-                recommendations.add("polish-wax");
+            case "Dull or Faded Paint":
+                recommendations.add("paint-sealant");
+                recommendations.add("clay-bar");
                 break;
             case "Pet Hair":
                 recommendations.add("pet-hair-removal");
-                recommendations.add("full-interior-detail");
-                break;
-            case "Mud / Dirt buildup":
-                recommendations.add("full-interior-detail");
-                recommendations.add("carpet-extraction");
+                recommendations.add("full-interior");
                 break;
             case "Water Spots":
-                recommendations.add("clay-bar-treatment");
-                recommendations.add("polish-wax");
-                break;
-            case "Dull or Faded Paint":
-                recommendations.add("paint-correction");
-                recommendations.add("polish-wax");
-                recommendations.add("ceramic-coating");
-                break;
-            case "Mold / Mildew":
-                recommendations.add("ozone-treatment");
-                recommendations.add("full-interior-detail");
-                break;
-            case "Sticky Spills":
-                recommendations.add("full-interior-detail");
-                recommendations.add("carpet-extraction");
+                recommendations.add("clay-bar");
+                recommendations.add("paint-sealant");
                 break;
         }
     });
@@ -110,45 +206,32 @@ export function generateEvaluationRecommendations(
     goals.forEach(goal => {
         switch (goal) {
             case "Fast Turnaround":
-                recommendations.add("express-interior");
+            case "Budget Friendly":
+                recommendations.add("full-interior");
                 break;
             case "Deep Interior Cleaning":
-                recommendations.add("full-interior-detail");
-                recommendations.add("carpet-extraction");
-                recommendations.add("ozone-treatment");
-                break;
-            case "Budget Friendly":
-                recommendations.add("express-interior");
-                recommendations.add("polish-wax");
+                recommendations.add("full-interior");
+                recommendations.add("odor-eliminator");
                 break;
             case "Maximum Shine":
-                recommendations.add("paint-correction");
-                recommendations.add("polish-wax");
-                recommendations.add("ceramic-coating");
-                break;
             case "Long-Term Protection":
-                recommendations.add("ceramic-coating");
-                recommendations.add("leather-conditioning");
+                recommendations.add("paint-sealant");
+                recommendations.add("clay-bar");
                 break;
             case "Odor Removal":
-                recommendations.add("ozone-treatment");
-                recommendations.add("full-interior-detail");
+                recommendations.add("odor-eliminator");
+                recommendations.add("full-interior");
                 break;
             case "Pet Hair Removal":
                 recommendations.add("pet-hair-removal");
-                recommendations.add("full-interior-detail");
+                recommendations.add("full-interior");
                 break;
             case "Restoration-Level Detail":
-                recommendations.add("paint-correction");
-                recommendations.add("full-interior-detail");
-                recommendations.add("engine-bay-detail");
-                break;
             case "Best Possible Outcome":
             case "Premium Detail / High-End Finish":
-                recommendations.add("paint-correction");
-                recommendations.add("ceramic-coating");
-                recommendations.add("full-interior-detail");
+                recommendations.add("full-detail");
                 recommendations.add("leather-conditioning");
+                recommendations.add("engine-bay");
                 break;
         }
     });
@@ -156,13 +239,14 @@ export function generateEvaluationRecommendations(
     // Custom text analysis
     const customText = `${customComplaint || ""} ${customGoal || ""}`.toLowerCase();
     if (customText.includes("scratch") || customText.includes("swirl")) {
-        recommendations.add("paint-correction");
+        recommendations.add("clay-bar");
+        recommendations.add("paint-sealant");
     }
     if (customText.includes("smell") || customText.includes("odor")) {
-        recommendations.add("ozone-treatment");
+        recommendations.add("odor-eliminator");
     }
     if (customText.includes("stain")) {
-        recommendations.add("carpet-extraction");
+        recommendations.add("full-interior");
     }
     if (customText.includes("pet") || customText.includes("hair")) {
         recommendations.add("pet-hair-removal");
@@ -171,14 +255,15 @@ export function generateEvaluationRecommendations(
     return Array.from(recommendations);
 }
 
-// Generate evaluation script
+// Generate evaluation script WITH ACCURATE PRICING
 export function generateEvaluationScript(
     clientName: string,
     complaints: string[],
     goals: string[],
     services: EvaluationService[],
     customComplaint?: string,
-    customGoal?: string
+    customGoal?: string,
+    vehicleType?: VehicleType // Add vehicle type parameter
 ): string {
     let script = `Hi ${clientName},\n\n`;
 
@@ -220,13 +305,22 @@ export function generateEvaluationScript(
 
     script += ", I recommend the following services:\n\n";
 
-    // List recommended services
+    // List recommended services WITH ACCURATE PRICING
+    let total = 0;
     services.forEach(service => {
-        script += `• ${service.name} ($${service.price}) - ${service.description}\n`;
+        const priceInfo = service.getPrice(vehicleType);
+        const displayPrice = priceInfo.priceRange || `$${priceInfo.price}`;
+        script += `• ${service.name} (${displayPrice}) - ${service.description}\n`;
+        total += priceInfo.price;
     });
 
-    const total = services.reduce((sum, s) => sum + s.price, 0);
-    script += `\nTotal Investment: $${total}\n\n`;
+    // Show total or range
+    if (vehicleType) {
+        script += `\nTotal Investment: $${total}\n\n`;
+    } else {
+        script += `\nEstimated Total: $${total}+ (depends on vehicle size)\n`;
+        script += `💡 Exact pricing available once we know your vehicle type\n\n`;
+    }
 
     // Closing
     script += "This combination will fully address the issues you described and help you achieve your desired outcome. ";

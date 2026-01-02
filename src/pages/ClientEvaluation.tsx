@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ClipboardCheck, User, CheckCircle2, FileText, Edit, Trash2, History as HistoryIcon, RefreshCw } from "lucide-react";
+import { ClipboardCheck, User, CheckCircle2, FileText, Edit, Trash2, History as HistoryIcon, RefreshCw, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getSupabaseCustomers } from "@/lib/supa-data";
 import { getClientEvaluations, upsertClientEvaluation, deleteClientEvaluation, getClientEvaluationHistory } from "@/lib/db";
 import { EVALUATION_COMPLAINTS, EVALUATION_GOALS, EVALUATION_SERVICES, EvaluationService, generateEvaluationRecommendations, generateEvaluationScript } from "@/data/evaluation_data";
+import { VehicleType } from "@/lib/services";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { getCurrentUser } from "@/lib/auth";
@@ -47,6 +49,7 @@ export default function ClientEvaluation() {
     // State
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [selectedClient, setSelectedClient] = useState<string>("");
+    const [vehicleType, setVehicleType] = useState<VehicleType | undefined>(undefined);
     const [complaints, setComplaints] = useState<string[]>([]);
     const [customComplaint, setCustomComplaint] = useState<string>("");
     const [goals, setGoals] = useState<string[]>([]);
@@ -98,8 +101,22 @@ export default function ClientEvaluation() {
     useEffect(() => {
         if (selectedClient) {
             loadHistory();
+
+            // Auto-detect vehicle type from customer record
+            if (customers.length > 0) {
+                const client = customers.find(c => c.id === selectedClient);
+                const vt = client?.vehicleType || client?.vehicle_info?.type;
+                const normalized = normalizeVehicleType(vt);
+                if (normalized) {
+                    setVehicleType(normalized);
+                    toast({
+                        title: "Vehicle Size Detected",
+                        description: `Set to ${normalized.charAt(0).toUpperCase() + normalized.slice(1)} based on customer profile.`
+                    });
+                }
+            }
         }
-    }, [selectedClient]);
+    }, [selectedClient, customers]);
 
     // Update recommendations when complaints/goals change
     useEffect(() => {
@@ -124,11 +141,12 @@ export default function ClientEvaluation() {
                 goals,
                 services,
                 customComplaint,
-                customGoal
+                customGoal,
+                vehicleType
             );
             setScript(generatedScript);
         }
-    }, [selectedClient, selectedUpsells, complaints, goals, customComplaint, customGoal, customers]);
+    }, [selectedClient, selectedUpsells, complaints, goals, customComplaint, customGoal, customers, vehicleType]);
 
     const loadCustomers = async () => {
         const custs = await getSupabaseCustomers();
@@ -250,10 +268,24 @@ export default function ClientEvaluation() {
             if (services.length > 0) {
                 addText("Recommended Services:", 12, true);
                 services.forEach(s => {
-                    addText(`• ${s.name} - $${s.price}`);
+                    const priceInfo = s.getPrice(vehicleType);
+                    const priceStr = priceInfo.priceRange || `$${priceInfo.price}`;
+                    addText(`• ${s.name} - ${priceStr}`);
                 });
-                const total = services.reduce((sum, s) => sum + s.price, 0);
-                addText(`Total: $${total}`, 12, true);
+
+                let totalStr = "";
+                if (vehicleType) {
+                    const total = services.reduce((sum, s) => sum + s.getPrice(vehicleType).price, 0);
+                    totalStr = `$${total}`;
+                } else {
+                    const minTotal = services.reduce((sum, s) => sum + s.getPrice(undefined).price, 0);
+                    totalStr = `$${minTotal}+`;
+                }
+
+                addText(`Total: ${totalStr}`, 12, true);
+                if (!vehicleType) {
+                    addText("(Estimate - pending vehicle size)", 10, false);
+                }
                 y += 3;
             }
 
@@ -326,10 +358,24 @@ export default function ClientEvaluation() {
         if (services.length > 0) {
             addText("Recommended Services:", 12, true);
             services.forEach(s => {
-                addText(`• ${s.name} - $${s.price}`);
+                const priceInfo = s.getPrice(vehicleType);
+                const priceStr = priceInfo.priceRange || `$${priceInfo.price}`;
+                addText(`• ${s.name} - ${priceStr}`);
             });
-            const total = services.reduce((sum, s) => sum + s.price, 0);
-            addText(`Total: $${total}`, 12, true);
+
+            let totalStr = "";
+            if (vehicleType) {
+                const total = services.reduce((sum, s) => sum + s.getPrice(vehicleType).price, 0);
+                totalStr = `$${total}`;
+            } else {
+                const minTotal = services.reduce((sum, s) => sum + s.getPrice(undefined).price, 0);
+                totalStr = `$${minTotal}+`;
+            }
+
+            addText(`Total: ${totalStr}`, 12, true);
+            if (!vehicleType) {
+                addText("(Estimate - pending vehicle size)", 10, false);
+            }
             y += 3;
         }
 
@@ -439,6 +485,31 @@ export default function ClientEvaluation() {
                             )}
                         </Card>
 
+                        {/* Vehicle Type Selection (Crucial for Pricing) */}
+                        <Card className="p-6 bg-zinc-900 border-zinc-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Car className="w-6 h-6 text-emerald-500" />
+                                <h2 className="text-xl font-bold text-white">Vehicle Size</h2>
+                            </div>
+
+                            <div className="mb-3 p-3 bg-emerald-900/20 border border-emerald-700 rounded text-sm text-emerald-200">
+                                💡 Select vehicle size to get <b>accurate</b> pricing. If not selected, a price range will be shown.
+                            </div>
+
+                            <Select value={vehicleType || "unknown"} onValueChange={(val) => setVehicleType(val === "unknown" ? undefined : val as VehicleType)}>
+                                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                                    <SelectValue placeholder="Select Vehicle Size..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-800 border-zinc-700">
+                                    <SelectItem value="unknown" className="text-zinc-400 font-medium">Unknown / Range Pricing</SelectItem>
+                                    <SelectItem value="compact" className="text-white">Compact / Sedan</SelectItem>
+                                    <SelectItem value="midsize" className="text-white">Mid-Size / Small SUV</SelectItem>
+                                    <SelectItem value="truck" className="text-white">Truck / Large SUV / Minivan</SelectItem>
+                                    <SelectItem value="luxury" className="text-white">Luxury / Oversized</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </Card>
+
                         {/* Complaints */}
                         <Card className="p-6 bg-zinc-900 border-zinc-800">
                             <h3 className="text-lg font-bold text-white mb-4">Customer Complaints</h3>
@@ -508,30 +579,50 @@ export default function ClientEvaluation() {
                             <Card className="p-6 bg-zinc-900 border-zinc-800">
                                 <h3 className="text-lg font-bold text-white mb-4">Recommended Services</h3>
                                 <div className="space-y-3">
-                                    {EVALUATION_SERVICES.filter(s => recommendedUpsells.includes(s.id)).map(service => (
-                                        <div key={service.id} className="flex items-start space-x-3 p-3 bg-zinc-800 rounded border border-zinc-700">
-                                            <Checkbox
-                                                id={`upsell-${service.id}`}
-                                                checked={selectedUpsells.includes(service.id)}
-                                                onCheckedChange={() => handleUpsellToggle(service.id)}
-                                                className="border-zinc-700 mt-1"
-                                            />
-                                            <div className="flex-1">
-                                                <label
-                                                    htmlFor={`upsell-${service.id}`}
-                                                    className="text-white font-semibold cursor-pointer"
-                                                >
-                                                    {service.name} - ${service.price}
-                                                </label>
-                                                <div className="text-sm text-zinc-400">{service.description}</div>
+                                    {EVALUATION_SERVICES.filter(s => recommendedUpsells.includes(s.id)).map(service => {
+                                        const priceInfo = service.getPrice(vehicleType);
+                                        const displayPrice = priceInfo.priceRange || `$${priceInfo.price}`;
+
+                                        return (
+                                            <div key={service.id} className="flex items-start space-x-3 p-3 bg-zinc-800 rounded border border-zinc-700">
+                                                <Checkbox
+                                                    id={`upsell-${service.id}`}
+                                                    checked={selectedUpsells.includes(service.id)}
+                                                    onCheckedChange={() => handleUpsellToggle(service.id)}
+                                                    className="border-zinc-700 mt-1"
+                                                />
+                                                <div className="flex-1">
+                                                    <label
+                                                        htmlFor={`upsell-${service.id}`}
+                                                        className="text-white font-semibold cursor-pointer"
+                                                    >
+                                                        {service.name} - <span className="text-emerald-400">{displayPrice}</span>
+                                                    </label>
+                                                    <div className="text-sm text-zinc-400">{service.description}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                                 {selectedUpsells.length > 0 && (
                                     <div className="mt-4 p-3 bg-cyan-900/20 border border-cyan-700 rounded">
-                                        <div className="text-cyan-200 font-semibold">
-                                            Total: ${EVALUATION_SERVICES.filter(s => selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.price, 0)}
+                                        <div className="text-cyan-200 font-semibold flex items-center gap-2">
+                                            {vehicleType ? (
+                                                <>
+                                                    <span>Total Investment:</span>
+                                                    <span className="text-xl text-white">
+                                                        ${EVALUATION_SERVICES.filter(s => selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.getPrice(vehicleType).price, 0)}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span>Estimated Total:</span>
+                                                    <span className="text-lg text-white">
+                                                        ${EVALUATION_SERVICES.filter(s => selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.getPrice(undefined).price, 0)}+
+                                                    </span>
+                                                    <span className="text-xs font-normal text-cyan-300 opacity-70 ml-2">(Select vehicle size for exact total)</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -587,7 +678,7 @@ export default function ClientEvaluation() {
                                                 {item.complaints.length} complaints, {item.goals.length} goals
                                             </div>
                                             <div className="text-xs text-zinc-500 mt-1">
-                                                {item.selected_upsells.length} services • ${EVALUATION_SERVICES.filter(s => item.selected_upsells.includes(s.id)).reduce((sum, s) => sum + s.price, 0)}
+                                                {item.selected_upsells.length} services
                                             </div>
                                             <div className="flex gap-2 mt-2">
                                                 <Button
