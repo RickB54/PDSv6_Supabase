@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chemical, DilutionRatio } from "@/types/chemicals";
-import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker } from 'lucide-react';
+import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle } from 'lucide-react';
 import { upsertChemical } from "@/lib/chemicals";
 import { generateTemplate } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
@@ -211,6 +211,71 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                         <Label>Description</Label>
                         <Textarea value={editing?.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="bg-zinc-900 border-zinc-700" rows={3} placeholder="Brief marketing description..." />
                     </div>
+
+                    {/* USED FOR (Array) */}
+                    <div className="space-y-2">
+                        <Label>Used For (Primary Applications)</Label>
+                        <div className="space-y-2">
+                            {editing?.used_for?.map((use, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={use}
+                                        onChange={e => {
+                                            const newUsedFor = [...(editing.used_for || [])];
+                                            newUsedFor[idx] = e.target.value;
+                                            setEditing({ ...editing, used_for: newUsedFor });
+                                        }}
+                                        className="bg-zinc-900 border-zinc-700 flex-1"
+                                        placeholder="e.g., Paint, Wheels, Glass"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newUsedFor = [...(editing.used_for || [])];
+                                            newUsedFor.splice(idx, 1);
+                                            setEditing({ ...editing, used_for: newUsedFor });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, used_for: [...(editing.used_for || []), ""] })}
+                                className="border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Application
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* WHEN TO USE / WHY TO USE */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>When to Use</Label>
+                            <Textarea
+                                value={editing?.when_to_use || ''}
+                                onChange={e => setEditing({ ...editing, when_to_use: e.target.value })}
+                                className="bg-zinc-900 border-zinc-700"
+                                rows={3}
+                                placeholder="Describe when this chemical should be used..."
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Why to Use It</Label>
+                            <Textarea
+                                value={editing?.why_to_use || ''}
+                                onChange={e => setEditing({ ...editing, why_to_use: e.target.value })}
+                                className="bg-zinc-900 border-zinc-700"
+                                rows={3}
+                                placeholder="Explain the benefits and reasons to use this chemical..."
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* SECTION 2: DILUTION */}
@@ -287,9 +352,292 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                             </div>
                         </div>
                     </div>
+                    <div className="space-y-2">
+                        <Label>Application Notes</Label>
+                        <Textarea
+                            value={editing?.application_guide?.notes || ''}
+                            onChange={e => setEditing({ ...editing, application_guide: { ...editing?.application_guide!, notes: e.target.value } })}
+                            className="bg-zinc-900 border-zinc-700"
+                            rows={2}
+                            placeholder="Additional application instructions..."
+                        />
+                    </div>
                 </div>
 
-                {/* SECTION 4: MULTIMEDIA */}
+                {/* SECTION 4: SURFACE COMPATIBILITY & WARNINGS */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider border-b border-yellow-900/30 pb-2">Surface Compatibility & Safety</h3>
+
+                    {/* Surface Compatibility */}
+                    <div className="space-y-3">
+                        <Label className="text-green-400">Safe On (Green)</Label>
+                        <div className="space-y-2">
+                            {editing?.surface_compatibility?.safe?.map((surface, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={surface}
+                                        onChange={e => {
+                                            const newSafe = [...(editing.surface_compatibility?.safe || [])];
+                                            newSafe[idx] = e.target.value;
+                                            setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, safe: newSafe } });
+                                        }}
+                                        className="bg-green-900/20 border-green-700 flex-1"
+                                        placeholder="e.g., Paint, Glass, Plastic"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newSafe = [...(editing.surface_compatibility?.safe || [])];
+                                            newSafe.splice(idx, 1);
+                                            setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, safe: newSafe } });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, safe: [...(editing.surface_compatibility?.safe || []), ""] } })}
+                                className="border-dashed border-green-700 text-green-400 hover:text-green-300"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Safe Surface
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <Label className="text-yellow-400">Use Caution On (Yellow)</Label>
+                        <div className="space-y-2">
+                            {editing?.surface_compatibility?.risky?.map((surface, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={surface}
+                                        onChange={e => {
+                                            const newRisky = [...(editing.surface_compatibility?.risky || [])];
+                                            newRisky[idx] = e.target.value;
+                                            setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, risky: newRisky } });
+                                        }}
+                                        className="bg-yellow-900/20 border-yellow-700 flex-1"
+                                        placeholder="e.g., Chrome, Aluminum"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newRisky = [...(editing.surface_compatibility?.risky || [])];
+                                            newRisky.splice(idx, 1);
+                                            setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, risky: newRisky } });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, risky: [...(editing.surface_compatibility?.risky || []), ""] } })}
+                                className="border-dashed border-yellow-700 text-yellow-400 hover:text-yellow-300"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Caution Surface
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <Label className="text-red-400">Avoid / Do Not Use On (Red)</Label>
+                        <div className="space-y-2">
+                            {editing?.surface_compatibility?.avoid?.map((surface, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={surface}
+                                        onChange={e => {
+                                            const newAvoid = [...(editing.surface_compatibility?.avoid || [])];
+                                            newAvoid[idx] = e.target.value;
+                                            setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, avoid: newAvoid } });
+                                        }}
+                                        className="bg-red-900/20 border-red-700 flex-1"
+                                        placeholder="e.g., Matte Paint, Vinyl Wraps"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newAvoid = [...(editing.surface_compatibility?.avoid || [])];
+                                            newAvoid.splice(idx, 1);
+                                            setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, avoid: newAvoid } });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, surface_compatibility: { ...editing.surface_compatibility!, avoid: [...(editing.surface_compatibility?.avoid || []), ""] } })}
+                                className="border-dashed border-red-700 text-red-400 hover:text-red-300"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Unsafe Surface
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SECTION 5: WARNINGS & RISKS */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-red-400 uppercase tracking-wider border-b border-red-900/30 pb-2 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" /> Warnings & Risks
+                    </h3>
+
+                    <div className="space-y-2">
+                        <Label>Damage Risk Level</Label>
+                        <Select
+                            value={editing?.warnings?.damage_risk}
+                            onValueChange={(v: any) => setEditing({ ...editing, warnings: { ...editing?.warnings!, damage_risk: v } })}
+                        >
+                            <SelectTrigger className="bg-zinc-900 border-zinc-700"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                <SelectItem value="Low">Low</SelectItem>
+                                <SelectItem value="Medium">Medium</SelectItem>
+                                <SelectItem value="High">High</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Potential Risks</Label>
+                        <div className="space-y-2">
+                            {editing?.warnings?.risks?.map((risk, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={risk}
+                                        onChange={e => {
+                                            const newRisks = [...(editing.warnings?.risks || [])];
+                                            newRisks[idx] = e.target.value;
+                                            setEditing({ ...editing, warnings: { ...editing.warnings!, risks: newRisks } });
+                                        }}
+                                        className="bg-zinc-900 border-zinc-700 flex-1"
+                                        placeholder="e.g., May etch if left to dry"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newRisks = [...(editing.warnings?.risks || [])];
+                                            newRisks.splice(idx, 1);
+                                            setEditing({ ...editing, warnings: { ...editing.warnings!, risks: newRisks } });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, warnings: { ...editing.warnings!, risks: [...(editing.warnings?.risks || []), ""] } })}
+                                className="border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Risk
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SECTION 6: CHEMICAL INTERACTIONS */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-2">Chemical Interactions</h3>
+
+                    <div className="space-y-2">
+                        <Label>Do Not Mix With</Label>
+                        <div className="space-y-2">
+                            {editing?.interactions?.do_not_mix?.map((chemical, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={chemical}
+                                        onChange={e => {
+                                            const newMix = [...(editing.interactions?.do_not_mix || [])];
+                                            newMix[idx] = e.target.value;
+                                            setEditing({ ...editing, interactions: { ...editing.interactions!, do_not_mix: newMix } });
+                                        }}
+                                        className="bg-zinc-900 border-zinc-700 flex-1"
+                                        placeholder="e.g., Acids, Bleach"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newMix = [...(editing.interactions?.do_not_mix || [])];
+                                            newMix.splice(idx, 1);
+                                            setEditing({ ...editing, interactions: { ...editing.interactions!, do_not_mix: newMix } });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, interactions: { ...editing.interactions!, do_not_mix: [...(editing.interactions?.do_not_mix || []), ""] } })}
+                                className="border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Incompatible Chemical
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Application Sequencing</Label>
+                        <div className="space-y-2">
+                            {editing?.interactions?.sequencing?.map((seq, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={seq}
+                                        onChange={e => {
+                                            const newSeq = [...(editing.interactions?.sequencing || [])];
+                                            newSeq[idx] = e.target.value;
+                                            setEditing({ ...editing, interactions: { ...editing.interactions!, sequencing: newSeq } });
+                                        }}
+                                        className="bg-zinc-900 border-zinc-700 flex-1"
+                                        placeholder="e.g., Use before wax, Apply after decontamination"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newSeq = [...(editing.interactions?.sequencing || [])];
+                                            newSeq.splice(idx, 1);
+                                            setEditing({ ...editing, interactions: { ...editing.interactions!, sequencing: newSeq } });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, interactions: { ...editing.interactions!, sequencing: [...(editing.interactions?.sequencing || []), ""] } })}
+                                className="border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Sequencing Note
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SECTION 7: MULTIMEDIA */}
                 <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-2">Media & Content</h3>
                     <div className="space-y-2">

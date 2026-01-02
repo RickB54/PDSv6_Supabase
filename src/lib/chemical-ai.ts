@@ -31,6 +31,7 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
         surface_compatibility: {
             safe: isInterior ? ["Leather", "Vinyl", "Plastic"] : ["Clear Coat", "Chrome", "Glass"],
             risky: isInterior ? ["Alcantara (if not diluted)"] : ["Matte Finishes"],
+            avoid: isInterior ? ["Unsealed Wood"] : ["Wraps", "PPF (unless specified)"]
         },
         interactions: {
             do_not_mix: ["Bleach", "Ammonia"],
