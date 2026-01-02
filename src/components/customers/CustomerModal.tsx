@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem, supabase } from "@/lib/supa-data";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2, FileBarChart } from "lucide-react";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
 
@@ -882,15 +882,62 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
             <div className="h-px bg-zinc-800" />
 
-            {/* Notes */}
+            {/* Notes & Scripts */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Notes</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  {isProspect ? 'Prospect Notes & Scripts' : 'Customer Notes'}
+                </h3>
+                {form.id && (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `/client-evaluation?customerId=${form.id}&customerName=${encodeURIComponent(form.name)}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="h-8 text-xs border-emerald-600 text-emerald-600 hover:bg-emerald-600/10"
+                      title="Open Client Evaluation script for this customer"
+                    >
+                      <FileBarChart className="h-3 w-3 mr-1" />
+                      Client Evaluation
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `/addon-upsell?customerId=${form.id}&customerName=${encodeURIComponent(form.name)}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="h-8 text-xs border-purple-600 text-purple-600 hover:bg-purple-600/10"
+                      title="Open Addon Upsell script for this customer"
+                    >
+                      <FileBarChart className="h-3 w-3 mr-1" />
+                      Addon Upsell
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <Textarea
-                placeholder="Additional notes about the customer or prospect..."
-                className="bg-zinc-900 border-zinc-800 min-h-[80px] text-white placeholder:text-zinc-500"
+                placeholder={isProspect
+                  ? "Notes for this prospect:\n• What services they want\n• Price discussed\n• Appointment date/time\n• Follow-up actions\n• Concerns or questions..."
+                  : "Additional notes about the customer..."
+                }
+                className="bg-zinc-900 border-zinc-800 min-h-[120px] text-white placeholder:text-zinc-500"
                 value={form.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
               />
+
+              {isProspect && (
+                <p className="text-[10px] text-amber-500 flex items-center gap-1">
+                  <FileBarChart className="h-3 w-3" />
+                  Tip: Save first, then use script buttons above to guide your conversation
+                </p>
+              )}
             </div>
           </div>
 
