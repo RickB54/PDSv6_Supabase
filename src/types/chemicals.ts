@@ -55,14 +55,19 @@ export interface Chemical {
     theme_color: string;
     primary_image_url?: string;
     gallery_image_urls?: string[];
-    video_urls?: { type: 'youtube' | 'vimeo' | 'mp4', url: string, title: string }[];
+    video_urls?: string[];
 
     // Extras
     pro_tips?: string[];
     compatible_chemicals?: string[]; // IDs or Names
     alternative_chemicals?: string[]; // IDs or Names
+    user_notes?: string; // Admin-editable notes
 
     // System
     created_at?: string;
     updated_at?: string;
+
+    // AI Tracking
+    ai_generated?: boolean;
+    manually_modified?: boolean;
 }

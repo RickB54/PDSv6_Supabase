@@ -4,6 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Chemical, DilutionRatio } from '@/types/chemicals';
+import { Textarea } from '@/components/ui/textarea';
+import { updateChemicalPartial } from '@/lib/chemicals';
+import { upsertLibraryItem, getLibraryItems } from '@/lib/supa-data';
+import { useToast } from '@/hooks/use-toast';
 import {
     AlertTriangle,
     Beaker,
@@ -19,9 +23,11 @@ import {
     XCircle,
     Printer,
     Pencil,
-    Download
+    Download,
+    Loader2,
+    BookOpen
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChemicalEditForm } from './ChemicalEditForm';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -31,10 +37,95 @@ interface ChemicalDetailProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onUpdate?: () => void;
+    isAdmin?: boolean;
 }
 
-export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate }: ChemicalDetailProps) {
+export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin = false }: ChemicalDetailProps) {
+    // Always start in view mode - admin can click Edit button to switch
     const [isEditing, setIsEditing] = useState(false);
+    const [notes, setNotes] = useState("");
+    const [isSavingNotes, setIsSavingNotes] = useState(false);
+    const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+    const [viewingDilutionNote, setViewingDilutionNote] = useState<{ method: string; note: string } | null>(null);
+    const { toast } = useToast();
+
+    // Helper to extract YouTube ID
+    const getYouTubeId = (url: string) => {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    // Sync notes when chemical changes
+    useEffect(() => {
+        if (chemical) {
+            setNotes(chemical.user_notes || "");
+        }
+    }, [chemical]);
+
+    const handleSaveNotes = async () => {
+        // ... (existing save notes logic stays same, implied reference)
+        if (!chemical) return;
+        setIsSavingNotes(true);
+        try {
+            const { error } = await updateChemicalPartial(chemical.id, { user_notes: notes });
+            if (error) throw error;
+            toast({ title: "Notes Saved", description: "User notes have been updated." });
+            if (onUpdate) onUpdate();
+            chemical.user_notes = notes;
+        } catch (e: any) {
+            console.error("Save Notes Error:", e);
+            toast({ title: "Error Saving Notes", description: e.message || "Unknown error occurred", variant: "destructive" });
+        } finally {
+            setIsSavingNotes(false);
+        }
+    };
+
+    const handleAddToLibrary = async (videoUrl: string, idx: number) => {
+        if (!chemical) return;
+
+        try {
+            // 1. Check for duplicates
+            const existingItems = await getLibraryItems();
+            const exists = existingItems.find(i => i.resource_url === videoUrl);
+
+            if (exists) {
+                toast({
+                    title: "Already Exists",
+                    description: "This video is already in the Learning Library.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            // 2. Add to Library
+            const newItem = {
+                id: crypto.randomUUID(), // Generate ID
+                title: `Training: ${chemical.name} (Part ${idx + 1})`,
+                description: `Official training video for **${chemical.name}**.\n\n**Category:** ${chemical.category}\n**Source:** Chemical Knowledge Base.`,
+                resource_url: videoUrl,
+                type: 'video' as 'video',
+                category: 'Chemical Training',
+                created_by: 'ChemicalLibrary', // System tag
+            };
+
+            const result = await upsertLibraryItem(newItem);
+
+            if (result.success) {
+                toast({
+                    title: "Success",
+                    description: "Video added to Learning Library.",
+                    className: "bg-green-900 border-green-800 text-white"
+                });
+            } else {
+                throw result.error;
+            }
+
+        } catch (error: any) {
+            console.error("Library Add Error:", error);
+            toast({ title: "Failed", description: "Could not add to library.", variant: "destructive" });
+        }
+    };
 
     const handleDownloadPdf = async () => {
         const element = document.getElementById('chemical-detail-content');
@@ -187,9 +278,11 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate }: Chemi
                             </div>
                         )}
                         <div className="flex gap-1 print:hidden">
-                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white" title="Edit Card">
-                                <Pencil className="w-5 h-5" />
-                            </Button>
+                            {isAdmin && (
+                                <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white" title="Edit Card">
+                                    <Pencil className="w-5 h-5" />
+                                </Button>
+                            )}
                             <Button variant="ghost" size="icon" onClick={handlePrint} className="text-zinc-400 hover:text-white" title="Print Card">
                                 <Printer className="w-5 h-5" />
                             </Button>
@@ -255,6 +348,70 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate }: Chemi
 
                             <Separator className="bg-zinc-800" />
 
+                            {/* USER NOTES (Admin Editable, Employee View) */}
+                            <section className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="flex items-center text-sm font-bold text-zinc-500 uppercase">
+                                        <FileText className="w-4 h-4 mr-2" /> User Notes
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-500 hover:text-white"
+                                            onClick={() => {
+                                                const doc = new jsPDF();
+                                                doc.setFontSize(16);
+                                                doc.text(`${chemical.name} - User Notes`, 10, 10);
+                                                doc.setFontSize(12);
+                                                const splitNotes = doc.splitTextToSize(notes || "No notes available.", 180);
+                                                doc.text(splitNotes, 10, 20);
+                                                doc.save(`${chemical.name}_Notes.pdf`);
+                                            }}
+                                            title="Download Notes as PDF"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </Button>
+                                        {isAdmin && (
+                                            <span className="text-[10px] text-zinc-600 uppercase border border-zinc-800 px-2 py-0.5 rounded">
+                                                Admin Only Edit
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="relative">
+                                    <Textarea
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                        disabled={!isAdmin}
+                                        placeholder={isAdmin ? "Add detailed internal notes, tips, or warnings here..." : "No additional notes provided."}
+                                        className={`bg-zinc-900 border-zinc-800 text-sm min-h-[100px] pb-10 resize-none focus-visible:ring-1 focus-visible:ring-purple-500/50 ${!isAdmin ? 'opacity-80 cursor-default' : ''}`}
+                                    />
+                                    {isAdmin && notes !== (chemical.user_notes || '') && (
+                                        <div className="absolute bottom-3 right-3 flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setNotes(chemical.user_notes || '')}
+                                                className="h-7 text-xs text-zinc-400 hover:text-white"
+                                            >
+                                                Undo
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                onClick={handleSaveNotes}
+                                                disabled={isSavingNotes}
+                                                className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
+                                            >
+                                                {isSavingNotes ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save Notes"}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            <Separator className="bg-zinc-800" />
+
                             {/* DILUTION RATIOS (Critical) */}
                             <section>
                                 <h3 className="text-lg font-bold text-white mb-4 flex items-center">
@@ -277,7 +434,13 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate }: Chemi
                                                         <td className="px-4 py-3 font-medium text-white">{d.method}</td>
                                                         <td className="px-4 py-3">{d.soil_level}</td>
                                                         <td className="px-4 py-3 text-purple-400 font-bold font-mono text-base">{d.ratio}</td>
-                                                        <td className="px-4 py-3 text-zinc-500 text-xs italic">{d.notes}</td>
+                                                        <td
+                                                            className="px-4 py-3 text-zinc-400 text-xs cursor-pointer hover:text-blue-400 hover:underline transition-colors"
+                                                            onClick={() => d.notes && setViewingDilutionNote({ method: d.method, note: d.notes || '' })}
+                                                            title={d.notes ? "Click to view full notes" : "No notes"}
+                                                        >
+                                                            {d.notes || <span className="text-zinc-600 italic">—</span>}
+                                                        </td>
                                                     </tr>
                                                 ))
                                             ) : (
@@ -391,14 +554,31 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate }: Chemi
                                         <Video className="w-5 h-5 mr-2" /> Training Videos
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {chemical.video_urls.map((vid, idx) => (
-                                            <Button key={idx} variant="outline" className="h-auto py-3 justify-start border-zinc-800 hover:bg-zinc-800" onClick={() => window.open(vid.url, '_blank')}>
-                                                <Video className="w-4 h-4 mr-2 text-zinc-500" />
-                                                <div className="text-left">
-                                                    <div className="text-white font-semibold">{vid.title}</div>
-                                                    <div className="text-xs text-zinc-500">Click to watch training</div>
-                                                </div>
-                                            </Button>
+                                        {chemical.video_urls.map((url, idx) => (
+                                            <div key={idx} className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-auto py-3 justify-start border-zinc-800 hover:bg-zinc-800 flex-1"
+                                                    onClick={() => setPlayingVideo(url)}
+                                                >
+                                                    <Video className="w-4 h-4 mr-2 text-zinc-500" />
+                                                    <div className="text-left overflow-hidden">
+                                                        <div className="text-white font-semibold truncate w-full">Training Video {idx + 1}</div>
+                                                        <div className="text-xs text-zinc-500 truncate max-w-[200px]">{url}</div>
+                                                    </div>
+                                                </Button>
+                                                {isAdmin && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-full border-zinc-800 hover:bg-zinc-800 text-zinc-500 hover:text-blue-400"
+                                                        onClick={() => handleAddToLibrary(url, idx)}
+                                                        title="Add to Learning Library"
+                                                    >
+                                                        <BookOpen className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                 </section>
@@ -407,6 +587,45 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate }: Chemi
                     </ScrollArea>
                 )}
             </DialogContent>
+
+            {/* Video Player Modal */}
+            <Dialog open={!!playingVideo} onOpenChange={(open) => !open && setPlayingVideo(null)}>
+                <DialogContent className="max-w-4xl bg-black border-zinc-800 p-0 overflow-hidden aspect-video">
+                    {playingVideo && (
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            src={`https://www.youtube.com/embed/${getYouTubeId(playingVideo)}?autoplay=1`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Dilution Notes Viewer Modal */}
+            <Dialog open={!!viewingDilutionNote} onOpenChange={(open) => !open && setViewingDilutionNote(null)}>
+                <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Beaker className="w-5 h-5 text-purple-400" />
+                            Dilution Notes: {viewingDilutionNote?.method}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto p-4 bg-zinc-900 rounded-lg border border-zinc-800">
+                        <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                            {viewingDilutionNote?.note}
+                        </p>
+                    </div>
+                    <div className="flex justify-end">
+                        <Button variant="outline" onClick={() => setViewingDilutionNote(null)}>
+                            Close
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Dialog>
     );
 }

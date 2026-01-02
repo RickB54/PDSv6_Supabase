@@ -60,6 +60,26 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
     }
 }
 
+export async function updateChemicalPartial(id: string, updates: Partial<Chemical>): Promise<{ error: any; data: Chemical | null }> {
+    try {
+        const payload = {
+            ...updates,
+            updated_at: new Date().toISOString(),
+        };
+
+        const { data, error } = await supabase
+            .from('chemical_library')
+            .update(payload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        return { error, data };
+    } catch (e) {
+        return { error: e, data: null };
+    }
+}
+
 export async function deleteChemical(id: string): Promise<boolean> {
     const { error } = await supabase.from('chemical_library').delete().eq('id', id);
     return !error;

@@ -11,7 +11,8 @@ import {
     Book,
     ChevronLeft,
     ChevronRight,
-    Users
+    Users,
+    FlaskConical
 } from "lucide-react";
 
 export function GlobalRightSidebar() {
@@ -71,6 +72,12 @@ export function GlobalRightSidebar() {
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/notes')} title="Personal Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Book className="w-5 h-5 text-amber-200" />
                 {!collapsed && <span>Notes</span>}
+            </Button>
+
+            {/* Chemicals Shortcut */}
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <FlaskConical className="w-5 h-5 text-teal-400" />
+                {!collapsed && <span>Chemicals</span>}
             </Button>
 
         </div>

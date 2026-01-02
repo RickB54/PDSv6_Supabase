@@ -4,12 +4,13 @@ import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getChemicals } from "@/lib/chemicals";
+import { getChemicals, deleteChemical } from "@/lib/chemicals";
 import { Chemical } from "@/types/chemicals";
 import { Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
+import { toast } from "@/hooks/use-toast";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function ChemicalsLibrary() {
 
     useEffect(() => {
         const user = getCurrentUser();
-        setIsAdmin(user?.role === 'admin');
+        setIsAdmin(user?.role === 'admin' || user?.role === 'owner');
 
         // Seed/Fetch data
         loadChemicals();
@@ -35,6 +36,15 @@ export default function ChemicalsLibrary() {
         const data = await getChemicals();
         setChemicals(data);
         setLoading(false);
+        return data;
+    };
+
+    const handleChemicalUpdate = async () => {
+        const data = await loadChemicals();
+        if (selectedChemical) {
+            const fresh = data.find(c => c.id === selectedChemical.id);
+            if (fresh) setSelectedChemical(fresh);
+        }
     };
 
     const categories = ["All", "Exterior", "Interior", "Dual-Use"];
@@ -49,6 +59,16 @@ export default function ChemicalsLibrary() {
     const handleCardClick = (c: Chemical) => {
         setSelectedChemical(c);
         setDetailOpen(true);
+    };
+
+    const handleDeleteChemical = async (id: string) => {
+        const { error } = await deleteChemical(id);
+        if (error) {
+            toast({ title: "Error", description: "Failed to delete chemical.", variant: "destructive" });
+        } else {
+            toast({ title: "Deleted", description: "Chemical removed from library.", className: "bg-red-900 border-red-800 text-white" });
+            setChemicals(prev => prev.filter(c => c.id !== id));
+        }
     };
 
     return (
@@ -97,7 +117,13 @@ export default function ChemicalsLibrary() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filtered.map(c => (
-                            <ChemicalCard key={c.id} chemical={c} onClick={() => handleCardClick(c)} />
+                            <ChemicalCard
+                                key={c.id}
+                                chemical={c}
+                                onClick={() => handleCardClick(c)}
+                                isAdmin={isAdmin}
+                                onDelete={handleDeleteChemical}
+                            />
                         ))}
                         {filtered.length === 0 && (
                             <div className="col-span-full text-center py-20 text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
@@ -113,6 +139,8 @@ export default function ChemicalsLibrary() {
                 chemical={selectedChemical}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
+                isAdmin={isAdmin}
+                onUpdate={handleChemicalUpdate}
             />
         </div>
     );

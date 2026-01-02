@@ -61,10 +61,15 @@ export default function F150Setup() {
     const loadItems = async () => {
         try {
             const data = await getLibraryItems();
-            setItems(data);
+
+            // Filter out items from the Learning Library (Chemicals & Products)
+            // These items are meant for the Learning Library only, not the blog
+            const blogItems = data.filter(item => item.category !== 'Chemical Training');
+
+            setItems(blogItems);
 
             // Extract unique categories (dynamic)
-            const dynamicCats = Array.from(new Set(data.map(i => i.category))).filter(c => c && c !== 'General');
+            const dynamicCats = Array.from(new Set(blogItems.map(i => i.category))).filter(c => c && c !== 'General');
             setCustomCategories(dynamicCats);
 
             // Load Global Comment Counts immediately

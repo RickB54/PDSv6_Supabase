@@ -1,14 +1,17 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chemical, DilutionRatio } from "@/types/chemicals";
-import { Loader2, Sparkles, Plus, X, Save, Beaker } from "lucide-react";
+import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker } from 'lucide-react';
 import { upsertChemical } from "@/lib/chemicals";
 import { generateTemplate } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supa-data";
+import { ensureAllStorageBuckets } from "@/lib/storage-utils";
 
 interface ChemicalEditFormProps {
     initialData: Partial<Chemical>;
@@ -20,6 +23,48 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
     const [editing, setEditing] = useState<Partial<Chemical>>(initialData);
     const [aiLoading, setAiLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [aiSnapshot, setAiSnapshot] = useState<Partial<Chemical> | null>(null);
+    const [viewingDilutionNote, setViewingDilutionNote] = useState<{ method: string; note: string } | null>(null);
+
+    // Ensure buckets exist on mount
+    useEffect(() => {
+        ensureAllStorageBuckets().catch(console.error);
+    }, []);
+
+    // Image Upload Logic
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+
+        const file = e.target.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        setUploading(true);
+        try {
+            const { error: uploadError } = await supabase.storage
+                .from('chemicals')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage
+                .from('chemicals')
+                .getPublicUrl(filePath);
+
+            setEditing(prev => ({ ...prev, primary_image_url: data.publicUrl }));
+            toast({ title: "Image Uploaded", description: "Primary image updated." });
+        } catch (error: any) {
+            console.error("Upload Error:", error);
+            toast({ title: "Upload Failed", description: error.message || "Failed to upload image.", variant: "destructive" });
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     // Enhanced Auto-Fill
     const handleAiGenerate = async () => {
@@ -31,15 +76,24 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
         setTimeout(() => {
             const category = editing.category || "Exterior";
             const template = generateTemplate(editing.name!, category as any);
-            setEditing(prev => ({
-                ...prev,
+
+            // Calculate new state
+            const newState = {
+                ...editing,
                 ...template,
                 // Preserve user-defined identity
-                name: prev?.name,
-                brand: prev?.brand,
-                category: prev?.category,
-                theme_color: prev?.theme_color || "#3b82f6",
-            }));
+                name: editing?.name,
+                brand: editing?.brand,
+                category: editing?.category,
+                theme_color: editing?.theme_color || "#3b82f6",
+                // Mark as AI-generated
+                ai_generated: true,
+                manually_modified: false,
+            };
+
+            setEditing(newState);
+            // Take snapshot of AI-generated content for comparison
+            setAiSnapshot(newState);
             setAiLoading(false);
             toast({ title: "Auto-Fill Complete", description: "Template data applied.", className: "bg-green-900 border-green-800" });
         }, 1000);
@@ -49,9 +103,20 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
         if (!editing?.name) return toast({ title: "Name is required", variant: "destructive" });
         if (!editing?.brand) return toast({ title: "Brand is required", variant: "destructive" });
 
+        // Detect manual modifications if this was AI-generated
+        let dataToSave = { ...editing };
+        if (editing.ai_generated) {
+            // Compare current state with initial data OR snapshot to detect changes
+            const baseline = aiSnapshot || initialData;
+            const wasManuallyEdited = hasContentChanged(baseline, editing);
+            if (wasManuallyEdited) {
+                dataToSave.manually_modified = true;
+            }
+        }
+
         setSaving(true);
         try {
-            const { error } = await upsertChemical(editing);
+            const { error } = await upsertChemical(dataToSave);
             if (error) throw error;
             toast({ title: "Success", description: "Chemical saved." });
             onSave();
@@ -60,6 +125,18 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
         } finally {
             setSaving(false);
         }
+    };
+
+    // Helper: Check if content fields changed (excluding images/videos)
+    const hasContentChanged = (snapshot: Partial<Chemical>, current: Partial<Chemical>): boolean => {
+        const contentFields = ['description', 'used_for', 'dilution_ratios', 'application_guide',
+            'surface_compatibility', 'warnings', 'pro_tips', 'user_notes'];
+
+        return contentFields.some(field => {
+            const snapVal = JSON.stringify((snapshot as any)[field]);
+            const currVal = JSON.stringify((current as any)[field]);
+            return snapVal !== currVal;
+        });
     };
 
     // Sub-component for Dilution Editing
@@ -162,7 +239,13 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-xs text-zinc-400">Notes</Label>
-                                            <Input value={ratio.notes || ''} onChange={e => updateDilution(idx, 'notes', e.target.value)} className="h-8 text-sm bg-zinc-800 border-zinc-600" />
+                                            <div
+                                                className="h-8 px-3 py-2 rounded-md border border-zinc-600 bg-zinc-800 text-sm text-zinc-300 cursor-pointer hover:border-blue-500 hover:bg-zinc-750 transition-colors flex items-center"
+                                                onClick={() => ratio.notes && setViewingDilutionNote({ method: ratio.method, note: ratio.notes || '' })}
+                                                title="Click to view full notes"
+                                            >
+                                                <span className="truncate">{ratio.notes || <span className="text-zinc-600 italic">Click to view</span>}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <Button size="icon" variant="ghost" onClick={() => removeDilution(idx)} className="mt-6 hover:text-red-500 h-8 w-8">
@@ -211,8 +294,76 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                     <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-2">Media & Content</h3>
                     <div className="space-y-2">
                         <Label>Primary Image URL</Label>
-                        <Input value={editing?.primary_image_url || ''} onChange={e => setEditing({ ...editing, primary_image_url: e.target.value })} className="bg-zinc-900 border-zinc-700" placeholder="https://..." />
+                        <div className="flex gap-2">
+                            <Input
+                                value={editing?.primary_image_url || ''}
+                                onChange={e => setEditing({ ...editing, primary_image_url: e.target.value })}
+                                className="bg-zinc-900 border-zinc-700 flex-1"
+                                placeholder="https://..."
+                            />
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageUpload}
+                                className="hidden"
+                                accept="image/*"
+                            />
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="border-zinc-700 hover:bg-zinc-800"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                title="Upload from Device"
+                            >
+                                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                            </Button>
+                        </div>
                     </div>
+
+                    <div className="space-y-2">
+                        <Label>Video Links (YouTube)</Label>
+                        {(!editing?.video_urls || editing.video_urls.length === 0) && (
+                            <p className="text-xs text-zinc-500 italic">No videos added.</p>
+                        )}
+                        <div className="space-y-2">
+                            {editing?.video_urls?.map((url, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                    <Input
+                                        value={url}
+                                        onChange={e => {
+                                            const newUrls = [...(editing.video_urls || [])];
+                                            newUrls[idx] = e.target.value;
+                                            setEditing({ ...editing, video_urls: newUrls });
+                                        }}
+                                        className="bg-zinc-900 border-zinc-700 flex-1"
+                                        placeholder="https://youtube.com/..."
+                                    />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            const newUrls = [...(editing.video_urls || [])];
+                                            newUrls.splice(idx, 1);
+                                            setEditing({ ...editing, video_urls: newUrls });
+                                        }}
+                                        className="hover:text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditing({ ...editing, video_urls: [...(editing.video_urls || []), ""] })}
+                                className="border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                            >
+                                <Plus className="w-3 h-3 mr-2" /> Add Video Link
+                            </Button>
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label>Gallery URLs (Comma separated)</Label>
                         <Input
@@ -236,7 +387,6 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800 mt-4">
-                <Button variant="ghost" onClick={onCancel} className="text-zinc-400 hover:text-white">Cancel</Button>
                 <Button
                     onClick={handleSaveInternal}
                     disabled={saving}
@@ -246,6 +396,49 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                     {saving ? "Saving..." : "Save Changes"}
                 </Button>
             </div>
+
+            {/* Dilution Notes Viewer/Editor Modal */}
+            <Dialog open={!!viewingDilutionNote} onOpenChange={(open) => !open && setViewingDilutionNote(null)}>
+                <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Beaker className="w-5 h-5 text-purple-400" />
+                            Dilution Notes: {viewingDilutionNote?.method}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="p-4">
+                        <Textarea
+                            value={viewingDilutionNote?.note || ''}
+                            onChange={(e) => setViewingDilutionNote(prev => prev ? { ...prev, note: e.target.value } : null)}
+                            className="min-h-[140px] bg-zinc-900 border-zinc-800 text-zinc-300 resize-none"
+                            placeholder="Enter notes for this dilution ratio..."
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 px-4 pb-4">
+                        <Button variant="outline" onClick={() => setViewingDilutionNote(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                                if (viewingDilutionNote) {
+                                    // Find and update the dilution ratio
+                                    const ratios = [...(editing?.dilution_ratios || [])];
+                                    const idx = ratios.findIndex(r => r.method === viewingDilutionNote.method);
+                                    if (idx !== -1) {
+                                        ratios[idx].notes = viewingDilutionNote.note;
+                                        setEditing({ ...editing, dilution_ratios: ratios });
+                                    }
+                                    setViewingDilutionNote(null);
+                                    toast({ title: "Notes Updated", description: "Dilution notes have been updated." });
+                                }
+                            }}
+                        >
+                            Save Notes
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -30,6 +30,14 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
                 fileSizeLimit: 10485760, // 10MB
                 allowedMimeTypes: ['image/*']
             }
+        },
+        {
+            name: 'chemicals',
+            config: {
+                public: true,
+                fileSizeLimit: 10485760, // 10MB
+                allowedMimeTypes: ['image/*']
+            }
         }
     ];
 
