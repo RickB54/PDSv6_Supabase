@@ -210,6 +210,17 @@ export default function VehicleClassification() {
             if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
             if (pricingType === 'compact') autoCategory = "Compact/Sedan";
 
+            // 3. Check History (Highest Priority - Learning Behavior)
+            // If the user has explicitly classified this vehicle before, respect their choice
+            const previousEntry = history.find(h =>
+                h.make.toLowerCase() === selectedMake.toLowerCase() &&
+                h.model.toLowerCase() === model.toLowerCase()
+            );
+
+            if (previousEntry && previousEntry.category) {
+                autoCategory = previousEntry.category;
+            }
+
         } catch (e) {
             console.error("Error determining category:", e);
         }
