@@ -11,6 +11,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
+import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -506,9 +507,36 @@ const SearchCustomer = () => {
                                   })}
                                 </div>
                                 {customer.videoUrl && (
-                                  <div className="mt-2 text-sm">
-                                    <a href={customer.videoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-400 hover:text-blue-300">
-                                      <Video className="h-4 w-4" /> Watch Video
+                                  <div className="mt-4">
+                                    <a
+                                      href={customer.videoUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="relative block aspect-video rounded overflow-hidden border-2 border-blue-500/30 bg-zinc-950 hover:border-blue-400 transition-all group"
+                                    >
+                                      {getYouTubeThumbnail(customer.videoUrl) ? (
+                                        <>
+                                          <img
+                                            src={getYouTubeThumbnail(customer.videoUrl)!}
+                                            alt="Video thumbnail"
+                                            className="w-full h-full object-cover"
+                                          />
+                                          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                                            <div className="bg-red-600 rounded-full p-4 group-hover:scale-110 transition-transform">
+                                              <Video className="h-8 w-8 text-white" />
+                                            </div>
+                                          </div>
+                                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                                            <p className="text-white text-sm font-medium flex items-center gap-2">
+                                              <Video className="h-4 w-4" /> Before/After Showcase Video
+                                            </p>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300">
+                                          <Video className="h-4 w-4" /> Watch Video
+                                        </div>
+                                      )}
                                     </a>
                                   </div>
                                 )}
