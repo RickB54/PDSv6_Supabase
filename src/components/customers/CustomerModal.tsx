@@ -804,18 +804,37 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
               {/* Video URL Link */}
               <div className="space-y-2">
                 <Label className="text-xs text-zinc-400 flex items-center gap-1">
-                  <LinkIcon className="h-3 w-3" />
-                  Video Link (Optional)
+                  <Video className="h-3 w-3" />
+                  YouTube Video (Before/After Showcase)
                 </Label>
-                <div className="relative">
-                  <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                  <Input
-                    placeholder="https://youtube.com/watch?v=..."
-                    className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                    value={form.videoUrl || ""}
-                    onChange={(e) => handleChange("videoUrl", e.target.value)}
-                  />
+                <div className="relative flex gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                    <Input
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                      value={form.videoUrl || ""}
+                      onChange={(e) => handleChange("videoUrl", e.target.value)}
+                    />
+                  </div>
+                  {form.videoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleChange("videoUrl", "")}
+                      className="shrink-0 h-10 w-10 text-red-500 hover:bg-red-950/30 hover:text-red-400"
+                      title="Remove video URL"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
+                {form.videoUrl && (
+                  <p className="text-[10px] text-emerald-500 flex items-center gap-1">
+                    <Video className="h-3 w-3" /> Video linked - will appear in gallery
+                  </p>
+                )}
               </div>
 
               {/* Learning Center URL Link */}

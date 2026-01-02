@@ -10,6 +10,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video } from "lucide-react";
+import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -307,6 +308,19 @@ const SearchCustomer = () => {
   const [expandedCustomers, setExpandedCustomers] = useState<string[]>([]);
   const [allExpanded, setAllExpanded] = useState(false);
   const [openMaps, setOpenMaps] = useState<string[]>([]);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string }[]>([]);
+  const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
+
+  const openGallery = (customer: Customer, startIndex = 0) => {
+    const photos: { url: string; label?: string }[] = [];
+    customer.generalPhotos?.forEach((url) => photos.push({ url, label: "General" }));
+    customer.beforePhotos?.forEach((url) => photos.push({ url, label: "Before" }));
+    customer.afterPhotos?.forEach((url) => photos.push({ url, label: "After" }));
+    setGalleryPhotos(photos);
+    setGalleryInitialIndex(startIndex);
+    setGalleryOpen(true);
+  };
 
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
   const toggleCustomer = (id: string) => { setExpandedCustomers(prev => (prev.includes(id) ? [] : [id])); setAllExpanded(false); };
@@ -370,20 +384,37 @@ const SearchCustomer = () => {
                   <div className="p-4 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between cursor-pointer hover:bg-blue-500/10 transition-colors gap-4" onClick={() => toggleCustomer(customer.id!)}>
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
-                      <div
-                        className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center text-zinc-400 font-bold"
-                        onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
-                      >
-                        {(customer.generalPhotos?.[0] || customer.beforePhotos?.[0] || customer.afterPhotos?.[0]) ? (
-                          <img
-                            src={customer.generalPhotos?.[0] || customer.beforePhotos?.[0] || customer.afterPhotos?.[0]}
-                            alt={customer.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
+
+                      {/* Photo Thumbnails - clickable to open gallery */}
+                      {(customer.generalPhotos?.length || customer.beforePhotos?.length || customer.afterPhotos?.length) ? (
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          {customer.generalPhotos?.slice(0, 3).map((photo, idx) => (
+                            <div
+                              key={`thumb-g-${idx}`}
+                              className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
+                              onClick={() => openGallery(customer, idx)}
+                            >
+                              <img src={photo} alt={`${customer.name} - General ${idx + 1}`} className="h-full w-full object-cover" />
+                            </div>
+                          ))}
+                          {(customer.beforePhotos?.length || 0) + (customer.afterPhotos?.length || 0) + (customer.generalPhotos?.length || 0) > 3 && (
+                            <button
+                              onClick={() => openGallery(customer, 0)}
+                              className="h-12 w-12 rounded-lg border-2 border-blue-500/50 bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-all hover:scale-105"
+                            >
+                              +{(customer.beforePhotos?.length || 0) + (customer.afterPhotos?.length || 0) + (customer.generalPhotos?.length || 0) - 3}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center text-zinc-400 font-bold"
+                          onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                        >
                           <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
+                        </div>
+                      )}
+
                       <div><h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3><div className="flex gap-3 text-sm text-zinc-400"><span>{customer.phone || 'No phone'}</span><span className="hidden sm:inline">•</span><span className="hidden sm:inline">{customer.vehicle} {customer.model}</span></div></div>
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -435,23 +466,44 @@ const SearchCustomer = () => {
                               <section>
                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"><ImageIcon className="h-3 w-3" /> Media Gallery</h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                  {customer.generalPhotos?.map((p, i) => (
-                                    <div key={`g-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
-                                      <img src={p} alt="General" className="w-full h-full object-cover" />
-                                    </div>
-                                  ))}
-                                  {customer.beforePhotos?.map((p, i) => (
-                                    <div key={`b-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
-                                      <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">Before</div>
-                                      <img src={p} alt="Before" className="w-full h-full object-cover" />
-                                    </div>
-                                  ))}
-                                  {customer.afterPhotos?.map((p, i) => (
-                                    <div key={`a-${i}`} className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950">
-                                      <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">After</div>
-                                      <img src={p} alt="After" className="w-full h-full object-cover" />
-                                    </div>
-                                  ))}
+                                  {customer.generalPhotos?.map((p, i) => {
+                                    const photoIndex = i;
+                                    return (
+                                      <div
+                                        key={`g-${i}`}
+                                        className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
+                                        onClick={() => openGallery(customer, photoIndex)}
+                                      >
+                                        <img src={p} alt="General" className="w-full h-full object-cover" />
+                                      </div>
+                                    );
+                                  })}
+                                  {customer.beforePhotos?.map((p, i) => {
+                                    const photoIndex = (customer.generalPhotos?.length || 0) + i;
+                                    return (
+                                      <div
+                                        key={`b-${i}`}
+                                        className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
+                                        onClick={() => openGallery(customer, photoIndex)}
+                                      >
+                                        <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">Before</div>
+                                        <img src={p} alt="Before" className="w-full h-full object-cover" />
+                                      </div>
+                                    );
+                                  })}
+                                  {customer.afterPhotos?.map((p, i) => {
+                                    const photoIndex = (customer.generalPhotos?.length || 0) + (customer.beforePhotos?.length || 0) + i;
+                                    return (
+                                      <div
+                                        key={`a-${i}`}
+                                        className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
+                                        onClick={() => openGallery(customer, photoIndex)}
+                                      >
+                                        <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">After</div>
+                                        <img src={p} alt="After" className="w-full h-full object-cover" />
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                                 {customer.videoUrl && (
                                   <div className="mt-2 text-sm">
@@ -516,6 +568,13 @@ const SearchCustomer = () => {
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Permanently?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
+
+      <PhotoGalleryLightbox
+        photos={galleryPhotos}
+        initialIndex={galleryInitialIndex}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+      />
 
       <CustomerModal open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open && new URLSearchParams(location.search).has("add")) navigate(location.pathname, { replace: true }); }} initial={editing} onSave={async (data) => { await onSaveModal(data); if (new URLSearchParams(location.search).has("add")) navigate(location.pathname, { replace: true }); }} />
     </div >
