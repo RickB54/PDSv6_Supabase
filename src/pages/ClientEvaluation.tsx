@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ interface ClientEvaluation {
 export default function ClientEvaluation() {
     const { toast } = useToast();
     const user = getCurrentUser();
+    const location = useLocation();
 
     // State
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -60,6 +62,25 @@ export default function ClientEvaluation() {
     useEffect(() => {
         loadCustomers();
     }, []);
+
+    // Check for URL parameters and auto-select customer
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const customerId = params.get('customerId');
+        const customerName = params.get('customerName');
+
+        if (customerId && customers.length > 0) {
+            // Find customer by ID
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                setSelectedClient(customerId);
+                toast({
+                    title: "Customer Selected",
+                    description: `Pre-selected: ${customer.name}`
+                });
+            }
+        }
+    }, [customers, location.search]);
 
     // Reload customers when page becomes visible (handles navigation back to this page)
     useEffect(() => {
