@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -101,19 +101,30 @@ export default function ClientEvaluation() {
     useEffect(() => {
         if (selectedClient) {
             loadHistory();
+        }
+    }, [selectedClient]);
 
-            // Auto-detect vehicle type from customer record
-            if (customers.length > 0) {
+    // Auto-detect vehicle type from customer record (only once per client selection)
+    const lastProcessedClient = useRef<string | null>(null);
+    useEffect(() => {
+        if (selectedClient && customers.length > 0) {
+            // Only run if we haven't processed this client yet (to allow manual overrides later)
+            if (lastProcessedClient.current !== selectedClient) {
                 const client = customers.find(c => c.id === selectedClient);
                 const vt = client?.vehicleType || client?.vehicle_info?.type;
                 const normalized = normalizeVehicleType(vt);
+
                 if (normalized) {
                     setVehicleType(normalized);
                     toast({
                         title: "Vehicle Size Detected",
                         description: `Set to ${normalized.charAt(0).toUpperCase() + normalized.slice(1)} based on customer profile.`
                     });
+                } else {
+                    setVehicleType(undefined); // Reset to default if no vehicle info
                 }
+
+                lastProcessedClient.current = selectedClient;
             }
         }
     }, [selectedClient, customers]);
