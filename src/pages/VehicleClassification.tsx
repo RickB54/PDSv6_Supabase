@@ -14,15 +14,15 @@ import autoTable from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
 import { getSupabaseCustomers } from "@/lib/supa-data";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 
-type ClassificationType = "Compact" | "Midsize / Sedan" | "SUV / Crossover" | "Truck / Oversized" | "Oversized Specialty";
+type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
 
 const CLASSIFICATION_OPTIONS: ClassificationType[] = [
-    "Compact",
-    "Midsize / Sedan",
-    "SUV / Crossover",
-    "Truck / Oversized",
-    "Oversized Specialty"
+    "Compact/Sedan",
+    "Mid-Size/SUV",
+    "Truck/Van/Large SUV",
+    "Luxury/High-End"
 ];
 
 // Stable data structure that handles both old and new formats
@@ -187,15 +187,34 @@ export default function VehicleClassification() {
         let autoCategory = "Manual Classification Required";
 
         try {
+            // 1. Try JSON Database First
             if (selectedMake && safeDB[selectedMake]) {
                 const makeData = safeDB[selectedMake];
                 if (makeData && typeof makeData === 'object' && model in makeData) {
                     const value = makeData[model];
                     if (value && typeof value === 'string') {
-                        autoCategory = value;
+                        // Map legacy/JSON values to new User-Approved Categories
+                        if (value === "Compact") autoCategory = "Compact/Sedan";
+                        else if (value === "Midsize / Sedan") autoCategory = "Mid-Size/SUV";
+                        else if (value === "SUV / Crossover") autoCategory = "Mid-Size/SUV";
+                        else if (value === "Truck / Oversized") autoCategory = "Truck/Van/Large SUV";
+                        else if (value === "Oversized Specialty") autoCategory = "Luxury/High-End";
+                        else autoCategory = "Mid-Size/SUV"; // Default fallback
                     }
                 }
             }
+
+            // 2. Apply Robust Overrides from Pricing Engine
+            // This fixes issues where JSON DB misclassifies Large SUVs (e.g. Expedition) as small SUVs
+            const searchStr = `${selectedMake} ${model}`;
+            const pricingType = normalizeVehicleType(searchStr);
+
+            // Force upgrade for Truck/Luxury detected vehicles
+            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
+            if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
+            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
+            if (pricingType === 'compact') autoCategory = "Compact/Sedan";
+
         } catch (e) {
             console.error("Error determining category:", e);
         }
@@ -349,11 +368,10 @@ export default function VehicleClassification() {
 
     const getClassificationColor = (classif: string) => {
         switch (classif) {
-            case "Compact": return "text-emerald-400";
-            case "Midsize / Sedan": return "text-blue-400";
-            case "SUV / Crossover": return "text-purple-400";
-            case "Truck / Oversized": return "text-amber-400";
-            case "Oversized Specialty": return "text-red-400";
+            case "Compact/Sedan": return "text-emerald-400";
+            case "Mid-Size/SUV": return "text-blue-400";
+            case "Truck/Van/Large SUV": return "text-amber-400";
+            case "Luxury/High-End": return "text-purple-400";
             default: return "text-zinc-400";
         }
     };
