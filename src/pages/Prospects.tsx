@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
-import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
@@ -26,37 +26,6 @@ import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
-
-interface Customer {
-  id?: string;
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
-  vehicle: string;
-  model: string;
-  year: string;
-  color: string;
-  mileage: string;
-  vehicleType: string;
-  conditionInside: string;
-  conditionOutside: string;
-  services: string[];
-  lastService: string;
-  duration: string;
-  notes: string;
-  createdAt?: string;
-  updatedAt?: string;
-  howFound?: string;
-  howFoundOther?: string;
-  type?: 'customer' | 'prospect';
-  is_archived?: boolean;
-  generalPhotos?: string[];
-  beforePhotos?: string[];
-  afterPhotos?: string[];
-  videoUrl?: string;
-  learningCenterUrl?: string;
-}
 
 const Prospects = () => {
   const { toast } = useToast();

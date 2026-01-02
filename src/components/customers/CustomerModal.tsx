@@ -203,7 +203,6 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           maxSizeMB: 0.4,           // Reduced from 1 to prevent mobile OOM errors
           maxWidthOrHeight: 1280,   // Reduced from 1920
           useWebWorker: true,
-          alwaysUseWebWorker: true, // Force worker on mobile
           initialQuality: 0.6,      // Lower quality for smaller files
           maxIteration: 10
         });
@@ -288,11 +287,10 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
       // 2. Delete the Vehicle
       toast.info("Deleting vehicle record...");
-      const { error, count: deleteCount } = await supabase
+      const { error } = await supabase
         .from('vehicles')
         .delete()
-        .eq('id', vehicleId)
-        .select('*', { count: 'exact', head: true });
+        .eq('id', vehicleId);
 
       if (error) throw error;
 
