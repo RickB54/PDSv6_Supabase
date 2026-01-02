@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper } from "lucide-react";
+import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -779,6 +779,10 @@ export default function AdminDashboard() {
                     <span>Package Pricing</span>
                   </Link>
                 )}
+                <Link to="/chemicals" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-600/10">
+                  <Beaker className="w-3.5 h-3.5 text-cyan-600" />
+                  <span>Chemical Cards</span>
+                </Link>
               </div>
             </Card>
           </Card>

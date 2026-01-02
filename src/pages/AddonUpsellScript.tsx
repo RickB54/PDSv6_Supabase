@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, User, CheckCircle2, FileText, Edit, Trash2, History as HistoryIcon } from "lucide-react";
+import { TrendingUp, User, CheckCircle2, FileText, Edit, Trash2, History as HistoryIcon, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getCustomers } from "@/lib/db";
+import { getSupabaseCustomers } from "@/lib/supa-data";
 import { getClientUpsells, upsertClientUpsell, deleteClientUpsell, getClientUpsellHistory } from "@/lib/db";
 import { COMPLAINT_OPTIONS, GOAL_OPTIONS, UPSELL_SERVICES, UpsellService } from "@/data/upsell_data";
 import { generateRecommendations, generateScript } from "@/lib/recommendation_engine";
@@ -62,9 +62,21 @@ export default function AddonUpsellScript() {
     const [history, setHistory] = useState<ClientUpsell[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    // Load customers on mount
+    // Load customers on mount AND every time page becomes visible
     useEffect(() => {
         loadCustomers();
+    }, []);
+
+    // Reload customers when page becomes visible (handles navigation back to this page)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                loadCustomers();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
     // Load history when client changes
@@ -107,7 +119,7 @@ export default function AddonUpsellScript() {
     }, [selectedClient, selectedUpsells, vehicleType, condition, complaints, goals, customComplaint, customGoal, additionalNotes, customers]);
 
     const loadCustomers = async () => {
-        const custs = await getCustomers<Customer>();
+        const custs = await getSupabaseCustomers();
         setCustomers(custs);
     };
 
@@ -376,19 +388,30 @@ export default function AddonUpsellScript() {
                                 💡 You can create a generic script without selecting a client, or choose a specific client to save the script.
                             </div>
 
-                            <Select value={selectedClient || "none"} onValueChange={(val) => setSelectedClient(val === "none" ? "" : val)}>
-                                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                                    <SelectValue placeholder="Choose a client or leave blank for generic..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-800 border-zinc-700">
-                                    <SelectItem value="none" className="text-white font-semibold">🔓 No Customer / Generic Mode</SelectItem>
-                                    {customers.map(c => (
-                                        <SelectItem key={c.id} value={c.id} className="text-white">
-                                            {c.name} {c.email && `(${c.email})`}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex gap-2">
+                                <Select value={selectedClient || "none"} onValueChange={(val) => setSelectedClient(val === "none" ? "" : val)}>
+                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                                        <SelectValue placeholder="Choose a client or leave blank for generic..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                                        <SelectItem value="none" className="text-white font-semibold">🔓 No Customer / Generic Mode</SelectItem>
+                                        {customers.map(c => (
+                                            <SelectItem key={c.id} value={c.id} className="text-white">
+                                                {c.name} {c.email && `(${c.email})`}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    onClick={loadCustomers}
+                                    variant="outline"
+                                    size="icon"
+                                    className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-400 hover:text-white"
+                                    title="Refresh customer list"
+                                >
+                                    <RefreshCw className="w-4 h-4" />
+                                </Button>
+                            </div>
 
                             {selectedClientData && (
                                 <div className="mt-4 p-3 bg-zinc-800 rounded border border-zinc-700">

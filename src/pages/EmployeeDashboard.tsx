@@ -287,6 +287,14 @@ const EmployeeDashboard = () => {
                 <div className="text-sm opacity-90">Communicate with your team in real-time.</div>
               </Card>
             </Link>
+
+            {/* Chemical Cards (cyan/blue) */}
+            <Link to="/chemicals" className="block">
+              <Card className="p-6 bg-cyan-700 text-white rounded-xl">
+                <div className="text-2xl font-bold">CHEMICAL CARDS</div>
+                <div className="text-sm opacity-90">Browse products, dilution ratios, and usage guides.</div>
+              </Card>
+            </Link>
           </div>
 
           {/* Quick actions */}
