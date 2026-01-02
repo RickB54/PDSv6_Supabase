@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ClipboardCheck, User, CheckCircle2, FileText, Edit, Trash2, History as HistoryIcon, RefreshCw, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabaseCustomers } from "@/lib/supa-data";
+import { getSupabaseCustomers, Customer } from "@/lib/supa-data";
 import { getClientEvaluations, upsertClientEvaluation, deleteClientEvaluation, getClientEvaluationHistory } from "@/lib/db";
 import { EVALUATION_COMPLAINTS, EVALUATION_GOALS, EVALUATION_SERVICES, EvaluationService, generateEvaluationRecommendations, generateEvaluationScript } from "@/data/evaluation_data";
 import { VehicleType } from "@/lib/services";
@@ -19,12 +19,6 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { getCurrentUser } from "@/lib/auth";
 
-interface Customer {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-}
 
 interface ClientEvaluation {
     id: string;
@@ -111,14 +105,22 @@ export default function ClientEvaluation() {
             // Only run if we haven't processed this client yet (to allow manual overrides later)
             if (lastProcessedClient.current !== selectedClient) {
                 const client = customers.find(c => c.id === selectedClient);
-                const vt = client?.vehicleType || client?.vehicle_info?.type;
-                const normalized = normalizeVehicleType(vt);
+
+                // Construct a rich search string including Year, Make, Model, and Type
+                const searchString = [
+                    client?.year,
+                    client?.vehicle, // Make
+                    client?.model,
+                    client?.vehicleType || client?.vehicle_info?.type
+                ].filter(Boolean).join(" ");
+
+                const normalized = normalizeVehicleType(searchString);
 
                 if (normalized) {
                     setVehicleType(normalized);
                     toast({
                         title: "Vehicle Size Detected",
-                        description: `Set to ${normalized.charAt(0).toUpperCase() + normalized.slice(1)} based on customer profile.`
+                        description: `Set to ${normalized.charAt(0).toUpperCase() + normalized.slice(1)} for "${searchString}".`
                     });
                 } else {
                     setVehicleType(undefined); // Reset to default if no vehicle info
