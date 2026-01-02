@@ -13,7 +13,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
-import { getSupabaseCustomers } from "@/lib/supa-data";
+import { getSupabaseCustomers, Customer } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 
 type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
@@ -40,12 +40,6 @@ interface SavedClassification {
     };
 }
 
-interface Customer {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-}
 
 // Safe type for vehicle database
 type VehicleDB = Record<string, Record<string, string>>;
@@ -62,6 +56,7 @@ export default function VehicleClassification() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+    const [isCustomModel, setIsCustomModel] = useState(false);
 
     // Load history and customers on mount
     useEffect(() => {
@@ -416,7 +411,16 @@ export default function VehicleClassification() {
                                     </SelectTrigger>
                                     <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
                                         {filteredMakes.length === 0 ? (
-                                            <div className="p-4 text-center text-zinc-500">No makes found</div>
+                                            <div className="p-4 text-center">
+                                                <p className="text-zinc-500 mb-2">No makes found matching "{makeSearchQuery}"</p>
+                                                <Button
+                                                    variant="secondary"
+                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                                    onClick={() => handleMakeSelect(makeSearchQuery)}
+                                                >
+                                                    Use "{makeSearchQuery}" as Make
+                                                </Button>
+                                            </div>
                                         ) : (
                                             filteredMakes.map((make) => (
                                                 <SelectItem key={make} value={make} className="text-zinc-200 focus:bg-zinc-800 cursor-pointer">
@@ -529,22 +533,58 @@ export default function VehicleClassification() {
 
                             <div>
                                 <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Choose Model</label>
-                                <Select value={selectedModel} onValueChange={handleModelSelect}>
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
-                                        <SelectValue placeholder="Choose a model..." />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
-                                        {availableModels.length === 0 ? (
-                                            <div className="p-4 text-center text-zinc-500">No models found</div>
-                                        ) : (
-                                            availableModels.map((model) => (
-                                                <SelectItem key={model} value={model} className="text-zinc-200 focus:bg-zinc-800 cursor-pointer">
-                                                    {model}
-                                                </SelectItem>
-                                            ))
-                                        )}
-                                    </SelectContent>
-                                </Select>
+                                {isCustomModel ? (
+                                    <div className="space-y-2">
+                                        <Input
+                                            placeholder="Type model name (e.g. Escalade)..."
+                                            value={selectedModel}
+                                            onChange={(e) => setSelectedModel(e.target.value)}
+                                            className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6"
+                                        />
+                                        <Button
+                                            onClick={() => handleModelSelect(selectedModel)}
+                                            disabled={!selectedModel}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        >
+                                            Confirm Model
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setIsCustomModel(false); setSelectedModel(""); }}
+                                            className="w-full text-zinc-400"
+                                        >
+                                            Back to List
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Select value={selectedModel} onValueChange={handleModelSelect}>
+                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
+                                                <SelectValue placeholder="Choose a model..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
+                                                {availableModels.length === 0 ? (
+                                                    <div className="p-4 text-center text-zinc-500">No models found</div>
+                                                ) : (
+                                                    availableModels.map((model) => (
+                                                        <SelectItem key={model} value={model} className="text-zinc-200 focus:bg-zinc-800 cursor-pointer">
+                                                            {model}
+                                                        </SelectItem>
+                                                    ))
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <div className="text-center pt-2">
+                                            <Button
+                                                variant="link"
+                                                onClick={() => setIsCustomModel(true)}
+                                                className="text-blue-400 h-auto p-0 text-sm"
+                                            >
+                                                Model not listed? Type it manually
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-between">
