@@ -52,7 +52,12 @@ export default function ChemicalsLibrary() {
     const filtered = chemicals.filter(c => {
         const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
             c.used_for.some(u => u.toLowerCase().includes(search.toLowerCase()));
-        const matchesCat = filter === "All" || c.category === filter;
+
+        // Show Dual-Use chemicals in both Exterior and Interior views
+        const matchesCat = filter === "All" ||
+            c.category === filter ||
+            (c.category === "Dual-Use" && (filter === "Exterior" || filter === "Interior"));
+
         return matchesSearch && matchesCat;
     });
 
@@ -62,8 +67,8 @@ export default function ChemicalsLibrary() {
     };
 
     const handleDeleteChemical = async (id: string) => {
-        const { error } = await deleteChemical(id);
-        if (error) {
+        const success = await deleteChemical(id);
+        if (!success) {
             toast({ title: "Error", description: "Failed to delete chemical.", variant: "destructive" });
         } else {
             toast({ title: "Deleted", description: "Chemical removed from library.", className: "bg-red-900 border-red-800 text-white" });
