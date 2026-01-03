@@ -885,6 +885,57 @@ const Reports = () => {
                 </div>
               </div>
 
+
+              {/* Inventory Assets Summary */}
+              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase">Inventory Assets</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Chemicals</p>
+                  <p className="text-xl font-bold text-emerald-400 mt-1">${totalInventoryValue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Materials</p>
+                  <p className="text-xl font-bold text-emerald-400 mt-1">${totalMaterialsValue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Tools</p>
+                  <p className="text-xl font-bold text-emerald-400 mt-1">${totalToolsValue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-900 rounded border border-zinc-700">
+                  <p className="text-xs text-zinc-400 uppercase">Total Inventory</p>
+                  <p className="text-xl font-bold text-white mt-1">${(totalInventoryValue + totalMaterialsValue + totalToolsValue).toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Break-Even Analysis */}
+              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase">Break-Even Analysis</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Investment (Assets + Exp)</p>
+                  <p className="text-xl font-bold text-red-300 mt-1">
+                    ${((totalInventoryValue + totalMaterialsValue + totalToolsValue) + expenses.reduce((s, e) => s + (e.amount || 0), 0)).toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Service Revenue</p>
+                  <p className="text-xl font-bold text-emerald-300 mt-1">
+                    ${income.reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-4 bg-zinc-900 rounded border border-zinc-700">
+                  <p className="text-xs text-zinc-400 uppercase">Remaining to Break Even</p>
+                  <p className="text-xl font-bold text-orange-400 mt-1">
+                    {(() => {
+                      const invest = (totalInventoryValue + totalMaterialsValue + totalToolsValue) + expenses.reduce((s, e) => s + (e.amount || 0), 0);
+                      const rev = income.reduce((s, i) => s + (i.amount || 0), 0);
+                      const rem = invest - rev;
+                      return rem > 0 ? `$${rem.toFixed(2)}` : 'PROFITABLE';
+                    })()}
+                  </p>
+                </div>
+              </div>
+
+              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase">Financial Performance</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Income</p>
