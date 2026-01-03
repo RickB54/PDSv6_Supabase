@@ -13,8 +13,8 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Chemical } from "@/types/chemicals";
-import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil, PlusCircle, Package } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil, PlusCircle, Package, Check } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateChemicalPartial } from "@/lib/chemicals";
@@ -23,8 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ChemicalCardProps {
     chemical: Chemical;
-    onClick: () => void;
-    isAdmin?: boolean;
     onClick: () => void;
     isAdmin?: boolean;
     onDelete?: (id: string) => void;
@@ -36,6 +34,12 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
     const [cost, setCost] = useState(chemical.default_cost?.toString() || "");
     const [size, setSize] = useState(chemical.default_size || "");
     const [isAdding, setIsAdding] = useState(false);
+
+    // Sync state with props (e.g. after save or refresh)
+    useEffect(() => {
+        if (chemical.default_cost !== undefined) setCost(chemical.default_cost.toString());
+        if (chemical.default_size !== undefined) setSize(chemical.default_size);
+    }, [chemical.default_cost, chemical.default_size]);
 
     const handleAddToInventory = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -118,6 +122,14 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                     >
                         {chemical.category}
                     </Badge>
+
+                    {/* Inventory Saved / Configured Badge */}
+                    {(chemical.default_cost !== undefined || chemical.default_size !== undefined) && (
+                        <Badge className="bg-emerald-900/90 backdrop-blur border-emerald-500/50 text-emerald-100 text-[10px] px-1.5 py-0.5 flex items-center gap-1 shadow-sm shadow-emerald-900/50">
+                            <Check className="w-2.5 h-2.5" />
+                            Configured
+                        </Badge>
+                    )}
 
                     {/* AI Tracking Badge */}
                     {chemical.ai_generated && !chemical.manually_modified && (
