@@ -2,6 +2,65 @@ import supabase from './supabase';
 import { Chemical } from '@/types/chemicals';
 // import { cleanInventoryItem } from './utils'; // Helper if needed, or define simple cleaner
 
+export interface StepChemicalMapping {
+    id: string;
+    step_id: string;
+    chemical_id: string;
+    dilution_override?: string;
+    tool_override?: string;
+    application_override?: string;
+    warnings_override?: string;
+    include_in_prep: boolean;
+    updated_by?: string;
+    updated_at: string;
+    // Joined
+    chemical?: Chemical;
+}
+
+export async function getStepChemicalMappings(stepId?: string | string[]): Promise<StepChemicalMapping[]> {
+    let query = supabase.from('step_chemical_mappings').select('*, chemical:chemical_library(*)');
+    if (stepId) {
+        if (Array.isArray(stepId)) {
+            query = query.in('step_id', stepId);
+        } else {
+            query = query.eq('step_id', stepId);
+        }
+    }
+    const { data, error } = await query;
+    if (error) {
+        console.error('Error fetching step chemical mappings:', error);
+        return [];
+    }
+    return (data || []).map((m: any) => ({
+        ...m,
+        chemical: m.chemical
+    }));
+}
+
+export async function upsertStepChemicalMapping(mapping: Partial<StepChemicalMapping>) {
+    const payload = { ...mapping };
+    // Remove joined fields if present
+    delete (payload as any).chemical;
+    delete (payload as any).created_at;
+
+    // Ensure ID is removed if empty so it auto-generates or handles upsert correctly
+    if (!payload.id) delete payload.id;
+
+    const { data, error } = await supabase
+        .from('step_chemical_mappings')
+        .upsert(payload as any)
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteStepChemicalMapping(id: string) {
+    const { error } = await supabase.from('step_chemical_mappings').delete().eq('id', id);
+    if (error) throw error;
+}
+
+
 export async function getChemicals(): Promise<Chemical[]> {
     try {
         const { data, error } = await supabase

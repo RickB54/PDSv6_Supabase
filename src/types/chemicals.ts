@@ -74,4 +74,7 @@ export interface Chemical {
     // Inventory Defaults
     default_cost?: number;
     default_size?: string;
+
+    // Inventory status
+    is_on_hand?: boolean;
 }

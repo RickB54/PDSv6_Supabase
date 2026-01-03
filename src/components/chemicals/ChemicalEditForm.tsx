@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -213,6 +214,19 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                     </div>
 
                     {/* USED FOR (Array) */}
+                    <div className="space-y-4 pt-4 border-t border-zinc-800">
+                        <div className="flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-lg p-3">
+                            <div className="space-y-0.5">
+                                <Label className="text-base text-white">In Stock / On Hand</Label>
+                                <p className="text-xs text-zinc-400">Is this chemical currently available in your inventory?</p>
+                            </div>
+                            <Switch
+                                checked={editing?.is_on_hand !== false}
+                                onCheckedChange={(c) => setEditing({ ...editing, is_on_hand: c })}
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label>Used For (Primary Applications)</Label>
                         <div className="space-y-2">

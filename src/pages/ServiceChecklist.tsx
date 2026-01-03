@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical } from "lucide-react";
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -20,12 +20,15 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import CustomerModal, { Customer as CustomerType } from "@/components/customers/CustomerModal";
+import CustomerModal from "@/components/customers/CustomerModal";
+import { Customer as CustomerType } from "@/lib/supa-data";
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as VehKey } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns, getPackageMeta, getAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { Progress } from "@/components/ui/progress";
 import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
 import { getSupabaseEmployees } from "@/lib/supa-data";
+import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
+import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummary";
 
 type DisplayService = {
   id: string;
@@ -265,6 +268,19 @@ const ServiceChecklist = () => {
   const [toolRows, setToolRows] = useState<ToolRow[]>([]);
   const [materialsModalOpen, setMaterialsModalOpen] = useState(false);
 
+  // Chemical Modal State
+  const [chemModalOpen, setChemModalOpen] = useState(false);
+  const [currentStepId, setCurrentStepId] = useState("");
+  const [currentStepName, setCurrentStepName] = useState("");
+
+  const handleOpenChemicals = (stepId: string, stepName: string) => {
+    setCurrentStepId(stepId);
+    setCurrentStepName(stepName);
+    setChemModalOpen(true);
+  };
+
+  const [prepSummaryOpen, setPrepSummaryOpen] = useState(false);
+
   const [params] = useSearchParams();
 
   useEffect(() => {
@@ -298,40 +314,56 @@ const ServiceChecklist = () => {
       if (addonsParam) {
         setSelectedAddOns(addonsParam.split(','));
       }
-      // Load employees from Supabase (same as Staff Schedule) with caching
-      setEmployeesLoading(true);
+    })();
+  }, [params]);
+
+  useEffect(() => {
+    (async () => {
+      let currentEmps: any[] = [];
       try {
-        // Try cache first for faster loading
+        setEmployeesLoading(true);
+        // Cache check
         const cached = sessionStorage.getItem('cached_employees');
         if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Date.now() - parsed.timestamp < 60000) { // Cache for 1 minute
-            setEmployees(parsed.data || []);
-            setEmployeesLoading(false);
-          }
+          try {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.timestamp < 60000) {
+              currentEmps = parsed.data || [];
+              setEmployees(currentEmps);
+              setEmployeesLoading(false);
+            }
+          } catch { }
         }
 
         // Load fresh data
-        const emps = await getSupabaseEmployees();
-        setEmployees(emps || []);
-
-        // Update cache
-        sessionStorage.setItem('cached_employees', JSON.stringify({
-          data: emps,
-          timestamp: Date.now()
-        }));
+        const fresh = await getSupabaseEmployees();
+        if (fresh) {
+          currentEmps = fresh;
+          setEmployees(fresh);
+          sessionStorage.setItem('cached_employees', JSON.stringify({
+            data: fresh,
+            timestamp: Date.now()
+          }));
+        }
       } catch (err) {
         console.error('Failed to load employees:', err);
-        setEmployees([]);
+        if (currentEmps.length === 0) setEmployees([]);
       } finally {
         setEmployeesLoading(false);
       }
+
       // Load live add-ons via API
-      const live = await api('/api/addons/live', { method: 'GET' });
-      setLiveAddOns(Array.isArray(live) ? live : []);
-      // Preselect default employee if present
-      const defaultEmp = ((Array.isArray(emps) ? emps : []) as any[])[0];
-      if (defaultEmp) setEmployeeAssigned(String(defaultEmp.id || defaultEmp.name || ''));
+      try {
+        const live = await api('/api/addons/live', { method: 'GET' });
+        setLiveAddOns(Array.isArray(live) ? live : []);
+      } catch (e) { console.error(e); }
+
+      // Preselect default employee if present and not already set
+      // We use currentEmps which holds either cached or fresh data
+      const defaultEmp = currentEmps[0];
+      if (defaultEmp && !employeeAssigned) {
+        setEmployeeAssigned(String(defaultEmp.id || defaultEmp.name || ''));
+      }
     })();
   }, [params]);
 
@@ -592,10 +624,104 @@ const ServiceChecklist = () => {
     // Add-on steps: treat each add-on as a single step under exterior
     const addonSteps: ChecklistStep[] = selectedAddOns.map((aid) => {
       const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
-      return { id: `addon-${aid}`, name: found?.name || aid, category: 'exterior', checked: false };
+      return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false };
     });
     setChecklistSteps([...prep, ...baseSteps, ...addonSteps]);
   }, [selectedPackage, selectedAddOns, vehicleType]);
+
+  // --- PERSISTENCE LOGIC START ---
+  const CHECKLIST_DRAFT_KEY = 'service_checklist_draft';
+
+  // 1. Restore State on Mount (if no URL params)
+  useEffect(() => {
+    const hasUrlParams = params.get("package") || params.get("vehicleType") || params.get("addons");
+    if (!hasUrlParams) {
+      const saved = localStorage.getItem(CHECKLIST_DRAFT_KEY);
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          console.log("Restoring checklist draft:", state);
+
+          if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
+          if (state.selectedPackage) {
+            setSelectedPackage(state.selectedPackage);
+            // We need to wait for step regeneration before restoring checked status?
+            // Actually, checklistSteps regeneration depends on selectedPackage.
+            // We can restore checking status in a separate effect or forcing it here after a tick?
+            // Better: Set the inputs, and let the regeneration effect run. 
+            // BUT, the regeneration effect resets 'checked' to false!
+            // We need a way to re-apply 'checked' status *after* steps are regenerated.
+            // We will save 'checklistSteps' to a temp ref or state and apply it after regeneration.
+          }
+          if (state.vehicleType) setVehicleType(state.vehicleType);
+          if (state.selectedAddOns) setSelectedAddOns(state.selectedAddOns);
+          if (state.destinationFee) setDestinationFee(state.destinationFee);
+          if (state.notes) setNotes(state.notes);
+          if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
+          if (state.discountValue) setDiscountValue(state.discountValue);
+          if (state.discountType) setDiscountType(state.discountType);
+
+          // Save dirty steps to be reapplied after regeneration
+          if (state.checklistSteps) {
+            window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
+          }
+
+          toast({ title: "Draft Restored", description: "Resumed your checklist from where you left off." });
+        } catch (e) {
+          console.error("Failed to restore draft", e);
+        }
+      }
+    }
+  }, []); // Run once on mount
+
+  // 2. Re-apply steps checked status after regeneration (if we just restored a draft)
+  useEffect(() => {
+    const pending = window.sessionStorage.getItem('pending_draft_steps');
+    if (pending && checklistSteps.length > 0) {
+      try {
+        const savedSteps = JSON.parse(pending) as ChecklistStep[];
+        // Only apply if they look compatible (e.g. at least one matching ID)
+        const hasMatch = savedSteps.some(s => checklistSteps.some(curr => curr.id === s.id));
+
+        if (hasMatch) {
+          const merged = checklistSteps.map(current => {
+            const saved = savedSteps.find(s => s.id === current.id);
+            return saved ? { ...current, checked: saved.checked } : current;
+          });
+          // Check if actually different to avoid loop
+          const isDifferent = JSON.stringify(merged) !== JSON.stringify(checklistSteps);
+          if (isDifferent) {
+            setChecklistSteps(merged);
+            window.sessionStorage.removeItem('pending_draft_steps'); // Clear trigger
+          }
+        }
+      } catch { }
+    }
+  }, [checklistSteps]);
+
+  // 3. Save State on Change
+  useEffect(() => {
+    // Don't save if empty/initial
+    if (!selectedPackage && !selectedCustomer) return;
+
+    const state = {
+      selectedCustomer,
+      selectedPackage,
+      vehicleType,
+      selectedAddOns,
+      checklistSteps, // Saves checked status
+      notes,
+      destinationFee,
+      employeeAssigned,
+      discountValue,
+      discountType,
+      timestamp: Date.now()
+    };
+
+    localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(state));
+  }, [selectedCustomer, selectedPackage, vehicleType, selectedAddOns, checklistSteps, notes, destinationFee, employeeAssigned, discountValue, discountType]);
+
+  // --- PERSISTENCE LOGIC END ---
 
   const progressPercent = useMemo(() => {
     const total = checklistSteps.length || 0;
@@ -979,6 +1105,10 @@ const ServiceChecklist = () => {
       doc.save(`invoice-${now.getTime()}.pdf`);
     } catch { }
 
+    // Clear persistent draft on successful save
+    localStorage.removeItem('service_checklist_draft');
+    window.sessionStorage.removeItem('pending_draft_steps');
+
     toast({ title: "Invoice Created", description: "Invoice saved and PDF downloaded." });
   };
   const finishJob = async () => {
@@ -1180,6 +1310,9 @@ const ServiceChecklist = () => {
                 <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-7 text-xs">
                   Rick's Tips
                 </Button>
+                <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-7 text-xs ml-2">
+                  <FlaskConical className="w-3 h-3 mr-1" /> Prep Chemicals
+                </Button>
               </div>
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="sm" onClick={() => {
@@ -1259,18 +1392,35 @@ const ServiceChecklist = () => {
                                   </span>
                                 </label>
 
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 ml-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-                                  }}
-                                >
-                                  {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
-                                </Button>
+                                <div className="flex items-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 ml-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
+                                    }}
+                                  >
+                                    {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
+                                  </Button>
+
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 ml-1 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleOpenChemicals(step.id, step.name);
+                                    }}
+                                    title="Chemical Reference"
+                                  >
+                                    <FlaskConical className="h-4 w-4 mr-1.5" />
+                                    <span className="text-xs font-bold">Chem</span>
+                                  </Button>
+                                </div>
                               </div>
 
                               {/* Accordion Content rendering below the flex row */}
@@ -1288,7 +1438,8 @@ const ServiceChecklist = () => {
                           );
                         })}
                       </div>
-                    )}
+                    )
+                    }
                   </div>
                 ))}
               </div>
@@ -1739,7 +1890,19 @@ const ServiceChecklist = () => {
           </Dialog>
         </div>
       </main >
-    </div >
+      <ChemicalStepModal
+        open={chemModalOpen}
+        onOpenChange={setChemModalOpen}
+        stepId={currentStepId}
+        stepName={currentStepName}
+        isAdmin={getCurrentUser()?.role === 'admin' || getCurrentUser()?.role === 'owner'}
+      />
+      <PrepChemicalsSummary
+        open={prepSummaryOpen}
+        onOpenChange={setPrepSummaryOpen}
+        steps={checklistSteps}
+      />
+    </div>
   );
 };
 

@@ -1,4 +1,5 @@
 import { Chemical, ChemicalCategory } from "@/types/chemicals";
+import { StepChemicalMapping } from "@/lib/chemicals";
 
 // Helper for generating smart templates
 export const generateTemplate = (name: string, category: ChemicalCategory): Partial<Chemical> => {
@@ -59,4 +60,103 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
     }
 
     return template;
+};
+
+// --- AUTO-SUGGESTION AI LOGIC ---
+
+export interface ChemicalSuggestionResults {
+    onHand: SuggestionItem[];
+    alternatives: SuggestionItem[];
+}
+
+export interface SuggestionItem {
+    chem: Chemical;
+    score: number;
+    reason: string;
+    suggestedMapping: StepChemicalMapping;
+}
+
+export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical[], stepId: string): ChemicalSuggestionResults => {
+    const normalizedStep = stepName.toLowerCase();
+
+    // Keyword Map
+    const keywords: Record<string, string[]> = {
+        'wheel': ['wheel', 'rim', 'tire', 'iron', 'brake'],
+        'tire': ['tire', 'rubber', 'dressing'],
+        'glass': ['glass', 'window', 'mirror'],
+        'interior': ['interior', 'leather', 'fabric', 'carpet', 'plastic', 'dash'],
+        'leather': ['leather', 'conditioner'],
+        'wash': ['shampoo', 'soap', 'wash', 'foam'],
+        'wax': ['wax', 'sealant', 'ceramic', 'coating'],
+        'polish': ['polish', 'compound', 'cut'],
+        'clay': ['clay', 'lubricant'],
+        'bug': ['bug', 'tar', 'sap'],
+        'prep': ['apc', 'cleaner', 'degreaser', 'prep'],
+    };
+
+    const scoreChemical = (chem: Chemical): { score: number; reason: string } => {
+        let score = 0;
+        const reasons: string[] = [];
+        const normName = chem.name.toLowerCase();
+        const normUsedFor = (chem.used_for || []).map(u => u.toLowerCase());
+
+        // 1. Exact Step Name Match in Chemical Name
+        if (normName.includes(normalizedStep)) {
+            score += 15;
+            reasons.push("Name matches step");
+        }
+
+        // 2. Keyword Matching
+        for (const [key, terms] of Object.entries(keywords)) {
+            if (normalizedStep.includes(key)) {
+                // Step has key, does Chem have terms?
+                const hasTerm = terms.some(t => normName.includes(t) || normUsedFor.some(u => u.includes(t)));
+                if (hasTerm) {
+                    score += 10;
+                    reasons.push(`Matches keyword category: ${key}`);
+                    break; // Count category once
+                }
+            }
+        }
+
+        // 3. Category Heuristic
+        if ((normalizedStep.includes('interior') || normalizedStep.includes('vacuum') || normalizedStep.includes('mat')) && chem.category === 'Interior') {
+            score += 5;
+        }
+        if ((normalizedStep.includes('exterior') || normalizedStep.includes('wash') || normalizedStep.includes('rinse')) && chem.category === 'Exterior') {
+            score += 5;
+        }
+
+        return { score, reason: reasons.join(', ') };
+    };
+
+    const results: SuggestionItem[] = allChemicals.map(chem => {
+        const { score, reason } = scoreChemical(chem);
+        if (score <= 0) return null;
+
+        // Construct Mapping
+        const defaultDilution = chem.dilution_ratios?.[0];
+        const mapping: StepChemicalMapping = {
+            id: `suggest_${chem.id}_${Date.now()}`,
+            step_id: stepId,
+            chemical_id: chem.id,
+            chemical: chem, // Include joined for display
+            dilution_override: defaultDilution?.ratio || 'RTU',
+            tool_override: defaultDilution?.method || chem.application_guide?.method || 'Standard',
+            application_override: `Use for ${stepName}. ${chem.application_guide?.notes || ''}`.substring(0, 150),
+            warnings_override: chem.warnings?.damage_risk === 'High' ? chem.warnings?.risks?.[0] : '',
+            include_in_prep: true,
+            updated_at: new Date().toISOString()
+        };
+
+        return { chem, score, reason, suggestedMapping: mapping };
+    })
+        .filter((item): item is SuggestionItem => item !== null)
+        .sort((a, b) => b.score - a.score);
+
+    // Split groups
+    const onHand = results.filter(r => r.chem.is_on_hand !== false); // Default true
+    const alternatives = results.filter(r => r.chem.is_on_hand === false);
+
+    return { onHand, alternatives };
 };
