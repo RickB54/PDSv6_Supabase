@@ -17,6 +17,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
+import { getSupabaseEstimates } from "@/lib/supa-data";
 
 const Reports = () => {
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
@@ -67,7 +68,8 @@ const Reports = () => {
         jobsData = [];
       }
     }
-    const estimatesData = (await localforage.getItem<any[]>("estimates")) || [];
+    // Load Estimates from Supabase
+    const estimatesData = await getSupabaseEstimates();
     const incomeData = await getReceivables();
     const expenseData = await getExpenses();
     const payrollData = (await localforage.getItem<any[]>("payroll-history")) || [];
@@ -295,7 +297,8 @@ const Reports = () => {
       doc.setFontSize(10);
       doc.text(`#${est.id || 'N/A'} - ${est.customerName || 'N/A'}`, 20, y);
       y += 5;
-      doc.text(`Service: ${est.service || 'N/A'} | Total: $${est.total || 0}`, 20, y);
+      const serviceList = Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A');
+      doc.text(`Service: ${serviceList} | Total: $${est.total || 0}`, 20, y);
       y += 5;
       doc.text(`Status: ${est.status || 'Draft'}`, 20, y);
       y += 8;
@@ -832,10 +835,12 @@ const Reports = () => {
                   <TableBody>
                     {filterByDate(estimates).map(est => (
                       <TableRow key={est.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-mono text-zinc-500">#{est.id}</TableCell>
+                        <TableCell className="font-mono text-zinc-500">#{est.estimateNumber || est.id?.substring(0, 6)}</TableCell>
                         <TableCell className="text-zinc-300 font-medium">{est.customerName || 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-400">{est.service || 'N/A'}</TableCell>
-                        <TableCell className="text-emerald-400 font-bold">${est.total || 0}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[200px] truncate" title={Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || '')}>
+                          {Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A')}
+                        </TableCell>
+                        <TableCell className="text-emerald-400 font-bold">${(est.total || 0).toFixed(2)}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-0.5 rounded text-xs font-bold ${est.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : est.status === 'Sent' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
                             {est.status || 'Draft'}
