@@ -202,47 +202,49 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                     </ul>
                 </div>
 
-                {/* Inventory Quick Actions */}
-                <div className="px-4 py-3 bg-zinc-950/50 border-t border-zinc-800 space-y-3" onClick={e => e.stopPropagation()}>
-                    <div className="flex gap-2">
-                        <div className="flex-1">
-                            <Label className="text-[10px] uppercase text-zinc-500 font-bold">Cost ($)</Label>
-                            <Input
-                                value={cost}
-                                onChange={e => setCost(e.target.value)}
-                                className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
-                                placeholder="0.00"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                            />
+                {/* Inventory Quick Actions (Admins Only) */}
+                {isAdmin && (
+                    <div className="px-4 py-3 bg-zinc-950/50 border-t border-zinc-800 space-y-3" onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Cost ($)</Label>
+                                <Input
+                                    value={cost}
+                                    onChange={e => setCost(e.target.value)}
+                                    className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
+                                    placeholder="0.00"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Size</Label>
+                                <Input
+                                    value={size}
+                                    onChange={e => setSize(e.target.value)}
+                                    className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
+                                    placeholder="e.g. 16oz"
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <Label className="text-[10px] uppercase text-zinc-500 font-bold">Size</Label>
-                            <Input
-                                value={size}
-                                onChange={e => setSize(e.target.value)}
-                                className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
-                                placeholder="e.g. 16oz"
-                            />
-                        </div>
+                        <Button
+                            onClick={handleAddToInventory}
+                            disabled={isAdding}
+                            size="sm"
+                            className="w-full h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700"
+                        >
+                            {isAdding ? (
+                                <span className="animate-pulse">Adding...</span>
+                            ) : (
+                                <>
+                                    <PlusCircle className="w-3.5 h-3.5 mr-2 text-emerald-500" />
+                                    Add to Inventory
+                                </>
+                            )}
+                        </Button>
                     </div>
-                    <Button
-                        onClick={handleAddToInventory}
-                        disabled={isAdding}
-                        size="sm"
-                        className="w-full h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700"
-                    >
-                        {isAdding ? (
-                            <span className="animate-pulse">Adding...</span>
-                        ) : (
-                            <>
-                                <PlusCircle className="w-3.5 h-3.5 mr-2 text-emerald-500" />
-                                Add to Inventory
-                            </>
-                        )}
-                    </Button>
-                </div>
+                )}
 
                 {/* Footer Actions */}
                 <div className="mt-auto pt-3 border-t border-zinc-800/50 flex justify-between items-center text-xs text-zinc-500">
