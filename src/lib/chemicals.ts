@@ -84,3 +84,39 @@ export async function deleteChemical(id: string): Promise<boolean> {
     const { error } = await supabase.from('chemical_library').delete().eq('id', id);
     return !error;
 }
+
+// Helper to store Inventory Defaults in user_notes if columns are missing
+export interface InventoryConfig {
+    cost?: number;
+    size?: string;
+}
+
+export function extractInventoryConfig(chemical: Chemical): InventoryConfig {
+    // 1. Prefer explicit columns
+    if (chemical.default_cost !== undefined || chemical.default_size !== undefined) {
+        return { cost: chemical.default_cost, size: chemical.default_size };
+    }
+    // 2. Fallback to notes storage
+    if (!chemical.user_notes) return {};
+    const match = chemical.user_notes.match(/\|\|INV_CONFIG::(.*)\|\|/);
+    if (match && match[1]) {
+        try { return JSON.parse(match[1]); } catch (e) { return {}; }
+    }
+    return {};
+}
+
+export async function updateInventoryConfig(id: string, config: InventoryConfig, currentNotes?: string) {
+    const configStr = `||INV_CONFIG::${JSON.stringify(config)}||`;
+    let newNotes = currentNotes || "";
+    // Remove old config if exists
+    newNotes = newNotes.replace(/\|\|INV_CONFIG::.*\|\|/, '').trim();
+    // Append new config
+    newNotes = `${newNotes} ${configStr}`.trim();
+
+    // Try sending columns too just in case they exist, plus the notes fallback
+    return updateChemicalPartial(id, {
+        user_notes: newNotes,
+        default_cost: config.cost,
+        default_size: config.size
+    } as any); // Cast to any to allow default_cost/size if types are strict but DB is loose
+}

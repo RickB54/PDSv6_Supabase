@@ -17,7 +17,7 @@ import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil, Pl
 import { useMemo, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateChemicalPartial } from "@/lib/chemicals";
+import { updateChemicalPartial, extractInventoryConfig, updateInventoryConfig } from "@/lib/chemicals";
 import * as inventoryData from "@/lib/inventory-data";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,15 +31,20 @@ interface ChemicalCardProps {
 
 export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }: ChemicalCardProps) {
     const { toast } = useToast();
-    const [cost, setCost] = useState(chemical.default_cost?.toString() || "");
-    const [size, setSize] = useState(chemical.default_size || "");
+
+    // Initial load using helper (supports both columns and notes fallback)
+    const initialConfig = useMemo(() => extractInventoryConfig(chemical), [chemical]);
+
+    const [cost, setCost] = useState(initialConfig.cost?.toString() || "");
+    const [size, setSize] = useState(initialConfig.size || "");
     const [isAdding, setIsAdding] = useState(false);
 
     // Sync state with props (e.g. after save or refresh)
     useEffect(() => {
-        if (chemical.default_cost !== undefined) setCost(chemical.default_cost.toString());
-        if (chemical.default_size !== undefined) setSize(chemical.default_size);
-    }, [chemical.default_cost, chemical.default_size]);
+        const freshConfig = extractInventoryConfig(chemical);
+        if (freshConfig.cost !== undefined) setCost(freshConfig.cost.toString());
+        if (freshConfig.size !== undefined) setSize(freshConfig.size);
+    }, [chemical]);
 
     const handleAddToInventory = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -50,11 +55,12 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
 
         setIsAdding(true);
         try {
-            // 1. Save defaults to Knowledge Base
-            await updateChemicalPartial(chemical.id, {
-                default_cost: parseFloat(cost) || 0,
-                default_size: size
-            });
+            // 1. Save defaults to Knowledge Base (using robust storage)
+            await updateInventoryConfig(chemical.id, {
+                cost: parseFloat(cost) || 0,
+                size: size
+            }, chemical.user_notes);
+
             if (onUpdate) onUpdate();
 
             // 2. Add to Inventory
@@ -114,22 +120,24 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                     </div>
                 )}
 
+                {/* Configured Badge (Top Left) */}
+                {(initialConfig.cost !== undefined || initialConfig.size !== undefined || (cost && size)) && (
+                    <div className="absolute top-2 left-2 z-10">
+                        <Badge className="bg-emerald-600 border-emerald-500 text-white font-bold shadow-lg shadow-black/50 text-[10px] px-1.5 py-0.5 flex items-center gap-1 hover:bg-emerald-500">
+                            <Check className="w-3 h-3 text-white stroke-2" />
+                            Configured
+                        </Badge>
+                    </div>
+                )}
+
                 {/* Category Badge */}
-                <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                <div className="absolute top-2 right-2 flex flex-col gap-1 items-end z-10">
                     <Badge
                         variant="outline"
                         className="bg-black/80 backdrop-blur border-zinc-700 text-white font-bold"
                     >
                         {chemical.category}
                     </Badge>
-
-                    {/* Inventory Saved / Configured Badge */}
-                    {(chemical.default_cost !== undefined || chemical.default_size !== undefined) && (
-                        <Badge className="bg-emerald-900/90 backdrop-blur border-emerald-500/50 text-emerald-100 text-[10px] px-1.5 py-0.5 flex items-center gap-1 shadow-sm shadow-emerald-900/50">
-                            <Check className="w-2.5 h-2.5" />
-                            Configured
-                        </Badge>
-                    )}
 
                     {/* AI Tracking Badge */}
                     {chemical.ai_generated && !chemical.manually_modified && (
