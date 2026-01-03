@@ -305,6 +305,121 @@ const Reports = () => {
     else window.open(doc.output('bloburl'), '_blank');
   };
 
+  const generateAccountingReport = (download = false) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Accounting & Financial Report", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+
+    let y = 40;
+
+    // 1. Inventory Assets (Calculated from live data)
+    const chemVal = chemicals.reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
+    const matVal = materials.reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
+    const toolVal = tools.reduce((s, t) => s + ((t.cost || 0) * (t.quantity || 1)), 0);
+    const totalAssets = chemVal + matVal + toolVal;
+
+    doc.setFontSize(14);
+    doc.setTextColor(34, 197, 94); // Green
+    doc.text("Inventory Assets", 20, y);
+    doc.setTextColor(0, 0, 0);
+    y += 10;
+    doc.setFontSize(10);
+    doc.text(`Chemicals Value: $${chemVal.toFixed(2)}`, 20, y);
+    doc.text(`Materials Value: $${matVal.toFixed(2)}`, 80, y);
+    doc.text(`Tools Value: $${toolVal.toFixed(2)}`, 140, y);
+    y += 6;
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Inventory Investment: $${totalAssets.toFixed(2)}`, 20, y);
+    doc.setFont(undefined, 'normal');
+    y += 15;
+
+    // 2. Financial Summary
+    // Filter data based on current UI filter
+    const activeIncome = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length);
+    const activeExpenses = expenses.filter(e => filterByDate([e]).length);
+
+    const totalInc = activeIncome.reduce((s, i) => s + (i.amount || 0), 0);
+    const totalExp = activeExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+    const netProfit = totalInc - totalExp;
+
+    doc.setFontSize(14);
+    doc.text("Financial Summary", 20, y);
+    y += 10;
+    doc.setFontSize(10);
+    doc.text(`Total Income: $${totalInc.toFixed(2)}`, 20, y);
+    doc.text(`Total Operating Expenses: $${totalExp.toFixed(2)}`, 80, y);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(netProfit >= 0 ? 34 : 220, netProfit >= 0 ? 197 : 38, netProfit >= 0 ? 94 : 38);
+    doc.text(`Net Profit: $${netProfit.toFixed(2)}`, 140, y);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    y += 15;
+
+    // 3. Break-Even Analysis
+    const totalInvestment = totalAssets + totalExp; // Assets + Expenses
+    const remainingBreakEven = totalInvestment - totalInc;
+    const recoveryPct = totalInvestment > 0 ? (totalInc / totalInvestment) * 100 : 0;
+
+    doc.setFontSize(14);
+    doc.setTextColor(99, 102, 241); // Indigo
+    doc.text("Break-Even Analysis", 20, y);
+    doc.setTextColor(0, 0, 0);
+    y += 10;
+    doc.setFontSize(10);
+    doc.text("Tracks ROI (Inventory Assets + Expenses vs Revenue)", 20, y);
+    y += 6;
+    doc.text(`Total Investment (Assets + Exp): $${totalInvestment.toFixed(2)}`, 20, y);
+    doc.text(`Total Service Revenue: $${totalInc.toFixed(2)}`, 100, y);
+    y += 6;
+    doc.setFont(undefined, 'bold');
+    if (remainingBreakEven > 0) {
+      doc.setTextColor(234, 88, 12); // Orange
+      doc.text(`Remaining to Break Even: $${remainingBreakEven.toFixed(2)}`, 20, y);
+    } else {
+      doc.setTextColor(34, 197, 94); // Green
+      doc.text(`PROFITABLE (Break-Even Achieved!)`, 20, y);
+    }
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Recovery: ${recoveryPct.toFixed(1)}%`, 140, y);
+    doc.setFont(undefined, 'normal');
+    y += 15;
+
+    // 4. Ledger Details
+    doc.setFontSize(14);
+    doc.text("Ledger Details", 20, y);
+    y += 10;
+
+    // Income
+    doc.setFontSize(11);
+    doc.text("Income", 20, y);
+    y += 6;
+    activeIncome.forEach(i => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(9);
+      doc.text(`+ $${(i.amount || 0).toFixed(2)} | ${(i.date || '').slice(0, 10)} | ${i.category} | ${i.description || '-'}`, 25, y);
+      y += 5;
+    });
+
+    y += 5;
+    if (y > 270) { doc.addPage(); y = 20; }
+
+    // Expenses
+    doc.setFontSize(11);
+    doc.text("Expenses", 20, y);
+    y += 6;
+    activeExpenses.forEach(e => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(9);
+      doc.text(`- $${(e.amount || 0).toFixed(2)} | ${(e.createdAt || '').slice(0, 10)} | ${e.category} | ${e.description || '-'}`, 25, y);
+      y += 5;
+    });
+
+    if (download) doc.save(`AccountingReport_${new Date().toISOString().split('T')[0]}.pdf`);
+    else window.open(doc.output('bloburl'), '_blank');
+  };
+
   const buildCustomerJobsPDF = (cust: any, jobsForCust: any[], returnDataUrl: boolean) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
@@ -741,92 +856,95 @@ const Reports = () => {
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-zinc-200">Accounting Ledger</h3>
-                <Button variant="outline" size="sm" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
-                  const within = (d: string) => {
-                    const dt = new Date(d);
-                    let okQuick = true;
-                    const now = new Date();
-                    if (dateFilter === 'daily') okQuick = dt.toDateString() === now.toDateString();
-                    else if (dateFilter === 'weekly') okQuick = dt >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    else if (dateFilter === 'monthly') okQuick = dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
-                    let okRange = true;
-                    if (dateRange.from) okRange = dt >= new Date(dateRange.from.setHours(0, 0, 0, 0));
-                    if (okRange && dateRange.to) okRange = dt <= new Date(dateRange.to.setHours(23, 59, 59, 999));
-                    return okQuick && okRange;
-                  };
-                  const lines = ['Type,Date,Amount,Category,Description,Customer,Method'];
-                  income.filter(i => within(i.date || i.createdAt)).forEach(i => lines.push(`Income,${(i.date || i.createdAt || '').slice(0, 10)},${i.amount || 0},${i.category || ''},${String(i.description || '').replace(/,/g, ';')},${i.customerName || ''},${i.paymentMethod || ''}`));
-                  expenses.filter(e => within(e.createdAt)).forEach(e => lines.push(`Expense,${(e.createdAt || '').slice(0, 10)},${e.amount || 0},${e.category || ''},${String(e.description || '').replace(/,/g, ';')},,`));
-                  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a'); a.href = url; a.download = `accounting_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
-                  setTimeout(() => URL.revokeObjectURL(url), 1000);
-                }}>
-                  <Save className="h-4 w-4 mr-2" /> Export CSV
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                  <p className="text-xs text-zinc-500 uppercase">Total Income</p>
-                  <p className="text-2xl font-bold text-emerald-400 mt-1">${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateAccountingReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateAccountingReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
+                  <Button variant="outline" size="sm" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
+                    const within = (d: string) => {
+                      const dt = new Date(d);
+                      let okQuick = true;
+                      const now = new Date();
+                      if (dateFilter === 'daily') okQuick = dt.toDateString() === now.toDateString();
+                      else if (dateFilter === 'weekly') okQuick = dt >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                      else if (dateFilter === 'monthly') okQuick = dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+                      let okRange = true;
+                      if (dateRange.from) okRange = dt >= new Date(dateRange.from.setHours(0, 0, 0, 0));
+                      if (okRange && dateRange.to) okRange = dt <= new Date(dateRange.to.setHours(23, 59, 59, 999));
+                      return okQuick && okRange;
+                    };
+                    const lines = ['Type,Date,Amount,Category,Description,Customer,Method'];
+                    income.filter(i => within(i.date || i.createdAt)).forEach(i => lines.push(`Income,${(i.date || i.createdAt || '').slice(0, 10)},${i.amount || 0},${i.category || ''},${String(i.description || '').replace(/,/g, ';')},${i.customerName || ''},${i.paymentMethod || ''}`));
+                    expenses.filter(e => within(e.createdAt)).forEach(e => lines.push(`Expense,${(e.createdAt || '').slice(0, 10)},${e.amount || 0},${e.category || ''},${String(e.description || '').replace(/,/g, ';')},,`));
+                    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `accounting_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  }}>
+                    <Save className="h-4 w-4 mr-2" /> Export CSV
+                  </Button>
                 </div>
-                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                  <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
-                  <p className="text-2xl font-bold text-red-400 mt-1">${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}</p>
-                </div>
-                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                  <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    {(() => {
-                      const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
-                      const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
-                      const p = inc - exp;
-                      return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
-                    })()}
-                  </p>
-                </div>
-              </div>
 
-              {/* Income Table */}
-              <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Income Records</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
-                <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
-                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
-                        <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">{i.category || 'General'}</TableCell>
-                        <TableCell className="text-zinc-400 max-w-[150px] truncate">{i.description}</TableCell>
-                        <TableCell className="text-zinc-400">{i.customerName}</TableCell>
-                        <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
-                      </TableRow>
-                    ))}
-                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                    <p className="text-xs text-zinc-500 uppercase">Total Income</p>
+                    <p className="text-2xl font-bold text-emerald-400 mt-1">${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
+                  </div>
+                  <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                    <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
+                    <p className="text-2xl font-bold text-red-400 mt-1">${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}</p>
+                  </div>
+                  <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                    <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      {(() => {
+                        const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
+                        const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
+                        const p = inc - exp;
+                        return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
+                      })()}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Expense Table */}
-              <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Expense Records</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
-                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
-                        <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">{e.category || 'General'}</TableCell>
-                        <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
-                      </TableRow>
-                    ))}
-                    {expenses.filter(e => filterByDate([e]).length).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No expense records.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </div>
+                {/* Income Table */}
+                <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Income Records</h4>
+                <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+                  <Table>
+                    <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
+                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                          <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
+                          <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
+                          <TableCell className="text-zinc-300">{i.category || 'General'}</TableCell>
+                          <TableCell className="text-zinc-400 max-w-[150px] truncate">{i.description}</TableCell>
+                          <TableCell className="text-zinc-400">{i.customerName}</TableCell>
+                          <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
+                        </TableRow>
+                      ))}
+                      {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Expense Table */}
+                <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Expense Records</h4>
+                <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
+                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                          <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
+                          <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
+                          <TableCell className="text-zinc-300">{e.category || 'General'}</TableCell>
+                          <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
+                        </TableRow>
+                      ))}
+                      {expenses.filter(e => filterByDate([e]).length).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No expense records.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </div>
             </Card>
           </TabsContent>
 
