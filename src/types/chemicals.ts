@@ -70,4 +70,8 @@ export interface Chemical {
     // AI Tracking
     ai_generated?: boolean;
     manually_modified?: boolean;
+
+    // Inventory Defaults
+    default_cost?: number;
+    default_size?: string;
 }

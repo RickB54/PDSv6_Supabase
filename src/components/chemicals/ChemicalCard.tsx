@@ -13,17 +13,72 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Chemical } from "@/types/chemicals";
-import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil } from "lucide-react";
-import { useMemo } from "react";
+import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil, PlusCircle, Package } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { updateChemicalPartial } from "@/lib/chemicals";
+import * as inventoryData from "@/lib/inventory-data";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChemicalCardProps {
     chemical: Chemical;
     onClick: () => void;
     isAdmin?: boolean;
+    onClick: () => void;
+    isAdmin?: boolean;
     onDelete?: (id: string) => void;
+    onUpdate?: () => void;
 }
 
-export function ChemicalCard({ chemical, onClick, isAdmin, onDelete }: ChemicalCardProps) {
+export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }: ChemicalCardProps) {
+    const { toast } = useToast();
+    const [cost, setCost] = useState(chemical.default_cost?.toString() || "");
+    const [size, setSize] = useState(chemical.default_size || "");
+    const [isAdding, setIsAdding] = useState(false);
+
+    const handleAddToInventory = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!cost && !size) {
+            toast({ title: "Missing Data", description: "Please enter a cost or size.", variant: "destructive" });
+            return;
+        }
+
+        setIsAdding(true);
+        try {
+            // 1. Save defaults to Knowledge Base
+            await updateChemicalPartial(chemical.id, {
+                default_cost: parseFloat(cost) || 0,
+                default_size: size
+            });
+            if (onUpdate) onUpdate();
+
+            // 2. Add to Inventory
+            const newItem = {
+                name: chemical.name,
+                category: chemical.category,
+                costPerBottle: parseFloat(cost) || 0,
+                bottleSize: size || "16oz",
+                currentStock: 0,
+                threshold: 1,
+                chemicalLibraryId: chemical.id,
+                imageUrl: chemical.primary_image_url
+            };
+
+            await inventoryData.saveChemical(newItem as any);
+
+            toast({
+                title: "Added to Inventory",
+                description: `${chemical.name} has been added to your inventory tracking.`,
+                className: "bg-emerald-900 border-emerald-800 text-white"
+            });
+        } catch (err) {
+            console.error(err);
+            toast({ title: "Error", description: "Failed to add to inventory", variant: "destructive" });
+        } finally {
+            setIsAdding(false);
+        }
+    };
     // Determine border/glow color based on theme_color or category
     const themeStyle = useMemo(() => {
         return {
@@ -125,6 +180,48 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete }: ChemicalC
                             </li>
                         )}
                     </ul>
+                </div>
+
+                {/* Inventory Quick Actions */}
+                <div className="px-4 py-3 bg-zinc-950/50 border-t border-zinc-800 space-y-3" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-2">
+                        <div className="flex-1">
+                            <Label className="text-[10px] uppercase text-zinc-500 font-bold">Cost ($)</Label>
+                            <Input
+                                value={cost}
+                                onChange={e => setCost(e.target.value)}
+                                className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
+                                placeholder="0.00"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <Label className="text-[10px] uppercase text-zinc-500 font-bold">Size</Label>
+                            <Input
+                                value={size}
+                                onChange={e => setSize(e.target.value)}
+                                className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
+                                placeholder="e.g. 16oz"
+                            />
+                        </div>
+                    </div>
+                    <Button
+                        onClick={handleAddToInventory}
+                        disabled={isAdding}
+                        size="sm"
+                        className="w-full h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700"
+                    >
+                        {isAdding ? (
+                            <span className="animate-pulse">Adding...</span>
+                        ) : (
+                            <>
+                                <PlusCircle className="w-3.5 h-3.5 mr-2 text-emerald-500" />
+                                Add to Inventory
+                            </>
+                        )}
+                    </Button>
                 </div>
 
                 {/* Footer Actions */}

@@ -128,6 +128,7 @@ export default function ChemicalsLibrary() {
                                 onClick={() => handleCardClick(c)}
                                 isAdmin={isAdmin}
                                 onDelete={handleDeleteChemical}
+                                onUpdate={handleChemicalUpdate}
                             />
                         ))}
                         {filtered.length === 0 && (
