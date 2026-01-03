@@ -883,68 +883,69 @@ const Reports = () => {
                     <Save className="h-4 w-4 mr-2" /> Export CSV
                   </Button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                    <p className="text-xs text-zinc-500 uppercase">Total Income</p>
-                    <p className="text-2xl font-bold text-emerald-400 mt-1">${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
-                  </div>
-                  <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                    <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
-                    <p className="text-2xl font-bold text-red-400 mt-1">${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}</p>
-                  </div>
-                  <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                    <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      {(() => {
-                        const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
-                        const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
-                        const p = inc - exp;
-                        return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
-                      })()}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Income</p>
+                  <p className="text-2xl font-bold text-emerald-400 mt-1">${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
                 </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
+                  <p className="text-2xl font-bold text-red-400 mt-1">${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
+                  <p className="text-2xl font-bold text-white mt-1">
+                    {(() => {
+                      const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
+                      const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
+                      const p = inc - exp;
+                      return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
+                    })()}
+                  </p>
+                </div>
+              </div>
 
-                {/* Income Table */}
-                <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Income Records</h4>
-                <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
-                  <Table>
-                    <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
-                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                          <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
-                          <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
-                          <TableCell className="text-zinc-300">{i.category || 'General'}</TableCell>
-                          <TableCell className="text-zinc-400 max-w-[150px] truncate">{i.description}</TableCell>
-                          <TableCell className="text-zinc-400">{i.customerName}</TableCell>
-                          <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
-                        </TableRow>
-                      ))}
-                      {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
-                    </TableBody>
-                  </Table>
-                </div>
+              {/* Income Table */}
+              <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Income Records</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
+                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">{i.category || 'General'}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[150px] truncate">{i.description}</TableCell>
+                        <TableCell className="text-zinc-400">{i.customerName}</TableCell>
+                        <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
+                      </TableRow>
+                    ))}
+                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
 
-                {/* Expense Table */}
-                <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Expense Records</h4>
-                <div className="rounded-lg border border-zinc-800 overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
-                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                          <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
-                          <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
-                          <TableCell className="text-zinc-300">{e.category || 'General'}</TableCell>
-                          <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
-                        </TableRow>
-                      ))}
-                      {expenses.filter(e => filterByDate([e]).length).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No expense records.</TableCell></TableRow>}
-                    </TableBody>
-                  </Table>
-                </div>
+              {/* Expense Table */}
+              <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Expense Records</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
+                      <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
+                        <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300">{e.category || 'General'}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
+                      </TableRow>
+                    ))}
+                    {expenses.filter(e => filterByDate([e]).length).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No expense records.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </TabsContent>
 
@@ -998,7 +999,7 @@ const Reports = () => {
         </Dialog>
 
       </main>
-    </div>
+    </div >
   );
 };
 
