@@ -16,6 +16,7 @@ import jsPDF from "jspdf";
 import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
+import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
 
 const Reports = () => {
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
@@ -53,9 +54,10 @@ const Reports = () => {
   const loadData = async () => {
     const cust = (await localforage.getItem<any[]>("customers")) || [];
     const inv = (await localforage.getItem<any[]>("invoices")) || [];
-    const chems = (await localforage.getItem<any[]>("chemicals")) || [];
-    const mats = (await localforage.getItem<any[]>("materials")) || [];
-    const tls = (await localforage.getItem<any[]>("tools")) || [];
+    // Load Inventory from Supabase
+    const chems = await getChemicals();
+    const mats = await getMaterials();
+    const tls = await getTools();
     let jobsData = (await localforage.getItem<any[]>("completed-jobs")) || [];
     if (!jobsData || jobsData.length === 0) {
       try {
