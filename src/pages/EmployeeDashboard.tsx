@@ -230,16 +230,16 @@ const EmployeeDashboard = () => {
 
           {/* Big cards arranged in two rows (2 columns on md+) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link to="/service-checklist" className="block">
-              <Card className="p-6 bg-green-700 text-white rounded-xl">
+            <Link to="/service-checklist" className="block h-full">
+              <Card className="p-6 bg-green-700 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">SERVICE CHECKLIST</div>
                 <div className="text-sm opacity-90">Start Job • View Active Jobs</div>
                 <div className="mt-3 inline-block px-3 py-1 rounded-full bg-green-900 text-xs">[ 0 Active Jobs ]</div>
               </Card>
             </Link>
 
-            <Link to="/staff-schedule" className="block">
-              <Card className="p-6 bg-teal-700 text-white rounded-xl">
+            <Link to="/staff-schedule" className="block h-full">
+              <Card className="p-6 bg-teal-700 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">WORK SCHEDULE</div>
                 <div className="text-sm opacity-90">View your upcoming shifts and times.</div>
               </Card>
@@ -247,8 +247,8 @@ const EmployeeDashboard = () => {
 
             {/* Orientation box (orange) */}
             {/* Prime Training Center */}
-            <Link to="/training-manual" className="block text-left">
-              <Card className="p-6 bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-colors">
+            <Link to="/training-manual" className="block text-left h-full">
+              <Card className="p-6 bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-colors h-full">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="text-2xl font-bold">PRIME TRAINING CENTER</div>
                 </div>
@@ -257,40 +257,40 @@ const EmployeeDashboard = () => {
               </Card>
             </Link>
 
-            <Link to="/exam" className="block text-left">
-              <Card className="p-6 bg-orange-600 text-white rounded-xl">
+            <Link to="/exam" className="block text-left h-full">
+              <Card className="p-6 bg-orange-600 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">ORIENTATION (EXAM)</div>
                 <div className="text-sm opacity-90">Company overview • Policies • Final Exam</div>
                 <div className="mt-3 inline-block px-3 py-1 rounded-full bg-orange-800 text-xs">New Employee</div>
               </Card>
             </Link>
 
-            <Link to="/services" className="block">
-              <Card className="p-6 bg-blue-700 text-white rounded-xl">
+            <Link to="/services" className="block h-full">
+              <Card className="p-6 bg-blue-700 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">VIEW WEBSITE</div>
                 <div className="text-sm opacity-90">To view our current package pricelist, add-ons and other website tools.</div>
               </Card>
             </Link>
 
             {/* Rick's Pro Tips (purple) */}
-            <button type="button" onClick={() => setTipsOpen(true)} className="block text-left">
-              <Card className="p-6 bg-purple-700 text-white rounded-xl">
+            <button type="button" onClick={() => setTipsOpen(true)} className="block text-left h-full">
+              <Card className="p-6 bg-purple-700 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">RICK’S PRO TIPS</div>
                 <div className="text-sm opacity-90">Quick professional reminders to reduce rework.</div>
               </Card>
             </button>
 
             {/* App Team Chat (green) */}
-            <Link to="/team-chat" className="block">
-              <Card className="p-6 bg-green-700 text-white rounded-xl">
+            <Link to="/team-chat" className="block h-full">
+              <Card className="p-6 bg-green-700 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">APP TEAM CHAT</div>
                 <div className="text-sm opacity-90">Communicate with your team in real-time.</div>
               </Card>
             </Link>
 
             {/* Chemical Cards (cyan/blue) */}
-            <Link to="/chemicals" className="block">
-              <Card className="p-6 bg-cyan-700 text-white rounded-xl">
+            <Link to="/chemicals" className="block h-full">
+              <Card className="p-6 bg-cyan-700 text-white rounded-xl h-full">
                 <div className="text-2xl font-bold">CHEMICAL CARDS</div>
                 <div className="text-sm opacity-90">Browse products, dilution ratios, and usage guides.</div>
               </Card>
