@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { useAlertsStore } from "@/store/alerts";
@@ -450,7 +450,7 @@ const InventoryControl = () => {
                               </Button>
                             )}
 
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, 'chemical', c.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
@@ -477,13 +477,43 @@ const InventoryControl = () => {
                         {c.currentStock} left
                       </span>
                     </div>
-                    <div className="flex justify-end gap-2 pt-2 border-t border-yellow-500/10">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8">
-                        <FileText className="h-4 w-4 mr-2" /> Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, 'chemical', c.name)} className="h-8 text-red-500">
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </Button>
+                    <div className="flex justify-between items-center pt-2 border-t border-yellow-500/10 gap-2 flex-wrap">
+                      <div className="flex gap-1">
+                        {c.chemicalLibraryId ? (
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300 px-2" onClick={() => window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId }))}>
+                              <FileText className="h-4 w-4 mr-1" /> Card
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10"
+                              title="Unlink Card"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!confirm('Unlink this chemical card?')) return;
+                                await inventoryData.saveChemical({ ...c, chemicalLibraryId: null }, false);
+                                loadData();
+                                toast({ title: "Unlinked", description: "Card link removed." });
+                              }}
+                            >
+                              <UnlinkIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400 px-2" onClick={() => { setLinkTargetItem(c); setLinkModalOpen(true); }}>
+                            <Plus className="h-4 w-4 mr-1" /> Link
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(c, 'chemical')} className="h-8 px-2">
+                          <Pencil className="h-4 w-4 mr-2" /> Edit
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, 'chemical', c.name)} className="h-8 text-red-500 px-2">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -551,7 +581,7 @@ const InventoryControl = () => {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(m, 'material')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(m, 'material')} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id, 'material', m.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
@@ -579,7 +609,7 @@ const InventoryControl = () => {
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-blue-500/10">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(m, 'material')} className="h-8">
-                        <FileText className="h-4 w-4 mr-2" /> Edit
+                        <Pencil className="h-4 w-4 mr-2" /> Edit
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id, 'material', m.name)} className="h-8 text-red-500">
                         <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -643,7 +673,7 @@ const InventoryControl = () => {
                         <TableCell className="text-zinc-300">${(t.price || 0).toFixed(2)}</TableCell>
                         <TableCell><span className="text-xs text-zinc-300 truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8 w-8 p-0"><FileText className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id, 'tool', t.name)} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
@@ -669,7 +699,7 @@ const InventoryControl = () => {
                     {t.notes && <div className="text-xs text-zinc-300">{t.notes}</div>}
                     <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(t, 'tool')} className="h-8">
-                        <FileText className="h-4 w-4 mr-2" /> Edit
+                        <Pencil className="h-4 w-4 mr-2" /> Edit
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id, 'tool', t.name)} className="h-8 text-red-500">
                         <Trash2 className="h-4 w-4 mr-2" /> Delete

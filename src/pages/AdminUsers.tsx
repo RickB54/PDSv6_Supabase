@@ -23,6 +23,7 @@ type AppUser = {
   updated_at?: string | null;
   isPending?: boolean;
   isLocalOnly?: boolean;
+  isCrmOnly?: boolean;
 };
 
 const roles: Role[] = ["admin", "employee", "customer"];
@@ -52,19 +53,21 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Supabase Data (Profiles & Invites)
-      // Workaround: Use ephemeral client to bypass RLS issues with authenticated session
-      // (Leveraging the fact that anon read access works as proven by verify script)
+      // 1. Fetch Supabase Data (Profiles & Invites & Customers)
       const anonClient = createClient(
         import.meta.env.VITE_SUPABASE_URL,
         import.meta.env.VITE_SUPABASE_ANON_KEY,
         { auth: { persistSession: false } }
       );
+
       const { data: profiles, error: pError } = await anonClient.from("app_users").select("id, role, name, email, updated_at");
       if (pError) throw pError;
 
       const { data: invites, error: iError } = await supabase.from("authorized_users").select("*");
       if (iError) console.error("Error fetching authorized_users (non-critical):", iError);
+
+      const { data: customers, error: cError } = await supabase.from("customers").select("id, full_name, email, created_at");
+      if (cError) console.error("Error fetching customers:", cError);
 
       // 2. Fetch Local Employees (Safely)
       let localEmployees: any[] = [];
@@ -74,20 +77,23 @@ export default function AdminUsers() {
         console.error("LocalForage error:", err);
       }
 
-      const activeMap = new Map((profiles || []).map(p => [p.email?.toLowerCase(), p]));
+      const activeMap = new Map((profiles || []).map(p => [(p.email || '').toLowerCase(), p]));
 
       // Combine all sources
       const combined: AppUser[] = [...(profiles || [])];
-      const seenEmails = new Set(combined.map(u => u.email?.toLowerCase()).filter(Boolean));
+      const seenEmails = new Set(combined.map(u => (u.email || '').toLowerCase().trim()).filter(Boolean));
 
       // Add Pending Invites (Authorized but no profile yet)
       (invites || []).forEach((inv: any) => {
-        const email = inv.email?.toLowerCase();
+        const email = (inv.email || '').toLowerCase().trim();
+        if (!email) return;
+
+        // Check against active profiles map AND seen set
         if (!activeMap.has(email)) {
           if (seenEmails.has(email)) return;
 
           combined.push({
-            id: 'pending_' + inv.email,
+            id: 'pending_' + inv.email, // Keep original email for ID or use normalized? Standardize on keeping DB value but checking normalized.
             role: inv.role,
             name: inv.name || inv.email,
             email: inv.email,
@@ -98,9 +104,31 @@ export default function AdminUsers() {
         }
       });
 
+      // Add CRM Customers (Registered in Customers table but no App/Auth User yet)
+      (customers || []).forEach((c: any) => {
+        const email = (c.email || '').toLowerCase().trim();
+
+        // If we have an email, ensure it's not already in the list
+        if (email && (activeMap.has(email) || seenEmails.has(email))) {
+          return;
+        }
+
+        // Add them!
+        combined.push({
+          id: 'crm_' + c.id,
+          role: 'customer',
+          name: c.full_name || "Unknown Customer",
+          email: c.email || "(No Email)",
+          updated_at: c.created_at,
+          isCrmOnly: true
+        });
+
+        if (email) seenEmails.add(email);
+      });
+
       // Add Local Employees missing from Supabase (Sync gap)
       localEmployees.forEach(emp => {
-        const email = emp.email?.toLowerCase();
+        const email = (emp.email || '').toLowerCase().trim();
         if (!email) return;
         if (!seenEmails.has(email)) {
           combined.push({
@@ -145,7 +173,12 @@ export default function AdminUsers() {
       }
 
       // Update actual user profile (app_users)
-      if (!id.startsWith('pending_') && !id.startsWith('local_')) {
+      if (id.startsWith('crm_')) {
+        // It's a CRM-only customer. We just invited them via authorized_users above. 
+        // Do NOT update app_users as they don't exist there yet.
+        toast({ title: "Access Granted", description: `Customer authorized as ${role}.` });
+      }
+      else if (!id.startsWith('pending_') && !id.startsWith('local_')) {
         const { error } = await supabase.from("app_users").update({ role }).eq("id", id);
         if (error) throw error;
       } else if (id.startsWith('local_')) {
@@ -155,11 +188,11 @@ export default function AdminUsers() {
         await localforage.setItem('company-employees', updated);
       }
 
-      toast({ title: "Role updated", description: `User is now ${role}` });
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)));
+      if (!id.startsWith('crm_')) toast({ title: "Role updated", description: `User is now ${role}` });
+
     } catch (e: any) {
       toast({ title: "Update failed", description: String(e?.message || e), variant: "destructive" });
-      // Revert optimism if needed, but we didn't do optimistic UI set here, so just refetch might be safer
       await fetchUsers();
     }
     setSavingId(null);
@@ -173,8 +206,13 @@ export default function AdminUsers() {
         const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
         const updated = localEmployees.map(e => e.id === editId || e.name === editName ? { ...e, name: editName } : e);
         await localforage.setItem('company-employees', updated);
+      } else if (editId.startsWith('crm_')) {
+        // Update Customer Table
+        const realId = editId.replace('crm_', '');
+        const { error } = await supabase.from("customers").update({ full_name: editName }).eq("id", realId);
+        if (error) throw error;
       } else {
-        // Update Supabase
+        // Update Supabase App User
         const { error } = await supabase.from("app_users").update({ name: editName }).eq("id", editId);
         if (error) throw error;
       }
@@ -196,8 +234,13 @@ export default function AdminUsers() {
         const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
         const updated = localEmployees.filter(e => e.id !== id);
         await localforage.setItem('company-employees', updated);
+      } else if (id.startsWith('crm_')) {
+        // Delete from Customers Table
+        const realId = id.replace('crm_', '');
+        const { error } = await supabase.from("customers").delete().eq("id", realId);
+        if (error) throw error;
       } else {
-        // Delete from Supabase
+        // Delete from Supabase App Users
         const { error } = await supabase.from("app_users").delete().eq("id", id);
         if (error) throw error;
         if (role === "customer") {

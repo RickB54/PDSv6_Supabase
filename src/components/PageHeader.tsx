@@ -71,7 +71,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
               {isFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </Button>
 
-            <Button asChild variant="outline" size="icon" className="sm:gap-2 hidden sm:flex">
+            <Button asChild variant="outline" size="icon" className="sm:gap-2 flex">
               <Link to="/">
                 <Globe className="h-4 w-4" />
                 <span className="sr-only">Website</span>

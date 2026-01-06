@@ -9,7 +9,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
 import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled } from "@/lib/auth";
-import "@/lib/storage-utils"; // Initialize all storage buckets
+// import "@/lib/storage-utils"; // Initialize all storage buckets - TEMPORARILY DISABLED
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";

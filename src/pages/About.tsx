@@ -89,7 +89,7 @@ const About = () => {
 
       {/* Hero Section with Video Background (click to open About dialog) */}
       <section
-        className="relative h-[25vh] min-h-[250px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-zinc-900 to-slate-900 border-b border-white/10"
+        className="relative h-auto min-h-[40vh] py-12 flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-zinc-900 to-slate-900 border-b border-white/10"
         aria-label="About Header"
       >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/50 via-black/80 to-black z-0" />

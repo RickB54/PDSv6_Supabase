@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
-import { getSupabaseCustomers, Customer } from "@/lib/supa-data";
+import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 
 type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
@@ -46,6 +47,10 @@ type VehicleDB = Record<string, Record<string, string>>;
 
 export default function VehicleClassification() {
     const { toast } = useToast();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const returnTo = location.state?.returnTo;
+
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [selectedMake, setSelectedMake] = useState<string>("");
     const [selectedModel, setSelectedModel] = useState<string>("");
@@ -224,14 +229,44 @@ export default function VehicleClassification() {
         } catch (e) {
             console.error("Error determining category:", e);
         }
-
         setCategory(autoCategory);
         setStep(3);
     };
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         saveToLocalStorage();
-        setStep(4);
+
+        // Save to Supabase vehicles table so it's searchable for future bookings
+        try {
+            await upsertSupabaseVehicle({
+                make: selectedMake,
+                model: selectedModel,
+                type: category,
+                customer_id: selectedCustomerId || undefined
+            });
+            toast({
+                title: "Vehicle Saved",
+                description: "This vehicle is now available for future selections"
+            });
+        } catch (err) {
+            console.error('Failed to save vehicle to database:', err);
+            // Don't block the flow if save fails
+        }
+
+        // If called from another page, return with vehicle data
+        if (returnTo) {
+            navigate(returnTo, {
+                state: {
+                    vehicleData: {
+                        make: selectedMake,
+                        model: selectedModel,
+                        category: category
+                    }
+                }
+            });
+        } else {
+            setStep(4);
+        }
     };
 
     const handleOverride = (newCategory: string) => {
@@ -239,7 +274,7 @@ export default function VehicleClassification() {
         setOverrideModalOpen(false);
         toast({
             title: "Classification Updated",
-            description: `Changed to: ${newCategory}`
+            description: `Changed to: ${newCategory} `
         });
     };
 
@@ -341,7 +376,7 @@ export default function VehicleClassification() {
             doc.setFontSize(18);
             doc.text("Vehicle Classification History", 14, 20);
             doc.setFontSize(10);
-            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+            doc.text(`Generated: ${new Date().toLocaleString()} `, 14, 28);
 
             const tableData = history.map((item) => [
                 item.make || "",
@@ -362,9 +397,9 @@ export default function VehicleClassification() {
             reader.readAsDataURL(pdfBlob);
             reader.onloadend = () => {
                 const base64data = reader.result as string;
-                const fileName = `vehicle-classification-${Date.now()}.pdf`;
+                const fileName = `vehicle - classification - ${Date.now()}.pdf`;
                 savePDFToArchive("Vehicle History", "Admin Export", "export", base64data, { fileName });
-                toast({ title: "Export Successful", description: `Saved to File Manager as ${fileName}` });
+                toast({ title: "Export Successful", description: `Saved to File Manager as ${fileName} ` });
             };
         } catch (error) {
             console.error("PDF export failed:", error);
@@ -413,6 +448,17 @@ export default function VehicleClassification() {
                                     />
                                 </div>
                             </div>
+
+                            {returnTo && (
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => navigate(returnTo)}
+                                    className="text-zinc-400 hover:text-white w-full"
+                                >
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Back to Booking
+                                </Button>
+                            )}
 
                             <div>
                                 <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Browse All Makes</label>
@@ -471,7 +517,7 @@ export default function VehicleClassification() {
                                     <AccordionTrigger className="px-6 hover:no-underline hover:bg-zinc-800/50 transition-colors py-4">
                                         <div className="flex items-center justify-between w-full pr-4">
                                             <span className="font-semibold text-zinc-200">{item.make} {item.model}</span>
-                                            <span className={`text-sm font-medium ${getClassificationColor(item.category)}`}>
+                                            <span className={`text - sm font - medium ${getClassificationColor(item.category)} `}>
                                                 {item.category}
                                             </span>
                                         </div>
@@ -639,7 +685,7 @@ export default function VehicleClassification() {
                                     </div>
                                     <div>
                                         <div className="text-xs text-zinc-500 uppercase font-bold mb-1">System Classification</div>
-                                        <div className={`text-3xl font-bold ${getClassificationColor(category)}`}>
+                                        <div className={`text - 3xl font - bold ${getClassificationColor(category)} `}>
                                             {category}
                                         </div>
                                     </div>
@@ -720,7 +766,7 @@ export default function VehicleClassification() {
                             </div>
                             <div className="flex justify-between border-b border-zinc-800 pb-2 mb-2">
                                 <span className="text-zinc-500">Class</span>
-                                <span className={`font-bold ${getClassificationColor(category)}`}>{category}</span>
+                                <span className={`font - bold ${getClassificationColor(category)} `}>{category}</span>
                             </div>
                             {selectedCustomerId && (
                                 <div className="flex justify-between items-center">
@@ -763,9 +809,9 @@ export default function VehicleClassification() {
                                     key={option}
                                     onClick={() => handleOverride(option)}
                                     variant="outline"
-                                    className={`w-full justify-between border-zinc-800 hover:bg-zinc-900 h-14 ${category === option ? 'bg-zinc-900 border-emerald-500 ring-1 ring-emerald-500' : 'bg-zinc-900/50'}`}
+                                    className={`w - full justify - between border - zinc - 800 hover: bg - zinc - 900 h - 14 ${category === option ? 'bg-zinc-900 border-emerald-500 ring-1 ring-emerald-500' : 'bg-zinc-900/50'} `}
                                 >
-                                    <span className={`font-semibold ${getClassificationColor(option)}`}>{option}</span>
+                                    <span className={`font - semibold ${getClassificationColor(option)} `}>{option}</span>
                                     {category === option && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                                 </Button>
                             ))}

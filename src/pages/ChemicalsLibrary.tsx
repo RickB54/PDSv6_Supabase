@@ -82,7 +82,7 @@ export default function ChemicalsLibrary() {
 
             <main className="container mx-auto px-4 py-8 max-w-7xl">
                 {/* Header Actions */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex flex-row flex-wrap justify-between items-start md:items-center gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Chemical Knowledge Base</h1>
                         <p className="text-zinc-400">Master every product in our arsenal.</p>

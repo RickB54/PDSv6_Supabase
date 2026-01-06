@@ -145,7 +145,7 @@ export default function AdminChemicals() {
                                 <Button
                                     size="icon"
                                     variant="destructive"
-                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute top-2 right-2 opacity-100 z-50 shadow-sm"
                                     onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
                                 >
                                     <Trash2 className="w-4 h-4" />

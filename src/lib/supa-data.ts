@@ -117,10 +117,13 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
 
             // Check if this user is actually an employee or admin
             const role = (supaUser.role || '').toLowerCase();
-            // Assuming we want all potential assignees which includes employees and admins
-            // We include them if they are in the system.
 
-            const normalizedRole = role === 'admin' || role === 'owner' ? 'Admin' : 'Employee';
+            // STRICT FILTER: Only allow 'admin', 'owner', 'employee'
+            if (!['admin', 'owner', 'employee'].includes(role)) {
+                continue;
+            }
+
+            const normalizedRole = (role === 'admin' || role === 'owner') ? 'Admin' : 'Employee';
 
             // Get local metadata
             const localData = localMap.get(email);
@@ -176,8 +179,8 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
  */
 export const getSupabaseCustomers = async (): Promise<Customer[]> => {
     try {
-        // Fetch customers with their vehicles
-        const { data, error } = await supabase
+        // 1. Fetch CRM customers with their vehicles
+        const { data: crmData, error: crmError } = await supabase
             .from('customers')
             .select(`
                 *,
@@ -187,71 +190,147 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             `)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('getSupabaseCustomers error:', error);
-            return [];
+        if (crmError) {
+            console.error('getSupabaseCustomers error:', crmError);
+            // We continue to try fetching app_users even if CRM fails
         }
 
-        // Client-side deduplication just in case DB is dirty
-        const uniqueCustomers: Customer[] = [];
-        const seenMap = new Set<string>();
+        // 2. Fetch Auth Users (App Users) with role = customer
+        // Use singleton anon client for auth table access if needed, or standard supabase
+        // Usually app_users is public read or user read
+        const { data: authData, error: authError } = await supabase
+            .from('app_users')
+            .select('*')
+            .eq('role', 'customer');
 
-        // 1. Process Supabase Data
-        (data || []).forEach((c: any) => {
-            const safeName = (c.full_name || c.name || '').trim().toLowerCase();
-            const safePhone = (c.phone || '').trim();
-            const key = `${safeName}|${safePhone}`;
-            if (!seenMap.has(key)) {
-                const v = c.vehicles && c.vehicles[0] ? c.vehicles[0] : {};
+        if (authError) {
+            console.error('getSupabaseCustomers auth fetch error:', authError);
+        }
+
+        // 3. Merge Strategies
+        const uniqueCustomers: Customer[] = [];
+        const seenEmails = new Set<string>();
+
+        // Helper to process CRM record
+        const processCrmRecord = (c: any) => {
+            const safeEmail = (c.email || '').toLowerCase().trim();
+            const key = safeEmail || `no-email-${c.id}`;
+
+            if (safeEmail) seenEmails.add(safeEmail);
+
+            const v = c.vehicles && c.vehicles[0] ? c.vehicles[0] : {};
+            return {
+                id: c.id,
+                name: c.full_name || c.name || 'Unknown',
+                email: c.email,
+                phone: c.phone,
+                address: c.address,
+                vehicle: v.make || '',
+                model: v.model || '',
+                year: v.year ? String(v.year) : '',
+                vehicleType: v.type || '',
+                color: v.color || '',
+                mileage: '',
+                vehicle_info: { make: v.make, model: v.model, year: v.year, type: v.type, color: v.color },
+                notes: c.notes,
+                created_at: c.created_at,
+                type: c.type || 'customer',
+                is_archived: c.is_archived || false,
+                generalPhotos: c.general_photos || [],
+                beforePhotos: c.before_photos || [],
+                afterPhotos: c.after_photos || [],
+                videoUrl: c.video_url || '',
+                learningCenterUrl: c.learning_center_url || '',
+                videoNote: c.video_note || ''
+            } as Customer;
+        };
+
+        // Add CRM Data
+        (crmData || []).forEach((c: any) => {
+            uniqueCustomers.push(processCrmRecord(c));
+        });
+
+        // Add Auth Data (if not duplicate)
+        (authData || []).forEach((u: any) => {
+            const safeEmail = (u.email || '').toLowerCase().trim();
+            if (safeEmail && !seenEmails.has(safeEmail)) {
                 uniqueCustomers.push({
-                    id: c.id,
-                    name: c.full_name || c.name,
-                    email: c.email,
-                    phone: c.phone,
-                    address: c.address,
-                    // Flatten vehicle data for UI
-                    vehicle: v.make || '',
-                    model: v.model || '',
-                    year: v.year ? String(v.year) : '',
-                    vehicleType: v.type || '',
-                    color: v.color || '',
-                    mileage: '', // TODO: Add mileage column to vehicles table in Supabase
-                    vehicle_info: { make: v.make, model: v.model, year: v.year, type: v.type, color: v.color },
-                    notes: c.notes,
-                    created_at: c.created_at,
-                    type: c.type || 'customer',
-                    is_archived: c.is_archived || false,
-                    generalPhotos: c.general_photos || [],
-                    beforePhotos: c.before_photos || [],
-                    afterPhotos: c.after_photos || [],
-                    videoUrl: c.video_url || '',
-                    learningCenterUrl: c.learning_center_url || '',
-                    videoNote: c.video_note || ''
-                } as any);
-                seenMap.add(key);
+                    id: u.id,
+                    name: u.name || u.email || 'Unknown',
+                    email: u.email,
+                    phone: '',
+                    address: '',
+                    vehicle: '',
+                    model: '',
+                    year: '',
+                    vehicleType: '',
+                    color: '',
+                    vehicle_info: {},
+                    notes: 'Registered Account (No CRM Profile)',
+                    created_at: u.updated_at || new Date().toISOString(),
+                    type: 'customer',
+                    is_archived: false
+                });
+                seenEmails.add(safeEmail);
             }
         });
 
-        // 2. Merge Local Mocks (Safe Testing)
+        // 4. Merge Local Mocks (Safe Testing)
         try {
             const localCust = await localforage.getItem<any[]>('customers') || [];
             localCust.forEach(c => {
-                if (!c.isStaticMock) return; // Only allow explicit mocks
-                const key = `${c.name?.trim().toLowerCase()}|${c.phone?.trim()}`;
-                if (!seenMap.has(key)) {
-                    uniqueCustomers.push({
-                        ...c,
-                        vehicle_info: { make: c.vehicle, model: c.model, year: c.year, type: c.vehicleType, color: 'Mock' }
-                    });
-                    seenMap.add(key);
-                }
+                if (!c.isStaticMock) return;
+                const safeEmail = (c.email || '').toLowerCase().trim();
+                // Avoid checking email for mocks too strictly as they might not have one, 
+                // but if they do, respect it.
+                if (safeEmail && seenEmails.has(safeEmail)) return;
+
+                uniqueCustomers.push({
+                    ...c,
+                    vehicle_info: { make: c.vehicle, model: c.model, year: c.year, type: c.vehicleType, color: 'Mock' }
+                });
             });
         } catch { }
 
-        return uniqueCustomers;
+        // Sort by created recent first
+        return uniqueCustomers.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
     } catch (err) {
         console.error('getSupabaseCustomers exception:', err);
         return [];
+    }
+}
+
+/**
+ * Save a classified vehicle to the Supabase vehicles table
+ * Makes it searchable for future bookings/customers
+ */
+export async function upsertSupabaseVehicle(vehicleData: {
+    make: string;
+    model: string;
+    year?: string;
+    type: string;
+    customer_id?: string;
+}) {
+    try {
+        const { data, error } = await supabase
+            .from('vehicles')
+            .upsert({
+                make: vehicleData.make,
+                model: vehicleData.model,
+                year: vehicleData.year || null,
+                type: vehicleData.type,
+                customer_id: vehicleData.customer_id || null,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('Failed to save vehicle to Supabase:', err);
+        throw err;
     }
 };
 
@@ -280,16 +359,34 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     let customerId = customer.id;
 
     if (customerId) {
-        // Update
+        // Update first
         const { data, error } = await supabase
             .from('customers')
             .update(payload)
             .eq('id', customerId)
             .select()
             .single();
-        if (error) throw error;
+
+        if (error) {
+            // If error is basic "PGRST116" (JSON object requested, multiple (or no) rows returned), it might mean not found in .single() context? 
+            // Actually .single() throws if 0 rows.
+            // If code is "PGRST116" -> The result contains 0 rows
+            if (error.code === 'PGRST116') {
+                // Row not found. Insert new one with this ID to sync Auth/CRM.
+                const { data: insData, error: insError } = await supabase
+                    .from('customers')
+                    .insert([{ ...payload, id: customerId }])
+                    .select()
+                    .single();
+
+                if (insError) throw insError;
+                // Success insert
+            } else {
+                throw error;
+            }
+        }
     } else {
-        // Insert
+        // Insert new (auto ID)
         // Check duplication by email first to be safe
         if (payload.email) {
             const { data: existing } = await supabase.from('customers').select('id').eq('email', payload.email).single();
@@ -317,6 +414,9 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         // A more complex logic would check if it exists.
         const v = customer.vehicle_info;
         if (v.make || v.model || v.year) {
+            // Do not insert if identical vehicle exists? 
+            // For now just insert as log history or simple association.
+            // Ideally we upsert? But vehicle ID is unknown here.
             const { error: vErr } = await supabase.from('vehicles').insert({
                 customer_id: customerId,
                 make: v.make,
@@ -423,12 +523,33 @@ export interface Estimate {
     addonIds?: string[]; // optional metadata
 }
 
-export const getSupabaseEstimates = async (): Promise<Estimate[]> => {
+export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise<Estimate[]> => {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('estimates')
             .select('*, customers(full_name), vehicles(make, model, year)')
             .order('created_at', { ascending: false });
+
+        if (filterByCurrentUser) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: customerData } = await supabase
+                    .from('customers')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (customerData) {
+                    query = query.eq('customer_id', customerData.id);
+                } else {
+                    return [];
+                }
+            } else {
+                return [];
+            }
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('getSupabaseEstimates error:', error);
@@ -651,12 +772,31 @@ export interface SupaBooking {
     is_archived?: boolean;
 }
 
-export const getSupabaseBookings = async (): Promise<SupaBooking[]> => {
+export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<SupaBooking[]> => {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('bookings')
-            .select('*, customers(full_name)')
+            .select('*, customers(full_name, user_id)')
             .order('scheduled_at', { ascending: false });
+
+        // If filtering for current user (customer dashboard), only get their bookings
+        if (filterByCurrentUser) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            // Get customer record for this auth user
+            const { data: customerData } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!customerData) return [];
+
+            query = query.eq('customer_id', customerData.id);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('getSupabaseBookings error:', error);
@@ -668,15 +808,187 @@ export const getSupabaseBookings = async (): Promise<SupaBooking[]> => {
             id: b.id,
             title: b.service_package || 'Booking',
             customer_name: b.customers?.full_name || 'Unknown Customer',
-            date: b.scheduled_at, // Map scheduled_at -> date
+            date: b.scheduled_at,
             status: b.status,
-            vehicle_info: b.booking_vehicle, // Assuming this might be needed, or mapped from relations if needed later
+            vehicle_info: b.booking_vehicle,
             notes: b.notes,
             price: b.service_price,
             addons: b.add_ons
         }));
     } catch (err) {
         console.error('getSupabaseBookings exception:', err);
+        return [];
+    }
+};
+
+export const upsertSupabaseBooking = async (booking: Partial<SupaBooking> & { customerId?: string }) => {
+    const payload = {
+        service_package: booking.title,
+        customer_id: booking.customerId, // Ensure we send customer_id if we have it
+        scheduled_at: booking.date,
+        status: booking.status,
+        booking_vehicle: booking.vehicle_info,
+        notes: booking.notes,
+        service_price: booking.price,
+        add_ons: booking.addons
+    };
+
+    if (booking.id) {
+        const { data, error } = await supabase.from('bookings').update(payload).eq('id', booking.id).select().single();
+        if (error) throw error;
+        return data;
+    } else {
+        const { data, error } = await supabase.from('bookings').insert([payload]).select().single();
+        if (error) throw error;
+        return data;
+    }
+};
+
+export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<any[]> => {
+    try {
+        let query = supabase
+            .from('invoices')
+            .select('*, customers(full_name, user_id), vehicles(make, model, year)')
+            .order('created_at', { ascending: false });
+
+        // If filtering for current user (customer dashboard), only get their invoices
+        if (filterByCurrentUser) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            // Get customer record for this auth user
+            const { data: customerData } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!customerData) return [];
+
+            query = query.eq('customer_id', customerData.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('getSupabaseInvoices error:', error);
+            return [];
+        }
+
+        return (data || []).map((i: any) => ({
+            id: i.id,
+            invoiceNumber: i.invoice_number,
+            customerId: i.customer_id,
+            customerName: i.customers?.full_name || 'Unknown',
+            vehicle: i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : 'Unknown',
+            services: i.services || [],
+            total: i.total,
+            date: i.date,
+            paymentStatus: i.status || 'unpaid',
+            createdAt: i.created_at,
+            paidAmount: i.paid_amount || 0,
+            paidDate: i.paid_date
+        }));
+    } catch (err) {
+        console.error('getSupabaseInvoices exception:', err);
+        return [];
+    }
+};
+
+export const upsertSupabaseInvoice = async (invoice: any) => {
+    // Map Frontend Invoice object to DB columns
+    const payload = {
+        invoice_number: invoice.invoiceNumber,
+        customer_id: invoice.customerId,
+        // We don't store customer_name or vehicle text directly if we have relations, 
+        // but if the table supports it as cache, we could. 
+        // For now, assume relations handle it, OR relying on what we just selected.
+        // Actually, for Auth-only users who don't have a Customer row, we MIGHT have an issue if we don't store the name.
+        // Let's check if the table has 'customer_name' column? 
+        // If not, we rely on the ID.
+        // vehicle_id might be needed if we want to link it.
+        // services is JSONB
+        services: invoice.services,
+        total: invoice.total,
+        date: invoice.date,
+        status: invoice.paymentStatus,
+        paid_amount: invoice.paidAmount,
+        paid_date: invoice.paidDate
+    };
+
+    if (invoice.id) {
+        const { data, error } = await supabase.from('invoices').update(payload).eq('id', invoice.id).select().single();
+        if (error) throw error;
+        return data;
+    } else {
+        const { data, error } = await supabase.from('invoices').insert([payload]).select().single();
+        if (error) throw error;
+        return data;
+    }
+};
+
+export const deleteSupabaseInvoice = async (id: string) => {
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) throw error;
+};
+
+
+
+// ------------------------------------------------------------------
+// Payments
+// ------------------------------------------------------------------
+
+export const getSupabasePayments = async (filterByCurrentUser = false): Promise<any[]> => {
+    try {
+        let query = supabase
+            .from('payments')
+            .select('*, bookings(customer_id, service_package)')
+            .order('created_at', { ascending: false });
+
+        // If filtering for current user, get their payments through bookings
+        if (filterByCurrentUser) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            // Get customer record for this auth user
+            const { data: customerData } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!customerData) return [];
+
+            // Get all bookings for this customer
+            const { data: bookings } = await supabase
+                .from('bookings')
+                .select('id')
+                .eq('customer_id', customerData.id);
+
+            if (!bookings || bookings.length === 0) return [];
+
+            const bookingIds = bookings.map(b => b.id);
+            query = query.in('booking_id', bookingIds);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('getSupabasePayments error:', error);
+            return [];
+        }
+
+        return (data || []).map((p: any) => ({
+            id: p.id,
+            bookingId: p.booking_id,
+            amount: p.amount,
+            currency: p.currency,
+            status: p.status,
+            servicePackage: p.bookings?.service_package,
+            createdAt: p.created_at
+        }));
+    } catch (err) {
+        console.error('getSupabasePayments exception:', err);
         return [];
     }
 };

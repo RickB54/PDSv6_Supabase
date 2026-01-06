@@ -13,7 +13,8 @@ import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, Chevron
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { addEstimate, upsertCustomer, upsertInvoice, purgeTestCustomers, getInvoices } from "@/lib/db";
+import { purgeTestCustomers } from "@/lib/db";
+import { upsertSupabaseInvoice, getSupabaseInvoices, upsertSupabaseBooking, upsertSupabaseEstimate, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -377,7 +378,7 @@ const ServiceChecklist = () => {
       }
       // Pre-check previous services from the latest invoice
       (async () => {
-        const invs = await getInvoices();
+        const invs = await getSupabaseInvoices();
         const custInvs = (invs as any[]).filter(inv => inv.customerId === selectedCustomer);
         custInvs.sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
         const last = custInvs[0];
@@ -674,7 +675,7 @@ const ServiceChecklist = () => {
     }
   }, []); // Run once on mount
 
-  // 2. Re-apply steps checked status after regeneration (if we just restored a draft)
+  // 2. Re-apply steps checked status after regeneration (No replacement, just view)stored a draft)
   useEffect(() => {
     const pending = window.sessionStorage.getItem('pending_draft_steps');
     if (pending && checklistSteps.length > 0) {
@@ -730,35 +731,84 @@ const ServiceChecklist = () => {
   }, [checklistSteps]);
 
   // Save generic checklist progress
-  const saveGenericChecklist = async (): Promise<string | undefined> => {
+  // Save generic checklist progress
+  const saveGenericChecklist = async (status: 'in-progress' | 'completed' = 'in-progress'): Promise<string | undefined> => {
     if (!selectedPackage || !vehicleType) {
       toast({ title: 'Select package and vehicle', description: 'Choose a package and vehicle type first.', variant: 'destructive' });
       return undefined;
     }
-    const payload = {
-      packageId: selectedPackage,
-      vehicleType: toVehKey(vehicleType),
-      vehicleTypeNote: vehicleType === 'Other' ? vehicleTypeOther : '',
-      addons: selectedAddOns,
-      tasks: checklistSteps.map(s => ({ id: s.id, name: s.name, category: s.category, checked: s.checked })),
-      progress: progressPercent,
-      // materials saved through dedicated endpoint below
-      employeeId: employeeAssigned || '',
-      estimatedTime,
-    };
-    const res = await api('/api/checklist/generic', { method: 'POST', body: JSON.stringify(payload) });
-    if ((res as any)?.id) {
-      setChecklistId((res as any).id);
-      toast({ title: 'Progress Saved', description: 'Generic checklist saved.' });
-      // Post materials usage on save (no subtract)
-      await postChecklistMaterials((res as any).id, false);
-      const externalCustomerId = params.get('customerId') || selectedCustomer;
-      if (externalCustomerId) {
-        await linkJobToCustomer(String(externalCustomerId));
+
+    // 0. Ensure Customer Exists in CRM (Sync Auth -> CRM)
+    // This is critical to avoid Foreign Key violation in Bookings table
+    if (selectedCustomer) {
+      const c = customers.find(x => x.id === selectedCustomer);
+      // Only try upsert if we actually found a customer object
+      if (c) {
+        try {
+          await upsertSupabaseCustomer({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            address: c.address,
+            vehicle_info: {
+              make: c.vehicle?.split(' ')[1] || '',
+              model: c.model,
+              year: c.year
+            }
+          });
+        } catch (err) {
+          console.error("Failed to sync customer for booking:", err);
+          // We don't abort, as maybe they already exist? 
+          // But typically if this fails, booking insert will fail too if FK is strict.
+        }
       }
-      return (res as any).id as string;
+    }
+
+    // 1. Save to Supabase Bookings (Job History)
+    const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package';
+
+    // Create detailed notes
+    const jobDetails = {
+      checklist: checklistSteps.map(s => ({ n: s.name, c: s.checked })),
+      chemicals: chemRows,
+      materials: matRows,
+      stats: { progress: progressPercent, time: elapsedTime }
+    };
+
+    const bookingPayload = {
+      id: checklistId || undefined, // Use existing ID if we have it
+      title: pkgName,
+      customerId: selectedCustomer, // Might be empty if generic
+      date: new Date().toISOString(),
+      status: status,
+      vehicle_info: { type: vehicleType, other: vehicleType === 'Other' ? vehicleTypeOther : undefined },
+      notes: `Job Details: ${JSON.stringify(jobDetails)} \n\n User Notes: ${notes}`,
+      price: calculateTotal(), // Estimated total
+      addons: selectedAddOns
+    };
+
+    let newId = checklistId;
+    try {
+      const savedBooking = await upsertSupabaseBooking(bookingPayload);
+      if (savedBooking && savedBooking.id) {
+        newId = savedBooking.id;
+        setChecklistId(newId);
+      }
+    } catch (err) {
+      console.error("Failed to save Supabase Booking", err);
+    }
+
+    // Legacy Local Save (Optional, but kept for compatibility if needed or removed)
+    // We'll trust Supabase primary now.
+
+    if (newId) {
+      toast({ title: 'Progress Saved', description: 'Checklist saved to Job History.' });
+      // Post materials usage on save (no subtract)
+      await postChecklistMaterials(newId, false);
+      return newId;
     } else {
-      toast({ title: 'Save Failed', description: 'Could not save checklist locally.', variant: 'destructive' });
+      toast({ title: 'Save Failed', description: 'Could not save checklist.', variant: 'destructive' });
       return undefined;
     }
   };
@@ -942,16 +992,15 @@ const ServiceChecklist = () => {
       };
     });
 
-    await addEstimate({
+    await upsertSupabaseEstimate({
       customerName: customer?.name || "Unknown",
       customerId: selectedCustomer,
-      vehicleType,
-      items: selectedItems,
-      subtotal: calculateSubtotal(),
-      discount: calculateDiscount(),
+      vehicle: vehicleType,
+      services: selectedItems.map(i => ({ name: i.name, price: i.price || 0 })), // Map items to services
       total: calculateTotal(),
       notes,
       date: new Date().toISOString(),
+      status: 'open'
     });
 
     toast({ title: "Estimate Saved", description: "Service checklist saved to local storage." });
@@ -1004,7 +1053,7 @@ const ServiceChecklist = () => {
       createdAt: now.toISOString(),
     };
 
-    await upsertInvoice(invoice);
+    await upsertSupabaseInvoice(invoice);
 
     // Generate PDF (download)
     try {
@@ -1036,80 +1085,115 @@ const ServiceChecklist = () => {
   };
 
   // Orchestrate finish job: ensure saved, post materials, alert and archive
+  // Orchestrate finish job: ensure saved, post materials, alert and archive
   const handleCreateInvoiceGeneric = async () => {
-    const customer = customers.find(c => c.id === selectedCustomer);
-    const vkeyBuiltIn = toBuiltInVehKey(vehicleType);
-    const allServices = [...coreServicesDisplay, ...addOnServicesDisplay, destinationFeeDisplay];
-    const selectedItems = selectedServices.map(id => {
-      const svc = allServices.find(s => s.id === id);
-      const price = (() => {
-        if (!svc) return 0;
-        if (svc.kind === 'package') {
-          const sp = parseFloat(savedPricesLive[getKey('package', svc.id, vehicleType)]) || NaN;
-          return isNaN(sp) ? getServicePrice(svc.id, vkeyBuiltIn) : sp;
-        }
-        if (svc.kind === 'addon') {
-          const ap = parseFloat(savedPricesLive[getKey('addon', svc.id, vehicleType)]) || NaN;
-          return isNaN(ap) ? getAddOnPrice(svc.id, vkeyBuiltIn) : ap;
-        }
-        return destinationFee;
-      })();
-      return {
-        id,
-        name: svc?.name || "",
-        price: price || 0,
-        chemicals: svc?.chemicals || [],
-      };
-    });
-
-    const now = new Date();
-    const invoice: any = {
-      customerId: customer?.id,
-      customerName: customer?.name || 'Generic Job',
-      vehicle: customer ? `${customer.year || ""} ${customer.vehicle || ""} ${customer.model || ""}`.trim() : '',
-      contact: { address: customer?.address || '', phone: customer?.phone || '', email: customer?.email || '' },
-      vehicleInfo: { type: vehicleLabels[vehicleType] || vehicleType, mileage: customer?.mileage, year: customer?.year, color: customer?.color, conditionInside: customer?.conditionInside, conditionOutside: customer?.conditionOutside },
-      services: selectedItems,
-      subtotal: calculateSubtotal(),
-      discount: { type: discountType, value: discountValue ? parseFloat(discountValue) : 0, amount: calculateDiscount() },
-      total: calculateTotal(),
-      notes,
-      date: now.toLocaleDateString(),
-      createdAt: now.toISOString(),
-    };
-
-    await upsertInvoice(invoice);
-
     try {
-      const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text("Prime Auto Detail - Invoice", 20, 20);
-      doc.setFontSize(12);
-      doc.text(`Customer: ${invoice.customerName}`, 20, 35);
-      doc.text(`Phone: ${invoice.contact.phone || "-"}`, 20, 42);
-      doc.text(`Email: ${invoice.contact.email || "-"}`, 20, 49);
-      doc.text(`Address: ${invoice.contact.address || "-"}`, 20, 56);
-      doc.text(`Vehicle: ${invoice.vehicle}`, 20, 66);
-      doc.text(`Vehicle Type: ${invoice.vehicleInfo.type}`, 20, 73);
-      let y = 85;
-      doc.setFontSize(14);
-      doc.text("Services:", 20, y); y += 8;
-      doc.setFontSize(11);
-      invoice.services.forEach((s: any) => {
-        doc.text(`${s.name}: $${s.price.toFixed(2)}`, 25, y); y += 6;
-        if (s.chemicals?.length) { doc.setFontSize(9); doc.text(`Chemicals: ${s.chemicals.join(", ")}`, 28, y); y += 5; doc.setFontSize(11); }
+      if (!selectedCustomer) {
+        toast({ title: 'Select Customer', description: 'Please select a customer first.', variant: 'destructive' });
+        return;
+      }
+
+      // 1. Sync Customer (Auth -> CRM)
+      const customer = customers.find(c => c.id === selectedCustomer);
+      if (customer) {
+        try {
+          // Ensure they exist in 'customers' table before invoice creation
+          await upsertSupabaseCustomer({
+            id: customer.id,
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            address: customer.address,
+            vehicle_info: {
+              make: customer.vehicle?.split(' ')[1] || '',
+              model: customer.model,
+              year: customer.year
+            }
+          });
+        } catch (err) {
+          console.error("Customer Sync Warning:", err);
+        }
+      }
+
+      const vkeyBuiltIn = toBuiltInVehKey(vehicleType);
+      const allServices = [...coreServicesDisplay, ...addOnServicesDisplay, destinationFeeDisplay];
+      const selectedItems = selectedServices.map(id => {
+        const svc = allServices.find(s => s.id === id);
+        const price = (() => {
+          if (!svc) return 0;
+          if (svc.kind === 'package') {
+            const sp = parseFloat(savedPricesLive[getKey('package', svc.id, vehicleType)]) || NaN;
+            return isNaN(sp) ? getServicePrice(svc.id, vkeyBuiltIn) : sp;
+          }
+          if (svc.kind === 'addon') {
+            const ap = parseFloat(savedPricesLive[getKey('addon', svc.id, vehicleType)]) || NaN;
+            return isNaN(ap) ? getAddOnPrice(svc.id, vkeyBuiltIn) : ap;
+          }
+          return destinationFee;
+        })();
+        return {
+          id,
+          name: svc?.name || "",
+          price: price || 0,
+          chemicals: svc?.chemicals || [],
+        };
       });
-      if (invoice.discount.amount > 0) { y += 4; doc.text(`Discount: -$${invoice.discount.amount.toFixed(2)} (${invoice.discount.type === 'percent' ? invoice.discount.value + '%' : '$' + invoice.discount.value})`, 25, y); y += 6; }
-      y += 4; doc.setFontSize(12); doc.text(`Total: $${invoice.total.toFixed(2)}`, 20, y);
-      if (notes) { y += 10; doc.setFontSize(12); doc.text("Notes:", 20, y); y += 6; doc.setFontSize(10); const split = doc.splitTextToSize(notes, 170); doc.text(split, 20, y); }
-      doc.save(`invoice-${now.getTime()}.pdf`);
-    } catch { }
 
-    // Clear persistent draft on successful save
-    localStorage.removeItem('service_checklist_draft');
-    window.sessionStorage.removeItem('pending_draft_steps');
+      const now = new Date();
+      const invoice: any = {
+        customerId: selectedCustomer, // Use ID directly
+        customerName: customer?.name || 'Generic Job',
+        vehicle: customer ? `${customer.year || ""} ${customer.vehicle || ""} ${customer.model || ""}`.trim() : '',
+        contact: { address: customer?.address || '', phone: customer?.phone || '', email: customer?.email || '' },
+        vehicleInfo: { type: vehicleLabels[vehicleType] || vehicleType, mileage: customer?.mileage, year: customer?.year, color: customer?.color, conditionInside: customer?.conditionInside, conditionOutside: customer?.conditionOutside },
+        services: selectedItems,
+        subtotal: calculateSubtotal(),
+        discount: { type: discountType, value: discountValue ? parseFloat(discountValue) : 0, amount: calculateDiscount() },
+        total: calculateTotal(),
+        notes,
+        date: now.toLocaleDateString(),
+        createdAt: now.toISOString(),
+      };
 
-    toast({ title: "Invoice Created", description: "Invoice saved and PDF downloaded." });
+      // 2. Create Invoice
+      await upsertSupabaseInvoice(invoice);
+
+      // 3. Generate PDF
+      try {
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text("Prime Auto Detail - Invoice", 20, 20);
+        doc.setFontSize(12);
+        doc.text(`Customer: ${invoice.customerName}`, 20, 35);
+        doc.text(`Phone: ${invoice.contact.phone || "-"}`, 20, 42);
+        doc.text(`Email: ${invoice.contact.email || "-"}`, 20, 49);
+        doc.text(`Address: ${invoice.contact.address || "-"}`, 20, 56);
+        doc.text(`Vehicle: ${invoice.vehicle}`, 20, 66);
+        doc.text(`Vehicle Type: ${invoice.vehicleInfo.type}`, 20, 73);
+        let y = 85;
+        doc.setFontSize(14);
+        doc.text("Services:", 20, y); y += 8;
+        doc.setFontSize(11);
+        invoice.services.forEach((s: any) => {
+          doc.text(`${s.name}: $${s.price.toFixed(2)}`, 25, y); y += 6;
+          if (s.chemicals?.length) { doc.setFontSize(9); doc.text(`Chemicals: ${s.chemicals.join(", ")}`, 28, y); y += 5; doc.setFontSize(11); }
+        });
+        if (invoice.discount.amount > 0) { y += 4; doc.text(`Discount: -$${invoice.discount.amount.toFixed(2)} (${invoice.discount.type === 'percent' ? invoice.discount.value + '%' : '$' + invoice.discount.value})`, 25, y); y += 6; }
+        y += 4; doc.setFontSize(12); doc.text(`Total: $${invoice.total.toFixed(2)}`, 20, y);
+        if (notes) { y += 10; doc.setFontSize(12); doc.text("Notes:", 20, y); y += 6; doc.setFontSize(10); const split = doc.splitTextToSize(notes, 170); doc.text(split, 20, y); }
+        doc.save(`invoice-${now.getTime()}.pdf`);
+      } catch { }
+
+      // Clear persistent draft on successful save
+      localStorage.removeItem('service_checklist_draft');
+      window.sessionStorage.removeItem('pending_draft_steps');
+
+      toast({ title: "Invoice Created", description: "Invoice saved to Supabase and PDF downloaded." });
+
+    } catch (e: any) {
+      console.error("Create Invoice Failed:", e);
+      toast({ title: "Failed to Create Invoice", description: e.message || "Unknown error", variant: "destructive" });
+    }
   };
   const finishJob = async () => {
     // Stop the timer
@@ -1118,7 +1202,7 @@ const ServiceChecklist = () => {
 
     let step = 'start';
     try {
-      const idToUse = checklistId || await saveGenericChecklist();
+      const idToUse = await saveGenericChecklist('completed');
       if (!idToUse) {
         throw new Error('Checklist not saved (select package and vehicle).');
       }
@@ -1853,7 +1937,7 @@ const ServiceChecklist = () => {
             onOpenChange={setCustomerModalOpen}
             initial={customers.find(c => c.id === selectedCustomer) as any}
             onSave={async (data) => {
-              const saved = await upsertCustomer(data as any);
+              const saved = await upsertSupabaseCustomer(data as any);
               const list = await getUnifiedCustomers();
               setCustomers(list as CustomerType[]);
               setSelectedCustomer((saved as any).id);

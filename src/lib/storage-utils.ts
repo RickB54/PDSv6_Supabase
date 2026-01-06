@@ -5,6 +5,11 @@ import { supabase } from './supa-data';
  * Creates them if they don't exist.
  * Safe to call multiple times - only creates missing buckets.
  */
+/**
+ * Ensures all required storage buckets exist in Supabase.
+ * Creates them if they don't exist.
+ * Safe to call multiple times - only creates missing buckets.
+ */
 export const ensureAllStorageBuckets = async (): Promise<void> => {
     const bucketsToCreate = [
         {
@@ -70,5 +75,8 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
     }
 };
 
-// Auto-run on import
-ensureAllStorageBuckets();
+// Auto-run on import - but don't block the main thread
+setTimeout(() => {
+    ensureAllStorageBuckets().catch(err => console.warn('Storage init error:', err));
+}, 100);
+

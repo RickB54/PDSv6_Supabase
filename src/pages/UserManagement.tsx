@@ -80,14 +80,60 @@ export default function UserManagement() {
 
   const loadCustomers = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. Fetch from 'customers' table (CRM)
+      const { data: crmData, error: crmError } = await supabase
         .from("customers")
         .select("id,full_name,email,phone,type,created_at")
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      setCustomers((data || []) as any[]);
-    } catch {
-      setCustomers([]);
+
+      if (crmError) throw crmError;
+
+      // 2. Fetch from 'app_users' table (Auth Profiles)
+      const { data: authData, error: authError } = await supabase
+        .from("app_users")
+        .select("id,name,email,updated_at")
+        .eq("role", "customer");
+
+      if (authError) throw authError;
+
+      // 3. Merge Strategies
+      // We prioritize CRM data because it has more fields (phone, type, etc).
+      // We use Email as the unique key.
+      const mergedMap = new Map();
+
+      // Add CRM data first
+      (crmData || []).forEach((c: any) => {
+        const key = c.email ? c.email.toLowerCase().trim() : `no-email-${c.id}`;
+        mergedMap.set(key, c);
+      });
+
+      // Add Auth data if not already present
+      (authData || []).forEach((u: any) => {
+        const key = u.email ? u.email.toLowerCase().trim() : null;
+        if (key && !mergedMap.has(key)) {
+          mergedMap.set(key, {
+            id: u.id,
+            full_name: u.name || "Unknown",
+            email: u.email,
+            phone: "—",
+            type: "customer", // Default type
+            created_at: u.updated_at, // Use updated_at as proxy for created_at
+            isAuthOnly: true
+          });
+        }
+      });
+
+      // Convert back to array and sort
+      const mergedList = Array.from(mergedMap.values()).sort((a: any, b: any) =>
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      );
+
+      setCustomers(mergedList);
+    } catch (err: any) {
+      console.error("loadCustomers failed:", err);
+      // Don't clear existing data on error if possible, or just set empty
+      // setCustomers([]); 
+      // Better to leave empty if failed to avoid confusion
     }
   };
 

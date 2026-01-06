@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getInvoices } from "@/lib/db";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { FileText, Download, Eye, Clock, CheckCircle2, Trash2, ShoppingCart, CreditCard, MessageSquare, Send } from "lucide-react";
 import jsPDF from "jspdf";
-import { getSupabaseEmployees, getTeamMessages, sendTeamMessage, TeamMessage } from "@/lib/supa-data";
+import { getSupabaseEmployees, getTeamMessages, sendTeamMessage, TeamMessage, getSupabaseInvoices, getSupabaseBookings, getSupabasePayments } from "@/lib/supa-data";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -16,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useCartStore } from "@/store/cart";
 
 interface Job {
   jobId: string;
@@ -56,19 +56,33 @@ const CustomerDashboard = () => {
   }, []);
 
   const loadData = async () => {
-    const allInvoices = await getInvoices();
-    const userInvoices = (allInvoices as Invoice[]).filter(
-      inv => inv.customerName.toLowerCase() === user?.name.toLowerCase()
-    );
-    setInvoices(userInvoices);
+    try {
+      // Load Invoices for current user
+      const userInvoices = await getSupabaseInvoices(true);
+      setInvoices(userInvoices);
 
-    // Load jobs from localStorage
-    const completedJobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
-    const userJobs = completedJobs.filter((j: Job) =>
-      j.customer.toLowerCase() === user?.name.toLowerCase()
-    );
-    setJobs(userJobs);
-    setJobs(userJobs);
+      // Load Bookings (Jobs) for current user
+      const userBookings = await getSupabaseBookings(true);
+
+      // Map Bookings to Jobs
+      const jobsMapped: Job[] = userBookings.map(b => ({
+        jobId: b.id,
+        customer: b.customer_name,
+        vehicle: typeof b.vehicle_info === 'string' ? b.vehicle_info : (b.vehicle_info?.type || b.title),
+        service: b.title,
+        status: b.status === 'completed' ? 'completed' : 'active',
+        finishedAt: b.status === 'completed' ? b.date : undefined
+      }));
+
+      setJobs(jobsMapped);
+    } catch (error) {
+      console.error('Error loading customer dashboard data:', error);
+      toast({
+        title: "Error loading data",
+        description: "There was a problem loading your dashboard. Please try refreshing the page.",
+        variant: "destructive"
+      });
+    }
   };
 
   useEffect(() => {
@@ -424,4 +438,3 @@ const CustomerDashboard = () => {
 };
 
 export default CustomerDashboard;
-import { useCartStore } from "@/store/cart";

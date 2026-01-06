@@ -1,6 +1,6 @@
 import { SidebarTrigger } from "@/components/ui/sidebar"; // NEW IMPORT
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears, parseISO, isToday, isWithinInterval, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
 import localforage from "localforage";
 import { upsertCustomer } from "@/lib/db";
+import { getUnifiedCustomers } from "@/lib/customers";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -53,6 +54,8 @@ export default function BookingsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -74,6 +77,7 @@ export default function BookingsPage() {
     reminderFrequency: "3"
   });
 
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
@@ -133,7 +137,6 @@ export default function BookingsPage() {
 
   // Fetch employees and sync
   useEffect(() => {
-
     const fetchEmployees = async () => {
       try {
         const emps = await getSupabaseEmployees(); // Use Supabase
@@ -143,9 +146,30 @@ export default function BookingsPage() {
       }
     };
     fetchEmployees();
+  }, []);
 
-    fetchEmployees();
+  const fetchCustomers = useCallback(async () => {
+    setLoadingCustomers(true);
+    try {
+      const custs = await getUnifiedCustomers();
+      if (custs.length > 0) {
+        setCustomers(custs);
+      } else {
+        console.warn('BookingsPage: getUnifiedCustomers returned empty. Falling back to localforage.');
+        const localCusts = (await localforage.getItem<any[]>('customers')) || [];
+        const mappedLocal = localCusts.map(c => ({ ...c, type: c.type || 'customer' }));
+        setCustomers(mappedLocal);
+      }
+    } catch (err) {
+      console.error('Failed to fetch customers:', err);
+      const localCusts = (await localforage.getItem<any[]>('customers')) || [];
+      setCustomers(localCusts);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  }, []);
 
+  useEffect(() => {
     // Fetch bookings from Supabase and sync to store
     const syncBookings = async () => {
       const supaBookings = await getSupabaseBookings();
@@ -196,20 +220,11 @@ export default function BookingsPage() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-
     // Fetch customers - Load from localforage to get complete data with addresses/vehicles
-    const fetchCustomers = async () => {
-      try {
-        // Get customers from localforage which has complete mock data
-        const custs = (await localforage.getItem<any[]>('customers')) || [];
-        setCustomers(custs);
-      } catch (err) {
-        console.error('Failed to fetch customers:', err);
-      }
-    };
     fetchCustomers();
-  }, []);
+
+    return () => { supabase.removeChannel(channel); };
+  }, [add, items, fetchCustomers]);
 
   // Handle URL query parameters for pre-filling booking form
   const location = useLocation();
@@ -253,6 +268,25 @@ export default function BookingsPage() {
       setViewMode('analytics');
     }
   }, [location.search]);
+
+  // Handle vehicle data returned from classification page
+  useEffect(() => {
+    if (location.state?.vehicleData) {
+      const { make, model, category } = location.state.vehicleData;
+      setFormData(prev => ({
+        ...prev,
+        vehicleMake: make || prev.vehicleMake,
+        vehicleModel: model || prev.vehicleModel,
+        vehicle: category || prev.vehicle
+      }));
+      // Open booking modal if not already open
+      if (!isAddModalOpen) {
+        setIsAddModalOpen(true);
+      }
+      // Clear state to prevent re-applying
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, isAddModalOpen, navigate]);
 
 
   // Refresh data on mount and focus
@@ -861,7 +895,7 @@ export default function BookingsPage() {
                   <Input
                     type="date"
                     className="w-40 h-8 bg-zinc-900 border-zinc-800"
-                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")}
+                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-MM-dd")}
                     onChange={(e) => {
                       if (e.target.value) {
                         // Parse YYYY-MM-DD manually to create local date at midnight explicitly
@@ -894,9 +928,20 @@ export default function BookingsPage() {
                 <label className="text-right text-sm font-medium text-gray-400">Customer</label>
                 <div className="col-span-3 relative">
                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-gray-400 text-sm">Select Customer</label>
+                    <button
+                      type="button"
+                      onClick={fetchCustomers}
+                      className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                    >
+                      {loadingCustomers ? 'Loading...' : `Refresh List (${customers.length})`}
+                    </button>
+                  </div>
                   <select
                     className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={formData.customer}
+                    disabled={loadingCustomers}
                     onChange={(e) => {
                       const custName = e.target.value;
                       setFormData({ ...formData, customer: custName });
@@ -920,10 +965,12 @@ export default function BookingsPage() {
                       }
                     }}
                   >
-                    <option value="" className="text-gray-400">Select customer or type below...</option>
+                    <option value="" className="text-gray-400">
+                      {loadingCustomers ? "Loading..." : "Select a Customer OR a Prospect"}
+                    </option>
                     {customers.map((cust) => (
-                      <option key={cust.id} value={cust.name} className="text-gray-300">
-                        {cust.name}
+                      <option key={cust.id || cust.email || cust.name} value={cust.name} className="text-gray-300">
+                        {cust.name} {cust.type === 'prospect' ? '(Prospect)' : ''}
                       </option>
                     ))}
                   </select>
@@ -964,28 +1011,30 @@ export default function BookingsPage() {
 
               <div className="grid grid-cols-4 items-start gap-4">
                 <label className="text-right text-sm font-medium text-gray-400 mt-2">Address</label>
-                <div className="col-span-3 space-y-2">
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                      placeholder="123 Main St, City, State"
-                      className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
-                  </div>
-                  {formData.address && (
-                    <div className="w-full h-48 rounded-md overflow-hidden border border-zinc-800">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent(formData.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                        frameBorder="0"
-                        scrolling="no"
-                        title="Location Map"
+                <div className="col-span-3">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        placeholder="123 Main St, City, State"
+                        className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       />
                     </div>
-                  )}
+                    {formData.address && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowMap(true)}
+                        className="shrink-0 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                        title="View on Map"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1020,10 +1069,10 @@ export default function BookingsPage() {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrinking-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0 bg-zinc-950 border-zinc-800">
+                      <PopoverContent className="w-[200px] p-0 bg-white border-zinc-300">
                         <Command>
-                          <CommandInput placeholder="Search addons..." className="h-9 text-white" />
-                          <CommandEmpty>No addon found.</CommandEmpty>
+                          <CommandInput placeholder="Search addons..." className="h-9 text-zinc-900" />
+                          <CommandEmpty className="text-zinc-600">No addon found.</CommandEmpty>
                           <CommandGroup className="max-h-64 overflow-auto">
                             {allAddons.map((addon) => (
                               <CommandItem
@@ -1036,7 +1085,7 @@ export default function BookingsPage() {
                                     return { ...prev, addons: [...prev.addons, addon.name] };
                                   });
                                 }}
-                                className="text-white cursor-pointer hover:bg-zinc-900"
+                                className="text-zinc-900 cursor-pointer hover:bg-zinc-100"
                               >
                                 <Check
                                   className={cn(
@@ -1072,7 +1121,7 @@ export default function BookingsPage() {
                       type="button"
                       variant="outline"
                       className="border-blue-600 text-blue-600 hover:bg-blue-600/10"
-                      onClick={() => setVehicleClassModalOpen(true)}
+                      onClick={() => navigate('/vehicle-classification', { state: { returnTo: '/bookings' } })}
                     >
                       Quick Select
                     </Button>
@@ -1243,10 +1292,33 @@ export default function BookingsPage() {
         </Dialog>
 
         <VehicleSelectorModal
-          open={vehicleClassModalOpen}
-          onOpenChange={setVehicleClassModalOpen}
+          open={vehicleSelectorOpen}
+          onOpenChange={setVehicleSelectorOpen}
           onSelect={handleVehicleSelect}
         />
+
+        {/* Google Maps Dialog */}
+        <Dialog open={showMap} onOpenChange={setShowMap}>
+          <DialogContent className="sm:max-w-[600px] h-[500px] bg-zinc-950 border-zinc-800 p-0 overflow-hidden">
+            <DialogHeader className="p-4 bg-zinc-900/50 border-b border-zinc-800 absolute top-0 w-full z-10 backdrop-blur-sm">
+              <DialogTitle className="text-white flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-red-500" />
+                {formData.address || "Location"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="w-full h-full pt-[60px]">
+              <iframe
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(formData.address || "")}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+              ></iframe>
+            </div>
+          </DialogContent>
+        </Dialog>
 
 
 

@@ -4,10 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter } from "lucide-react";
-import { getInvoices, upsertInvoice, deleteInvoice } from "@/lib/db";
-import { getSupabaseCustomers } from "@/lib/supa-data";
-import { Customer } from "@/components/customers/CustomerModal";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X } from "lucide-react";
+import { getSupabaseInvoices, upsertSupabaseInvoice, deleteSupabaseInvoice, getSupabaseCustomers, Customer } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";
@@ -61,13 +59,15 @@ const Invoicing = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterCustomerId, setFilterCustomerId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isEditingPaid, setIsEditingPaid] = useState(false);
+  const [editPaidValue, setEditPaidValue] = useState("");
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [invs, custs] = await Promise.all([getInvoices(), getSupabaseCustomers()]);
+    const [invs, custs] = await Promise.all([getSupabaseInvoices(), getSupabaseCustomers()]);
     // Assign invoice numbers starting from 100 if missing
     const invoicesWithNumbers = (invs as Invoice[]).map((inv, idx) => ({
       ...inv,
@@ -96,36 +96,64 @@ const Invoicing = () => {
       return;
     }
 
-    const customer = customers.find(c => c.id === selectedCustomer);
-    if (!customer) return;
+    try {
+      const customer = customers.find(c => c.id === selectedCustomer);
+      if (!customer) throw new Error("Customer not found in list");
 
-    const maxInvoiceNum = invoices.reduce((max, inv) => Math.max(max, inv.invoiceNumber || 99), 99);
-    const vehicleDesc = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
+      // 1. Ensure Customer exists in CRM (Sync Auth -> CRM if needed)
+      // This is crucial if 'selectedCustomer' is an Auth User ID who hasn't been synced to 'customers' table yet.
+      // We assume 'customer' object has at least a name, maybe email.
+      const crmCustomer = await upsertSupabaseCustomer({
+        id: customer.id, // Try to keep same ID
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        vehicle_info: {
+          make: customer.vehicle?.split(' ')[1] || '', // Rough parsing fallback, ideally we have structured vehicle info
+          model: customer.model,
+          year: customer.year
+        }
+      });
 
-    const invoice: Invoice = {
-      invoiceNumber: maxInvoiceNum + 1,
-      customerId: selectedCustomer,
-      customerName: customer.name,
-      vehicle: vehicleDesc.trim() || "Unknown Vehicle",
-      services,
-      total: calculateTotal(),
-      date: new Date().toLocaleDateString(),
-      createdAt: new Date().toISOString(),
-      paymentStatus: "unpaid",
-      paidAmount: 0,
-    };
+      // 2. Prepare Invoice
+      const maxInvoiceNum = invoices.reduce((max, inv) => Math.max(max, inv.invoiceNumber || 99), 99);
+      const vehicleDesc = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
 
-    await upsertInvoice(invoice);
-    toast({ title: "Success", description: "Invoice created successfully" });
+      const invoice: Invoice = {
+        invoiceNumber: maxInvoiceNum + 1,
+        customerId: crmCustomer.id!, // Use ID from CRM upsert result to be safe
+        customerName: crmCustomer.full_name || customer.name,
+        vehicle: vehicleDesc.trim() || "Unknown Vehicle",
+        services,
+        total: calculateTotal(),
+        date: new Date().toLocaleDateString(),
+        createdAt: new Date().toISOString(),
+        paymentStatus: "unpaid",
+        paidAmount: 0,
+      };
 
-    setSelectedCustomer("");
-    setServices([]);
-    setShowCreateForm(false);
-    loadData();
+      // 3. Create Invoice
+      await upsertSupabaseInvoice(invoice);
+      toast({ title: "Success", description: "Invoice created successfully" });
+
+      setSelectedCustomer("");
+      setServices([]);
+      setShowCreateForm(false);
+      loadData();
+
+    } catch (err: any) {
+      console.error("Create Invoice Failed:", err);
+      toast({
+        title: "Failed to create invoice",
+        description: err.message || "Unknown error occurred",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteInvoice = async (id: string) => {
-    await deleteInvoice(id);
+    await deleteSupabaseInvoice(id);
     setDeleteId(null);
     toast({ title: "Deleted", description: "Invoice deleted successfully" });
     loadData();
@@ -174,12 +202,32 @@ const Invoicing = () => {
     const newPaid = (selectedInvoice.paidAmount || 0) + amt;
     const status = newPaid >= selectedInvoice.total ? "paid" : "partially-paid";
     const updated: Invoice = { ...selectedInvoice, paidAmount: newPaid, paymentStatus: status, paidDate: new Date().toISOString() };
-    await upsertInvoice(updated);
+    await upsertSupabaseInvoice(updated);
     setPaymentDialogOpen(false);
     setPaymentAmount("");
     setSelectedInvoice(updated);
     loadData();
     toast({ title: "Payment recorded", description: `Added $${amt.toFixed(2)} to invoice #${updated.invoiceNumber}` });
+  };
+
+  const saveEditedPaid = async () => {
+    if (!selectedInvoice) return;
+    const amt = parseFloat(editPaidValue);
+    if (Number.isNaN(amt) || amt < 0) return; // Allow 0 to reset
+
+    // Determine status based on new amount
+    const status = amt >= selectedInvoice.total ? "paid" : amt > 0 ? "partially-paid" : "unpaid";
+
+    const updated: Invoice = { ...selectedInvoice, paidAmount: amt, paymentStatus: status };
+    if (amt >= selectedInvoice.total) {
+      updated.paidDate = new Date().toISOString();
+    }
+
+    await upsertSupabaseInvoice(updated);
+    setSelectedInvoice(updated);
+    setIsEditingPaid(false);
+    loadData();
+    toast({ title: "Payment updated", description: `Payment amount manually updated to $${amt.toFixed(2)}` });
   };
 
   const generatePDF = (invoice: Invoice, download = false) => {
@@ -527,10 +575,32 @@ const Invoicing = () => {
                   <span className="text-lg font-bold text-white">Total</span>
                   <span className="text-2xl font-bold text-emerald-400">${selectedInvoice.total.toFixed(2)}</span>
                 </div>
-                {(selectedInvoice.paidAmount || 0) > 0 && (
-                  <div className="flex justify-between items-center text-sm text-zinc-400">
+                {(selectedInvoice.paidAmount || 0) >= 0 && ( /* Always show if editing possibility exists, usually > 0 but we might want to edit 0 too. But let's keep logic simple for now: if paid > 0 OR editing */
+                  <div className="flex justify-between items-center text-sm text-zinc-400 h-9">
                     <span>Amount Paid</span>
-                    <span>-${selectedInvoice.paidAmount?.toFixed(2)}</span>
+                    {isEditingPaid ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={editPaidValue}
+                          onChange={e => setEditPaidValue(e.target.value)}
+                          className="h-8 w-24 bg-zinc-900 border-zinc-700 text-right px-2"
+                        />
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10" onClick={saveEditedPaid}>
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white hover:bg-zinc-800" onClick={() => setIsEditingPaid(false)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 group">
+                        <span>-${(selectedInvoice.paidAmount || 0).toFixed(2)}</span>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setIsEditingPaid(true); }}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {(selectedInvoice.paidAmount || 0) > 0 && (selectedInvoice.total - (selectedInvoice.paidAmount || 0) > 0) && (
