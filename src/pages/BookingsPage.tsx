@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw } from "lucide-react"; // Added Copy, RotateCcw
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { useBookingsStore, type Booking } from "@/store/bookings";
+import type { BookingStatus } from "@/store/bookings";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -32,7 +34,7 @@ import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import supabase from "@/lib/supabase"; // Realtime import
 
 // --- Types ---
-type ViewMode = "week" | "month" | "year" | "analytics";
+type ViewMode = "day" | "week" | "month" | "year" | "analytics";
 
 // --- Helpers for Week View ---
 const getWeekDays = (date: Date) => {
@@ -55,10 +57,19 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
+
+
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Sync latest data on mount
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   // Form State
   const [formData, setFormData] = useState({
+    customerId: undefined as string | undefined,
     customer: "",
     email: "",
     phone: "",
@@ -69,12 +80,14 @@ export default function BookingsPage() {
     vehicleModel: "",
     address: "",
     time: "09:00",
+    endTime: "17:00",
     assignedEmployee: "",
     bookedBy: getCurrentUser()?.name || '',
     notes: "",
     addons: [] as string[],
     hasReminder: false,
-    reminderFrequency: "3"
+    reminderFrequency: "3",
+    status: "confirmed" as BookingStatus
   });
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -90,10 +103,8 @@ export default function BookingsPage() {
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
 
   const handleArchiveToggle = (booking: Booking) => {
-    if (confirm(booking.isArchived ? "Restore this booking?" : "Are you sure you want to archive this booking?")) {
-      update(booking.id, { isArchived: !booking.isArchived });
-      toast.success(booking.isArchived ? "Booking restored" : "Booking archived");
-    }
+    update(booking.id, { isArchived: !booking.isArchived });
+    toast.success(booking.isArchived ? "Booking restored" : "Booking archived");
   };
 
   // Handlers
@@ -170,61 +181,20 @@ export default function BookingsPage() {
   }, []);
 
   useEffect(() => {
-    // Fetch bookings from Supabase and sync to store
-    const syncBookings = async () => {
-      const supaBookings = await getSupabaseBookings();
+    // 1. Fetch Customers
+    fetchCustomers();
 
-      const localIds = new Set(items.map(b => b.id));
-
-      supaBookings.forEach(sb => {
-        if (!localIds.has(sb.id)) {
-          // Determine status - map raw string to BookingStatus type
-          let status: any = sb.status;
-          if (!['pending', 'confirmed', 'in_progress', 'done'].includes(status)) {
-            status = 'pending';
-          }
-
-          add({
-            id: sb.id,
-            customer: sb.customer_name || 'Unknown',
-            title: sb.title || 'Service',
-            date: sb.date, // Assuming ISO
-            status: status,
-            vehicle: sb.vehicle_info?.type || '',
-            vehicleYear: sb.vehicle_year || sb.vehicle_info?.year || '',
-            vehicleMake: sb.vehicle_make || sb.vehicle_info?.make || '',
-            vehicleModel: sb.vehicle_model || sb.vehicle_info?.model || '',
-            address: sb.address || '',
-            assignedEmployee: sb.assigned_employee || '',
-            notes: sb.notes || '',
-            price: sb.price,
-            addons: sb.addons || [],
-            bookedBy: sb.booked_by || 'Website',
-            hasReminder: sb.has_reminder,
-            reminderFrequency: sb.reminder_frequency,
-            isArchived: sb.is_archived,
-            createdAt: sb.created_at
-          });
-        }
-      });
-    };
-    syncBookings();
-
-    // Realtime Subscription
+    // 2. Realtime Subscription (using store refresh)
     const channel = supabase
       .channel('bookings-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-        // console.log("Realtime change:", payload);
-        syncBookings();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+        refresh();
         toast.info("Calendar updated from remote change");
       })
       .subscribe();
 
-    // Fetch customers - Load from localforage to get complete data with addresses/vehicles
-    fetchCustomers();
-
     return () => { supabase.removeChannel(channel); };
-  }, [add, items, fetchCustomers]);
+  }, [refresh, fetchCustomers]);
 
   // Handle URL query parameters for pre-filling booking form
   const location = useLocation();
@@ -322,14 +292,48 @@ export default function BookingsPage() {
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
+  // Status styling helpers
+  const getStatusColor = (status: BookingStatus | undefined) => {
+    switch (status) {
+      case 'tentative':
+        return 'bg-yellow-500/10 border-yellow-500/50 border-dashed text-yellow-200';
+      case 'blocked':
+        return 'bg-red-500/10 border-red-500/50 border-dashed text-red-200';
+      case 'confirmed':
+        return 'bg-primary/20 border-primary text-primary-foreground';
+      case 'pending':
+        return 'bg-orange-500/20 border-orange-500 text-orange-200';
+      case 'in_progress':
+        return 'bg-blue-500/20 border-blue-500 text-blue-200';
+      case 'done':
+        return 'bg-green-500/20 border-green-500 text-green-200';
+      default:
+        return 'bg-primary/20 border-primary text-primary-foreground';
+    }
+  };
+
+  const getStatusIcon = (status: BookingStatus | undefined) => {
+    switch (status) {
+      case 'tentative': return '⏱';
+      case 'blocked': return '🚫';
+      case 'confirmed': return '✓';
+      case 'pending': return '⏳';
+      case 'in_progress': return '🔄';
+      case 'done': return '✅';
+      default: return '✓';
+    }
+  };
+
   // Handlers
   const handlePrev = () => {
-    if (viewMode === 'week') setCurrentDate(subWeeks(currentDate, 1));
+    if (viewMode === 'day') setCurrentDate(date => { const d = new Date(date); d.setDate(d.getDate() - 1); return d; });
+    else if (viewMode === 'week') setCurrentDate(subWeeks(currentDate, 1));
     else if (viewMode === 'year') setCurrentDate(subYears(currentDate, 1));
     else setCurrentDate(subMonths(currentDate, 1));
   };
   const handleNext = () => {
-    if (viewMode === 'week') setCurrentDate(addWeeks(currentDate, 1));
+    if (viewMode === 'day') setCurrentDate(date => { const d = new Date(date); d.setDate(d.getDate() + 1); return d; });
+    else if (viewMode === 'week') setCurrentDate(addWeeks(currentDate, 1));
     else if (viewMode === 'year') setCurrentDate(addYears(currentDate, 1));
     else setCurrentDate(addMonths(currentDate, 1));
   };
@@ -348,6 +352,7 @@ export default function BookingsPage() {
     setSelectedCustomer(matchingCust || null);
     setFormData({
       customer: booking.customer,
+      customerId: booking.customerId,
       email: customers.find(c => c.name === booking.customer)?.email || "",
       phone: customers.find(c => c.name === booking.customer)?.phone || "",
       service: booking.title,
@@ -357,12 +362,14 @@ export default function BookingsPage() {
       vehicleModel: booking.vehicleModel || "",
       address: booking.address || "",
       time: format(parseISO(booking.date), "HH:mm"),
+      endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "", // Load bookedBy
       notes: booking.notes || "",
       addons: booking.addons || [],
       hasReminder: booking.hasReminder || false,
-      reminderFrequency: booking.reminderFrequency?.toString() || "3"
+      reminderFrequency: booking.reminderFrequency?.toString() || "3",
+      status: booking.status || "confirmed"
     });
     setIsAddModalOpen(true);
     setIsAddModalOpen(true);
@@ -384,7 +391,7 @@ export default function BookingsPage() {
       // 1. Push Bell Notification
       const title = `Employee ${action.toUpperCase()} Booking`;
       const msg = `${currentUser.name} has ${action}d a booking for ${booking.customer} on ${format(parseISO(booking.date), 'MMM d, yyyy')}.`;
-      await import("@/lib/adminAlerts").then(m => m.pushAdminAlert('info', msg, 'system', { id: booking.id }));
+      await import("@/lib/adminAlerts").then(m => m.pushAdminAlert('booking_created', msg, 'system', { id: booking.id }));
 
       // 2. Generate PDF Evidence (reuse logic or simplified)
       // We reuse the form data if it matches the booking, or use booking data
@@ -425,8 +432,11 @@ export default function BookingsPage() {
 
     // Sync to Customer Profile
     try {
+      // Resolve customer ID from selection if names match, otherwise undefined (or previous formData.customerId if just editing details)
+      const resolvedCustomerId = (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId;
+
       const custPayload = {
-        id: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : undefined,
+        id: resolvedCustomerId,
         name: formData.customer,
         email: formData.email,
         phone: formData.phone,
@@ -452,6 +462,13 @@ export default function BookingsPage() {
         customer: formData.customer,
         title: formData.service,
         date: date.toISOString(),
+        endTime: formData.endTime ? (() => {
+          const [endHours, endMinutes] = formData.endTime.split(":").map(Number);
+          const endDate = new Date(dateBase);
+          endDate.setHours(endHours, endMinutes, 0, 0);
+          return endDate.toISOString();
+        })() : undefined,
+        status: formData.status,
         vehicle: formData.vehicle,
         vehicleYear: formData.vehicleYear,
         vehicleMake: formData.vehicleMake,
@@ -462,7 +479,8 @@ export default function BookingsPage() {
         notes: formData.notes,
         addons: formData.addons,
         hasReminder: formData.hasReminder,
-        reminderFrequency: parseInt(formData.reminderFrequency) || 0
+        reminderFrequency: parseInt(formData.reminderFrequency) || 0,
+        customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId
       };
       update(selectedBooking.id, updates);
       resultingBooking = { ...selectedBooking, ...updates };
@@ -473,12 +491,19 @@ export default function BookingsPage() {
       toast.success("Booking updated");
     } else {
       // Create
-      const newBooking = {
-        id: `b-${Date.now()}`,
+      const newBooking: Booking = {
+        id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b-${Date.now()}`,
         customer: formData.customer,
+        customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
         title: formData.service,
         date: date.toISOString(),
-        status: "confirmed" as const,
+        endTime: formData.endTime ? (() => {
+          const [endHours, endMinutes] = formData.endTime.split(":").map(Number);
+          const endDate = new Date(dateBase);
+          endDate.setHours(endHours, endMinutes, 0, 0);
+          return endDate.toISOString();
+        })() : undefined,
+        status: formData.status,
         vehicle: formData.vehicle,
         vehicleYear: formData.vehicleYear,
         vehicleMake: formData.vehicleMake,
@@ -507,21 +532,12 @@ export default function BookingsPage() {
     setSelectedBooking(null);
     setSelectedCustomer(null);
     setSelectedCustomer(null);
-    setFormData({ customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3" });
+    setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3", status: "confirmed" });
   };
 
   const handleDelete = () => {
     if (selectedBooking) {
-      if (confirm("Are you sure you want to delete this booking?")) {
-        // Notify Admin if Employee BEFORE removal (so we have data)
-        notifyEmployeeChange('delete', selectedBooking);
-
-        remove(selectedBooking.id);
-        toast.success("Booking deleted");
-        setIsAddModalOpen(false);
-        setSelectedBooking(null);
-        setSelectedCustomer(null);
-      }
+      setIsDeleteDialogOpen(true);
     }
   };
 
@@ -532,6 +548,7 @@ export default function BookingsPage() {
     const customer = customers.find(c => c.name === booking.customer);
 
     setFormData({
+      customerId: undefined,
       customer: booking.customer,
       email: customer?.email || "",
       phone: customer?.phone || "",
@@ -542,12 +559,14 @@ export default function BookingsPage() {
       vehicleModel: booking.vehicleModel || "",
       address: booking.address || "",
       time: "09:00", // Default time for new booking
+      endTime: "17:00",
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "",
       notes: booking.notes || "",
       addons: booking.addons || [],
       hasReminder: false,
-      reminderFrequency: "3"
+      reminderFrequency: "3",
+      status: booking.status || "confirmed"
     });
 
     // Reset validation/selection states for "New" mode
@@ -556,16 +575,6 @@ export default function BookingsPage() {
     setSelectedDate(parseISO(booking.date)); // Default to the original booking date (Same Day)
     setIsAddModalOpen(true);
     toast.info("Booking duplicated. Please select a new time.");
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50';
-      case 'confirmed': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
-      case 'in_progress': return 'bg-purple-500/20 text-purple-400 border-purple-500/50';
-      case 'done': return 'bg-green-500/20 text-green-400 border-green-500/50';
-      default: return 'bg-zinc-800 text-zinc-400 border-zinc-700';
-    }
   };
 
   const handleSavePDF = () => {
@@ -645,6 +654,7 @@ export default function BookingsPage() {
       <PageHeader title="Booking Calendar" subtitle="Manage appointments">
         <div className="flex items-center gap-2 hidden lg:flex">
           <div className="flex bg-zinc-900/50 rounded-lg p-1 border border-zinc-800">
+            <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-7 text-xs px-2">Day</Button>
             <Button variant={viewMode === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="h-7 text-xs px-2">Week</Button>
             <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-7 text-xs px-2">Month</Button>
             <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-7 text-xs px-2">Year</Button>
@@ -659,7 +669,7 @@ export default function BookingsPage() {
           <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
             <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>
             <span className="min-w-[80px] w-auto text-center text-xs font-semibold px-2">
-              {viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
+              {viewMode === 'day' ? format(currentDate, "MMMM d") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
             </span>
             <Button variant="ghost" size="icon" onClick={handleNext} className="h-8 w-8"><ChevronRight className="h-3 w-3" /></Button>
           </div>
@@ -679,6 +689,7 @@ export default function BookingsPage() {
         <div className="flex flex-col gap-4 lg:hidden mb-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+              <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-8 text-xs px-3">Day</Button>
               <Button variant={viewMode === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="h-8 text-xs px-3">Week</Button>
               <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-8 text-xs px-3">Month</Button>
               <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-8 text-xs px-3">Year</Button>
@@ -694,13 +705,113 @@ export default function BookingsPage() {
           </div>
           <div className="flex items-center justify-between gap-2">
             <Button variant="outline" size="icon" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
-            <span className="font-semibold">{viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}</span>
+            <span className="font-semibold">{viewMode === 'day' ? format(currentDate, "EEEE, MMMM d, yyyy") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}</span>
             <Button variant="outline" size="icon" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
             <Button variant="ghost" size="sm" onClick={handleToday}>Today</Button>
           </div>
         </div>
 
-        {viewMode === 'week' ? (
+        {viewMode === 'day' ? (
+          <Card className="min-h-[600px] flex flex-col bg-zinc-950/50 border-zinc-800">
+            {/* Day View Timeline Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900/50">
+              <div>
+                <h2 className="text-xl font-bold">{format(currentDate, "EEEE")}</h2>
+                <p className="text-muted-foreground">{format(currentDate, "MMMM d, yyyy")}</p>
+              </div>
+              <Button onClick={() => handleDayClick(currentDate)} className="gap-2">
+                <Plus className="h-4 w-4" /> Add Booking
+              </Button>
+            </div>
+
+            {/* Timeline Grid */}
+            <div className="flex-1 overflow-y-auto relative custom-scrollbar p-0">
+              {/* Time Indicators (08:00 - 18:00) */}
+              <div className="relative min-h-[800px]">
+                {Array.from({ length: 13 }).map((_, i) => {
+                  const hour = i + 7; // Start at 7 AM
+                  return (
+                    <div key={hour} className="flex h-[60px] border-b border-zinc-800/50 group hover:bg-zinc-900/10">
+                      <div className="w-16 text-right pr-4 text-xs text-muted-foreground py-2 sticky left-0 bg-background/95 border-r border-zinc-800/50 z-10">
+                        {hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}
+                      </div>
+                      <div className="flex-1 relative">
+                        {/* 30-min marker (dashed) */}
+                        <div className="absolute top-1/2 left-0 right-0 border-t border-zinc-800/20 border-dashed w-full" />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Current Time Indicator */}
+                {isToday(currentDate) && (() => {
+                  const now = new Date();
+                  const currentHour = now.getHours();
+                  const currentMin = now.getMinutes();
+                  // Pixel calculation: (Hour - 7) * 60px + Minutes
+                  const top = Math.max(0, (currentHour - 7) * 60 + currentMin);
+                  if (currentHour >= 7 && currentHour <= 19) {
+                    return (
+                      <div className="absolute left-16 right-0 border-t-2 border-red-500 z-20 pointer-events-none flex items-center" style={{ top: `${top}px` }}>
+                        <div className="w-2 h-2 bg-red-500 rounded-full -ml-1" />
+                      </div>
+                    )
+                  }
+                  return null;
+                })()}
+
+                {/* Render Bookings */}
+                {getBookingsForDay(currentDate).map(booking => {
+                  const start = parseISO(booking.date);
+                  const startH = start.getHours();
+                  const startM = start.getMinutes();
+
+                  // Duration - assume 1h default if no end time, or calc diff
+                  let durationMin = 60;
+                  if (booking.endTime) {
+                    const end = parseISO(booking.endTime);
+                    durationMin = (end.getTime() - start.getTime()) / 60000;
+                  }
+                  // Min height 30px
+                  durationMin = Math.max(30, durationMin);
+
+                  // Top position: (Hour - 7) * 60 + Min
+                  const top = (startH - 7) * 60 + startM;
+
+                  // Skip if outside 7am-8pm roughly or negative
+                  if (top < 0) return null;
+
+                  return (
+                    <div
+                      key={booking.id}
+                      onClick={(e) => handleBookingClick(e, booking)}
+                      className={cn(
+                        "absolute left-20 right-4 rounded-md border p-2 text-xs shadow-sm cursor-pointer hover:brightness-110 transition-all z-10 overflow-hidden flex flex-col",
+                        getStatusColor(booking.status)
+                      )}
+                      style={{
+                        top: `${top}px`,
+                        height: `${durationMin}px`,
+                        minHeight: '40px'
+                      }}
+                    >
+                      <div className="flex items-center gap-2 font-semibold">
+                        <span>{format(start, "h:mm a")}</span>
+                        <span className="truncate">{booking.customer}</span>
+                      </div>
+                      <div className="opacity-90 truncate">{booking.title}</div>
+                      {booking.vehicle && <div className="opacity-75 truncate text-[10px]">{booking.vehicle}</div>}
+                      <div className="mt-auto pt-1 flex items-center gap-1 text-[10px] uppercase font-bold opacity-80">
+                        <span>{getStatusIcon(booking.status)}</span>
+                        <span>{booking.status}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        ) : viewMode === 'week' ? (
           <div className="space-y-4">
             {eachDayOfInterval({ start: startOfWeek(currentDate, { weekStartsOn: 1 }), end: endOfWeek(currentDate, { weekStartsOn: 1 }) }).map(day => {
               const bookings = getBookingsForDay(day);
@@ -708,7 +819,11 @@ export default function BookingsPage() {
               return (
                 <Card key={day.toString()} className={cn("p-4 border-zinc-800 bg-zinc-900/40", isTodayDate && "border-primary/50 bg-primary/5")}>
                   <div className="flex items-center gap-4 mb-4">
-                    <div className={cn("h-12 w-12 rounded-lg flex flex-col items-center justify-center border", isTodayDate ? "bg-primary text-primary-foreground border-primary" : "bg-zinc-800 border-zinc-700")}>
+                    <div
+                      className={cn("h-12 w-12 rounded-lg flex flex-col items-center justify-center border cursor-pointer hover:bg-zinc-800 transition-colors", isTodayDate ? "bg-primary text-primary-foreground border-primary" : "bg-zinc-800 border-zinc-700")}
+                      onClick={() => { setCurrentDate(day); setViewMode('day'); }}
+                      title="View Day Timeline"
+                    >
                       <span className="text-xs font-semibold uppercase">{format(day, "EEE")}</span>
                       <span className="text-lg font-bold">{format(day, "d")}</span>
                     </div>
@@ -728,10 +843,17 @@ export default function BookingsPage() {
                         className={cn("flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-zinc-800/50 transition-all", getStatusColor(booking.status))}
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-16 text-center text-xs font-mono">{format(parseISO(booking.date), "HH:mm")}</div>
+                          <div className="w-24 text-center text-xs font-mono flex flex-col items-center">
+                            <span>{format(parseISO(booking.date), "h:mm a")}</span>
+                            {booking.endTime && <span className="text-zinc-500 opacity-80">- {format(parseISO(booking.endTime), "h:mm a")}</span>}
+                          </div>
                           <div>
                             <div className="font-semibold">{booking.customer}</div>
                             <div className="text-sm opacity-80">{booking.title} • {booking.vehicle}</div>
+                            <div className="flex items-center gap-1 text-xs mt-0.5 opacity-90 font-medium">
+                              <span>{getStatusIcon(booking.status)}</span>
+                              <span className="uppercase">{booking.status}</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -843,10 +965,18 @@ export default function BookingsPage() {
                           )}
                         >
                           <div className="flex items-center gap-1">
-                            <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "HH:mm")}</span>
+                            <span className="mr-0.5">{getStatusIcon(booking.status)}</span>
+                            <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "h:mm a")}</span>
                             <span className="font-semibold truncate">{booking.customer}</span>
                           </div>
                           <div className="truncate opacity-80 text-[10px]">{booking.title}</div>
+
+                          {/* Status Text for Month View */}
+                          <div className="flex items-center gap-1 text-[9px] opacity-90 font-semibold uppercase mt-0.5">
+                            {/* Icon already in header, but user wants to see it 'stating' what status it is */}
+                            <span>{booking.status}</span>
+                          </div>
+
                           {booking.vehicleYear && booking.vehicleMake && (
                             <div className="truncate opacity-70 text-[9px]">
                               {booking.vehicleYear} {booking.vehicleMake} {booking.vehicleModel}
@@ -884,8 +1014,8 @@ export default function BookingsPage() {
 
         {/* Booking Dialog */}
         <Dialog open={isAddModalOpen} onOpenChange={(open) => { if (!open) { setSelectedBooking(null); setSelectedCustomer(null); } setIsAddModalOpen(open); }}>
-          <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 p-4 sm:p-6">
-            <DialogHeader>
+          <DialogContent className="w-[95vw] max-w-[500px] max-h-[85vh] flex flex-col bg-zinc-950 border-zinc-800 p-0">
+            <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-xl font-bold flex items-center gap-2">
                   {selectedBooking ? 'Edit Booking' : 'New Booking'}
@@ -910,361 +1040,399 @@ export default function BookingsPage() {
               </div>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Time</label>
-                <div className="col-span-3 relative">
-                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                  <Input
-                    type="time"
-                    className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
-                    value={formData.time}
-                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Customer</label>
-                <div className="col-span-3 relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-gray-400 text-sm">Select Customer</label>
-                    <button
-                      type="button"
-                      onClick={fetchCustomers}
-                      className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                    >
-                      {loadingCustomers ? 'Loading...' : `Refresh List (${customers.length})`}
-                    </button>
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6">
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Time</label>
+                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                        <Input
+                          type="time"
+                          value={formData.time}
+                          onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                          className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
+                        />
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1 text-center">Start</div>
+                    </div>
+                    <div>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                        <Input
+                          type="time"
+                          value={formData.endTime}
+                          onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                          className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
+                        />
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1 text-center">End</div>
+                    </div>
                   </div>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={formData.customer}
-                    disabled={loadingCustomers}
-                    onChange={(e) => {
-                      const custName = e.target.value;
-                      setFormData({ ...formData, customer: custName });
+                </div>
 
-                      // Find and set customer data
-                      const cust = customers.find(c => c.name === custName);
-                      // console.log('Selected customer:', cust); // Debug log
-                      if (cust) {
-                        setSelectedCustomer(cust);
-                        setFormData(prev => ({
-                          ...prev,
-                          customer: cust.name,
-                          email: cust.email || prev.email || "",
-                          phone: cust.phone || prev.phone || "",
-                          address: cust.address || prev.address,
-                          vehicleYear: cust.year || prev.vehicleYear,
-                          vehicleMake: cust.vehicle || prev.vehicleMake,
-                          vehicleModel: cust.model || prev.vehicleModel
-                        }));
-                        // console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
-                      }
-                    }}
-                  >
-                    <option value="" className="text-gray-400">
-                      {loadingCustomers ? "Loading..." : "Select a Customer OR a Prospect"}
-                    </option>
-                    {customers.map((cust) => (
-                      <option key={cust.id || cust.email || cust.name} value={cust.name} className="text-gray-300">
-                        {cust.name} {cust.type === 'prospect' ? '(Prospect)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="mt-2">
-                    <Input
-                      placeholder="Or type new customer name..."
-                      className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Customer</label>
+                  <div className="col-span-3 relative">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-gray-400 text-sm">Select Customer</label>
+                      <button
+                        type="button"
+                        onClick={fetchCustomers}
+                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                      >
+                        {loadingCustomers ? 'Loading...' : `Refresh List (${customers.length})`}
+                      </button>
+                    </div>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       value={formData.customer}
-                      onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
+                      disabled={loadingCustomers}
+                      onChange={(e) => {
+                        const custName = e.target.value;
+                        setFormData({ ...formData, customer: custName });
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Contact</label>
-                <div className="col-span-3 grid grid-cols-2 gap-2">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                      placeholder="Email (optional)"
-                      className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                      placeholder="Phone (optional)"
-                      className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 items-start gap-4">
-                <label className="text-right text-sm font-medium text-gray-400 mt-2">Address</label>
-                <div className="col-span-3">
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                        // Find and set customer data
+                        const cust = customers.find(c => c.name === custName);
+                        // console.log('Selected customer:', cust); // Debug log
+                        if (cust) {
+                          setSelectedCustomer(cust);
+                          setFormData(prev => ({
+                            ...prev,
+                            customer: cust.name,
+                            email: cust.email || prev.email || "",
+                            phone: cust.phone || prev.phone || "",
+                            address: cust.address || prev.address,
+                            vehicleYear: cust.year || prev.vehicleYear,
+                            vehicleMake: cust.vehicle || prev.vehicleMake,
+                            vehicleModel: cust.model || prev.vehicleModel
+                          }));
+                          // console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
+                        }
+                      }}
+                    >
+                      <option value="" className="text-gray-400">
+                        {loadingCustomers ? "Loading..." : "Select a Customer OR a Prospect"}
+                      </option>
+                      {customers.map((cust) => (
+                        <option key={cust.id || cust.email || cust.name} value={cust.name} className="text-gray-300">
+                          {cust.name} {cust.type === 'prospect' ? '(Prospect)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="mt-2">
                       <Input
-                        placeholder="123 Main St, City, State"
-                        className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="Or type new customer name..."
+                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
+                        value={formData.customer}
+                        onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                       />
                     </div>
-                    {formData.address && (
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Contact</label>
+                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        placeholder="Email (optional)"
+                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        placeholder="Phone (optional)"
+                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400 mt-2">Address</label>
+                  <div className="col-span-3">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                        <Input
+                          placeholder="123 Main St, City, State"
+                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        />
+                      </div>
+                      {formData.address && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowMap(true)}
+                          className="shrink-0 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                          title="View on Map"
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Service</label>
+                  <div className="col-span-3 flex gap-2">
+                    <div className="relative flex-1">
+                      <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                      <select
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={formData.service}
+                        onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                      >
+                        <option value="" className="text-gray-500">Select Service...</option>
+                        {allServices.map((pkg) => (
+                          <option key={pkg.id} value={pkg.name}>
+                            {pkg.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex-1">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 font-normal">
+                            <span className="truncate">
+                              {formData.addons.length > 0
+                                ? `${formData.addons.length} Addon${formData.addons.length > 1 ? 's' : ''}`
+                                : "Addons..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrinking-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0 bg-white border-zinc-300">
+                          <Command>
+                            <CommandInput placeholder="Search addons..." className="h-9 text-zinc-900" />
+                            <CommandEmpty className="text-zinc-600">No addon found.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-auto">
+                              {allAddons.map((addon) => (
+                                <CommandItem
+                                  key={addon.id}
+                                  value={addon.name}
+                                  onSelect={() => {
+                                    setFormData(prev => {
+                                      const exists = prev.addons.includes(addon.name);
+                                      if (exists) return { ...prev, addons: prev.addons.filter(a => a !== addon.name) };
+                                      return { ...prev, addons: [...prev.addons, addon.name] };
+                                    });
+                                  }}
+                                  className="text-zinc-900 cursor-pointer hover:bg-zinc-100"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.addons.includes(addon.name) ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {addon.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Status */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Status</label>
+                  <div className="col-span-3">
+                    <select
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={formData.status || 'confirmed'}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    >
+                      <option value="confirmed">✓ Confirmed Booking</option>
+                      <option value="tentative">⏱ Tentative (Hold)</option>
+                      <option value="blocked">🚫 Blocked</option>
+                      <option value="pending">⏳ Pending</option>
+                      <option value="in_progress">🔄 In Progress</option>
+                      <option value="done">✅ Done</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Vehicle Type</label>
+                  <div className="col-span-3 space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <Car className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                        <Input
+                          placeholder="e.g. SUV, Sedan, Truck"
+                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                          value={formData.vehicle}
+                          onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
+                        />
+                      </div>
                       <Button
                         type="button"
                         variant="outline"
-                        size="icon"
-                        onClick={() => setShowMap(true)}
-                        className="shrink-0 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white"
-                        title="View on Map"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-600/10"
+                        onClick={() => navigate('/vehicle-classification', { state: { returnTo: '/bookings' } })}
                       >
-                        <MapPin className="h-4 w-4" />
+                        Quick Select
                       </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Vehicle Details</label>
+                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                    <Input
+                      placeholder="Year"
+                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                      value={formData.vehicleYear}
+                      onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Make"
+                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                      value={formData.vehicleMake}
+                      onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Model"
+                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                      value={formData.vehicleModel}
+                      onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
+                    />
+                    {selectedCustomer?.vehicle && (
+                      <p className="col-span-3 text-xs text-gray-400">
+                        Customer's vehicle: {selectedCustomer.year} {selectedCustomer.vehicle} {selectedCustomer.model}
+                      </p>
                     )}
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Service</label>
-                <div className="col-span-3 flex gap-2">
-                  <div className="relative flex-1">
-                    <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Assign To</label>
+                  <div className="col-span-3 relative">
+                    <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <select
                       className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={formData.service}
-                      onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                      value={formData.assignedEmployee}
+                      onChange={(e) => setFormData({ ...formData, assignedEmployee: e.target.value })}
                     >
-                      <option value="" className="text-gray-500">Select Service...</option>
-                      {allServices.map((pkg) => (
-                        <option key={pkg.id} value={pkg.name}>
-                          {pkg.name}
+                      <option value="" className="text-gray-400">Unassigned</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.name} className="text-white bg-zinc-900">
+                          {emp.name}
                         </option>
                       ))}
                     </select>
                   </div>
-
-                  <div className="flex-1">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 font-normal">
-                          <span className="truncate">
-                            {formData.addons.length > 0
-                              ? `${formData.addons.length} Addon${formData.addons.length > 1 ? 's' : ''}`
-                              : "Addons..."}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrinking-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0 bg-white border-zinc-300">
-                        <Command>
-                          <CommandInput placeholder="Search addons..." className="h-9 text-zinc-900" />
-                          <CommandEmpty className="text-zinc-600">No addon found.</CommandEmpty>
-                          <CommandGroup className="max-h-64 overflow-auto">
-                            {allAddons.map((addon) => (
-                              <CommandItem
-                                key={addon.id}
-                                value={addon.name}
-                                onSelect={() => {
-                                  setFormData(prev => {
-                                    const exists = prev.addons.includes(addon.name);
-                                    if (exists) return { ...prev, addons: prev.addons.filter(a => a !== addon.name) };
-                                    return { ...prev, addons: [...prev.addons, addon.name] };
-                                  });
-                                }}
-                                className="text-zinc-900 cursor-pointer hover:bg-zinc-100"
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.addons.includes(addon.name) ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {addon.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Vehicle Type</label>
-                <div className="col-span-3 space-y-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <Car className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input
-                        placeholder="e.g. SUV, Sedan, Truck"
-                        className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                        value={formData.vehicle}
-                        onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-blue-600 text-blue-600 hover:bg-blue-600/10"
-                      onClick={() => navigate('/vehicle-classification', { state: { returnTo: '/bookings' } })}
+                {/* Booked By Field */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Booked By</label>
+                  <div className="col-span-3 relative">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                    <select
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={formData.bookedBy}
+                      onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
                     >
-                      Quick Select
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Vehicle Details</label>
-                <div className="col-span-3 grid grid-cols-3 gap-2">
-                  <Input
-                    placeholder="Year"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                    value={formData.vehicleYear}
-                    onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Make"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                    value={formData.vehicleMake}
-                    onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Model"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                    value={formData.vehicleModel}
-                    onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
-                  />
-                  {selectedCustomer?.vehicle && (
-                    <p className="col-span-3 text-xs text-gray-400">
-                      Customer's vehicle: {selectedCustomer.year} {selectedCustomer.vehicle} {selectedCustomer.model}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Assign To</label>
-                <div className="col-span-3 relative">
-                  <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                  <select
-                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={formData.assignedEmployee}
-                    onChange={(e) => setFormData({ ...formData, assignedEmployee: e.target.value })}
-                  >
-                    <option value="" className="text-gray-400">Unassigned</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name} className="text-white bg-zinc-900">
-                        {emp.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Booked By Field */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Booked By</label>
-                <div className="col-span-3 relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                  <select
-                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={formData.bookedBy}
-                    onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
-                  >
-                    <option value="" className="text-gray-400">Unknown</option>
-                    {/* Ensure current user defaults if not in list */}
-                    {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
-                      <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">
-                        {getCurrentUser()?.name} (You)
-                      </option>
-                    )}
-                    {employees.map((emp) => (
-                      <option key={emp.id || emp.email} value={emp.name} className="text-white bg-zinc-900">
-                        {emp.name} ({emp.role})
-                      </option>
-                    ))}
-                    {/* Catch-all: If the saved value isn't any of the above, show it so it doesn't look Unknown */}
-                    {formData.bookedBy &&
-                      formData.bookedBy !== getCurrentUser()?.name &&
-                      !employees.find(e => e.name === formData.bookedBy) && (
-                        <option key="saved-value" value={formData.bookedBy} className="text-gray-300">
-                          {formData.bookedBy}
+                      <option value="" className="text-gray-400">Unknown</option>
+                      {/* Ensure current user defaults if not in list */}
+                      {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
+                        <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">
+                          {getCurrentUser()?.name} (You)
                         </option>
                       )}
-                  </select>
-                </div>
-              </div>
-
-              {/* Creation Timestamp in History */}
-              {selectedBooking && selectedBooking.createdAt && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Created On</label>
-                  <div className="col-span-3 text-sm text-gray-400">
-                    {new Date(selectedBooking.createdAt).toLocaleString()}
+                      {employees.map((emp) => (
+                        <option key={emp.id || emp.email} value={emp.name} className="text-white bg-zinc-900">
+                          {emp.name} ({emp.role})
+                        </option>
+                      ))}
+                      {/* Catch-all: If the saved value isn't any of the above, show it so it doesn't look Unknown */}
+                      {formData.bookedBy &&
+                        formData.bookedBy !== getCurrentUser()?.name &&
+                        !employees.find(e => e.name === formData.bookedBy) && (
+                          <option key="saved-value" value={formData.bookedBy} className="text-gray-300">
+                            {formData.bookedBy}
+                          </option>
+                        )}
+                    </select>
                   </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-4 items-start gap-4">
-                <label className="text-right text-sm font-medium text-gray-400 mt-2">Notes</label>
-                <div className="col-span-3">
-                  <textarea
-                    className="flex w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
-                    placeholder="Additional notes..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Reminder Settings */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-400">Reminder</label>
-                <div className="col-span-3 flex items-center gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="hasReminder"
-                      className="rounded border-zinc-800 bg-zinc-900 data-[state=checked]:bg-primary"
-                      checked={formData.hasReminder}
-                      onChange={(e) => setFormData({ ...formData, hasReminder: e.target.checked })}
-                    />
-                    <label htmlFor="hasReminder" className="text-sm font-medium text-gray-300 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Enable Follow-up
-                    </label>
-                  </div>
-
-                  {formData.hasReminder && (
-                    <div className="flex-1">
-                      <select
-                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        value={formData.reminderFrequency}
-                        onChange={(e) => setFormData({ ...formData, reminderFrequency: e.target.value })}
-                      >
-                        <option value="1">1 Month</option>
-                        <option value="3">3 Months</option>
-                        <option value="4">4 Months</option>
-                        <option value="6">6 Months</option>
-                        <option value="custom">Custom</option>
-                      </select>
+                {/* Creation Timestamp in History */}
+                {selectedBooking && selectedBooking.createdAt && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-sm font-medium text-gray-400">Created On</label>
+                    <div className="col-span-3 text-sm text-gray-400">
+                      {new Date(selectedBooking.createdAt).toLocaleString()}
                     </div>
-                  )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400 mt-2">Notes</label>
+                  <div className="col-span-3">
+                    <textarea
+                      className="flex w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                      placeholder="Additional notes..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Reminder Settings */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Reminder</label>
+                  <div className="col-span-3 flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="hasReminder"
+                        className="rounded border-zinc-800 bg-zinc-900 data-[state=checked]:bg-primary"
+                        checked={formData.hasReminder}
+                        onChange={(e) => setFormData({ ...formData, hasReminder: e.target.checked })}
+                      />
+                      <label htmlFor="hasReminder" className="text-sm font-medium text-gray-300 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Enable Follow-up
+                      </label>
+                    </div>
+
+                    {formData.hasReminder && (
+                      <div className="flex-1">
+                        <select
+                          className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          value={formData.reminderFrequency}
+                          onChange={(e) => setFormData({ ...formData, reminderFrequency: e.target.value })}
+                        >
+                          <option value="1">1 Month</option>
+                          <option value="3">3 Months</option>
+                          <option value="4">4 Months</option>
+                          <option value="6">6 Months</option>
+                          <option value="custom">Custom</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1282,6 +1450,20 @@ export default function BookingsPage() {
                 <Button variant="secondary" onClick={() => handleDuplicate(selectedBooking)} className="gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700">
                   <Copy className="h-4 w-4" /> Duplicate
                 </Button>
+                {selectedBooking?.status === 'tentative' && (
+                  <Button
+                    onClick={() => {
+                      if (selectedBooking) {
+                        update(selectedBooking.id, { status: 'confirmed' });
+                        toast.success('Booking confirmed!');
+                        setIsAddModalOpen(false);
+                      }
+                    }}
+                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    ✓ Confirm Booking
+                  </Button>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
@@ -1386,9 +1568,7 @@ export default function BookingsPage() {
                 // Apply filters here
                 let customerBookings = items.filter(b => b.customer === customerName);
 
-                if (!showArchived) {
-                  customerBookings = customerBookings.filter(b => !b.isArchived);
-                }
+                // Removed !showArchived check so they always appear in history list
 
                 if (dateFilter.start && dateFilter.end) {
                   customerBookings = customerBookings.filter(b => {
@@ -1516,7 +1696,10 @@ export default function BookingsPage() {
                               {customer.bookings.map((booking: Booking) => (
                                 <div
                                   key={booking.id}
-                                  className="p-2 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer"
+                                  className={cn(
+                                    "p-2 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer",
+                                    booking.isArchived && "bg-green-900/40 border-green-700 hover:bg-green-900/50"
+                                  )}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleBookingClick(e as any, booking);
@@ -1562,7 +1745,7 @@ export default function BookingsPage() {
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      className={cn("h-6 text-xs gap-1 ml-2", booking.isArchived ? "text-yellow-500 hover:text-yellow-400" : "text-zinc-500 hover:text-zinc-300")}
+                                      className={cn("h-6 text-xs gap-1 ml-2", booking.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleArchiveToggle(booking);
@@ -1603,6 +1786,36 @@ export default function BookingsPage() {
           </div>
         </Card >
       </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this booking? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedBooking) {
+                  // Notify Admin if Employee BEFORE removal
+                  notifyEmployeeChange('delete', selectedBooking);
+                  remove(selectedBooking.id);
+                  toast.success("Booking deleted");
+                  setIsAddModalOpen(false);
+                  setSelectedBooking(null);
+                  setSelectedCustomer(null);
+                }
+                setIsDeleteDialogOpen(false);
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div >
   );
 }

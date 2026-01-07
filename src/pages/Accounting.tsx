@@ -99,6 +99,11 @@ const Accounting = () => {
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
   const [showDeleteExpense, setShowDeleteExpense] = useState(false);
   const [showDeleteNotes, setShowDeleteNotes] = useState(false);
+
+  // Generic Edit/Delete States
+  const [deleteItemState, setDeleteItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string }>({ open: false, type: 'income', id: '' });
+  const [editItemState, setEditItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string, amount: string }>({ open: false, type: 'income', id: '', amount: '' });
+
   const [dateFilter, setDateFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [expenseList, setExpenseList] = useState<Expense[]>([]);
@@ -197,6 +202,53 @@ const Accounting = () => {
     setWeeklyRevenue(weekly);
     setMonthlyRevenue(monthly);
     setTotalSpent(totalExp);
+  };
+
+  const handleConfirmDeleteItem = async () => {
+    const { type, id } = deleteItemState;
+    if (!id) return;
+    try {
+      if (type === 'income') {
+        const { deleteReceivable } = await import('@/lib/receivables');
+        await deleteReceivable(id);
+        toast({ title: 'Income Deleted' });
+      } else {
+        const { deleteExpense } = await import('@/lib/db');
+        await deleteExpense(id);
+        toast({ title: 'Expense Deleted' });
+      }
+      loadData();
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    } finally {
+      setDeleteItemState(prev => ({ ...prev, open: false }));
+    }
+  };
+
+  const handleSaveEditItem = async () => {
+    const { type, id, amount } = editItemState;
+    if (!id || !amount || isNaN(parseFloat(amount))) return;
+
+    try {
+      if (type === 'income') {
+        const income = incomeList.find(i => i.id === id);
+        if (income) {
+          await upsertReceivable({ ...income, amount: parseFloat(amount) });
+          toast({ title: 'Income Updated' });
+        }
+      } else {
+        const expense = expenseList.find(e => e.id === id);
+        if (expense) {
+          await upsertExpense({ ...expense, amount: parseFloat(amount) } as any);
+          toast({ title: 'Expense Updated' });
+        }
+      }
+      loadData();
+    } catch {
+      toast({ title: "Update failed", variant: "destructive" });
+    } finally {
+      setEditItemState(prev => ({ ...prev, open: false }));
+    }
   };
 
   const calculateProfit = () => {
@@ -1066,13 +1118,8 @@ const Accounting = () => {
                                       size="icon"
                                       variant="ghost"
                                       className="h-8 w-8"
-                                      onClick={async () => {
-                                        const newAmount = prompt('Edit amount:', String(income.amount || 0));
-                                        if (newAmount && !isNaN(parseFloat(newAmount))) {
-                                          await upsertReceivable({ ...income, amount: parseFloat(newAmount) });
-                                          loadData();
-                                          toast({ title: 'Income Updated' });
-                                        }
+                                      onClick={() => {
+                                        setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) });
                                       }}
                                       title="Edit"
                                     >
@@ -1082,13 +1129,8 @@ const Accounting = () => {
                                       size="icon"
                                       variant="ghost"
                                       className="h-8 w-8 text-destructive hover:text-destructive"
-                                      onClick={async () => {
-                                        if (confirm('Delete this income transaction?')) {
-                                          const { deleteReceivable } = await import('@/lib/receivables');
-                                          if (income.id) await deleteReceivable(income.id);
-                                          loadData();
-                                          toast({ title: 'Income Deleted' });
-                                        }
+                                      onClick={() => {
+                                        setDeleteItemState({ open: true, type: 'income', id: income.id! });
                                       }}
                                       title="Delete"
                                     >
@@ -1150,13 +1192,8 @@ const Accounting = () => {
                                     size="icon"
                                     variant="ghost"
                                     className="h-8 w-8"
-                                    onClick={async () => {
-                                      const newAmount = prompt('Edit amount:', String(expense.amount || 0));
-                                      if (newAmount && !isNaN(parseFloat(newAmount))) {
-                                        await upsertExpense({ ...expense, amount: parseFloat(newAmount) } as any);
-                                        loadData();
-                                        toast({ title: 'Expense Updated' });
-                                      }
+                                    onClick={() => {
+                                      setEditItemState({ open: true, type: 'expense', id: expense.id!, amount: String(expense.amount || 0) });
                                     }}
                                     title="Edit"
                                   >
@@ -1166,13 +1203,8 @@ const Accounting = () => {
                                     size="icon"
                                     variant="ghost"
                                     className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={async () => {
-                                      if (confirm('Delete this expense transaction?')) {
-                                        const { deleteExpense } = await import('@/lib/db');
-                                        if (expense.id) await deleteExpense(expense.id);
-                                        loadData();
-                                        toast({ title: 'Expense Deleted' });
-                                      }
+                                    onClick={() => {
+                                      setDeleteItemState({ open: true, type: 'expense', id: expense.id! });
                                     }}
                                     title="Delete"
                                   >
@@ -1316,6 +1348,44 @@ const Accounting = () => {
             <Button onClick={handleCreateNewCategory} className="bg-gradient-hero">
               Create Category
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={deleteItemState.open} onOpenChange={(open) => setDeleteItemState(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this {deleteItemState.type}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteItem} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={editItemState.open} onOpenChange={(open) => setEditItemState(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {editItemState.type === 'income' ? 'Income' : 'Expense'} Amount</DialogTitle>
+            <DialogDescription>Update the transaction amount.</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label>Amount</Label>
+            <Input
+              type="number"
+              value={editItemState.amount}
+              onChange={(e) => setEditItemState(prev => ({ ...prev, amount: e.target.value }))}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItemState(prev => ({ ...prev, open: false }))}>Cancel</Button>
+            <Button onClick={handleSaveEditItem}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

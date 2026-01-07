@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, Customer } from "@/lib/supa-data";
@@ -143,7 +144,8 @@ const SearchCustomer = () => {
 
   const filterByDate = (customer: Customer) => {
     const now = new Date();
-    const baseDateStr = customer.updatedAt || customer.createdAt || customer.lastService;
+    // Normalize date fields: DB uses snake_case, but some local types might be camelCase
+    const baseDateStr = (customer as any).updated_at || (customer as any).created_at || (customer as any).updatedAt || (customer as any).createdAt || customer.lastService;
     if (!baseDateStr) return dateFilter === "all" && !(dateRange.from || dateRange.to);
     const d = new Date(baseDateStr);
 
@@ -302,7 +304,8 @@ const SearchCustomer = () => {
 
   const totalCustomers = filteredCustomers.length;
   const newCustomers = filteredCustomers.filter(c => {
-    const d = c.createdAt ? new Date(c.createdAt) : new Date();
+    const dStr = (c as any).created_at || (c as any).createdAt;
+    const d = dStr ? new Date(dStr) : new Date();
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
@@ -344,14 +347,25 @@ const SearchCustomer = () => {
 
         <div className="space-y-4">
           {[...filteredCustomers]
-            .sort((a, b) => { const da = a.updatedAt || ""; const db = b.updatedAt || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
+            .sort((a, b) => {
+              const daStr = (a as any).updated_at || (a as any).updatedAt || "";
+              const dbStr = (b as any).updated_at || (b as any).updatedAt || "";
+              return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+            })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
               if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
-                <div key={customer.id} className="border border-blue-500/20 rounded-xl overflow-hidden bg-zinc-900/50 transition-all hover:border-blue-500/40">
-                  <div className="p-4 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between cursor-pointer hover:bg-blue-500/10 transition-colors gap-4" onClick={() => toggleCustomer(customer.id!)}>
+                <div key={customer.id} className={cn(
+                  "border rounded-xl overflow-hidden transition-all",
+                  customer.is_archived
+                    ? "bg-green-900/40 border-green-700 hover:bg-green-900/50"
+                    : "bg-zinc-900/50 border-blue-500/20 hover:border-blue-500/40"
+                )}>
+                  <div className={cn("p-4 flex flex-col md:flex-row items-center justify-between cursor-pointer transition-colors gap-4",
+                    customer.is_archived ? "hover:bg-green-900/10" : "bg-blue-500/5 hover:bg-blue-500/10"
+                  )} onClick={() => toggleCustomer(customer.id!)}>
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
 
@@ -389,8 +403,14 @@ const SearchCustomer = () => {
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                       <div className="flex gap-1 mr-4">
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={customer.is_archived ? "Restore" : "Archive"}>
-                          {customer.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }}
+                          className={cn("h-8 px-2 text-xs gap-1", customer.is_archived ? "text-green-400 hover:text-green-300 hover:bg-green-900/50" : "text-zinc-400 hover:text-amber-400")}
+                          title={customer.is_archived ? "Restore" : "Archive"}
+                        >
+                          {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>

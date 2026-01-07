@@ -67,6 +67,7 @@ const FileManager = () => {
   const [userChangedTypeFilter, setUserChangedTypeFilter] = useState(false);
   const [appliedUrlCategory, setAppliedUrlCategory] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PDFRecord | null>(null);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
@@ -272,13 +273,7 @@ const FileManager = () => {
           <div className="flex flex-col sm:flex-row justify-end gap-3 w-full sm:w-auto">
             <Button
               variant="destructive"
-              onClick={() => {
-                if (confirm("Are you sure you want to DELETE ALL files? This cannot be undone.")) {
-                  localStorage.removeItem('pdfArchive');
-                  setRecords([]);
-                  toast({ title: "All Files Deleted", description: "The archive has been cleared." });
-                }
-              }}
+              onClick={() => setDeleteAllOpen(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete All Files
@@ -581,6 +576,32 @@ const FileManager = () => {
               className="bg-destructive"
             >
               Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete ALL Confirmation Dialog */}
+      <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Files?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All archived files will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="button-group-responsive">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                localStorage.removeItem('pdfArchive');
+                setRecords([]);
+                setDeleteAllOpen(false);
+                toast({ title: "All Files Deleted", description: "The archive has been cleared." });
+              }}
+              className="bg-destructive hover:bg-red-700"
+            >
+              Yes, Delete Everything
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

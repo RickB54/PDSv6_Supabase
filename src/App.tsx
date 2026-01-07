@@ -153,7 +153,11 @@ const App = () => {
     const updateUser = () => setUser(getCurrentUser());
     window.addEventListener('auth-changed', updateUser as EventListener);
     window.addEventListener('storage', updateUser);
+    window.addEventListener('storage', updateUser);
     try { initTaskWorkflowListeners(); } catch { }
+    // Initial global data fetch (triggers migration if needed)
+    import("@/store/bookings").then(m => m.useBookingsStore.getState().refresh());
+
     return () => {
       window.removeEventListener('auth-changed', updateUser as EventListener);
       window.removeEventListener('storage', updateUser);

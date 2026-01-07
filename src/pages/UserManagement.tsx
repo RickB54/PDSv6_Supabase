@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/lib/supabase";
 import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw, Info } from "lucide-react";
@@ -49,6 +50,7 @@ export default function UserManagement() {
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: 'employee' | 'admin' | 'customer' | null; id: string | null; warning?: string }>({ open: false, type: null, id: null });
 
   const loadEmployees = async () => {
     try {
@@ -280,113 +282,74 @@ export default function UserManagement() {
     toast({ title: "Impersonation disabled", description: "Use role-based login instead." });
   };
 
-  const deleteEmployee = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this employee? This action cannot be undone.")) return;
-    try {
-      const { error } = await supabase
-        .from("app_users")
-        .delete()
-        .eq("id", id)
-        .eq("role", "employee");
-      if (error) throw error;
-      await loadEmployees();
-      toast({ title: "Employee deleted" });
-    } catch {
-      toast({ title: "Delete failed", variant: "destructive" });
-    }
+  const deleteEmployee = (id: string) => {
+    setDeleteConfirm({ open: true, type: 'employee', id });
   };
 
-  const deleteAdmin = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this administrator? This action cannot be undone.")) return;
-    try {
-      const { error } = await supabase
-        .from("app_users")
-        .delete()
-        .eq("id", id)
-        .in("role", ["admin", "owner"]);
-      if (error) throw error;
-      await loadAdmins();
-      toast({ title: "Admin deleted" });
-    } catch {
-      toast({ title: "Delete failed", variant: "destructive" });
-    }
+  const deleteAdmin = (id: string) => {
+    setDeleteConfirm({ open: true, type: 'admin', id });
   };
 
   const deleteCustomer = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this customer? This action cannot be undone.")) return;
+    try {
+      const { data: vehicles } = await supabase.from("vehicles").select("id").eq("customer_id", id);
+      const count = vehicles?.length || 0;
+      let warning = undefined;
+
+      if (count > 0) {
+        warning = `WARNING: This customer has ${count} linked vehicle(s).\n\nDeleting this customer will PERMANENTLY DELETE:\n- All linked Vehicles\n- All Appointment History (Bookings)\n- All Estimates\n- The Customer Profile`;
+      }
+      setDeleteConfirm({ open: true, type: 'customer', id, warning });
+    } catch {
+      setDeleteConfirm({ open: true, type: 'customer', id });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    const { id, type } = deleteConfirm;
+    if (!id || !type) return;
 
     try {
-      // First, check if customer has any vehicles
-      const { data: vehicles, error: vehicleCheckError } = await supabase
-        .from("vehicles")
-        .select("id")
-        .eq("customer_id", id);
+      if (type === 'employee') {
+        const { error } = await supabase.from("app_users").delete().eq("id", id).eq("role", "employee");
+        if (error) throw error;
+        await loadEmployees();
+        toast({ title: "Employee deleted" });
+      } else if (type === 'admin') {
+        const { error } = await supabase.from("app_users").delete().eq("id", id).in("role", ["admin", "owner"]);
+        if (error) throw error;
+        await loadAdmins();
+        toast({ title: "Admin deleted" });
+      } else if (type === 'customer') {
+        // 1. Delete Estimates
+        const { error: estError } = await supabase.from("estimates").delete().eq("customer_id", id);
+        if (estError) throw new Error(`Failed to delete related estimates: ${estError.message}`);
 
-      if (vehicleCheckError) throw vehicleCheckError;
+        // 2. Delete Bookings
+        const { error: bookError } = await supabase.from("bookings").delete().eq("customer_id", id);
+        if (bookError) throw new Error(`Failed to delete related bookings: ${bookError.message}`);
 
-      if (vehicles && vehicles.length > 0) {
-        if (!confirm(`WARNING: This customer has ${vehicles.length} linked vehicle(s).\n\nDeleting this customer will PERMANENTLY DELETE:\n- All linked Vehicles\n- All Appointment History (Bookings)\n- All Estimates\n- The Customer Profile\n\nAre you sure you want to proceed?`)) {
-          return;
+        // 3. Delete Vehicles
+        const { error: deleteVehiclesError } = await supabase.from("vehicles").delete().eq("customer_id", id);
+        if (deleteVehiclesError) throw new Error(`Failed to delete linked vehicles: ${deleteVehiclesError.message}`);
+
+        // Verification
+        const { count: vehicleCount } = await supabase.from("vehicles").select("id", { count: 'exact', head: true }).eq("customer_id", id);
+        if (vehicleCount && vehicleCount > 0) {
+          throw new Error(`Unable to delete ${vehicleCount} linked vehicle(s). Manual deletion required.`);
         }
+
+        // 4. Delete Customer
+        const { error } = await supabase.from("customers").delete().eq("id", id);
+        if (error) throw error;
+
+        await loadCustomers();
+        toast({ title: "Customer deleted" });
       }
-
-      // UNCONDITIONAL CLEANUP
-      // Even if our pre-check found 0 vehicles, we attempt to delete dependencies to ensure
-      // no "phantom" constraints block the customer deletion.
-
-      // 1. Delete Estimates (ignore errors if none found, but throw on real db errors)
-      const { error: estError } = await supabase
-        .from("estimates")
-        .delete()
-        .eq("customer_id", id);
-      if (estError) throw new Error(`Failed to delete related estimates: ${estError.message}`);
-
-      // 2. Delete Bookings (Appointments)
-      const { error: bookError } = await supabase
-        .from("bookings")
-        .delete()
-        .eq("customer_id", id);
-      if (bookError) throw new Error(`Failed to delete related bookings: ${bookError.message}`);
-
-      // 3. Delete Vehicles
-      const { error: deleteVehiclesError } = await supabase
-        .from("vehicles")
-        .delete()
-        .eq("customer_id", id);
-      if (deleteVehiclesError) throw new Error(`Failed to delete linked vehicles: ${deleteVehiclesError.message}`);
-
-      // VERIFICATION: Check if vehicles actually got deleted
-      // (Row Level Security or other constraints might silently block deletion)
-      const { count: vehicleCount } = await supabase
-        .from("vehicles")
-        .select("id", { count: 'exact', head: true })
-        .eq("customer_id", id);
-
-      if (vehicleCount && vehicleCount > 0) {
-        toast({
-          title: "Partial Delete Failed",
-          description: `Unable to modify ${vehicleCount} linked vehicle(s). Please go to the Customer Profile and manually delete the vehicles first, then delete the customer.`,
-          variant: "destructive",
-          duration: 6000
-        });
-        return;
-      }
-
-      // If no vehicles remain, proceed with customer deletion
-      const { error } = await supabase
-        .from("customers")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-      await loadCustomers();
-      toast({ title: "Customer deleted" });
     } catch (e: any) {
-      toast({
-        title: "Delete failed",
-        description: e?.message || "An error occurred while deleting the customer.",
-        variant: "destructive"
-      });
+      toast({ title: "Delete failed", description: e?.message || "Error occurred", variant: "destructive" });
+    } finally {
+      setDeleteConfirm({ open: false, type: null, id: null });
     }
   };
 
@@ -1209,6 +1172,22 @@ export default function UserManagement() {
           </div>
         </Card>
       </main>
+      <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-wrap">
+              {deleteConfirm.warning || "This action cannot be undone. This will permanently delete the selected user and all associated data."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Delete Forever
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -71,6 +72,16 @@ const InventoryControl = () => {
   // Linker Modal State
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkTargetItem, setLinkTargetItem] = useState<Chemical | null>(null);
+
+  // Consolidated Delete/Unlink Alert State
+  const [deleteState, setDeleteState] = useState<{
+    open: boolean;
+    type: 'delete' | 'unlink';
+    mode?: 'chemical' | 'material' | 'tool';
+    id: string;
+    name: string;
+    item?: any;
+  }>({ open: false, type: 'delete', id: '', name: '' });
 
   useEffect(() => {
     const handleOpenDetail = async (e: CustomEvent<string>) => {
@@ -222,29 +233,42 @@ const InventoryControl = () => {
 
   // Save handled inside UnifiedInventoryModal; refresh list on onSaved
 
-  const handleDelete = async (id: string, mode: 'chemical' | 'material' | 'tool', itemName: string) => {
-    const confirmed = window.confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`);
-    if (!confirmed) return;
+  const handleDelete = (id: string, mode: 'chemical' | 'material' | 'tool', itemName: string) => {
+    setDeleteState({ open: true, type: 'delete', mode, id, name: itemName });
+  };
+
+  const handleUnlinkRequest = (item: Chemical) => {
+    setDeleteState({ open: true, type: 'unlink', mode: 'chemical', id: item.id, name: item.name, item });
+  };
+
+  const handleConfirmAction = async () => {
+    const { id, mode, type, name, item } = deleteState;
+    if (!id || !type) return;
 
     try {
-      if (mode === 'chemical') {
-        await inventoryData.deleteChemical(id);
-        toast({ title: "Chemical Deleted", description: `${itemName} removed from inventory.` });
-      } else if (mode === 'material') {
-        await inventoryData.deleteMaterial(id);
-        toast({ title: "Material Deleted", description: `${itemName} removed from inventory.` });
-      } else {
-        await inventoryData.deleteTool(id);
-        toast({ title: "Tool Deleted", description: `${itemName} removed from inventory.` });
+      if (type === 'delete') {
+        if (!mode) return;
+        if (mode === 'chemical') {
+          await inventoryData.deleteChemical(id);
+          toast({ title: "Chemical Deleted", description: `${name} removed from inventory.` });
+        } else if (mode === 'material') {
+          await inventoryData.deleteMaterial(id);
+          toast({ title: "Material Deleted", description: `${name} removed from inventory.` });
+        } else {
+          await inventoryData.deleteTool(id);
+          toast({ title: "Tool Deleted", description: `${name} removed from inventory.` });
+        }
+        await loadData();
+      } else if (type === 'unlink' && item) {
+        await inventoryData.saveChemical({ ...item, chemicalLibraryId: null }, false);
+        loadData();
+        toast({ title: "Unlinked", description: "Card link removed." });
       }
-      await loadData(); // Reload from database
     } catch (error) {
-      console.error('Error deleting item:', error);
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete item from database.",
-        variant: "destructive"
-      });
+      console.error('Error actioning item:', error);
+      toast({ title: "Action Failed", description: "Failed to update database.", variant: "destructive" });
+    } finally {
+      setDeleteState(prev => ({ ...prev, open: false }));
     }
   };
 
@@ -435,10 +459,7 @@ const InventoryControl = () => {
                                   title="Unlink Card"
                                   onClick={async (e) => {
                                     e.stopPropagation();
-                                    if (!confirm('Unlink this chemical card?')) return;
-                                    await inventoryData.saveChemical({ ...c, chemicalLibraryId: null }, false);
-                                    loadData();
-                                    toast({ title: "Unlinked", description: "Card link removed." });
+                                    handleUnlinkRequest(c);
                                   }}
                                 >
                                   <UnlinkIcon className="h-3 w-3" />
@@ -491,10 +512,7 @@ const InventoryControl = () => {
                               title="Unlink Card"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                if (!confirm('Unlink this chemical card?')) return;
-                                await inventoryData.saveChemical({ ...c, chemicalLibraryId: null }, false);
-                                loadData();
-                                toast({ title: "Unlinked", description: "Card link removed." });
+                                handleUnlinkRequest(c);
                               }}
                             >
                               <UnlinkIcon className="h-4 w-4" />
@@ -989,6 +1007,25 @@ const InventoryControl = () => {
         />
 
       </Dialog>
+
+      <AlertDialog open={deleteState.open} onOpenChange={(open) => setDeleteState(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{deleteState.type === 'delete' ? 'Delete Item?' : 'Unlink Card?'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteState.type === 'delete'
+                ? `Are you sure you want to delete "${deleteState.name}"? This action cannot be undone.`
+                : `Are you sure you want to unlink the card for "${deleteState.name}"? The inventory item will remain.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAction} className={deleteState.type === 'delete' ? "bg-destructive hover:bg-destructive/90" : ""}>
+              {deleteState.type === 'delete' ? 'Delete' : 'Unlink'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div >
   );
 };

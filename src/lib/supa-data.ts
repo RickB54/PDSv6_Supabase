@@ -746,103 +746,7 @@ export const deleteStaffShift = async (id: string) => {
     if (error) throw error;
 };
 
-// ------------------------------------------------------------------
-// Bookings
-// ------------------------------------------------------------------
-
-export interface SupaBooking {
-    id: string;
-    title: string;
-    customer_name: string;
-    date: string;
-    status: string;
-    created_at?: string;
-    vehicle_info?: any;
-    vehicle_year?: string;
-    vehicle_make?: string;
-    vehicle_model?: string;
-    address?: string;
-    assigned_employee?: string;
-    notes?: string;
-    price?: number;
-    addons?: string[];
-    booked_by?: string;
-    has_reminder?: boolean;
-    reminder_frequency?: number;
-    is_archived?: boolean;
-}
-
-export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<SupaBooking[]> => {
-    try {
-        let query = supabase
-            .from('bookings')
-            .select('*, customers(full_name, user_id)')
-            .order('scheduled_at', { ascending: false });
-
-        // If filtering for current user (customer dashboard), only get their bookings
-        if (filterByCurrentUser) {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return [];
-
-            // Get customer record for this auth user
-            const { data: customerData } = await supabase
-                .from('customers')
-                .select('id')
-                .eq('user_id', user.id)
-                .single();
-
-            if (!customerData) return [];
-
-            query = query.eq('customer_id', customerData.id);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-            console.error('getSupabaseBookings error:', error);
-            return [];
-        }
-
-        // Map DB columns to SupaBooking interface
-        return (data || []).map((b: any) => ({
-            id: b.id,
-            title: b.service_package || 'Booking',
-            customer_name: b.customers?.full_name || 'Unknown Customer',
-            date: b.scheduled_at,
-            status: b.status,
-            vehicle_info: b.booking_vehicle,
-            notes: b.notes,
-            price: b.service_price,
-            addons: b.add_ons
-        }));
-    } catch (err) {
-        console.error('getSupabaseBookings exception:', err);
-        return [];
-    }
-};
-
-export const upsertSupabaseBooking = async (booking: Partial<SupaBooking> & { customerId?: string }) => {
-    const payload = {
-        service_package: booking.title,
-        customer_id: booking.customerId, // Ensure we send customer_id if we have it
-        scheduled_at: booking.date,
-        status: booking.status,
-        booking_vehicle: booking.vehicle_info,
-        notes: booking.notes,
-        service_price: booking.price,
-        add_ons: booking.addons
-    };
-
-    if (booking.id) {
-        const { data, error } = await supabase.from('bookings').update(payload).eq('id', booking.id).select().single();
-        if (error) throw error;
-        return data;
-    } else {
-        const { data, error } = await supabase.from('bookings').insert([payload]).select().single();
-        if (error) throw error;
-        return data;
-    }
-};
+// [Removed duplicate Bookings section. See end of file for implementation.]
 
 export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<any[]> => {
     try {
@@ -1454,3 +1358,140 @@ export async function uploadLibraryFile(file: File): Promise<{ url: string | nul
         return { url: null, error: error?.message || "Unknown exception during upload" };
     }
 }
+
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Bookings
+// ------------------------------------------------------------------
+
+export interface SupaBooking {
+    id: string; // UUID
+    customer_id?: string;
+    // We stash extra fields in existing JSONB columns to avoid schema changes
+    booking_vehicle: any; // JSONB
+    add_ons: any; // JSONB
+    date: string;
+    status: string;
+    created_at?: string;
+}
+
+export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<any[]> => {
+    try {
+        let query = supabase
+            .from('bookings')
+            .select('*');
+
+        if (filterByCurrentUser) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            const { data: customerData } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!customerData) return [];
+
+            query = query.eq('customer_id', customerData.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('getSupabaseBookings error:', error);
+            return [];
+        }
+
+        return (data || []).map((b: any) => {
+            const meta = b.booking_vehicle || {};
+            // If date is missing (legacy?), try to recover from meta or ignore
+            const dateStr = b.date || meta.date || new Date().toISOString();
+
+            return {
+                id: b.id,
+                title: b.title || meta.title || b.service || 'Service',
+                customer: b.customer_name || meta.customer_name || 'Unknown',
+                customerId: b.customer_id,
+                date: dateStr,
+                endTime: b.end_time || meta.end_time,
+                status: b.status || 'confirmed',
+                notes: b.notes || meta.notes,
+                vehicle: meta.type || '', // Use meta for vehicle type 
+                vehicleMake: meta.make || '',
+                vehicleModel: meta.model || '',
+                vehicleYear: meta.year || '',
+                addons: Array.isArray(b.add_ons) ? b.add_ons : [],
+                price: b.price || meta.price,
+                assignedEmployee: b.assigned_employee || meta.assigned_employee,
+                bookedBy: b.booked_by || meta.booked_by,
+                createdAt: b.created_at || meta.created_at,
+                reminderFrequency: meta.reminder_frequency,
+                hasReminder: meta.has_reminder,
+                isArchived: meta.is_archived
+            };
+        });
+    } catch (err) {
+        console.error('Exception getSupabaseBookings', err);
+        return [];
+    }
+};
+
+export const upsertSupabaseBooking = async (booking: any) => {
+    try {
+        // Robust payload: stash everything potentially missing in booking_vehicle JSONB
+        const meta = {
+            type: booking.vehicle,
+            make: booking.vehicleMake,
+            model: booking.vehicleModel,
+            year: booking.vehicleYear,
+            title: booking.title,
+            customer_name: booking.customer,
+            end_time: booking.endTime,
+            price: booking.price,
+            assigned_employee: booking.assignedEmployee,
+            booked_by: booking.bookedBy,
+            reminder_frequency: booking.reminderFrequency,
+            has_reminder: booking.hasReminder,
+            is_archived: booking.isArchived,
+            notes: booking.notes
+        };
+
+        const payload: any = {
+            id: booking.id,
+            customer_id: booking.customerId || null,
+            date: booking.date,
+            status: booking.status,
+            booking_vehicle: meta,
+            add_ons: booking.addons,
+            created_at: booking.createdAt || new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('bookings')
+            .upsert(payload)
+            .select()
+            .single();
+
+        if (error) {
+            console.warn('Upsert booking warning (trying fallback?):', error);
+            throw error;
+        }
+        return data;
+    } catch (err) {
+        console.error('upsertSupabaseBooking error:', err);
+        throw err;
+    }
+};
+
+export const deleteSupabaseBooking = async (id: string) => {
+    try {
+        const { error } = await supabase.from('bookings').delete().eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseBooking error:', err);
+        throw err;
+    }
+};
+
+
