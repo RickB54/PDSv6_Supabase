@@ -1,4 +1,9 @@
 import Orientation from "./pages/Orientation";
+import ContactSupport from "./pages/ContactSupport";
+import ActiveJobs from "./pages/ActiveJobs";
+import JobHistory from "./pages/JobHistory";
+import PaymentsAndCart from "./pages/PaymentsAndCart";
+import MyInvoices from "./pages/MyInvoices";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -227,6 +232,31 @@ const App = () => {
                         <CustomerDashboard />
                       </ProtectedRoute>
                     } />
+                    <Route path="/contact-support" element={
+                      <ProtectedRoute allowedRoles={['customer']}>
+                        <ContactSupport />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/active-jobs" element={
+                      <ProtectedRoute allowedRoles={['customer']}>
+                        <ActiveJobs />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/job-history" element={
+                      <ProtectedRoute allowedRoles={['customer']}>
+                        <JobHistory />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/payments-cart" element={
+                      <ProtectedRoute allowedRoles={['customer']}>
+                        <PaymentsAndCart />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/my-invoices" element={
+                      <ProtectedRoute allowedRoles={['customer']}>
+                        <MyInvoices />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/customer-profile" element={
                       <ProtectedRoute allowedRoles={['customer']}>
                         <CustomerProfile />
@@ -393,7 +423,7 @@ const App = () => {
                       </ProtectedRoute>
                     } />
                     <Route path="/notes" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                      <ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}>
                         <PersonalNotes />
                       </ProtectedRoute>
                     } />
@@ -467,7 +497,7 @@ const App = () => {
                     } />
                   </Routes>
                 </div>
-                {user && <GlobalRightSidebar />}
+                {user && user.role !== 'customer' && <GlobalRightSidebar />}
               </ErrorBoundary>
             </div>
           </SidebarProvider>

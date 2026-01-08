@@ -4,437 +4,95 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { FileText, Download, Eye, Clock, CheckCircle2, Trash2, ShoppingCart, CreditCard, MessageSquare, Send } from "lucide-react";
-import jsPDF from "jspdf";
-import { getSupabaseEmployees, getTeamMessages, sendTeamMessage, TeamMessage, getSupabaseInvoices, getSupabaseBookings, getSupabasePayments } from "@/lib/supa-data";
-import { supabase } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 
-interface Job {
-  jobId: string;
-  customer: string;
-  vehicle: string;
-  service: string;
-  status: "active" | "completed";
-  finishedAt?: string;
-}
-
-interface Invoice {
-  id?: string;
-  invoiceNumber?: number;
-  customerId: string;
-  customerName: string;
-  vehicle: string;
-  services: { name: string; price: number }[];
-  total: number;
-  date: string;
-  paymentStatus?: "unpaid" | "partially-paid" | "paid";
-}
-
 const CustomerDashboard = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-
-  // Chat State
-  const [chatMessages, setChatMessages] = useState<TeamMessage[]>([]);
-  const [newChatText, setNewChatText] = useState("");
-
   const user = getCurrentUser();
   const navigate = useNavigate();
-  const { items, subtotal, removeItem } = useCartStore();
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      // Load Invoices for current user
-      const userInvoices = await getSupabaseInvoices(true);
-      setInvoices(userInvoices);
-
-      // Load Bookings (Jobs) for current user
-      const userBookings = await getSupabaseBookings(true);
-
-      // Map Bookings to Jobs
-      const jobsMapped: Job[] = userBookings.map(b => ({
-        jobId: b.id,
-        customer: b.customer_name,
-        vehicle: typeof b.vehicle_info === 'string' ? b.vehicle_info : (b.vehicle_info?.type || b.title),
-        service: b.title,
-        status: b.status === 'completed' ? 'completed' : 'active',
-        finishedAt: b.status === 'completed' ? b.date : undefined
-      }));
-
-      setJobs(jobsMapped);
-    } catch (error) {
-      console.error('Error loading customer dashboard data:', error);
-      toast({
-        title: "Error loading data",
-        description: "There was a problem loading your dashboard. Please try refreshing the page.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  useEffect(() => {
-    // Load chat history
-    (async () => {
-      const msgs = await getTeamMessages();
-      setChatMessages(msgs);
-    })();
-
-    // Subscribe to Realtime Updates
-    const channel = supabase
-      .channel('public:team_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
-        const newMsg = payload.new as TeamMessage;
-        setChatMessages(prev => [...prev, newMsg]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, []);
-
-  const downloadInvoice = (invoice: Invoice) => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Prime Auto Detail", 105, 20, { align: "center" });
-    doc.setFontSize(12);
-    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 30, { align: "center" });
-    doc.text(`Date: ${invoice.date}`, 20, 50);
-    doc.text(`Customer: ${invoice.customerName}`, 20, 60);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 70);
-
-    let y = 85;
-    doc.text("Services:", 20, y);
-    y += 10;
-    invoice.services.forEach((s) => {
-      doc.text(`${s.name}: $${s.price.toFixed(2)}`, 30, y);
-      y += 8;
-    });
-
-    y += 5;
-    doc.setFontSize(14);
-    doc.text(`Total: $${invoice.total.toFixed(2)}`, 20, y);
-
-    doc.save(`Invoice_${invoice.invoiceNumber}_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
-
-  const activeJobs = jobs.filter(j => j.status === "active");
-  const completedJobs = jobs.filter(j => j.status === "completed");
-  const unpaidInvoices = invoices.filter(inv => (inv.paymentStatus || "unpaid") !== "paid");
-  const paidInvoices = invoices.filter(inv => (inv.paymentStatus || "unpaid") === "paid");
 
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="My Account" />
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="container mx-auto px-4 py-8 max-w-6xl animate-fade-in">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name}!</h1>
+            <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name || 'Customer'}!</h1>
             <div className="flex gap-2">
               <Link to="/customer-profile" className="inline-flex items-center rounded-md border px-3 py-2 text-sm">Profile</Link>
               <Button variant="outline" onClick={() => { try { useCartStore.getState().clear(); logout(); } finally { navigate('/login', { replace: true }); } }}>Logout</Button>
             </div>
           </div>
 
-          {/* Chat Widget */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center gap-3 mb-4">
-              <MessageSquare className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold text-foreground">Contact Support</h2>
-            </div>
-            <div className="flex flex-col h-[300px]">
-              <div className="flex-1 overflow-auto bg-background/50 rounded-md border border-border p-4 mb-4 space-y-3">
-                {(() => {
-                  const myEmail = (user?.email || '').toLowerCase();
-                  const visibleMsgs = chatMessages.filter(m =>
-                    (m.sender_email || '').toLowerCase() === myEmail ||
-                    (m.recipient_email || '').toLowerCase() === myEmail
-                  );
-
-                  if (visibleMsgs.length === 0) return <p className="text-sm text-muted-foreground text-center mt-10">Send us a message if you need help!</p>;
-
-                  return visibleMsgs.map(m => {
-                    const isMe = (m.sender_email || '').toLowerCase() === myEmail;
-                    return (
-                      <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] rounded-lg p-3 ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                          <p className="text-xs font-bold mb-1 opacity-80">{isMe ? 'You' : m.sender_name}</p>
-                          <p className="text-sm">{m.content}</p>
-                          <p className="text-[10px] mt-1 opacity-70 text-right">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Type a message..."
-                  value={newChatText}
-                  onChange={e => setNewChatText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      const btn = e.currentTarget.parentElement?.querySelector('button');
-                      btn?.click();
-                    }
-                  }}
-                />
-                <Button onClick={async () => {
-                  const text = newChatText.trim();
-                  if (!text) return;
-                  const senderEmail = user?.email || '';
-                  const senderName = user?.name || senderEmail;
-                  // Send to public (null) so it appears in Admin "All Team" inbox. 
-                  // Logic: Admins see all NULL recipient messages. 
-                  // Privacy-wise: Other customers filter NULL messages out if sender != them.
-                  try {
-                    await sendTeamMessage(text, senderEmail, senderName, null);
-                    setNewChatText("");
-                  } catch (err) {
-                    toast({ title: "Failed to send", variant: "destructive" });
-                  }
-                }}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Active Jobs */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center gap-3 mb-4">
-              <Clock className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold text-foreground">Active Jobs</h2>
-            </div>
-            {activeJobs.length === 0 ? (
-              <p className="text-muted-foreground">No active jobs at the moment.</p>
-            ) : (
-              <div className="space-y-3">
-                {activeJobs.map(job => (
-                  <div key={job.jobId} className="p-4 bg-background/50 rounded border border-border">
-                    <h3 className="font-semibold text-foreground">{job.service}</h3>
-                    <p className="text-sm text-muted-foreground">{job.vehicle}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          {/* Completed Jobs */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center gap-3 mb-4">
-              <CheckCircle2 className="h-6 w-6 text-success" />
-              <h2 className="text-2xl font-bold text-foreground">Job History</h2>
-            </div>
-            {completedJobs.length === 0 ? (
-              <p className="text-muted-foreground">No completed jobs yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {completedJobs.map(job => (
-                  <div key={job.jobId} className="p-4 bg-background/50 rounded border border-border">
-                    <h3 className="font-semibold text-foreground">{job.service}</h3>
-                    <p className="text-sm text-muted-foreground">{job.vehicle}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completed: {job.finishedAt ? new Date(job.finishedAt).toLocaleDateString() : 'N/A'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          {/* Payments & Cart */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center gap-3 mb-4">
-              <ShoppingCart className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold text-foreground">Payments & Cart</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* My Cart */}
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">My Cart</h3>
-                {items.length === 0 ? (
-                  <p className="text-muted-foreground">Your cart is empty.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {items.map(i => (
-                      <div key={i.id} className="flex items-center justify-between p-3 bg-background/50 rounded border border-border">
-                        <div>
-                          <p className="font-semibold text-foreground">{i.name}</p>
-                          <p className="text-sm text-muted-foreground">Qty: {i.quantity} {i.vehicleType ? `· ${i.vehicleType}` : ""}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <p className="font-bold text-primary">${(i.price * i.quantity).toFixed(2)}</p>
-                          <Button variant="ghost" size="icon" onClick={() => removeItem(i.id)} aria-label="Remove">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between p-2">
-                      <span className="text-sm text-muted-foreground">Subtotal</span>
-                      <span className="text-lg font-bold text-foreground">${subtotal().toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-                {items.length > 0 && (
-                  <div className="mt-3 flex items-center justify-end">
-                    <Link to="/checkout">
-                      <Button variant="default" className="bg-primary text-primary-foreground">
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Make a Payment
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {/* Unpaid Invoices */}
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Unpaid Invoices</h3>
-                {unpaidInvoices.length === 0 ? (
-                  <p className="text-muted-foreground">No unpaid invoices.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {unpaidInvoices.map(inv => (
-                      <div key={inv.id} className="p-3 bg-background/50 rounded border border-border flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-foreground">Invoice #{inv.invoiceNumber}</p>
-                          <p className="text-sm text-muted-foreground">${inv.total.toFixed(2)}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Link to={`/checkout?invoice=${inv.id}`}>
-                            <Button variant="default" className="bg-primary text-primary-foreground">
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              Pay Invoice
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Payment History */}
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold text-foreground mb-2">Payment History</h3>
-              {paidInvoices.length === 0 ? (
-                <p className="text-muted-foreground">No payments yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {paidInvoices.map(inv => (
-                    <div key={inv.id} className="p-3 bg-background/50 rounded border border-border">
-                      <div className="flex justify-between">
-                        <span>Invoice #{inv.invoiceNumber} — {inv.date}</span>
-                        <span className="font-semibold text-success">${inv.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Invoices */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold text-foreground">My Invoices</h2>
-            </div>
-            {invoices.length === 0 ? (
-              <p className="text-muted-foreground">No invoices available.</p>
-            ) : (
-              <div className="space-y-3">
-                {invoices.map(inv => (
-                  <div key={inv.id} className="p-4 bg-background/50 rounded border border-border">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-foreground">Invoice #{inv.invoiceNumber}</h3>
-                        <p className="text-sm text-muted-foreground">{inv.date}</p>
-                        <p className="text-lg font-bold text-primary mt-1">${inv.total.toFixed(2)}</p>
-                        <p className={`text-sm font-medium ${(inv.paymentStatus || "unpaid") === "paid" ? "text-success" :
-                          (inv.paymentStatus || "unpaid") === "partially-paid" ? "text-yellow-500" :
-                            "text-destructive"
-                          }`}>
-                          {(inv.paymentStatus || "unpaid").replace("-", " ").toUpperCase()}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="icon" variant="outline" onClick={() => setSelectedInvoice(inv)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="outline" onClick={() => downloadInvoice(inv)}>
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          <DashboardCard
+            title="Contact Support"
+            description="Message our team directly."
+            icon={MessageSquare}
+            to="/contact-support"
+            color="text-blue-500"
+            gradient="bg-gradient-to-br from-blue-500 to-cyan-500"
+          />
+          <DashboardCard
+            title="Active Jobs"
+            description="Track your current services."
+            icon={Clock}
+            to="/active-jobs"
+            color="text-amber-500"
+            gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+          />
+          <DashboardCard
+            title="Job History"
+            description="View past services and details."
+            icon={History}
+            to="/job-history"
+            color="text-green-500"
+            gradient="bg-gradient-to-br from-green-500 to-emerald-500"
+          />
+          <DashboardCard
+            title="Payments & Cart"
+            description="Pay invoices and manage cart."
+            icon={ShoppingCart}
+            to="/payments-cart"
+            color="text-primary"
+            gradient="bg-gradient-to-br from-primary to-purple-600"
+          />
+          <DashboardCard
+            title="My Invoices"
+            description="Download and view invoices."
+            icon={FileText}
+            to="/my-invoices"
+            color="text-purple-500"
+            gradient="bg-gradient-to-br from-purple-500 to-pink-500"
+          />
+          <DashboardCard
+            title="User Settings"
+            description="Update your profile and password."
+            icon={Settings}
+            to="/user-settings"
+            color="text-zinc-500"
+            gradient="bg-gradient-to-br from-zinc-500 to-slate-500"
+          />
         </div>
       </main>
-
-      {/* Invoice Detail Dialog */}
-      <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Invoice #{selectedInvoice?.invoiceNumber}</DialogTitle>
-          </DialogHeader>
-          {selectedInvoice && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium">{selectedInvoice.date}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Vehicle</p>
-                  <p className="font-medium">{selectedInvoice.vehicle}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Services</p>
-                <div className="space-y-2">
-                  {selectedInvoice.services.map((s, idx) => (
-                    <div key={idx} className="flex justify-between p-2 bg-background/50 rounded">
-                      <span>{s.name}</span>
-                      <span className="font-semibold">${s.price.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">Total</span>
-                  <span className="text-2xl font-bold text-primary">${selectedInvoice.total.toFixed(2)}</span>
-                </div>
-              </div>
-              <Button onClick={() => downloadInvoice(selectedInvoice)} className="w-full">
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
+
+const DashboardCard = ({ title, description, icon: Icon, to, color, gradient }: { title: string, description: string, icon: any, to: string, color: string, gradient: string }) => (
+  <Link to={to} className="block group">
+    <Card className={`p-6 border-border hover:border-primary/50 transition-all cursor-pointer h-full relative overflow-hidden`}>
+      <div className={`absolute inset-0 opacity-10 ${gradient} group-hover:opacity-20 transition-opacity`} />
+      <div className="relative z-10">
+        <div className="flex items-center gap-4 mb-3">
+          <div className={`p-3 rounded-full bg-background/50 border border-border group-hover:scale-110 transition-transform ${color}`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground">{title}</h3>
+        </div>
+        <p className="text-muted-foreground">{description}</p>
+      </div>
+    </Card>
+  </Link>
+);
 
 export default CustomerDashboard;

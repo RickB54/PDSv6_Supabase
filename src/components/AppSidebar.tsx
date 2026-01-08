@@ -2,7 +2,8 @@ import {
   Home, ClipboardCheck, Search, FileText, Calculator, BookOpen, Users,
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
   TicketPercent, GraduationCap, Shield, CheckSquare, CalendarDays,
-  ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper
+  ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
+  MessageSquare, Clock, History, ShoppingCart
 } from "lucide-react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo } from "react";
@@ -220,6 +221,18 @@ export function AppSidebar() {
     { title: 'Reports', url: '/reports', icon: FileBarChart, role: 'admin', key: 'reports' }
   ];
 
+  /* ---------------- CUSTOMER ITEMS ---------------- */
+  const CUSTOMER_ITEMS: MenuItem[] = [
+    { title: "Customer Dashboard", url: "/customer-dashboard", icon: LayoutDashboard },
+    { title: "Contact Support", url: "/contact-support", icon: MessageSquare },
+    { title: "Active Jobs", url: "/active-jobs", icon: Clock },
+    { title: "Job History", url: "/job-history", icon: History },
+    { title: "Payments & Cart", url: "/payments-cart", icon: ShoppingCart },
+    { title: "My Invoices", url: "/my-invoices", icon: FileText },
+    { title: "Personal Notes", url: "/notes", icon: BookOpen },
+    { title: "User Settings", url: "/user-settings", icon: Settings },
+  ];
+
   // --- MENU CONFIG ---
   // Using shared config to ensure Sidebar and Section Landing pages match
   const MENU_GROUPS = useMemo(() => getMenuGroups({
@@ -284,14 +297,36 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           {isCustomer && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild onClick={handleNavClick}>
-                <Link to="/customer-dashboard">
-                  <Home className="h-4 w-4" />
-                  <span>My Account</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <>
+              {CUSTOMER_ITEMS.map((item) => {
+                const isActive = location.pathname === item.url || (item.url.includes('#') && location.pathname + location.hash === item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild onClick={handleNavClick}>
+                      {/* Use standard Link. Hash navigation might require simple anchor if router link doesn't scroll.
+                           However, Link is usually preferred for client-side routing.
+                           We might need a small click handler to force scroll if hash is present.
+                       */}
+                      <Link to={item.url}
+                        className={isActive ? 'font-semibold text-blue-500' : 'text-zinc-400 hover:text-white'}
+                        onClick={() => {
+                          if (item.url.includes('#')) {
+                            const id = item.url.split('#')[1];
+                            setTimeout(() => {
+                              const el = document.getElementById(id);
+                              if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }, 100);
+                          }
+                        }}
+                      >
+                        {item.icon && <item.icon className="h-4 w-4" />}
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </>
           )}
 
           {(isAdmin || isEmployee) && (

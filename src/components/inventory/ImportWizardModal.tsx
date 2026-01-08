@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getChemicals, saveChemical, getTools, saveTool, getMaterials, saveMaterial } from "@/lib/inventory-data";
 
 interface ImportWizardModalProps {
     open: boolean;
@@ -166,109 +167,101 @@ export default function ImportWizardModal({
         );
     };
 
+    const [isImporting, setIsImporting] = useState(false);
+
     const handleImport = async () => {
+        setIsImporting(true);
         try {
             let importedCount = 0;
+            let skippedCount = 0;
 
             if (activeTab === "chemicals" && selectedChemicals.size > 0) {
-                const existingChemicals = (await localforage.getItem<any[]>("chemicals")) || [];
-                const existingIds = new Set(existingChemicals.map((c) => c.id));
+                const existingChemicals = await getChemicals();
+                const existingNames = new Set(existingChemicals.map((c) => c.name.toLowerCase().trim()));
+                const chemicalsToImport = standardChemicals.filter((c) => selectedChemicals.has(c.id));
 
-                const chemicalsToImport = standardChemicals.filter(
-                    (c) => selectedChemicals.has(c.id) && !existingIds.has(c.id)
-                ).map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    bottleSize: c.bottleSize || c.unitOfMeasure,
-                    costPerBottle: c.suggestedPrice || 0,
-                    threshold: c.threshold || 2,
-                    currentStock: 0,
-                    unitOfMeasure: c.unitOfMeasure || "oz",
-                    consumptionRatePerJob: c.consumptionRatePerJob || 0,
-                    category: c.category || "General",
-                    subcategory: c.subcategory || "",
-                    description: c.description || "",
-                    imageUrl: "", // Ensure field exists
-                }));
-
-                if (chemicalsToImport.length > 0) {
-                    await localforage.setItem("chemicals", [...existingChemicals, ...chemicalsToImport]);
-                    importedCount = chemicalsToImport.length;
+                for (const c of chemicalsToImport) {
+                    if (existingNames.has(c.name.toLowerCase().trim())) {
+                        skippedCount++;
+                        continue;
+                    }
+                    await saveChemical({
+                        name: c.name,
+                        bottleSize: c.bottleSize || c.unitOfMeasure,
+                        costPerBottle: c.suggestedPrice || 0,
+                        threshold: c.threshold || 2,
+                        currentStock: 0,
+                        imageUrl: "",
+                    });
+                    importedCount++;
                 }
             }
 
             if (activeTab === "tools" && selectedTools.size > 0) {
-                const existingTools = (await localforage.getItem<any[]>("tools")) || [];
-                const existingIds = new Set(existingTools.map((t) => t.id));
+                const existingTools = await getTools();
+                const existingNames = new Set(existingTools.map((t) => t.name.toLowerCase().trim()));
+                const toolsToImport = standardTools.filter((t) => selectedTools.has(t.id));
 
-                const toolsToImport = standardTools.filter(
-                    (t) => selectedTools.has(t.id) && !existingIds.has(t.id)
-                ).map((t) => ({
-                    id: t.id,
-                    name: t.name,
-                    warranty: t.warranty || "N/A",
-                    purchaseDate: new Date().toISOString().split("T")[0],
-                    price: t.suggestedPrice || 0,
-                    cost: t.suggestedPrice || 0, // Alias
-                    quantity: 1, // Default to 1
-                    threshold: 0,
-                    lifeExpectancy: t.lifeExpectancy || "N/A",
-                    notes: t.description || "",
-                    category: t.category || "Tool",
-                    subcategory: t.subcategory || "",
-                    unitOfMeasure: "unit",
-                    consumptionRatePerJob: 0,
-                    imageUrl: "", // Ensure field exists
-                }));
-
-                if (toolsToImport.length > 0) {
-                    await localforage.setItem("tools", [...existingTools, ...toolsToImport]);
-                    importedCount = toolsToImport.length;
+                for (const t of toolsToImport) {
+                    if (existingNames.has(t.name.toLowerCase().trim())) {
+                        skippedCount++;
+                        continue;
+                    }
+                    await saveTool({
+                        name: t.name,
+                        warranty: t.warranty || "N/A",
+                        purchaseDate: new Date().toISOString().split("T")[0],
+                        price: t.suggestedPrice || 0,
+                        lifeExpectancy: t.lifeExpectancy || "N/A",
+                        notes: t.description || "",
+                        imageUrl: "",
+                    });
+                    importedCount++;
                 }
             }
 
             if (activeTab === "materials" && selectedMaterials.size > 0) {
-                const existingMaterials = (await localforage.getItem<any[]>("materials")) || [];
-                const existingIds = new Set(existingMaterials.map((m) => m.id));
+                const existingMaterials = await getMaterials();
+                const existingNames = new Set(existingMaterials.map((m) => m.name.toLowerCase().trim()));
+                const materialsToImport = standardMaterials.filter((m) => selectedMaterials.has(m.id));
 
-                const materialsToImport = standardMaterials.filter(
-                    (m) => selectedMaterials.has(m.id) && !existingIds.has(m.id)
-                ).map((m) => ({
-                    id: m.id,
-                    name: m.name,
-                    category: m.type || "Material",
-                    subtype: m.subtype || "",
-                    costPerItem: m.suggestedPrice || 0,
-                    quantity: m.quantity || 0, // Default to 0
-                    threshold: m.threshold || 5, // Default threshold
-                    lowThreshold: m.threshold || 5, // Alias for older logic
-                    notes: m.description || "",
-                    unitOfMeasure: "unit",
-                    consumptionRatePerJob: 0,
-                    imageUrl: "", // Ensure field exists
-                }));
-
-                if (materialsToImport.length > 0) {
-                    await localforage.setItem("materials", [...existingMaterials, ...materialsToImport]);
-                    importedCount = materialsToImport.length;
+                for (const m of materialsToImport) {
+                    if (existingNames.has(m.name.toLowerCase().trim())) {
+                        skippedCount++;
+                        continue;
+                    }
+                    await saveMaterial({
+                        name: m.name,
+                        category: m.type || "Material",
+                        subtype: m.subtype || "",
+                        costPerItem: m.suggestedPrice || 0,
+                        quantity: m.quantity || 0,
+                        lowThreshold: m.threshold || 5,
+                        notes: m.description || "",
+                        imageUrl: "",
+                    });
+                    importedCount++;
                 }
             }
 
             if (importedCount > 0) {
-                toast.success(`Successfully imported ${importedCount} ${activeTab}`);
+                toast.success(`Imported ${importedCount} items to Supabase.`);
+                if (skippedCount > 0) toast.info(`Skipped ${skippedCount} duplicate items.`);
                 setSelectedChemicals(new Set());
                 setSelectedTools(new Set());
                 setSelectedMaterials(new Set());
                 onOpenChange(false);
-                if (onImportComplete) {
-                    onImportComplete();
-                }
+                if (onImportComplete) onImportComplete();
+            } else if (skippedCount > 0) {
+                toast.info(`No items imported. All ${skippedCount} selected items already exist.`);
             } else {
-                toast.info("No new items to import (items may already exist)");
+                toast.info("No items selected.");
             }
         } catch (error) {
             console.error("Import error:", error);
-            toast.error("Failed to import items");
+            toast.error("Failed to import to Supabase");
+        } finally {
+            setIsImporting(false);
         }
     };
 

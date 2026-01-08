@@ -11,6 +11,7 @@ export interface Chemical {
     currentStock: number;
     imageUrl?: string;
     chemicalLibraryId?: string;
+    createdAt?: string;
 }
 
 export interface Material {
@@ -35,6 +36,7 @@ export interface Tool {
     lifeExpectancy: string;
     notes: string;
     imageUrl?: string;
+    createdAt?: string;
 }
 
 export interface UsageHistory {
@@ -77,7 +79,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         currentStock: item.current_stock || 0,
         currentStock: item.current_stock || 0,
         imageUrl: item.image_url,
-        chemicalLibraryId: item.chemical_library_id
+        chemicalLibraryId: item.chemical_library_id,
+        createdAt: item.created_at
     }));
 }
 
@@ -85,8 +88,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
-    const dbData = {
-        id: chemical.id,
+    const dbData: any = {
         user_id: session.user.id,
         name: chemical.name,
         bottle_size: chemical.bottleSize,
@@ -97,6 +99,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         chemical_library_id: chemical.chemicalLibraryId,
         updated_at: new Date().toISOString()
     };
+    if (chemical.id) dbData.id = chemical.id;
 
     const { error } = await supabase
         .from('chemicals')
@@ -158,8 +161,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
-    const dbData = {
-        id: material.id,
+    const dbData: any = {
         user_id: session.user.id,
         name: material.name,
         category: material.category,
@@ -171,6 +173,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         image_url: material.imageUrl,
         updated_at: new Date().toISOString()
     };
+    if (material.id) dbData.id = material.id;
 
     const { error } = await supabase
         .from('materials')
@@ -222,7 +225,8 @@ export async function getTools(): Promise<Tool[]> {
         price: item.price || 0,
         lifeExpectancy: item.life_expectancy || '',
         notes: item.notes || '',
-        imageUrl: item.image_url
+        imageUrl: item.image_url,
+        createdAt: item.created_at
     }));
 }
 
@@ -230,8 +234,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
-    const dbData = {
-        id: tool.id,
+    const dbData: any = {
         user_id: session.user.id,
         name: tool.name,
         warranty: tool.warranty,
@@ -242,6 +245,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         image_url: tool.imageUrl,
         updated_at: new Date().toISOString()
     };
+    if (tool.id) dbData.id = tool.id;
 
     const { error } = await supabase
         .from('tools')

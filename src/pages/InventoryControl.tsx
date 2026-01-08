@@ -24,6 +24,9 @@ import localforage from "localforage";
 import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
 import { LinkChemicalModal } from "@/components/inventory/LinkChemicalModal";
 import { getChemicalById } from "@/lib/chemicals";
+import { InventoryImportModal } from "@/components/inventory/InventoryImportModal";
+import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
+
 import { Chemical as LibraryChemical } from "@/types/chemicals";
 
 // Import types from inventory-data
@@ -41,7 +44,11 @@ const InventoryControl = () => {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
   const [usageHistory, setUsageHistory] = useState<UsageHistory[]>([]);
+
   const [modalOpen, setModalOpen] = useState(false);
+  const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
+  const [inventoryCleanupOpen, setInventoryCleanupOpen] = useState(false);
+  const [activeImportTab, setActiveImportTab] = useState<"chemicals" | "tools" | "materials">("chemicals");
   const [modalMode, setModalMode] = useState<'chemical' | 'material' | 'tool'>('chemical');
   const [editing, setEditing] = useState<any | null>(null);
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
@@ -371,6 +378,31 @@ const InventoryControl = () => {
           </div>
         </Card>
 
+        {/* Data Management Actions */}
+        <div className="flex flex-wrap gap-4">
+          <Button
+            onClick={() => setInventoryImportOpen(true)}
+            variant="outline"
+            className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-amber-500/50 group"
+          >
+            <FileText className="h-5 w-5 mr-2 text-amber-500 group-hover:text-amber-400" />
+            <div className="text-left">
+              <div className="font-semibold text-sm">Import Inventory</div>
+            </div>
+          </Button>
+
+          <Button
+            onClick={() => setInventoryCleanupOpen(true)}
+            variant="outline"
+            className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-red-500/50 group"
+          >
+            <Trash2 className="h-5 w-5 mr-2 text-red-500 group-hover:text-red-400" />
+            <div className="text-left">
+              <div className="font-semibold text-sm">Bulk Cleanup</div>
+            </div>
+          </Button>
+        </div>
+
         {/* Global Expand/Collapse Controls */}
         <div className="flex justify-end gap-2">
           <Button
@@ -415,7 +447,8 @@ const InventoryControl = () => {
               <div className="flex justify-between items-center mb-4">
                 <div className="flex gap-2">
                   <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setImportWizardTab("chemicals"); setImportWizardOpen(true); }}><Package className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -569,7 +602,8 @@ const InventoryControl = () => {
               <div className="flex justify-between items-center mb-4">
                 <div className="flex gap-2">
                   <Button size="sm" onClick={openAddMaterial} className="bg-blue-600 hover:bg-blue-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Material</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setImportWizardTab("materials"); setImportWizardOpen(true); }}><Package className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("materials"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -666,7 +700,8 @@ const InventoryControl = () => {
               <div className="flex justify-between items-center mb-4">
                 <div className="flex gap-2">
                   <Button size="sm" onClick={openAddTool} className="bg-purple-600 hover:bg-purple-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Tool</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setImportWizardTab("tools"); setImportWizardOpen(true); }}><Package className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("tools"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -1026,8 +1061,25 @@ const InventoryControl = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <InventoryImportModal
+        open={inventoryImportOpen}
+        onOpenChange={(open) => {
+          setInventoryImportOpen(open);
+          if (!open) loadData(); // Refresh data after close
+        }}
+        defaultTab={activeImportTab}
+      />
+      <InventoryCleanupModal
+        open={inventoryCleanupOpen}
+        onOpenChange={(open) => {
+          setInventoryCleanupOpen(open);
+          if (!open) loadData(); // Refresh data after close
+        }}
+      />
     </div >
   );
 };
 
 export default InventoryControl;
+
+

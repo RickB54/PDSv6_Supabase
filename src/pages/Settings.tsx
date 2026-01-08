@@ -25,6 +25,8 @@ import { pushAdminAlert } from '@/lib/adminAlerts';
 import supabase, { isSupabaseConfigured } from '@/lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useFullScreen } from "@/hooks/useFullScreen";
+import { InventoryImportModal } from "@/components/inventory/InventoryImportModal";
+import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -47,6 +49,8 @@ const Settings = () => {
   const [restoreDefaultsOpen, setRestoreDefaultsOpen] = useState(false);
   const [supabaseBackups, setSupabaseBackups] = useState<BackupMetadata[]>([]);
   const [supabaseBackupsOpen, setSupabaseBackupsOpen] = useState(false);
+  const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
+  const [inventoryCleanupOpen, setInventoryCleanupOpen] = useState(false);
 
   // Supabase diagnostics block state
   const [diag, setDiag] = useState<{ authMode: string; urlPresent: boolean; keyPresent: boolean; configured: boolean; uid: string | null; appUserReadable: boolean | null; lastChecked: string }>({
@@ -650,11 +654,19 @@ const Settings = () => {
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button onClick={handleBackup} variant="outline" className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-blue-500/50 group">
-                <Download className="h-6 w-6 mr-3 text-blue-500 group-hover:text-blue-400" />
+              <Button onClick={() => setInventoryImportOpen(true)} variant="outline" className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-amber-500/50 group md:col-span-1">
+                <FileText className="h-6 w-6 mr-3 text-amber-500 group-hover:text-amber-400" />
                 <div className="text-left">
-                  <div className="font-semibold">Download Backup</div>
-                  <div className="text-xs text-zinc-500 font-normal">Save complete JSON backup locally</div>
+                  <div className="font-semibold">Import Inventory</div>
+                  <div className="text-xs text-zinc-500 font-normal">Standard Catalog or Custom</div>
+                </div>
+              </Button>
+
+              <Button onClick={() => setInventoryCleanupOpen(true)} variant="outline" className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-red-500/50 group md:col-span-1">
+                <Trash2 className="h-6 w-6 mr-3 text-red-500 group-hover:text-red-400" />
+                <div className="text-left">
+                  <div className="font-semibold">Bulk Cleanup</div>
+                  <div className="text-xs text-zinc-500 font-normal">Delete multiple items easily</div>
                 </div>
               </Button>
 
@@ -663,6 +675,22 @@ const Settings = () => {
                 <div className="text-left">
                   <div className="font-semibold">Save to Drive</div>
                   <div className="text-xs text-zinc-500 font-normal">Upload backup to Google Drive</div>
+                </div>
+              </Button>
+
+              <Button variant="outline" onClick={handleOpenDriveRestore} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-purple-500/50 group">
+                <Upload className="h-6 w-6 mr-3 text-purple-500 group-hover:text-purple-400" />
+                <div className="text-left">
+                  <div className="font-semibold">Restore from Drive</div>
+                  <div className="text-xs text-zinc-500 font-normal">Fetch and restore backup from Drive</div>
+                </div>
+              </Button>
+
+              <Button onClick={handleBackup} variant="outline" className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-blue-500/50 group">
+                <Download className="h-6 w-6 mr-3 text-blue-500 group-hover:text-blue-400" />
+                <div className="text-left">
+                  <div className="font-semibold">Download Backup</div>
+                  <div className="text-xs text-zinc-500 font-normal">Save complete JSON backup locally</div>
                 </div>
               </Button>
 
@@ -677,27 +705,19 @@ const Settings = () => {
                 <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
               </label>
 
-              <Button variant="outline" onClick={handleOpenDriveRestore} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-purple-500/50 group">
-                <Upload className="h-6 w-6 mr-3 text-purple-500 group-hover:text-purple-400" />
-                <div className="text-left">
-                  <div className="font-semibold">Restore from Drive</div>
-                  <div className="text-xs text-zinc-500 font-normal">Fetch and restore backup from Drive</div>
-                </div>
-              </Button>
-
-              <Button variant="outline" onClick={handleBackupToSupabase} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group">
+              <Button variant="outline" onClick={handleBackupToSupabase} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group md:col-span-1">
                 <Database className="h-6 w-6 mr-3 text-emerald-500 group-hover:text-emerald-400" />
                 <div className="text-left">
                   <div className="font-semibold">Backup to Supabase</div>
-                  <div className="text-xs text-zinc-500 font-normal">Upload backup to Supabase cloud storage</div>
+                  <div className="text-xs text-zinc-500 font-normal">Upload backup to Supabase</div>
                 </div>
               </Button>
 
-              <Button variant="outline" onClick={handleOpenSupabaseBackups} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group">
+              <Button variant="outline" onClick={handleOpenSupabaseBackups} className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group md:col-span-1">
                 <RefreshCw className="h-6 w-6 mr-3 text-emerald-500 group-hover:text-emerald-400" />
                 <div className="text-left">
                   <div className="font-semibold">Restore from Supabase</div>
-                  <div className="text-xs text-zinc-500 font-normal">View and restore backups from Supabase</div>
+                  <div className="text-xs text-zinc-500 font-normal">View/restore Supabase backups</div>
                 </div>
               </Button>
             </div>
@@ -1380,6 +1400,15 @@ const Settings = () => {
         </DialogContent>
       </Dialog>
 
+      <InventoryImportModal
+        open={inventoryImportOpen}
+        onOpenChange={setInventoryImportOpen}
+      />
+
+      <InventoryCleanupModal
+        open={inventoryCleanupOpen}
+        onOpenChange={setInventoryCleanupOpen}
+      />
     </div>
   );
 };
