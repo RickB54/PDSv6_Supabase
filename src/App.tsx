@@ -181,7 +181,7 @@ const App = () => {
               <ErrorBoundary>
                 <ChatAudioAlert />
                 {user && <AppSidebar />}
-                <div className={`flex-1 overflow-x-hidden ${user ? 'pt-20' : ''}`}>
+                <div className={`flex-1 overflow-x-hidden ${user ? 'pt-24' : ''}`}>
                   <Routes>
                     <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
                     <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
@@ -218,7 +218,7 @@ const App = () => {
                       element={
                         user?.role === 'admin' ? <Navigate to="/dashboard/admin" replace /> :
                           user?.role === 'employee' ? <Navigate to="/dashboard/employee" replace /> :
-                            user?.role === 'customer' ? <Navigate to="/customer-portal" replace /> :
+                            user?.role === 'customer' ? <Navigate to="/customer-dashboard" replace /> :
                               <Navigate to="/login" replace /> // Fallback to Login
                       }
                     />

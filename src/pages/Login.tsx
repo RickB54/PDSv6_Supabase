@@ -27,7 +27,7 @@ export default function Login() {
                 // Role based redirect
                 if (user.role === 'admin') navigate("/dashboard/admin");
                 else if (user.role === 'employee') navigate("/dashboard/employee");
-                else navigate("/customer-portal");
+                else navigate("/customer-dashboard");
             }
         } catch (error: any) {
             console.error(error);

@@ -28,7 +28,12 @@ export default function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           </p>
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Email: <a href="mailto:Rick.PrimeAutoDetail@gmail.com?subject=Inquiry from Website" className="text-primary hover:underline">
+              Email: <a
+                href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent('Rick.PrimeAutoDetail@gmail.com')}&su=Website%20Inquiry`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
                 Rick.PrimeAutoDetail@gmail.com
               </a>
             </p>

@@ -18,6 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -231,6 +232,7 @@ export function AppSidebar() {
     { title: "My Invoices", url: "/my-invoices", icon: FileText },
     { title: "Personal Notes", url: "/notes", icon: BookOpen },
     { title: "User Settings", url: "/user-settings", icon: Settings },
+    { title: "Prime Website", url: "/", icon: Globe },
   ];
 
   // --- MENU CONFIG ---
@@ -259,12 +261,12 @@ export function AppSidebar() {
     }
   };
 
-  const collapsibleMode = "offcanvas";
+  const collapsibleMode = "icon";
   const sidebarClass = "border-r border-border";
 
   return (
     <Sidebar className={sidebarClass} collapsible={collapsibleMode as any}>
-      <div className="p-4 border-b border-border pt-20">
+      <div className="p-4 border-b border-border pt-24">
         {open && (
           <div className="flex items-center w-full">
             <div className="flex items-center gap-3 animate-fade-in flex-1" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
@@ -465,6 +467,7 @@ export function AppSidebar() {
           ) : "Logged Out"}
         </div>
       </div>
+      <SidebarRail />
     </Sidebar >
   );
 }
