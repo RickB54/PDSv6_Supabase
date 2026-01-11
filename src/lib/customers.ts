@@ -14,6 +14,7 @@ export interface UnifiedCustomer {
   color?: string;
   mileage?: string;
   vehicleType?: string;
+  vehicles?: any[];
   createdAt?: string;
   updatedAt?: string;
   type?: 'customer' | 'prospect';
@@ -74,6 +75,7 @@ export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
       model: SC.vehicle_info?.model || '',
       year: String(SC.vehicle_info?.year || ''),
       vehicleType: SC.vehicle_info?.type || '',
+      vehicles: SC.vehicles || [],
       notes: SC.notes,
       type: SC.type,
       createdAt: SC.created_at,

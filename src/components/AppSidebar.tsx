@@ -3,9 +3,9 @@ import {
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
   TicketPercent, GraduationCap, Shield, CheckSquare, CalendarDays,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
-  MessageSquare, Clock, History, ShoppingCart
+  MessageSquare, Clock, History, ShoppingCart, Video
 } from "lucide-react";
-import { NavLink, Link, useLocation } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo } from "react";
 import {
   Sidebar,
@@ -26,6 +26,7 @@ import { getCurrentUser, finalizeSupabaseSession } from "@/lib/auth";
 import supabase from "@/lib/supabase";
 import logo from "@/assets/logo-primary.png";
 import { getAdminAlerts } from "@/lib/adminAlerts";
+import AboutDialog from "@/components/AboutDialog";
 import { getMenuGroups, TOP_ITEMS as CONFIGURED_TOP_ITEMS } from "@/components/menu-config";
 import api from "@/lib/api";
 import { isViewed } from "@/lib/viewTracker";
@@ -34,6 +35,7 @@ import localforage from "localforage"; // Using localforage for payroll check
 export function AppSidebar() {
   const { open, setOpenMobile, setOpen } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState(getCurrentUser());
   const isAdmin = user?.role === 'admin';
   const isEmployee = user?.role === 'employee';
@@ -41,8 +43,9 @@ export function AppSidebar() {
 
   // 5-click Admin Unlock Logic REMOVED for safety
   // The system now strictly uses Supabase Auth via auth.ts
+  const [showAbout, setShowAbout] = useState(false);
   const handleLogoClick = () => {
-    // No-op or just simple navigation is handled by Link wrapper
+    setShowAbout(true);
   };
 
   const [tick, setTick] = useState(0);
@@ -219,6 +222,7 @@ export function AppSidebar() {
     // User asked for it "below Employee Dashboard" which is usually in TOP_ITEMS or a group. 
     // Usually Employee Dashboard is a top item.
     { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
+    { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery' },
     { title: 'Reports', url: '/reports', icon: FileBarChart, role: 'admin', key: 'reports' }
   ];
 
@@ -270,7 +274,7 @@ export function AppSidebar() {
         {open && (
           <div className="flex items-center w-full">
             <div className="flex items-center gap-3 animate-fade-in flex-1" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
-              <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
+              <img src={logo} alt="Prime Auto Detail" className="h-12 w-auto" />
               <div>
                 <h2 className="font-bold text-foreground">Prime Auto</h2>
                 <p className="text-xs text-muted-foreground">Detail</p>
@@ -287,11 +291,6 @@ export function AppSidebar() {
             >
               {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
             </Button>
-          </div>
-        )}
-        {!open && (
-          <div className="flex flex-col items-center gap-2">
-            <img src={logo} alt="Prime Auto Detail" className="w-10 h-auto mx-auto" onClick={handleLogoClick} style={{ cursor: 'pointer' }} />
           </div>
         )}
       </div>
@@ -322,7 +321,7 @@ export function AppSidebar() {
                         }}
                       >
                         {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
+                        {open && <span>{item.title}</span>}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -344,9 +343,9 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
                       <Link to={item.url} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors')}>
-                        <item.icon className={`h-4 w-4 mr-2 ${isChatAlert ? 'text-red-500' : ''}`} />
-                        <span>{item.title}</span>
-                        {isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
+                        <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
+                        {open && <span>{item.title}</span>}
+                        {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -384,20 +383,22 @@ export function AppSidebar() {
                             className={`flex items-center gap-2 ${validItems.some(item => location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'))) ? 'text-blue-500 font-semibold' : 'text-zinc-400'}`}
                           >
                             <group.icon className="h-4 w-4" />
-                            <span>{group.title}</span>
+                            {open && <span>{group.title}</span>}
                             {/* Batch count on parent */}
-                            {!isOpen && groupBadgeCount > 0 && (
+                            {open && !isOpen && groupBadgeCount > 0 && (
                               <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
                                 {groupBadgeCount}
                               </span>
                             )}
                           </Link>
                         </SidebarMenuButton>
-                        <CollapsibleTrigger asChild>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-400 transition-colors">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                          </button>
-                        </CollapsibleTrigger>
+                        {open && (
+                          <CollapsibleTrigger asChild>
+                            <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-400 transition-colors">
+                              <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            </button>
+                          </CollapsibleTrigger>
+                        )}
                       </div>
 
                       <CollapsibleContent>
@@ -431,10 +432,10 @@ export function AppSidebar() {
                                     to={item.url}
                                     className={className}
                                   >
-                                    {item.icon && <item.icon className={`h-4 w-4 mr-2 ${isChatAlert ? 'text-red-500' : ''}`} />}
-                                    <span>{item.title}</span>
-                                    {isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
-                                    {item.badge !== undefined && !isChatAlert && (
+                                    {item.icon && <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />}
+                                    {open && <span>{item.title}</span>}
+                                    {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
+                                    {open && item.badge !== undefined && !isChatAlert && (
                                       <span className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white`}>
                                         {item.badge}
                                       </span>
@@ -468,6 +469,7 @@ export function AppSidebar() {
         </div>
       </div>
       <SidebarRail />
+      <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </Sidebar >
   );
 }

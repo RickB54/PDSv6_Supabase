@@ -20,6 +20,26 @@ export interface Employee {
     lastPaid?: string;
 }
 
+export interface Vehicle {
+    id?: string;
+    customer_id?: string;
+    make: string;
+    model: string;
+    year?: string;
+    type: string;
+    color?: string;
+    vin?: string;
+    mileage?: string;
+    conditionInside?: string;
+    conditionOutside?: string;
+    created_at?: string;
+    // Media Gallery Fields
+    generalPhotos?: string[];
+    beforePhotos?: string[];
+    afterPhotos?: string[];
+    videoUrls?: string[]; // Multiple embedded video URLs
+}
+
 export interface Customer {
     id?: string;
     name: string;
@@ -27,6 +47,7 @@ export interface Customer {
     phone?: string;
     address?: string;
     vehicle_info?: any;
+    vehicles?: Vehicle[]; // Support for multiple vehicles
     notes?: string;
     created_at?: string;
     type?: string;
@@ -185,7 +206,8 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             .select(`
                 *,
                 vehicles (
-                    make, model, year, type, color, vin
+                    id, make, model, year, type, color, vin,
+                    general_photos, before_photos, after_photos, video_urls
                 )
             `)
             .order('created_at', { ascending: false });
@@ -218,7 +240,30 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 
             if (safeEmail) seenEmails.add(safeEmail);
 
-            const v = c.vehicles && c.vehicles[0] ? c.vehicles[0] : {};
+            const allVehsRaw = (c.vehicles || []).map((v: any) => ({
+                id: v.id,
+                make: v.make,
+                model: v.model,
+                year: v.year ? String(v.year) : '',
+                type: v.type,
+                color: v.color,
+                vin: v.vin,
+                generalPhotos: v.general_photos || [],
+                beforePhotos: v.before_photos || [],
+                afterPhotos: v.after_photos || [],
+                videoUrls: v.video_urls || []
+            }));
+
+            // Deduplicate vehicles by ID to prevent ghost entries
+            const seenVehIds = new Set<string>();
+            const allVehs = allVehsRaw.filter(v => {
+                if (!v.id) return true;
+                if (seenVehIds.has(v.id)) return false;
+                seenVehIds.add(v.id);
+                return true;
+            });
+
+            const v = allVehs[0] || {};
             return {
                 id: c.id,
                 name: c.full_name || c.name || 'Unknown',
@@ -227,10 +272,11 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 address: c.address,
                 vehicle: v.make || '',
                 model: v.model || '',
-                year: v.year ? String(v.year) : '',
+                year: v.year || '',
                 vehicleType: v.type || '',
                 color: v.color || '',
                 mileage: '',
+                vehicles: allVehs,
                 vehicle_info: { make: v.make, model: v.model, year: v.year, type: v.type, color: v.color },
                 notes: c.notes,
                 created_at: c.created_at,
@@ -265,6 +311,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                     year: '',
                     vehicleType: '',
                     color: '',
+                    vehicles: [],
                     vehicle_info: {},
                     notes: 'Registered Account (No CRM Profile)',
                     created_at: u.updated_at || new Date().toISOString(),
@@ -287,6 +334,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 
                 uniqueCustomers.push({
                     ...c,
+                    vehicles: c.vehicles || [],
                     vehicle_info: { make: c.vehicle, model: c.model, year: c.year, type: c.vehicleType, color: 'Mock' }
                 });
             });
@@ -306,23 +354,42 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
  * Makes it searchable for future bookings/customers
  */
 export async function upsertSupabaseVehicle(vehicleData: {
+    id?: string;
     make: string;
     model: string;
     year?: string;
     type: string;
+    color?: string;
+    vin?: string;
     customer_id?: string;
+    generalPhotos?: string[];
+    beforePhotos?: string[];
+    afterPhotos?: string[];
+    videoUrls?: string[];
 }) {
     try {
+        const payload: any = {
+            make: vehicleData.make,
+            model: vehicleData.model,
+            year: vehicleData.year || null,
+            type: vehicleData.type,
+            color: vehicleData.color || null,
+            vin: vehicleData.vin || null,
+            customer_id: vehicleData.customer_id || null,
+            general_photos: vehicleData.generalPhotos || [],
+            before_photos: vehicleData.beforePhotos || [],
+            after_photos: vehicleData.afterPhotos || [],
+            video_urls: vehicleData.videoUrls || [],
+            created_at: new Date().toISOString()
+        };
+
+        if (vehicleData.id) {
+            payload.id = vehicleData.id;
+        }
+
         const { data, error } = await supabase
             .from('vehicles')
-            .upsert({
-                make: vehicleData.make,
-                model: vehicleData.model,
-                year: vehicleData.year || null,
-                type: vehicleData.type,
-                customer_id: vehicleData.customer_id || null,
-                created_at: new Date().toISOString()
-            })
+            .upsert(payload)
             .select()
             .single();
 
@@ -336,7 +403,7 @@ export async function upsertSupabaseVehicle(vehicleData: {
 
 /**
  * Upserts a customer to Supabase.
- * Automatically handles vehicle creation/update if vehicle_info is provided.
+ * Automatically handles multiple vehicle creation/update.
  */
 export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { type?: string }) => {
     // 1. Prepare payload for CUSTOMERS table
@@ -407,26 +474,32 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         }
     }
 
-    // 2. Upsert VEHICLE if info provided
-    if (customerId && customer.vehicle_info) {
-        // Simple logic: Insert a new vehicle if it has content, 
-        // essentially satisfying "Last Known Vehicle".
-        // A more complex logic would check if it exists.
-        const v = customer.vehicle_info;
-        if (v.make || v.model || v.year) {
-            // Do not insert if identical vehicle exists? 
-            // For now just insert as log history or simple association.
-            // Ideally we upsert? But vehicle ID is unknown here.
-            const { error: vErr } = await supabase.from('vehicles').insert({
-                customer_id: customerId,
-                make: v.make,
-                model: v.model,
-                year: v.year,
-                type: v.type || v.vehicleType,
-                color: v.color
-                // mileage: v.mileage // TODO: Add mileage column to vehicles table
-            });
-            if (vErr) console.warn("Vehicle save failed", vErr);
+    // 2. Upsert VEHICLES if info provided
+    if (customerId) {
+        // A. Handle 'vehicles' array (preferred)
+        if (customer.vehicles && Array.isArray(customer.vehicles)) {
+            for (const v of customer.vehicles) {
+                if (v.make || v.model || v.year) {
+                    await upsertSupabaseVehicle({
+                        ...v,
+                        customer_id: customerId
+                    });
+                }
+            }
+        }
+        // B. Fallback to legacy 'vehicle_info' for single vehicle entry
+        else if (customer.vehicle_info) {
+            const v = customer.vehicle_info;
+            if (v.make || v.model || v.year) {
+                await upsertSupabaseVehicle({
+                    make: v.make,
+                    model: v.model,
+                    year: v.year,
+                    type: v.type || v.vehicleType || 'Compact/Sedan',
+                    color: v.color,
+                    customer_id: customerId
+                });
+            }
         }
     }
 
@@ -1426,6 +1499,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 assignedEmployee: b.assigned_employee || meta.assigned_employee,
                 bookedBy: b.booked_by || meta.booked_by,
                 createdAt: b.created_at || meta.created_at,
+                vehicleId: b.vehicle_id || meta.vehicle_id, // Map vehicleId
                 reminderFrequency: meta.reminder_frequency,
                 hasReminder: meta.has_reminder,
                 isArchived: meta.is_archived
@@ -1454,12 +1528,14 @@ export const upsertSupabaseBooking = async (booking: any) => {
             reminder_frequency: booking.reminderFrequency,
             has_reminder: booking.hasReminder,
             is_archived: booking.isArchived,
+            vehicle_id: booking.vehicleId || booking.vehicle_id, // Stash in meta too
             notes: booking.notes
         };
 
         const payload: any = {
             id: booking.id,
             customer_id: booking.customerId || null,
+            vehicle_id: booking.vehicleId || booking.vehicle_id || null, // Top-level if column exists
             date: booking.date,
             status: booking.status,
             booking_vehicle: meta,

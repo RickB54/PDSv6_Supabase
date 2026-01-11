@@ -41,6 +41,7 @@ export type MenuGroup = {
 
 export const TOP_ITEMS: MenuItem[] = [
     { title: "Admin Dashboard", url: "/admin-dashboard", role: "admin", key: "admin-dashboard", icon: LayoutDashboard },
+    { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red" },
     { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard },
 ];
 
@@ -54,13 +55,7 @@ export const getMenuGroups = (counts: {
     inventoryCount: number;
     fileCount: number;
 }): MenuGroup[] => [
-        {
-            title: "Website Admin", icon: Shield,
-            items: [
-                { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red" },
-                { title: "Website", url: "/", role: "all", icon: Globe },
-            ]
-        },
+
         {
             title: "Customer Intake", icon: UserPlus,
             items: [

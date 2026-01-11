@@ -7,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem, supabase } from "@/lib/supa-data";
+import { getCurrentUser } from "@/lib/auth";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2, FileBarChart } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2, FileBarChart, Plus, ChevronDown, ExternalLink } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
 
@@ -29,6 +32,10 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [showMap, setShowMap] = useState(false);
   const [linkedVehicles, setLinkedVehicles] = useState<any[]>([]);
+  const [currentVehicleIdx, setCurrentVehicleIdx] = useState<number | null>(null);
+
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin';
 
   // File upload refs
   const generalPhotoRef = useRef<HTMLInputElement>(null);
@@ -75,6 +82,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     videoUrl: "",
     learningCenterUrl: "",
     videoNote: "",
+    vehicles: [],
   });
 
   const isProspect = form.type === 'prospect';
@@ -113,8 +121,26 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             const { data: vehs } = await supabase
               .from('vehicles')
               .select('*')
-              .eq('customer_id', initial.id);
-            if (vehs) setLinkedVehicles(vehs);
+              .eq('customer_id', initial.id)
+              .order('created_at', { ascending: true });
+            if (vehs) {
+              setLinkedVehicles(vehs);
+              setForm(prev => ({
+                ...prev,
+                vehicles: vehs.map(v => ({
+                  id: v.id,
+                  make: v.make,
+                  model: v.model,
+                  year: v.year ? String(v.year) : "",
+                  type: v.type,
+                  color: v.color,
+                  vin: v.vin,
+                  conditionInside: "",
+                  conditionOutside: "",
+                  mileage: ""
+                }))
+              }));
+            }
           } catch (e) {
             console.error("Error loading linked vehicles", e);
           }
@@ -145,7 +171,10 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           shortVideos: [],
           videoUrl: "",
           learningCenterUrl: "",
-          videoNote: ""
+          videoNote: "",
+          vehicles: [
+            { make: "", model: "", year: "", type: "", color: "", vin: "", conditionInside: "", conditionOutside: "", mileage: "" }
+          ]
         });
       }
     };
@@ -162,7 +191,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }
   };
 
-  const handleVehicleSelect = (data: { make: string; model: string; category: string }) => {
+  const handleVehicleSelect = (data: { make: string; model: string; category: string }, index?: number) => {
     let mappedType = "";
     const cat = data.category;
     if (cat === "Compact") mappedType = "Compact/Sedan";
@@ -171,68 +200,109 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV";
     else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV";
 
+    if (typeof index === 'number') {
+      const updated = [...(form.vehicles || [])];
+      updated[index] = {
+        ...updated[index],
+        make: data.make,
+        model: data.model,
+        type: mappedType || updated[index].type
+      };
+      setForm(prev => ({ ...prev, vehicles: updated }));
+    } else {
+      setForm(prev => ({
+        ...prev,
+        vehicle: data.make,
+        model: data.model,
+        vehicleType: mappedType || prev.vehicleType
+      }));
+    }
+  };
+
+  const addVehicleRow = () => {
     setForm(prev => ({
       ...prev,
-      vehicle: data.make,
-      model: data.model,
-      vehicleType: mappedType || prev.vehicleType
+      vehicles: [...(prev.vehicles || []), { make: "", model: "", year: "", type: "", color: "", vin: "", conditionInside: "", conditionOutside: "", mileage: "" }]
+    }));
+  };
+
+  const updateVehicleRow = (index: number, patch: any) => {
+    const updated = [...(form.vehicles || [])];
+    updated[index] = { ...updated[index], ...patch };
+    setForm(prev => ({ ...prev, vehicles: updated }));
+  };
+
+  const removeVehicleRow = (index: number) => {
+    if ((form.vehicles || []).length <= 1) return;
+    setForm(prev => ({
+      ...prev,
+      vehicles: (prev.vehicles || []).filter((_, i) => i !== index)
     }));
   };
 
 
 
-  const handleFileUpload = async (file: File, type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number) => {
+  const handleFileUpload = async (file: File, type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number, vehicleIndex?: number) => {
     try {
       if (!file) return;
 
-      // Check file size (50MB video, 10MB image)
       const maxSize = type === 'shortVideos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxSize) {
         toast.error("File Too Large", { description: "Max size exceeded." });
         return;
       }
 
-      setLoading(true); // Reusing existing loading state
+      setLoading(true);
       toast.info("Uploading...", { description: "Processing..." });
 
       let fileToUpload = file;
-
-      // Compress images
       if (type !== 'shortVideos' && file.type.startsWith('image/')) {
         fileToUpload = await browserImageCompression(file, {
-          maxSizeMB: 0.4,           // Reduced from 1 to prevent mobile OOM errors
-          maxWidthOrHeight: 1280,   // Reduced from 1920
+          maxSizeMB: 0.4,
+          maxWidthOrHeight: 1280,
           useWebWorker: true,
-          initialQuality: 0.6,      // Lower quality for smaller files
+          initialQuality: 0.6,
           maxIteration: 10
         });
       }
 
-      // Upload key
       const ext = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
       const filePath = `customers/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('blog-media')
+        .from('customer-photos')
         .upload(filePath, fileToUpload);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('blog-media')
+        .from('customer-photos')
         .getPublicUrl(filePath);
 
       setForm(prev => {
-        const current = prev[type] || [];
-        const updated = [...current];
-        // Ensure array is large enough if index is out of bounds (though usually it's 0)
-        updated[index] = publicUrl;
-        return { ...prev, [type]: updated };
+        if (vehicleIndex !== undefined && prev.vehicles && prev.vehicles[vehicleIndex]) {
+          const updatedVehicles = [...prev.vehicles];
+          const vehicle = { ...updatedVehicles[vehicleIndex] };
+          const currentMedia = (vehicle as any)[type] || [];
+          const updatedMedia = [...currentMedia];
+          if (index < updatedMedia.length) {
+            updatedMedia[index] = publicUrl;
+          } else {
+            updatedMedia.push(publicUrl);
+          }
+          (vehicle as any)[type] = updatedMedia;
+          updatedVehicles[vehicleIndex] = vehicle;
+          return { ...prev, vehicles: updatedVehicles };
+        } else {
+          const current = prev[type] || [];
+          const updated = [...current];
+          updated[index] = publicUrl;
+          return { ...prev, [type]: updated };
+        }
       });
 
       toast.success("Uploaded successfully!");
-
     } catch (error: any) {
       console.error('Upload error:', error);
       toast.error("Upload Failed", { description: error.message });
@@ -241,12 +311,62 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }
   };
 
-  const removeMedia = (type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number) => {
+  const removeMedia = (type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number, vehicleIndex?: number) => {
     setForm(prev => {
-      const current = prev[type] || [];
-      const updated = [...current];
-      updated[index] = '';
-      return { ...prev, [type]: updated };
+      if (vehicleIndex !== undefined && prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const vehicle = { ...updatedVehicles[vehicleIndex] };
+        const currentMedia = (vehicle as any)[type] || [];
+        const updatedMedia = currentMedia.filter((_: any, i: number) => i !== index);
+        (vehicle as any)[type] = updatedMedia;
+        updatedVehicles[vehicleIndex] = vehicle;
+        return { ...prev, vehicles: updatedVehicles };
+      } else {
+        const current = prev[type] || [];
+        const updated = current.filter((_: any, i: number) => i !== index);
+        return { ...prev, [type]: updated };
+      }
+    });
+  };
+
+  const updateVideoUrl = (vehicleIndex: number, index: number, url: string) => {
+    setForm(prev => {
+      if (prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const vehicle = { ...updatedVehicles[vehicleIndex] };
+        const videoUrls = [...(vehicle.videoUrls || [])];
+        videoUrls[index] = url;
+        vehicle.videoUrls = videoUrls;
+        updatedVehicles[vehicleIndex] = vehicle;
+        return { ...prev, vehicles: updatedVehicles };
+      }
+      return prev;
+    });
+  };
+
+  const addVideoUrl = (vehicleIndex: number) => {
+    setForm(prev => {
+      if (prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const vehicle = { ...updatedVehicles[vehicleIndex] };
+        vehicle.videoUrls = [...(vehicle.videoUrls || []), ""];
+        updatedVehicles[vehicleIndex] = vehicle;
+        return { ...prev, vehicles: updatedVehicles };
+      }
+      return prev;
+    });
+  };
+
+  const removeVideoUrl = (vehicleIndex: number, index: number) => {
+    setForm(prev => {
+      if (prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const vehicle = { ...updatedVehicles[vehicleIndex] };
+        vehicle.videoUrls = (vehicle.videoUrls || []).filter((_, i) => i !== index);
+        updatedVehicles[vehicleIndex] = vehicle;
+        return { ...prev, vehicles: updatedVehicles };
+      }
+      return prev;
     });
   };
 
@@ -429,139 +549,165 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
             <div className="h-px bg-zinc-800" />
 
-            {/* Vehicle Section */}
-            <div className="space-y-3">
+            {/* Vehicle Section - Accordion Style */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Vehicle Details</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Vehicles
+                </h3>
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setVehicleSelectorOpen(true)}
-                  className="h-8 text-xs border-dashed border-zinc-700 hover:border-zinc-500"
+                  onClick={addVehicleRow}
+                  className="h-8 text-xs border-emerald-600/30 text-emerald-500 hover:bg-emerald-600/10"
                 >
-                  <Search className="w-3 h-3 mr-1" />
-                  Select Vehicle from Database
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Another Vehicle
                 </Button>
               </div>
 
-              <div className="grid gap-3">
-                <div className="relative">
-                  <Car className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                  <select
-                    value={form.vehicleType}
-                    onChange={(e) => handleChange("vehicleType", e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">Select Vehicle Type</option>
-                    <option value="Compact/Sedan">Compact/Sedan</option>
-                    <option value="Mid-Size/SUV">Mid-Size/SUV</option>
-                    <option value="Truck/Van/Large SUV">Truck/Van/Large SUV</option>
-                    <option value="Luxury/High-End">Luxury/High-End</option>
-                    <option value="Motorcycle">Motorcycle</option>
-                    <option value="RV/Boat">RV/Boat</option>
-                  </select>
-                </div>
+              <Accordion type="multiple" defaultValue={["vehicle-0"]} className="space-y-2">
+                {(form.vehicles || []).map((v, idx) => (
+                  <AccordionItem key={idx} value={`vehicle-${idx}`} className="border border-zinc-800 bg-zinc-900/40 rounded-lg overflow-hidden">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-zinc-800/50">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400 border border-zinc-700">
+                            {idx + 1}
+                          </div>
+                          <span className="text-sm font-medium text-white">
+                            {v.year || v.make || v.model ? `${v.year} ${v.make} ${v.model}`.trim() : `Vehicle ${idx + 1}`}
+                          </span>
+                          {v.type && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 border-zinc-700 text-zinc-500">
+                              {v.type}
+                            </Badge>
+                          )}
+                        </div>
+                        {idx > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); removeVehicleRow(idx); }}
+                            className="h-7 w-7 p-0 text-red-500 hover:bg-red-950/30"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4 pt-2 border-t border-zinc-800/50">
+                      <div className="grid gap-4">
+                        <div className="flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCurrentVehicleIdx(idx);
+                              setVehicleSelectorOpen(true);
+                            }}
+                            className="h-7 text-[10px] border-dashed border-zinc-700 hover:border-zinc-500"
+                          >
+                            <Search className="w-3 h-3 mr-1" />
+                            Database Search
+                          </Button>
+                        </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <Input
-                    placeholder="Year"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                    value={form.year}
-                    onChange={(e) => handleChange("year", e.target.value)}
-                  />
-                  <Input
-                    placeholder="Make"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                    value={form.vehicle}
-                    onChange={(e) => handleChange("vehicle", e.target.value)}
-                  />
-                  <Input
-                    placeholder="Model"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                    value={form.model}
-                    onChange={(e) => handleChange("model", e.target.value)}
-                  />
-                </div>
+                        <div className="grid gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <select
+                              value={v.type}
+                              onChange={(e) => updateVehicleRow(idx, { type: e.target.value })}
+                              className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                            >
+                              <option value="">Select Type</option>
+                              <option value="Compact/Sedan">Compact/Sedan</option>
+                              <option value="Mid-Size/SUV">Mid-Size/SUV</option>
+                              <option value="Truck/Van/Large SUV">Truck/Van/Large SUV</option>
+                              <option value="Luxury/High-End">Luxury/High-End</option>
+                              <option value="Motorcycle">Motorcycle</option>
+                              <option value="RV/Boat">RV/Boat</option>
+                            </select>
+                            <Input
+                              placeholder="Year"
+                              className="bg-zinc-950 border-zinc-800 text-white h-10"
+                              value={v.year}
+                              onChange={(e) => updateVehicleRow(idx, { year: e.target.value })}
+                            />
+                          </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    placeholder="Color"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                    value={form.color}
-                    onChange={(e) => handleChange("color", e.target.value)}
-                  />
-                  <Input
-                    placeholder="Mileage (approx)"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                    value={form.mileage}
-                    onChange={(e) => handleChange("mileage", e.target.value)}
-                  />
-                </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Input
+                              placeholder="Make"
+                              className="bg-zinc-950 border-zinc-800 text-white h-10"
+                              value={v.make}
+                              onChange={(e) => updateVehicleRow(idx, { make: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Model"
+                              className="bg-zinc-950 border-zinc-800 text-white h-10"
+                              value={v.model}
+                              onChange={(e) => updateVehicleRow(idx, { model: e.target.value })}
+                            />
+                          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Condition (Inside): 1 (Bad) - 5 (Pristine)</Label>
-                    <select
-                      value={form.conditionInside}
-                      onChange={(e) => handleChange("conditionInside", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <option value="">Rate Condition...</option>
-                      <option value="1">1 - Extremely Bad</option>
-                      <option value="2">2 - Poor</option>
-                      <option value="3">3 - Average</option>
-                      <option value="4">4 - Good</option>
-                      <option value="5">5 - Pristine</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Condition (Outside): 1 (Bad) - 5 (Pristine)</Label>
-                    <select
-                      value={form.conditionOutside}
-                      onChange={(e) => handleChange("conditionOutside", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <option value="">Rate Condition...</option>
-                      <option value="1">1 - Extremely Bad</option>
-                      <option value="2">2 - Poor</option>
-                      <option value="3">3 - Average</option>
-                      <option value="4">4 - Good</option>
-                      <option value="5">5 - Pristine</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Input
+                              placeholder="Color"
+                              className="bg-zinc-950 border-zinc-800 text-white h-10"
+                              value={v.color}
+                              onChange={(e) => updateVehicleRow(idx, { color: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Mileage"
+                              className="bg-zinc-950 border-zinc-800 text-white h-10"
+                              value={v.mileage || ""}
+                              onChange={(e) => updateVehicleRow(idx, { mileage: e.target.value })}
+                            />
+                          </div>
 
-            {linkedVehicles.length > 0 && (
-              <>
-                <div className="h-px bg-zinc-800" />
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Manage Linked Vehicles ({linkedVehicles.length})</h3>
-                  <div className="space-y-2">
-                    {linkedVehicles.map((v) => (
-                      <div key={v.id} className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <Car className="h-4 w-4 text-zinc-500" />
-                          <div className="text-sm text-white">
-                            {v.year} {v.make} {v.model} <span className="text-zinc-500">({v.type})</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground uppercase">Interior Cond.</Label>
+                              <select
+                                value={v.conditionInside}
+                                onChange={(e) => updateVehicleRow(idx, { conditionInside: e.target.value })}
+                                className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-white outline-none"
+                              >
+                                <option value="">N/A</option>
+                                <option value="1">1 - Poor</option>
+                                <option value="2">2 - Fair</option>
+                                <option value="3">3 - Good</option>
+                                <option value="4">4 - Great</option>
+                                <option value="5">5 - Pristine</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground uppercase">Exterior Cond.</Label>
+                              <select
+                                value={v.conditionOutside}
+                                onChange={(e) => updateVehicleRow(idx, { conditionOutside: e.target.value })}
+                                className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-white outline-none"
+                              >
+                                <option value="">N/A</option>
+                                <option value="1">1 - Poor</option>
+                                <option value="2">2 - Fair</option>
+                                <option value="3">3 - Good</option>
+                                <option value="4">4 - Great</option>
+                                <option value="5">5 - Pristine</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-red-500 hover:bg-red-950/30 hover:text-red-400"
-                          onClick={() => handleDeleteLinkedVehicle(v.id)}
-                          title="Permanently remove this vehicle"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
 
             <div className="h-px bg-zinc-800" />
 
@@ -595,290 +741,195 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             </div>
 
             {/* Services for Customers */}
-            {!isProspect && (
-              <>
-                <div className="h-px bg-zinc-800" />
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Service History</h3>
-                  <div className="grid gap-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                        <Input
-                          placeholder="Last Service Date"
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                          value={form.lastService}
-                          onChange={(e) => handleChange("lastService", e.target.value)}
-                        />
+            {
+              !isProspect && (
+                <>
+                  <div className="h-px bg-zinc-800" />
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Service History</h3>
+                    <div className="grid gap-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                          <Input
+                            placeholder="Last Service Date"
+                            className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                            value={form.lastService}
+                            onChange={(e) => handleChange("lastService", e.target.value)}
+                          />
+                        </div>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                          <Input
+                            placeholder="Duration"
+                            className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                            value={form.duration}
+                            onChange={(e) => handleChange("duration", e.target.value)}
+                          />
+                        </div>
                       </div>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                        <Input
-                          placeholder="Duration"
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                          value={form.duration}
-                          onChange={(e) => handleChange("duration", e.target.value)}
-                        />
-                      </div>
+                      <Input
+                        placeholder="Services (comma separated)"
+                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                        value={form.services.join(", ")}
+                        onChange={(e) => handleChange("services", e.target.value)}
+                      />
                     </div>
-                    <Input
-                      placeholder="Services (comma separated)"
-                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                      value={form.services.join(", ")}
-                      onChange={(e) => handleChange("services", e.target.value)}
-                    />
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )
+            }
 
             <div className="h-px bg-zinc-800" />
 
-            {/* Media Gallery - Simplified for speed */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                Job Photos (Before/After)
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Before Photo */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-zinc-400">Before Photo</Label>
-                  <div className="relative aspect-square rounded-md bg-zinc-800/50 border border-zinc-700 overflow-hidden">
-                    {form.beforePhotos?.[0] ? (
-                      <>
-                        <img src={form.beforePhotos[0]} alt="Before" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeMedia('beforePhotos', 0)}
-                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full"
-                        >
-                          <X className="h-3 w-3 text-white" />
-                        </button>
-                      </>
-                    ) : (
-                      <div
-                        onClick={() => beforePhoto1Ref.current?.click()}
-                        className="w-full h-full flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors"
-                      >
-                        <div className="text-center p-2">
-                          <ImageIcon className="h-8 w-8 mx-auto text-zinc-600 mb-1" />
-                          <p className="text-[10px] text-zinc-500">Click to upload</p>
-                        </div>
-                      </div>
-                    )}
-                    <input
-                      ref={beforePhoto1Ref}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'beforePhotos', 0)}
-                    />
-                    <input
-                      ref={beforePhoto1CameraRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'beforePhotos', 0)}
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); beforePhoto1CameraRef.current?.click(); }}
-                      className="absolute -bottom-2 -right-2 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-900 shadow-lg z-10"
-                      title="Take Photo"
-                    >
-                      <Camera className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* General Photo */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-zinc-400">General Photo</Label>
-                  <div className="relative aspect-square rounded-md bg-zinc-800/50 border border-zinc-700 overflow-hidden">
-                    {form.generalPhotos?.[0] ? (
-                      <>
-                        <img src={form.generalPhotos[0]} alt="General" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeMedia('generalPhotos', 0)}
-                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full"
-                        >
-                          <X className="h-3 w-3 text-white" />
-                        </button>
-                      </>
-                    ) : (
-                      <div
-                        onClick={() => generalPhotoRef.current?.click()}
-                        className="w-full h-full flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors"
-                      >
-                        <div className="text-center p-2">
-                          <ImageIcon className="h-8 w-8 mx-auto text-zinc-600 mb-1" />
-                          <p className="text-[10px] text-zinc-500">Click to upload</p>
-                        </div>
-                      </div>
-                    )}
-                    <input
-                      ref={generalPhotoRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'generalPhotos', 0)}
-                    />
-                    <input
-                      ref={generalPhotoCameraRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'generalPhotos', 0)}
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); generalPhotoCameraRef.current?.click(); }}
-                      className="absolute -bottom-2 -right-2 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-900 shadow-lg z-10"
-                      title="Take Photo"
-                    >
-                      <Camera className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* After Photo */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-zinc-400">After Photo</Label>
-                  <div className="relative aspect-square rounded-md bg-zinc-800/50 border border-zinc-700 overflow-hidden">
-                    {form.afterPhotos?.[0] ? (
-                      <>
-                        <img src={form.afterPhotos[0]} alt="After" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeMedia('afterPhotos', 0)}
-                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full"
-                        >
-                          <X className="h-3 w-3 text-white" />
-                        </button>
-                      </>
-                    ) : (
-                      <div
-                        onClick={() => afterPhoto1Ref.current?.click()}
-                        className="w-full h-full flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors"
-                      >
-                        <div className="text-center p-2">
-                          <ImageIcon className="h-8 w-8 mx-auto text-zinc-600 mb-1" />
-                          <p className="text-[10px] text-zinc-500">Click to upload</p>
-                        </div>
-                      </div>
-                    )}
-                    <input
-                      ref={afterPhoto1Ref}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'afterPhotos', 0)}
-                    />
-                    <input
-                      ref={afterPhoto1CameraRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'afterPhotos', 0)}
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); afterPhoto1CameraRef.current?.click(); }}
-                      className="absolute -bottom-2 -right-2 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-900 shadow-lg z-10"
-                      title="Take Photo"
-                    >
-                      <Camera className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Video URL Link */}
-              <div className="space-y-2">
-                <Label className="text-xs text-zinc-400 flex items-center gap-1">
-                  <Video className="h-3 w-3" />
-                  YouTube Video (Before/After Showcase)
-                </Label>
-                <div className="relative flex gap-2">
-                  <div className="relative flex-1">
-                    <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                    <Input
-                      placeholder="https://youtube.com/watch?v=..."
-                      className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                      value={form.videoUrl || ""}
-                      onChange={(e) => handleChange("videoUrl", e.target.value)}
-                    />
-                  </div>
-                  {form.videoUrl && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleChange("videoUrl", "")}
-                      className="shrink-0 h-10 w-10 text-red-500 hover:bg-red-950/30 hover:text-red-400"
-                      title="Remove video URL"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                {form.videoUrl && (
-                  <p className="text-[10px] text-emerald-500 flex items-center gap-1">
-                    <Video className="h-3 w-3" /> Video linked - will appear in gallery
-                  </p>
+            {/* Vehicle Media Gallery Integration */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Vehicle Media Gallery
+                </h3>
+                {form.id && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="text-blue-500 h-auto p-0 text-xs flex items-center gap-1"
+                    onClick={() => window.open(`/vehicle-gallery?customerId=${form.id}`, '_blank')}
+                  >
+                    View Full Gallery <ExternalLink className="h-3 w-3" />
+                  </Button>
                 )}
               </div>
 
-              {/* Learning Center URL Link */}
-              <div className="space-y-2">
-                <Label className="text-xs text-zinc-400 flex items-center gap-1">
-                  <LinkIcon className="h-3 w-3" />
-                  Learning Center Video (Job Instructions)
-                </Label>
-                <div className="relative">
-                  <Select
-                    value={form.learningCenterUrl}
-                    onValueChange={(val) => handleChange("learningCenterUrl", val)}
-                  >
-                    <SelectTrigger className="w-full bg-zinc-900 border-zinc-800 text-white">
-                      <SelectValue placeholder="Select a video from Learning Library..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white max-h-[300px]">
-                      {libraryItems.length > 0 ? (
-                        libraryItems.map((item) => (
-                          <SelectItem key={item.id} value={item.resource_url || ""}>
-                            {item.title}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-2 text-xs text-zinc-500 text-center">No videos available</div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-[10px] text-zinc-500 italic mt-1">
-                  Link to a video in the Prime Training Center showing how to perform this job
+              <div className="bg-blue-900/10 border border-blue-900/30 rounded-lg p-3">
+                <p className="text-[11px] text-blue-400 leading-tight">
+                  <strong>Gallery Workflow:</strong> Photos are stored in-app and become a permanent part of the record.
+                  Videos are embedded from external platforms (YouTube, FB, IG, TikTok).
+                  Manage all media centrally in the <span className="underline cursor-pointer" onClick={() => window.open('/vehicle-gallery', '_blank')}>Vehicle Gallery</span>.
                 </p>
               </div>
 
-              {/* Video Note */}
-              <div className="space-y-2">
-                <Label className="text-xs text-zinc-400">Video Note (Origin/Instructions)</Label>
-                <Input
-                  placeholder="e.g. Origin of this video, why it's here..."
-                  className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
-                  value={form.videoNote || ""}
-                  onChange={(e) => handleChange("videoNote", e.target.value)}
-                />
-              </div>
-            </div>
+              {(form.vehicles || []).length === 0 ? (
+                <div className="text-center py-6 border border-dashed border-zinc-800 rounded-lg">
+                  <Car className="h-8 w-8 mx-auto text-zinc-800 mb-2" />
+                  <p className="text-xs text-zinc-500">No vehicles linked to add media to.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(form.vehicles || []).map((vehicle, vIdx) => {
+                    const isFirst = vIdx === 0;
+                    const content = (
+                      <div className="space-y-6 pt-2">
+                        {/* Photo Grid */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <MediaUploadField
+                            label="Before Photo"
+                            type="beforePhotos"
+                            photos={vehicle.beforePhotos || []}
+                            vIdx={vIdx}
+                            onUpload={handleFileUpload}
+                            onRemove={removeMedia}
+                          />
+                          <MediaUploadField
+                            label="After Photo"
+                            type="afterPhotos"
+                            photos={vehicle.afterPhotos || []}
+                            vIdx={vIdx}
+                            onUpload={handleFileUpload}
+                            onRemove={removeMedia}
+                          />
+                          <MediaUploadField
+                            label="General Photo"
+                            type="generalPhotos"
+                            photos={vehicle.generalPhotos || []}
+                            vIdx={vIdx}
+                            onUpload={handleFileUpload}
+                            onRemove={removeMedia}
+                          />
+                        </div>
 
+                        {/* Video URLs */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-zinc-400 flex items-center gap-1">
+                              <Video className="h-3 w-3" /> Embedded Video URLs
+                            </Label>
+                            {isAdmin && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-[10px] bg-zinc-900 border-zinc-700"
+                                onClick={() => addVideoUrl(vIdx)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" /> Add Video
+                              </Button>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            {(vehicle.videoUrls || []).map((url, urlIdx) => (
+                              <div key={urlIdx} className="flex gap-2">
+                                <div className="relative flex-1">
+                                  <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                                  <Input
+                                    placeholder="YouTube, FB, TikTok URL..."
+                                    className="pl-9 bg-zinc-900 border-zinc-800 text-white text-xs h-9"
+                                    value={url}
+                                    onChange={(e) => updateVideoUrl(vIdx, urlIdx, e.target.value)}
+                                    disabled={!isAdmin && !!url}
+                                  />
+                                </div>
+                                {isAdmin && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeVideoUrl(vIdx, urlIdx)}
+                                    className="h-9 w-9 text-red-500 hover:bg-red-950/30"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                            {(vehicle.videoUrls || []).length === 0 && (
+                              <p className="text-[10px] text-zinc-600 italic">No videos linked for this vehicle.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+
+                    if (isFirst) {
+                      return (
+                        <div key={vIdx} className="space-y-2 border-b border-zinc-800 pb-6">
+                          <div className="flex items-center gap-2 text-xs font-medium text-zinc-300">
+                            <Car className="h-3 w-3" /> {vehicle.year} {vehicle.make} {vehicle.model} (Primary)
+                          </div>
+                          {content}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Accordion key={vIdx} type="single" collapsible className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/30">
+                        <AccordionItem value={`veh-${vIdx}`} className="border-0">
+                          <AccordionTrigger className="px-4 py-2 hover:no-underline text-xs font-medium text-zinc-400">
+                            <div className="flex items-center gap-2">
+                              <Car className="h-3 w-3" /> {vehicle.year} {vehicle.make} {vehicle.model}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-4">
+                            {content}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             <div className="h-px bg-zinc-800" />
 
@@ -953,7 +1004,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
       <VehicleSelectorModal
         open={vehicleSelectorOpen}
         onOpenChange={setVehicleSelectorOpen}
-        onSelect={handleVehicleSelect}
+        onSelect={(data) => handleVehicleSelect(data, currentVehicleIdx !== null ? currentVehicleIdx : undefined)}
       />
 
       <Dialog open={showMap} onOpenChange={setShowMap}>
@@ -978,5 +1029,70 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+interface MediaUploadFieldProps {
+  label: string;
+  type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos';
+  photos: string[];
+  vIdx: number;
+  onUpload: (file: File, type: any, index: number, vIdx: number) => void;
+  onRemove: (type: any, index: number, vIdx: number) => void;
+}
+
+function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: MediaUploadFieldProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-[10px] text-zinc-500 uppercase font-bold">{label}</Label>
+      <div className="relative aspect-square rounded-md bg-zinc-900 border border-zinc-800 overflow-hidden ring-1 ring-zinc-800/50">
+        {photos && photos[0] ? (
+          <>
+            <img src={photos[0]} alt={label} className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => onRemove(type, 0, vIdx)}
+              className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors backdrop-blur-sm"
+            >
+              <X className="h-3 w-3 text-white" />
+            </button>
+          </>
+        ) : (
+          <div
+            onClick={() => fileRef.current?.click()}
+            className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-800/50 transition-colors"
+          >
+            <ImageIcon className="h-4 w-4 text-zinc-700 mb-1" />
+            <p className="text-[8px] text-zinc-600">Upload</p>
+          </div>
+        )}
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0], type, 0, vIdx)}
+        />
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0], type, 0, vIdx)}
+        />
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }}
+          className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-zinc-950 shadow-xl z-20 transition-transform active:scale-90"
+        >
+          <Camera className="h-3 w-3 text-white" />
+        </button>
+      </div>
+    </div>
   );
 }

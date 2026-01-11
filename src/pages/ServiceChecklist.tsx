@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video } from "lucide-react";
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -106,6 +106,7 @@ const ServiceChecklist = () => {
   const [customerSearch, setCustomerSearch] = useState<string>("");
   const [customerSearchResults, setCustomerSearchResults] = useState<CustomerType[]>([]);
   const [vehicleTypeOther, setVehicleTypeOther] = useState<string>("");
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
 
   // Read employee from URL params (from Staff Schedule "Start Job")
   useEffect(() => {
@@ -376,6 +377,18 @@ const ServiceChecklist = () => {
         const key = toVehKey(customer.vehicleType);
         setVehicleType((vehicleOptions.includes(key) ? key : 'midsize'));
       }
+
+      // Auto-select first vehicle if available
+      if (customer?.vehicles && customer.vehicles.length > 0) {
+        setSelectedVehicleId(customer.vehicles[0].id || "");
+        if (customer.vehicles[0].type) {
+          const key = toVehKey(customer.vehicles[0].type);
+          setVehicleType((vehicleOptions.includes(key) ? key : 'midsize'));
+        }
+      } else {
+        setSelectedVehicleId("");
+      }
+
       // Pre-check previous services from the latest invoice
       (async () => {
         const invs = await getSupabaseInvoices();
@@ -1117,6 +1130,9 @@ const ServiceChecklist = () => {
 
       const vkeyBuiltIn = toBuiltInVehKey(vehicleType);
       const allServices = [...coreServicesDisplay, ...addOnServicesDisplay, destinationFeeDisplay];
+
+      const selectedVehicle = customer?.vehicles?.find((v: any) => v.id === selectedVehicleId) || customer?.vehicles?.[0];
+
       const selectedItems = selectedServices.map(id => {
         const svc = allServices.find(s => s.id === id);
         const price = (() => {
@@ -1143,9 +1159,17 @@ const ServiceChecklist = () => {
       const invoice: any = {
         customerId: selectedCustomer, // Use ID directly
         customerName: customer?.name || 'Generic Job',
-        vehicle: customer ? `${customer.year || ""} ${customer.vehicle || ""} ${customer.model || ""}`.trim() : '',
+        vehicle_id: selectedVehicleId || selectedVehicle?.id,
+        vehicle: selectedVehicle ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim() : (customer ? `${customer.year || ""} ${customer.vehicle || ""} ${customer.model || ""}`.trim() : ''),
         contact: { address: customer?.address || '', phone: customer?.phone || '', email: customer?.email || '' },
-        vehicleInfo: { type: vehicleLabels[vehicleType] || vehicleType, mileage: customer?.mileage, year: customer?.year, color: customer?.color, conditionInside: customer?.conditionInside, conditionOutside: customer?.conditionOutside },
+        vehicleInfo: {
+          type: selectedVehicle?.type || vehicleLabels[vehicleType] || vehicleType,
+          mileage: customer?.mileage,
+          year: selectedVehicle?.year || customer?.year,
+          color: selectedVehicle?.color || customer?.color,
+          conditionInside: customer?.conditionInside,
+          conditionOutside: customer?.conditionOutside
+        },
         services: selectedItems,
         subtotal: calculateSubtotal(),
         discount: { type: discountType, value: discountValue ? parseFloat(discountValue) : 0, amount: calculateDiscount() },
@@ -1321,6 +1345,51 @@ const ServiceChecklist = () => {
                 ))}
               </select>
             </div>
+
+            {selectedCustomer && (customers.find(c => c.id === selectedCustomer)?.vehicles?.length || 0) > 0 && (
+              <div className="mb-4 animate-in fade-in slide-in-from-top-2">
+                <Label className="flex items-center gap-2 text-purple-400">
+                  <Car className="h-4 w-4" />
+                  Select Specific Vehicle
+                </Label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedVehicleId}
+                    onChange={(e) => {
+                      const vehId = e.target.value;
+                      setSelectedVehicleId(vehId);
+                      const cust = customers.find(c => c.id === selectedCustomer);
+                      const veh = cust?.vehicles?.find((v: any) => v.id === vehId);
+                      if (veh && veh.type) {
+                        const key = toVehKey(veh.type);
+                        setVehicleType(vehicleOptions.includes(key) ? key : 'midsize');
+                      }
+                    }}
+                    className="flex h-10 w-full rounded-md border border-purple-900/30 bg-black text-white px-3 py-2 text-sm focus:ring-purple-500/20"
+                  >
+                    <option value="">-- Choose a Vehicle --</option>
+                    {(customers.find(c => c.id === selectedCustomer)?.vehicles || []).map((v: any) => (
+                      <option key={v.id} value={v.id}>
+                        {v.year} {v.make} {v.model} ({v.type || 'No Type'})
+                      </option>
+                    ))}
+                  </select>
+                  {selectedCustomer && (
+                    <Button
+                      variant="outline"
+                      className="h-10 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                      onClick={() => window.open(`/vehicle-gallery?customerId=${selectedCustomer}&vehicleId=${selectedVehicleId}`, '_blank')}
+                      title="View Vehicle Gallery"
+                    >
+                      <Video className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-1 italic">
+                  * Customer has multiple vehicles. Selecting one will auto-update the Vehicle Type.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Package</Label>

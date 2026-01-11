@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
+import CustomerModal from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
@@ -150,7 +150,7 @@ const Prospects = () => {
 
   const filterByDate = (customer: Customer) => {
     const now = new Date();
-    const baseDateStr = customer.updatedAt || customer.createdAt || customer.lastService;
+    const baseDateStr = (customer as any).updated_at || (customer as any).created_at || customer.lastService;
     if (!baseDateStr) return dateFilter === "all" && !(dateRange.from || dateRange.to);
     const d = new Date(baseDateStr);
 
@@ -293,7 +293,8 @@ const Prospects = () => {
 
   const totalProspects = filteredCustomers.length;
   const newThisMonth = filteredCustomers.filter(c => {
-    const d = c.createdAt ? new Date(c.createdAt) : new Date();
+    const dStr = (c as any).created_at || (c as any).createdAt;
+    const d = dStr ? new Date(dStr) : new Date();
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
@@ -370,7 +371,7 @@ const Prospects = () => {
         {/* Accordion Cards View */}
         <div className="space-y-4">
           {[...filteredCustomers]
-            .sort((a, b) => { const da = a.updatedAt || ""; const db = b.updatedAt || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
+            .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
               if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
@@ -434,6 +435,9 @@ const Prospects = () => {
                           </Button>
                         )}
                         <Button asChild variant="outline" size="sm" className="h-9 border-zinc-700 hover:bg-zinc-800"><Link to={`/service-checklist?customerId=${customer.id}`}><FileBarChart className="h-4 w-4 mr-2" /> Start Service</Link></Button>
+                        <Button asChild variant="outline" size="sm" className="h-9 border-pink-500/30 text-pink-400 hover:bg-pink-500/10 hover:text-pink-300">
+                          <Link to={`/vehicle-gallery?customerId=${customer.id}`}><Video className="h-4 w-4 mr-2" /> Gallery</Link>
+                        </Button>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -555,8 +559,8 @@ const Prospects = () => {
                           <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Prospect Info</h4>
                           <div className="space-y-3 bg-zinc-950 p-4 rounded border border-zinc-800/50">
                             <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Source:</span><span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-300">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || '—'}</span></div>
-                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Created:</span><span className="text-zinc-300 text-sm">{customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : '—'}</span></div>
-                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Last Updated:</span><span className="text-zinc-300 text-sm">{customer.updatedAt ? new Date(customer.updatedAt).toLocaleDateString() : '—'}</span></div>
+                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Created:</span><span className="text-zinc-300 text-sm">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span></div>
+                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Last Updated:</span><span className="text-zinc-300 text-sm">{(customer as any).updated_at ? new Date((customer as any).updated_at).toLocaleDateString() : '—'}</span></div>
                           </div>
                         </div>
                       </div>

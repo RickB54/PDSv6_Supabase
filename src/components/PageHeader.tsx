@@ -48,7 +48,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
               </Button>
             )}
 
-            <button onClick={() => setShowAbout(true)} className="flex items-center gap-3 transition-opacity hover:opacity-80">
+            <button onClick={() => navigate("/")} className="flex items-center gap-3 transition-opacity hover:opacity-80">
               <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
             </button>
 

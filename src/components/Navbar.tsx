@@ -68,7 +68,7 @@ export const Navbar = () => {
               </Button>
             )}
             <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
-              <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
+              <img src={logo} alt="Prime Auto Detail" className="h-12 w-auto" />
             </Link>
           </div>
 

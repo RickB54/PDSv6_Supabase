@@ -12,7 +12,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Users,
-    FlaskConical
+    FlaskConical,
+    Video
 } from "lucide-react";
 
 export function GlobalRightSidebar() {
@@ -46,6 +47,10 @@ export function GlobalRightSidebar() {
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <CheckSquare className="w-5 h-5 text-blue-500" />
                 {!collapsed && <span>Tasks</span>}
+            </Button>
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Video className="w-5 h-5 text-pink-500" />
+                {!collapsed && <span>Gallery</span>}
             </Button>
 
             {/* Separator */}

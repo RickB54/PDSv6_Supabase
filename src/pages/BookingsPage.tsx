@@ -87,7 +87,8 @@ export default function BookingsPage() {
     addons: [] as string[],
     hasReminder: false,
     reminderFrequency: "3",
-    status: "confirmed" as BookingStatus
+    status: "confirmed" as BookingStatus,
+    vehicleId: undefined as string | undefined
   });
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -369,7 +370,8 @@ export default function BookingsPage() {
       addons: booking.addons || [],
       hasReminder: booking.hasReminder || false,
       reminderFrequency: booking.reminderFrequency?.toString() || "3",
-      status: booking.status || "confirmed"
+      status: booking.status || "confirmed",
+      vehicleId: booking.vehicleId
     });
     setIsAddModalOpen(true);
     setIsAddModalOpen(true);
@@ -480,6 +482,7 @@ export default function BookingsPage() {
         addons: formData.addons,
         hasReminder: formData.hasReminder,
         reminderFrequency: parseInt(formData.reminderFrequency) || 0,
+        vehicleId: formData.vehicleId,
         customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId
       };
       update(selectedBooking.id, updates);
@@ -515,6 +518,7 @@ export default function BookingsPage() {
         addons: formData.addons,
         hasReminder: formData.hasReminder,
         reminderFrequency: parseInt(formData.reminderFrequency) || 0,
+        vehicleId: formData.vehicleId, // Store the specific vehicle ID
         createdAt: new Date().toISOString()
       };
       add(newBooking as any);
@@ -532,7 +536,7 @@ export default function BookingsPage() {
     setSelectedBooking(null);
     setSelectedCustomer(null);
     setSelectedCustomer(null);
-    setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3", status: "confirmed" });
+    setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3", status: "confirmed", vehicleId: undefined });
   };
 
   const handleDelete = () => {
@@ -566,7 +570,8 @@ export default function BookingsPage() {
       addons: booking.addons || [],
       hasReminder: false,
       reminderFrequency: "3",
-      status: booking.status || "confirmed"
+      status: booking.status || "confirmed",
+      vehicleId: booking.vehicleId
     });
 
     // Reset validation/selection states for "New" mode
@@ -1099,15 +1104,18 @@ export default function BookingsPage() {
                         // console.log('Selected customer:', cust); // Debug log
                         if (cust) {
                           setSelectedCustomer(cust);
+                          const primaryVeh = cust.vehicles && cust.vehicles.length > 0 ? cust.vehicles[0] : null;
                           setFormData(prev => ({
                             ...prev,
                             customer: cust.name,
                             email: cust.email || prev.email || "",
                             phone: cust.phone || prev.phone || "",
                             address: cust.address || prev.address,
-                            vehicleYear: cust.year || prev.vehicleYear,
-                            vehicleMake: cust.vehicle || prev.vehicleMake,
-                            vehicleModel: cust.model || prev.vehicleModel
+                            vehicleYear: primaryVeh?.year || cust.year || prev.vehicleYear,
+                            vehicleMake: primaryVeh?.make || cust.vehicle || prev.vehicleMake,
+                            vehicleModel: primaryVeh?.model || cust.model || prev.vehicleModel,
+                            vehicleId: primaryVeh?.id,
+                            vehicle: primaryVeh?.type || cust.vehicleType || prev.vehicle
                           }));
                           // console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
                         }
@@ -1132,6 +1140,39 @@ export default function BookingsPage() {
                     </div>
                   </div>
                 </div>
+
+                {selectedCustomer && (selectedCustomer.vehicles?.length || 0) > 0 && (
+                  <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
+                    <label className="text-right text-sm font-medium text-purple-400">Select Vehicle</label>
+                    <div className="col-span-3">
+                      <select
+                        className="flex h-10 w-full rounded-md border border-purple-900/40 bg-zinc-900 px-3 py-2 text-sm text-white focus:ring-purple-500/20"
+                        value={formData.vehicleId}
+                        onChange={(e) => {
+                          const vehId = e.target.value;
+                          const veh = selectedCustomer.vehicles.find((v: any) => v.id === vehId);
+                          if (veh) {
+                            setFormData(prev => ({
+                              ...prev,
+                              vehicleId: vehId,
+                              vehicleYear: veh.year || prev.vehicleYear,
+                              vehicleMake: veh.make || prev.vehicleMake,
+                              vehicleModel: veh.model || prev.vehicleModel,
+                              vehicle: veh.type || prev.vehicle
+                            }));
+                          }
+                        }}
+                      >
+                        <option value="">-- Choose from Linked Vehicles --</option>
+                        {selectedCustomer.vehicles.map((v: any) => (
+                          <option key={v.id} value={v.id}>
+                            {v.year} {v.make} {v.model} ({v.type || 'N/A'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Contact</label>

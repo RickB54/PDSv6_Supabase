@@ -81,6 +81,7 @@ import LearningLibrary from "./pages/LearningLibrary";
 import F150Setup from "./pages/F150Setup";
 import ChemicalsLibrary from "./pages/ChemicalsLibrary";
 import AdminChemicals from "@/pages/AdminChemicals";
+import VehicleGallery from "./pages/VehicleGallery";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
 import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
@@ -435,6 +436,11 @@ const App = () => {
                     <Route path="/employee-dashboard" element={
                       <ProtectedRoute allowedRoles={['employee', 'admin']}>
                         <EmployeeDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/vehicle-gallery" element={
+                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
+                        <VehicleGallery />
                       </ProtectedRoute>
                     } />
                     <Route path="/mobile-setup" element={
