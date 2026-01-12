@@ -270,22 +270,21 @@ const CustomerPortal = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <HeroSection />
-      <main id="services" className="container mx-auto px-4 py-8 max-w-7xl scroll-mt-24">
+      <main id="services" className="container mx-auto px-4 py-24 max-w-7xl scroll-mt-24">
         {/* Step Guide Intro */}
-        <div className="mb-8 text-center animate-fade-in bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800">
-          <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">
-            Follow the <span className="text-primary italic">3 easy steps</span> to choose your detail
+        <div className="mb-12 text-center animate-fade-in bg-blue-50/50 p-8 rounded-2xl border border-blue-100 shadow-sm">
+          <h2 className="text-3xl md:text-4xl font-black text-blue-900 uppercase tracking-tighter">
+            Follow the <span className="text-red-600 italic">3 easy steps</span> to choose your detail
           </h2>
         </div>
 
         {/* Vehicle Type Selector - Centered */}
         <div className="flex justify-center mb-12">
-          <div className={`w-full max-w-md bg-primary/5 p-6 rounded-xl border-2 shadow-lg transition-all duration-500
-            ${activeStep === 1 ? 'border-primary animate-pulse-subtle' : 'border-primary/20'}
+          <div className={`w-full max-w-md bg-blue-50/30 p-6 rounded-xl border-2 shadow-sm transition-all duration-500
+            ${activeStep === 1 ? 'border-blue-600/50 animate-pulse-subtle' : 'border-blue-100'}
           `}>
             <Label className={`text-center block mb-3 text-lg font-black uppercase tracking-tight
-              ${activeStep === 1 ? 'text-primary animate-blink' : 'text-primary/70'}
+              ${activeStep === 1 ? 'text-blue-700 animate-blink' : 'text-blue-900/40'}
             `}>
               Step 1: Select Your Vehicle Type
             </Label>
@@ -302,7 +301,7 @@ const CustomerPortal = () => {
             <div className="mt-3 text-center">
               <button
                 onClick={() => setShowClassification(true)}
-                className="text-xs text-primary/70 hover:text-primary font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mx-auto transition-colors group"
+                className="text-xs text-blue-700/70 hover:text-blue-700 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mx-auto transition-colors group"
               >
                 <HelpCircle className="w-3.5 h-3.5 group-hover:animate-pulse" />
                 Not sure which size to pick? Click here
@@ -312,9 +311,9 @@ const CustomerPortal = () => {
         </div>
 
         {/* Step 2 Header */}
-        <div className="mb-8 pt-8 border-t border-zinc-800/50">
+        <div className="mb-8 pt-8 border-t border-blue-100">
           <h3 className={`text-2xl font-black uppercase tracking-tight transition-colors
-            ${activeStep === 2 ? 'text-primary animate-blink' : 'text-primary/70'}
+            ${activeStep === 2 ? 'text-blue-700 animate-blink' : 'text-blue-900/40'}
           `}>
             Step 2: Select your package below
           </h3>
@@ -331,8 +330,8 @@ const CustomerPortal = () => {
                 key={pkg.id}
                 className={`relative overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 group
                   ${isSelected
-                    ? 'border-primary ring-4 ring-primary/50 shadow-[0_0_40px_rgba(220,38,38,0.3)]'
-                    : 'border-border hover:border-primary/50 shadow-card'
+                    ? 'border-blue-600 ring-4 ring-blue-600/20 shadow-xl'
+                    : 'border-blue-100 hover:border-blue-300 shadow-sm'
                   }
                   ${isBestValue ? 'border-primary/70' : ''}
                 `}
@@ -342,7 +341,7 @@ const CustomerPortal = () => {
                 onClick={() => setSelectedService(pkg.id)}
               >
                 {isBestValue && (
-                  <div className="absolute top-0 left-0 right-0 bg-gradient-hero py-1 text-center z-10">
+                  <div className="absolute top-0 left-0 right-0 bg-blue-700 py-1 text-center z-10">
                     <span className="text-xs font-bold text-white tracking-wider">★ BEST VALUE ★</span>
                   </div>
                 )}
@@ -359,13 +358,12 @@ const CustomerPortal = () => {
                 )}
 
                 <div className={`p-6 space-y-5 ${isBestValue ? 'pt-8' : ''}`}>
-                  {/* Service Name & Check */}
                   <div className="flex items-start justify-between min-h-[60px]">
-                    <h3 className="text-xl font-bold text-foreground leading-tight pr-2">
+                    <h3 className="text-xl font-bold text-blue-900 leading-tight pr-2">
                       {pkg.name.replace(' (BEST VALUE)', '')}
                     </h3>
                     {isSelected && (
-                      <div className="bg-primary rounded-full p-1 flex-shrink-0">
+                      <div className="bg-blue-600 rounded-full p-1 flex-shrink-0">
                         <Check className="h-5 w-5 text-white" />
                       </div>
                     )}
@@ -378,10 +376,10 @@ const CustomerPortal = () => {
 
                   {/* Dynamic Price */}
                   <div className="py-3">
-                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    <div className="text-4xl font-bold text-blue-800">
                       ${pkg.pricing[vehicleType]}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-xs text-blue-700/60 mt-1 font-semibold">
                       For {vehicleLabels[vehicleType] || vehicleType}
                     </div>
                   </div>
@@ -391,8 +389,8 @@ const CustomerPortal = () => {
                     <Button
                       className={`flex-1 h-12 font-semibold transition-all duration-300 
                         ${isSelected
-                          ? 'bg-gradient-hero text-white shadow-glow'
-                          : 'bg-secondary text-secondary-foreground hover:bg-gradient-hero hover:text-white'
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 border-none'
+                          : 'bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white border-none'
                         }`}
                     >
                       {isSelected ? '✓ Selected' : 'Select'}
@@ -423,7 +421,7 @@ const CustomerPortal = () => {
             `}
           >
             <h2 className={`text-2xl font-black uppercase tracking-tight transition-colors
-              ${activeStep === 3 ? 'text-primary animate-blink' : 'text-primary'}
+              ${activeStep === 3 ? 'text-blue-700 animate-blink' : 'text-blue-800'}
             `}>
               Step 3 Optional: Select Your Add-Ons
             </h2>
@@ -448,17 +446,17 @@ const CustomerPortal = () => {
                     <Card
                       key={addon.id}
                       className={`p-4 cursor-pointer transition-all duration-300 hover:shadow-lg
-                        ${isSelected ? 'border-primary ring-2 ring-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'}
+                        ${isSelected ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/30' : 'border-blue-100 hover:border-blue-300'}
                       `}
                       onClick={() => toggleAddOn(addon.id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-foreground text-sm mb-1">{addon.name}</h4>
-                          <p className="text-primary font-bold text-lg">${addon.pricing[vehicleType]}</p>
+                          <h4 className="font-semibold text-blue-900 text-sm mb-1">{addon.name}</h4>
+                          <p className="text-blue-700 font-bold text-lg">${addon.pricing[vehicleType]}</p>
                         </div>
                         {isSelected && (
-                          <div className="bg-primary rounded-full p-1">
+                          <div className="bg-blue-600 rounded-full p-1">
                             <Check className="h-4 w-4 text-white" />
                           </div>
                         )}
@@ -496,42 +494,42 @@ const CustomerPortal = () => {
 
         {/* Order Summary */}
         {selectedService && (
-          <Card className="p-8 max-w-lg mx-auto bg-gradient-card border-border shadow-card">
-            <h3 className="text-2xl font-bold mb-6 text-foreground text-center">
-              [ ORDER SUMMARY ]
+          <Card className="p-8 max-w-lg mx-auto bg-white border-blue-100 shadow-2xl">
+            <h3 className="text-2xl font-bold mb-6 text-blue-900 text-center uppercase tracking-widest">
+              [ Order Summary ]
             </h3>
             <div className="space-y-4 mb-6">
               <div className="flex justify-between items-start py-2 border-b border-border">
-                <span className="text-foreground font-medium">Service:</span>
+                <span className="text-zinc-500 font-medium">Service:</span>
                 <span className="text-right">
-                  <div className="font-semibold text-foreground">{service?.name.replace(' (BEST VALUE)', '')}</div>
-                  <div className="text-primary font-bold">${servicePrice}</div>
+                  <div className="font-bold text-blue-900">{service?.name.replace(' (BEST VALUE)', '')}</div>
+                  <div className="text-blue-700 font-bold">${servicePrice}</div>
                 </span>
               </div>
 
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-foreground font-medium">Vehicle:</span>
-                <span className="text-foreground capitalize">{vehicleType === 'compact' ? 'Compact/Sedan' : vehicleType === 'midsize' ? 'Mid-Size/SUV' : vehicleType === 'truck' ? 'Truck/Van/Large SUV' : 'Luxury/High-End'}</span>
+              <div className="flex justify-between py-2 border-b border-blue-50">
+                <span className="text-zinc-500 font-medium">Vehicle:</span>
+                <span className="text-blue-900 font-semibold capitalize">{vehicleType === 'compact' ? 'Compact/Sedan' : vehicleType === 'midsize' ? 'Mid-Size/SUV' : vehicleType === 'truck' ? 'Truck/Van/Large SUV' : 'Luxury/High-End'}</span>
               </div>
 
               {selectedAddOns.length > 0 && (
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-foreground font-medium">Add-Ons:</span>
-                  <span className="text-primary font-bold">${addOnsTotal}</span>
+                <div className="flex justify-between py-2 border-b border-blue-50">
+                  <span className="text-zinc-500 font-medium">Add-Ons:</span>
+                  <span className="text-blue-700 font-bold">${addOnsTotal}</span>
                 </div>
               )}
 
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-foreground font-medium">
-                  Destination: <span className="text-muted-foreground text-sm">{distance} mi</span>
+              <div className="flex justify-between py-2 border-b border-blue-50">
+                <span className="text-zinc-500 font-medium">
+                  Destination: <span className="text-zinc-400 text-sm">{distance} mi</span>
                 </span>
-                <span className="text-primary font-bold">${destinationFee}</span>
+                <span className="text-blue-700 font-bold">${destinationFee}</span>
               </div>
 
-              <div className="border-t-2 border-primary pt-4 mt-4">
+              <div className="border-t-2 border-blue-600 pt-4 mt-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-foreground">TOTAL</span>
-                  <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  <span className="text-xl font-bold text-blue-900">TOTAL</span>
+                  <span className="text-3xl font-black text-blue-700">
                     ${total}
                   </span>
                 </div>
@@ -540,8 +538,8 @@ const CustomerPortal = () => {
 
             <div className="space-y-3">
               <Button
-                className={`w-full h-12 text-white font-semibold text-lg shadow-glow transition-all
-                  ${activeStep === 4 ? 'bg-primary animate-blink shadow-[0_0_40px_rgba(220,38,38,0.6)]' : 'bg-gradient-hero'}
+                className={`w-full h-14 text-white font-bold text-xl transition-all rounded-xl shadow-xl
+                  ${activeStep === 4 ? 'bg-blue-600 animate-blink shadow-blue-600/30' : 'bg-blue-600 hover:bg-blue-700'}
                 `}
                 onClick={() => {
                   const selectedPkg = livePackages.find(s => s.id === selectedService);
@@ -563,19 +561,19 @@ const CustomerPortal = () => {
         )}
 
         {/* Service & Pricing Disclaimer */}
-        <Card className="mt-12 p-6 border-destructive bg-destructive/10">
-          <h3 className="font-bold text-lg mb-3 text-foreground flex items-center gap-2">
-            ⚠️ Service & Pricing Disclaimer
+        <Card className="mt-12 p-8 border-none bg-blue-50/50">
+          <h3 className="font-bold text-xl mb-4 text-blue-900 flex items-center gap-2">
+            <span className="text-red-600">⚠️</span> Service & Pricing Disclaimer
           </h3>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>• <strong>Paint Protection & Ceramic Coating</strong> NOT included. Available only in Premium packages or add-ons.</p>
-            <p>• We do <strong>NOT</strong> offer: → Biological Cleanup → Emergency Services</p>
-            <p>• We focus on <strong>premium cosmetic and protective detailing</strong>.</p>
-            <p className="font-semibold mt-4 text-foreground border-t border-border pt-3">
+          <div className="space-y-3 text-sm text-zinc-600 leading-relaxed">
+            <p>• <strong className="text-blue-800">Paint Protection & Ceramic Coating</strong> NOT included. Available only in Premium packages or add-ons.</p>
+            <p>• We do <strong className="text-blue-800">NOT</strong> offer: → Biological Cleanup → Emergency Services</p>
+            <p>• We focus on <strong className="text-blue-800">premium cosmetic and protective detailing</strong>.</p>
+            <p className="font-bold mt-4 text-blue-900 border-t border-blue-100 pt-4 italic">
               Important: Final price may vary based on vehicle condition, size, or additional work required.
               All quotes are estimates until vehicle is inspected.
             </p>
-            <p className="font-semibold text-foreground">
+            <p className="font-bold text-blue-900 border-t border-blue-100 pt-3">
               All bookings are subject to professional scheduling confirmation.
             </p>
           </div>
@@ -594,27 +592,27 @@ const CustomerPortal = () => {
               ${learnMorePackage ? learnMorePackage.pricing[vehicleType] : 0}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <h4 className="font-semibold mb-2 text-foreground">Why Choose This Package?</h4>
-              <p className="text-muted-foreground">{learnMorePackage?.description}</p>
+              <h4 className="font-bold mb-2 text-blue-900 uppercase text-sm tracking-wider">Why Choose This Package?</h4>
+              <p className="text-zinc-600 leading-relaxed">{learnMorePackage?.description}</p>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2 text-foreground">What's Included:</h4>
-              <ul className="space-y-2">
+              <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">What's Included:</h4>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                 {learnMorePackage?.steps.map((step: any, idx: number) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-primary mt-1">✓</span>
-                    <span className="text-muted-foreground">{typeof step === 'string' ? step : step.name}</span>
+                    <span className="text-blue-600 mt-1 font-bold">✓</span>
+                    <span className="text-zinc-600 text-sm">{typeof step === 'string' ? step : step.name}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-4 pt-6 border-t border-blue-50">
               <Button
-                className="flex-1 bg-gradient-hero"
+                className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-widest"
                 onClick={() => {
                   if (learnMorePackage) {
                     // Add selected package to cart with current vehicleType pricing

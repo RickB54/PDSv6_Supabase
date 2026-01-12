@@ -88,6 +88,7 @@ import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
 import { ChatAudioAlert } from "@/components/chat/ChatAudioAlert";
 import { useLocation as useRouterLocation } from "react-router-dom";
 import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -182,6 +183,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <ConditionalGlobalChat />
           <SidebarProvider defaultOpen={true}>
             <div className={`flex min-h-screen w-full ${user?.role === 'admin' || user?.role === 'employee' ? 'dark-theme bg-black' : ''}`}>

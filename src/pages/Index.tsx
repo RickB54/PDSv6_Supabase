@@ -17,11 +17,13 @@ import {
 } from "lucide-react";
 
 // Import local assets copied earlier
-import paintComparison from "@/assets/home/paint_comparison.png";
+import paintBefore from "@/assets/paint_before.png";
+import paintAfter from "@/assets/paint_after.png";
 import interiorDetail from "@/assets/home/interior_detail.png";
 import ceramicBeading from "@/assets/home/ceramic_beading.png";
 import mobileVan from "@/assets/home/mobile_van.png";
 import proTools from "@/assets/home/pro_tools.png";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import dailyDriver from "@/assets/home/daily_driver.png";
 import familySuv from "@/assets/home/family_suv.png";
 import luxurySport from "@/assets/home/luxury_sport.png";
@@ -85,11 +87,9 @@ const Index = () => {
               </ul>
             </div>
             <div className="flex-1 relative">
-              <div className="absolute -inset-4 bg-zinc-100 rounded-2xl transform rotate-2 z-0" />
-              <img
-                src={paintComparison}
-                alt="Paint Comparison"
-                className="relative z-10 rounded-xl shadow-2xl border border-zinc-200"
+              <BeforeAfterSlider
+                beforeImage={paintBefore}
+                afterImage={paintAfter}
               />
             </div>
           </div>
@@ -160,8 +160,9 @@ const Index = () => {
       <section className="py-24 bg-white">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <div className="lg:w-1/2 order-2 lg:order-1">
-              <img src={proTools} alt="Detailing Process" className="rounded-2xl shadow-2xl" />
+            <div className="lg:w-1/2 relative order-2 lg:order-1">
+              <img src={proTools} alt="Detailing Process" className="rounded-2xl shadow-2xl relative z-10" />
+              <div className="absolute -bottom-8 -right-8 w-64 h-64 bg-red-50 -z-10 rounded-full blur-3xl opacity-60"></div>
             </div>
             <div className="lg:w-1/2 order-1 lg:order-2 space-y-12">
               <div className="space-y-4">
