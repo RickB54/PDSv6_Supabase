@@ -7,14 +7,17 @@ All colors MUST be HSL.
 */
 
 @layer base {
+
   /* Light mode theme for public pages */
   /* Active menu item styling: make current item blue */
   a[aria-current="page"],
   nav a[aria-current="page"],
   button[aria-current="page"],
   .sidebar a[aria-current="page"] {
-    color: #2563eb !important; /* Tailwind blue-600 */
+    color: #2563eb !important;
+    /* Tailwind blue-600 */
   }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 20%;
@@ -112,19 +115,74 @@ All colors MUST be HSL.
 
 /* Utility: hide scrollbars when applied (used on mobile slide-out menu) */
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 /* Responsive button group utility: stack on mobile, row on desktop */
 .button-group-responsive {
   @apply flex flex-wrap gap-2;
 }
+
 @media (max-width: 640px) {
   .button-group-responsive {
     @apply flex-col items-stretch w-full;
+  }
+}
+
+@layer utilities {
+  .animate-blink {
+    animation: blink 1s ease-in-out infinite;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 3s ease-in-out infinite;
+  }
+
+  .animate-marquee {
+    animation: marquee 12s linear infinite;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(100vw);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes pulse-subtle {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
   }
 }

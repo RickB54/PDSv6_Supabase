@@ -46,7 +46,7 @@ export const Navbar = () => {
     { to: "/", label: "Services" },
     { to: "/faq", label: "FAQ" },
     { to: "/contact", label: "Contact" },
-    { to: "/book", label: "Book Now" },
+    { to: "/services", label: "Book Now" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -62,7 +62,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo & Sidebar Toggle */}
           <div className="flex items-center gap-2">
-            {user && (
+            {user && (user.role === 'admin' || user.role === 'employee') && (
               <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
                 <SidebarIcon className="h-5 w-5" />
               </Button>

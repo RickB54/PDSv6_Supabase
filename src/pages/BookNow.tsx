@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle } from "lucide-react"; // Renamed Calendar icon
+import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle } from "lucide-react"; // Renamed Calendar icon
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
@@ -36,37 +36,44 @@ import { cn } from "@/lib/utils";
 const BookNow = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  // AT THE VERY TOP — ONLY read from URL, never from localStorage
   const urlParams = new URLSearchParams(window.location.search);
-  const preselectedServices = urlParams.get('services')?.split(',').filter(Boolean) || [];
   const preselectedAddons = urlParams.get('addons')?.split(',').filter(Boolean) || [];
   const urlPackage = urlParams.get('package') || '';
   const urlPrice = parseFloat(urlParams.get('price') || '') || 0;
   const urlVehicle = urlParams.get('vehicle') || '';
+  const urlDistance = parseFloat(urlParams.get('distance') || '0');
+  const urlDestFee = parseFloat(urlParams.get('destinationFee') || '0');
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
+    address: "",
     make: "",
     model: "",
     year: "",
     datetime: "",
-    package: urlPackage || preselectedServices[0] || "",
+    package: urlPackage || "",
     message: "",
     conditionInside: "",
     conditionOutside: ""
   });
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
-  const [addOns, setAddOns] = useState<string[]>(preselectedAddons.length ? preselectedAddons : []);
+  const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const addBooking = useBookingsStore(state => state.add);
+  const { add: addBooking, items: allBookings, refresh: refreshBookings } = useBookingsStore();
+
+  useEffect(() => {
+    refreshBookings();
+  }, [refreshBookings]);
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
   const [appliedCouponCode, setAppliedCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [couponError, setCouponError] = useState<string>('');
+  const [showCouponField, setShowCouponField] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(undefined);
 
   // Live pricing + meta state
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
@@ -329,7 +336,7 @@ const BookNow = () => {
     const price = found ? (found.pricing[vehicleType] ?? found.pricing['compact'] ?? 0) : 0;
     return sum + price;
   }, 0);
-  const total = packagePrice + addOnsTotal;
+  const total = packagePrice + addOnsTotal + urlDestFee;
   const discountedTotal = Math.max(0, total - appliedDiscount);
 
   // NUKES ANY OLD GHOST DATA ON EVERY LOAD
@@ -395,10 +402,11 @@ const BookNow = () => {
       } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
         newErrors.phone = "Phone must be 10 digits";
       }
+      if (!formData.address.trim()) newErrors.address = "Service address is required";
       if (!formData.make.trim()) newErrors.make = "Vehicle make is required";
       if (!formData.model.trim()) newErrors.model = "Vehicle model is required";
       if (!formData.year.trim()) newErrors.year = "Year is required";
-      if (!formData.package) newErrors.package = "Please select a package";
+      if (!date) newErrors.date = "Please select a preferred date";
     }
 
     setErrors(newErrors);
@@ -434,11 +442,9 @@ const BookNow = () => {
     } catch { }
 
     // 1) Save booking to API and local store for instant calendar
-    const dateIso = formData.datetime ? new Date(formData.datetime).toISOString() : new Date().toISOString();
+    const dateIso = date ? date.toISOString() : new Date().toISOString();
 
-    // Append Condition to Message/Notes
-    const conditionNote = `\n\n[Vehicle Condition]\nInside: ${formData.conditionInside}/5\nOutside: ${formData.conditionOutside}/5`;
-    const finalNotes = (formData.message || "") + conditionNote;
+    const finalNotes = formData.message || "";
 
     const bookingPayload = {
       customer: { name: formData.name, email: formData.email, phone: formData.phone },
@@ -542,6 +548,7 @@ const BookNow = () => {
       name: "",
       email: "",
       phone: "",
+      address: "",
       make: "",
       model: "",
       year: "",
@@ -588,370 +595,316 @@ const BookNow = () => {
     <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-2 max-w-3xl">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link to="/">
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        <Button variant="ghost" asChild className="mb-6">
+          <Link to="/services">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
+            Return to Services
           </Link>
         </Button>
 
-        <div className="space-y-6 animate-fade-in">
-          <div className="text-center space-y-4">
-            <CalendarIcon className="h-36 w-36 mx-auto text-primary" />
-            <h1 className="text-4xl font-bold text-foreground">Book Your Detail</h1>
-            <p className="text-muted-foreground text-lg">Fill out the form below to request an appointment</p>
+        <div className="space-y-8 animate-fade-in">
+          <div className="text-center space-y-4 mb-2">
+            <h1 className="text-4xl font-black text-foreground uppercase tracking-tight">Confirm Your Details</h1>
+            <p className="text-muted-foreground text-lg italic">Please verify your selection and provide site details below</p>
+            <p className="text-xs text-primary font-bold italic">
+              * To start a fresh booking with different services, please return to the <Link to="/services" className="underline">Services Page</Link>.
+            </p>
           </div>
 
-          <Card className="p-8 bg-gradient-card border-border">
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-6"
-              name="booking"
-              method="POST"
-              data-netlify="true"
-              netlify-honeypot="bot-field"
-            >
-              <input type="hidden" name="form-name" value="booking" />
-              <input type="hidden" name="bot-field" />
-              {/* Netlify reCAPTCHA v2 */}
-              <div data-netlify-recaptcha="true"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={handleNameChange}
-                    required
-                    className={errors.name ? "border-destructive" : ""}
-                  />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                </div>
+          {/* READ-ONLY SUMMARY (LOCKED IN) */}
+          <Card className="p-0 overflow-hidden border-2 border-blue-400/30 bg-blue-50/95 shadow-2xl">
+            <div className="bg-blue-100/50 border-b border-blue-200 p-4 px-6 flex justify-between items-center">
+              <h2 className="text-xl font-black text-blue-900 uppercase tracking-wider">Selected Package</h2>
+              <span className="text-xs font-bold text-blue-700/70 uppercase bg-blue-200/50 px-3 py-1 rounded-full border border-blue-300/50">Read-Only Summary</span>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className={errors.email ? "border-destructive" : ""}
-                  />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                </div>
+            <div className="p-6 md:p-8 space-y-6">
+              <div className="flex flex-col md:flex-row justify-between gap-6">
+                <div className="space-y-4 flex-1">
+                  <div>
+                    <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-1">Package Name</div>
+                    <div className="text-2xl font-bold text-blue-950">{selectedService ? selectedService.name.replace(' (BEST VALUE)', '') : urlPackage || 'Custom Package'}</div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                    className={errors.phone ? "border-destructive" : ""}
-                  />
-                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="datetime">Preferred Date & Time *</Label>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full sm:flex-1 justify-start text-left font-normal border-zinc-700 bg-zinc-900/50 text-white h-12",
-                              !formData.datetime && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                            {formData.datetime ? format(new Date(formData.datetime), "PPP") : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800 z-50" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formData.datetime ? new Date(formData.datetime) : undefined}
-                            onSelect={(d) => {
-                              if (!d) return;
-                              const current = formData.datetime ? new Date(formData.datetime) : new Date();
-                              current.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-                              setFormData({ ...formData, datetime: current.toISOString() });
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-
-                      <Select
-                        value={formData.datetime ? format(new Date(formData.datetime), "HH:mm") : "09:00"}
-                        onValueChange={(t) => {
-                          const [h, m] = t.split(':').map(Number);
-                          const current = formData.datetime ? new Date(formData.datetime) : new Date();
-                          current.setHours(h, m, 0, 0);
-                          setFormData({ ...formData, datetime: current.toISOString() });
-                        }}
-                      >
-                        <SelectTrigger className="w-full sm:w-[160px] border-zinc-700 bg-zinc-900/50 text-white h-12">
-                          <Clock className="mr-2 h-4 w-4 text-primary" />
-                          <SelectValue placeholder="Time" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-950 border-zinc-800">
-                          {Array.from({ length: 13 }).map((_, i) => {
-                            const h = i + 7; // 7 AM to 7 PM
-                            const timeStr = `${h.toString().padStart(2, '0')}:00`;
-                            const label = format(new Date().setHours(h, 0, 0, 0), "h:mm a");
-                            return <SelectItem key={timeStr} value={timeStr}>{label}</SelectItem>;
-                          })}
-                        </SelectContent>
-                      </Select>
+                  <div>
+                    <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-1">Vehicle Size</div>
+                    <div className="text-lg font-semibold text-blue-900 capitalize">
+                      {vehicleLabels[vehicleType] || vehicleType}
                     </div>
-                    <p className="text-[12px] text-primary/80 leading-relaxed italic font-medium bg-primary/5 p-3 rounded-lg border border-primary/10">
-                      * Please note: Selected times are preferred and subject to availability. We will coordinate with you to confirm the final appointment slot.
-                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="make">Vehicle Make *</Label>
-                  <Input
-                    id="make"
-                    placeholder="e.g., Toyota"
-                    value={formData.make}
-                    onChange={(e) => setFormData({ ...formData, make: e.target.value })}
-                    required
-                  />
-                </div>
+                <div className="space-y-4 md:text-right">
+                  <div>
+                    <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-1">Price Estimate</div>
+                    <div className="text-3xl font-black text-primary italic">
+                      ${discountedTotal}
+                    </div>
+                    {appliedDiscount > 0 && (
+                      <div className="text-sm text-green-600 font-bold">
+                        -${appliedDiscount} {appliedCouponCode} applied
+                      </div>
+                    )}
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="model">Vehicle Model *</Label>
-                  <Input
-                    id="model"
-                    placeholder="e.g., Camry"
-                    value={formData.model}
-                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="year">Year *</Label>
-                  <Input
-                    id="year"
-                    placeholder="e.g., 2020"
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    required
-                  />
+                  <div>
+                    <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-1">Est. Duration</div>
+                    <div className="text-sm font-medium text-blue-800 italic">Approx. 2-4 Hours (Varies by Condition)</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-8 text-center animate-fade-in bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800">
-                <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">
-                  Follow the <span className="text-primary italic">3 easy steps</span> to choose your detail
-                </h2>
+              {addOns.length > 0 && (
+                <div className="pt-6 border-t border-blue-200">
+                  <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-3">Selected Add-Ons</div>
+                  <div className="flex flex-wrap gap-2">
+                    {addOns.map(id => {
+                      const found = liveAddOns.find(a => a.id === id);
+                      return (
+                        <span key={id} className="bg-blue-100/50 border border-blue-200 text-blue-900 px-3 py-1.5 rounded-md text-sm font-medium">
+                          + {found ? found.name : id}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 text-center">
+                <p className="text-xs text-blue-700/70 italic">
+                  * To change your package or add-ons, please <Link to="/services" className="text-blue-900 font-bold hover:underline">return to the services page</Link>.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <Card className="p-8 bg-gradient-card border-border">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+            name="booking"
+            method="POST"
+            data-netlify="true"
+            netlify-honeypot="bot-field"
+          >
+            <input type="hidden" name="form-name" value="booking" />
+            <input type="hidden" name="bot-field" />
+            {/* Netlify reCAPTCHA v2 */}
+            <div data-netlify-recaptcha="true"></div>
+            <div className="space-y-6">
+              <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 mb-2">
+                <h3 className="text-lg font-bold text-foreground uppercase tracking-tight mb-4 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                  Contact & Service Location
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      value={formData.name}
+                      onChange={handleNameChange}
+                      required
+                      className={errors.name ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                      className={errors.email ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="(555) 000-0000"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                      className={errors.phone ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Service Address *</Label>
+                    <Input
+                      id="address"
+                      placeholder="Street, City, State, Zip"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-4 p-6 bg-primary/5 border-2 border-primary/20 rounded-xl shadow-lg animate-pulse-subtle">
-                <Label className="text-center block mb-3 text-lg font-black text-primary uppercase tracking-tight animate-blink">
-                  Step 1: Select Your Vehicle Type
-                </Label>
-                <p className="text-sm text-muted-foreground font-medium">Pricing adjusts automatically based on vehicle size. Please choose accurately.</p>
-                <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
-                  <SelectTrigger id="vehicle-type-select" className="h-16 text-lg md:text-xl border-2 border-primary/40 bg-zinc-900/80 hover:bg-zinc-900 transition-all shadow-xl focus:ring-4 focus:ring-primary/20">
-                    <SelectValue placeholder="Choose your vehicle size..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-950 border-zinc-800">
-                    {vehicleOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt} className="py-4 text-base md:text-lg border-b border-zinc-800/50 last:border-0">
-                        {vehicleLabels[opt] || opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="mt-3 text-center">
+
+              <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 mb-2">
+                <h3 className="text-lg font-bold text-foreground uppercase tracking-tight mb-4 flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-primary" />
+                  Vehicle Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="make">Vehicle Make *</Label>
+                    <Input
+                      id="make"
+                      placeholder="e.g., Toyota"
+                      value={formData.make}
+                      onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="model">Vehicle Model *</Label>
+                    <Input
+                      id="model"
+                      placeholder="e.g., Camry"
+                      value={formData.model}
+                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="year">Year *</Label>
+                    <Input
+                      id="year"
+                      placeholder="e.g., 2020"
+                      value={formData.year}
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-foreground uppercase tracking-tight flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-primary" />
+                  Select Preferred Date
+                </h3>
+
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <Card className="p-4 bg-blue-50/95 border-2 border-blue-400/30 shadow-xl mx-auto md:mx-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      className="rounded-md border-0 bg-transparent text-blue-950"
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      modifiers={{
+                        booked: (date) => {
+                          const dStr = format(date, 'yyyy-MM-dd');
+                          return allBookings.some(b => b.date.startsWith(dStr) && b.status !== 'blocked');
+                        }
+                      }}
+                      modifiersStyles={{
+                        booked: { fontWeight: 'bold', color: '#1e40af', borderBottom: '2px solid #1e40af' }
+                      }}
+                    />
+                  </Card>
+
+                  <div className="flex-1 space-y-4">
+                    <div className="p-4 bg-blue-100/30 border border-blue-200/50 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900 mb-1">📅 Why pick a date?</p>
+                      <p className="text-xs text-blue-800/80 leading-relaxed">
+                        Selecting a date helps us check availability. All bookings are <span className="text-blue-600 font-bold underline">requests pending confirmation</span>. Rick will contact you to finalize the exact time.
+                      </p>
+                    </div>
+
+                    {date && (
+                      <div className="p-4 bg-blue-600 border border-blue-500 rounded-lg animate-in fade-in slide-in-from-left-2 transition-all shadow-lg shadow-blue-500/20">
+                        <p className="text-sm font-bold text-white/80 mb-1 uppercase tracking-tight">Selected Date</p>
+                        <p className="text-lg font-black text-white">{format(date, 'EEEE, LLLL do, yyyy')}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="message" className="text-blue-900 font-bold">Special Requests or Specific Timing (Optional)</Label>
+                      <div className="bg-blue-50/95 p-3 rounded-lg border-2 border-blue-400/30">
+                        <Textarea
+                          id="message"
+                          placeholder="e.g., Morning appointment preferred, parking details, etc."
+                          value={formData.message}
+                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                          rows={3}
+                          className="bg-transparent border-0 text-blue-950 placeholder:text-blue-400 focus-visible:ring-0 min-h-[80px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+
+
+
+              {/* === IMPROVED COUPON PLACEMENT === */}
+              <div className="pt-4">
+                {!showCouponField ? (
                   <button
                     type="button"
-                    onClick={() => setShowClassification(true)}
-                    className="text-xs text-primary/70 hover:text-primary font-bold uppercase tracking-widest flex items-center justify-center gap-2 mx-auto transition-all group py-2"
+                    onClick={() => setShowCouponField(true)}
+                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
                   >
-                    <HelpCircle className="w-4 h-4 group-hover:animate-pulse" />
-                    Not sure what your vehicle classification is? Click here
+                    <Tag className="w-3.5 h-3.5" />
+                    Have a promo code?
                   </button>
-                </div>
-                {/* Visual indicator for higher prices */}
-                <div className="flex items-center gap-2 text-primary font-semibold text-sm animate-bounce-horizontal">
-                  <span>← Choosing a larger vehicle updates pricing below</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label>Condition (Inside) *</Label>
-                  <Select
-                    value={formData.conditionInside}
-                    onValueChange={(v) => setFormData({ ...formData, conditionInside: v })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Rate 1-5" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Extremely Bad</SelectItem>
-                      <SelectItem value="2">2 - Poor</SelectItem>
-                      <SelectItem value="3">3 - Average</SelectItem>
-                      <SelectItem value="4">4 - Good</SelectItem>
-                      <SelectItem value="5">5 - Pristine</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Condition (Outside) *</Label>
-                  <Select
-                    value={formData.conditionOutside}
-                    onValueChange={(v) => setFormData({ ...formData, conditionOutside: v })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Rate 1-5" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Extremely Bad</SelectItem>
-                      <SelectItem value="2">2 - Poor</SelectItem>
-                      <SelectItem value="3">3 - Average</SelectItem>
-                      <SelectItem value="4">4 - Good</SelectItem>
-                      <SelectItem value="5">5 - Pristine</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="datetime">Preferred Date/Time (Optional)</Label>
-                <Input
-                  id="datetime"
-                  type="datetime-local"
-                  value={formData.datetime}
-                  onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
-                />
-              </div>
-
-              <div className="pt-8 border-t border-zinc-800/50 space-y-4">
-                <h3 className="text-xl font-black text-primary uppercase tracking-tight">Step 2: Select your package below</h3>
-                <Label>Package *</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {livePackages.map((pkg: any) => {
-                    const isSelected = formData.package === pkg.id;
-                    const isBestValue = pkg.name.includes('BEST VALUE');
-                    const imageSrc = packageMetaLive[pkg.id]?.imageDataUrl;
-                    return (
-                      <Card
-                        key={pkg.id}
-                        className={`relative overflow-hidden cursor-pointer transition-all ${isSelected ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:border-primary/30'}`}
-                        onClick={() => setFormData({ ...formData, package: pkg.id })}
+                ) : (
+                  <div className="space-y-3 p-4 bg-zinc-900/30 border border-zinc-800 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter promo code"
+                        className="h-10 bg-black border-zinc-700 text-sm focus:border-primary uppercase"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                      />
+                      <Button
+                        className="h-10 px-4 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase transition-all"
+                        type="button"
+                        onClick={applyCoupon}
                       >
-                        {isBestValue && (
-                          <div className="absolute top-0 left-0 right-0 bg-gradient-hero py-1 text-center z-10">
-                            <span className="text-xs font-bold text-white tracking-wider">★ BEST VALUE ★</span>
-                          </div>
-                        )}
-                        {imageSrc && (
-                          <div className="relative h-32 overflow-hidden">
-                            <img src={imageSrc} alt={pkg.name} className="w-full h-full object-cover" />
-                          </div>
-                        )}
-                        <div className={`p-4 ${isBestValue ? 'pt-6' : ''}`}>
-                          <div className="flex items-start justify-between">
-                            <h3 className="font-semibold text-foreground pr-2">{pkg.name.replace(' (BEST VALUE)', '')}</h3>
-                            {isSelected && <div className="bg-primary rounded-full px-2 py-1 text-xs text-white">Selected</div>}
-                          </div>
-                          <div className="mt-2 text-primary font-bold text-xl">${pkg.pricing[vehicleType]}</div>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-                {errors.package && <p className="text-xs text-destructive">{errors.package}</p>}
-              </div>
-
-              <div className="pt-8 border-t border-zinc-800/50 space-y-4">
-                <h3 className="text-xl font-black text-primary uppercase tracking-tight">Step 3 Optional: Select Your Add-Ons</h3>
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="addons" className="border border-border rounded-md px-4">
-                    <AccordionTrigger className="hover:no-underline py-4">
-                      <Label className="cursor-pointer text-base">Add-Ons (Optional)</Label>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {liveAddOns.map((addon: any) => {
-                          const isSelected = addOns.includes(addon.id);
-                          return (
-                            <Card
-                              key={addon.id}
-                              className={`p-3 cursor-pointer transition-all ${isSelected ? 'border-primary ring-2 ring-primary/40 bg-primary/5' : 'border-border hover:border-primary/30'}`}
-                              onClick={() => toggleAddOn(addon.id)}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="text-sm font-semibold text-foreground">{addon.name}</div>
-                                  <div className="text-primary font-bold">${addon.pricing[vehicleType]}</div>
-                                </div>
-                                {isSelected && <div className="bg-primary rounded-full px-2 py-1 text-xs text-white">✓</div>}
-                              </div>
-                            </Card>
-                          );
-                        })}
+                        Apply
+                      </Button>
+                    </div>
+                    {appliedDiscount > 0 && (
+                      <div className="text-green-400 font-bold text-xs flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        {appliedCouponCode} applied! You saved ${appliedDiscount.toFixed(2)}
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message">Additional Message (Optional)</Label>
-                <Textarea
-                  id="message"
-                  placeholder="Any special requests or questions?"
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  rows={4}
-                />
-              </div>
-
-              {/* === LIVE COUPONS FROM ADMIN === */}
-              <div className="mt-8 p-6 bg-zinc-900 border border-zinc-700 rounded-xl">
-                <h3 className="text-xl font-bold text-white mb-4">Coupon Code</h3>
-
-                <div className="flex gap-3">
-                  <Input
-                    type="text"
-                    placeholder="Enter code"
-                    className="flex-1 px-5 py-4 bg-black border border-zinc-600 rounded-lg text-white focus:border-red-500 focus:outline-none"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
-                  />
-                  <Button
-                    className="bg-red-600 hover:bg-red-700 font-bold px-8"
-                    type="button"
-                    onClick={applyCoupon}
-                  >
-                    Apply
-                  </Button>
-                </div>
-
-                {appliedDiscount > 0 && (
-                  <div className="mt-4 text-green-400 font-bold text-lg">
-                    ✓ {appliedCouponCode} applied — You saved ${appliedDiscount.toFixed(2)}!
+                    )}
+                    {couponError && (
+                      <div className="text-red-400 font-semibold text-xs flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {couponError}
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {couponError && (
-                  <div className="mt-4 text-red-400 font-semibold">{couponError}</div>
                 )}
               </div>
 
@@ -961,9 +914,10 @@ const BookNow = () => {
                 <div className="text-xl font-bold text-foreground">${discountedTotal}</div>
               </div>
 
-              <Button type="submit" className="w-full bg-gradient-hero text-lg py-6 min-h-[56px] mt-4" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Submit Booking Request"}
+              <Button type="submit" className="w-full bg-gradient-hero text-lg py-7 font-black uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-transform" disabled={isSubmitting}>
+                {isSubmitting ? "Processing..." : "Schedule My Detail"}
               </Button>
+
               {/* New: Separate Estimate and Payment actions */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                 <Button
@@ -972,7 +926,7 @@ const BookNow = () => {
                   className="w-full py-6"
                   onClick={async () => {
                     try {
-                      const dateIso = formData.datetime ? new Date(formData.datetime).toISOString() : new Date().toISOString();
+                      const dateIso = date ? date.toISOString() : new Date().toISOString();
 
                       // Construct Services List for Estimate
                       const selectedPkg = livePackages.find((p: any) => p.id === formData.package);
@@ -1066,29 +1020,14 @@ const BookNow = () => {
                   <Link to="/checkout">Make a Payment / Checkout</Link>
                 </Button>
               </div>
-            </form>
-          </Card>
+            </div>
+          </form>
+        </Card>
 
-          <p className="text-center text-sm text-muted-foreground">
-            By submitting this form, you agree to be contacted by Prime Auto Detail regarding your booking.
-          </p>
-        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          By submitting this form, you agree to be contacted by Prime Auto Detail regarding your booking.
+        </p>
       </main>
-      {/* Removed bottom debug banner for production */}
-      {/* Debug Bar removed: production environment with Supabase enabled */}
-      <VehicleClassificationDialog
-        open={showClassification}
-        onOpenChange={setShowClassification}
-        onSelect={(cat) => {
-          // Normalize the category back to the internal IDs if possible
-          const lower = cat.toLowerCase();
-          if (lower.includes("compact")) setVehicleType("compact");
-          else if (lower.includes("mid-size") || lower.includes("midsize")) setVehicleType("midsize");
-          else if (lower.includes("truck") || lower.includes("van") || lower.includes("large suv")) setVehicleType("truck");
-          else if (lower.includes("luxury")) setVehicleType("luxury");
-          else setVehicleType("midsize"); // Fallback
-        }}
-      />
     </div>
   );
 };

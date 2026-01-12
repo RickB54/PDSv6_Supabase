@@ -40,7 +40,9 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
         <div className="relative flex items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-2 sm:gap-4 flex-nowrap min-w-0">
-            <SidebarTrigger className="text-foreground" />
+            {user && (user.role === 'admin' || user.role === 'employee') && (
+              <SidebarTrigger className="text-foreground" />
+            )}
 
             {showBackButton && (
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-zinc-400 hover:text-white" title="Go Back">
@@ -102,7 +104,8 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
           </div>
         </div>
       </header>
-      {/* Spacer removed for sticky positioning */}
+      {/* Spacer to prevent fixed header from cutting off content */}
+      <div className="h-[72px] w-full" />
 
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </>

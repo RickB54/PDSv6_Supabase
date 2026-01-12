@@ -53,6 +53,18 @@ const CustomerPortal = () => {
   const [learnMorePackage, setLearnMorePackage] = useState<any | null>(null);
   const [showClassification, setShowClassification] = useState(false);
 
+  // Sequential Step Blinking Logic
+  const [vehicleInteracted, setVehicleInteracted] = useState(false);
+  const [addOnsInteracted, setAddOnsInteracted] = useState(false);
+
+  const getActiveStep = () => {
+    if (!vehicleInteracted) return 1;
+    if (!selectedService) return 2;
+    if (!addOnsInteracted) return 3;
+    return 4; // Completed all, blink CTA
+  };
+  const activeStep = getActiveStep();
+
   // Live data pulled from backend
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [packageMetaLive, setPackageMetaLive] = useState<Record<string, any>>({});
@@ -259,7 +271,7 @@ const CustomerPortal = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <HeroSection />
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
+      <main id="services" className="container mx-auto px-4 py-8 max-w-7xl scroll-mt-24">
         {/* Step Guide Intro */}
         <div className="mb-8 text-center animate-fade-in bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800">
           <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">
@@ -269,11 +281,15 @@ const CustomerPortal = () => {
 
         {/* Vehicle Type Selector - Centered */}
         <div className="flex justify-center mb-12">
-          <div className="w-full max-w-md animate-pulse-subtle bg-primary/5 p-6 rounded-xl border-2 border-primary/20 shadow-lg">
-            <Label className="text-center block mb-3 text-lg font-black text-primary uppercase tracking-tight animate-blink">
+          <div className={`w-full max-w-md bg-primary/5 p-6 rounded-xl border-2 shadow-lg transition-all duration-500
+            ${activeStep === 1 ? 'border-primary animate-pulse-subtle' : 'border-primary/20'}
+          `}>
+            <Label className={`text-center block mb-3 text-lg font-black uppercase tracking-tight
+              ${activeStep === 1 ? 'text-primary animate-blink' : 'text-primary/70'}
+            `}>
               Step 1: Select Your Vehicle Type
             </Label>
-            <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
+            <Select value={vehicleType} onValueChange={(v) => { setVehicleType(v); setVehicleInteracted(true); }}>
               <SelectTrigger className="w-full h-12 text-base bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
@@ -297,7 +313,11 @@ const CustomerPortal = () => {
 
         {/* Step 2 Header */}
         <div className="mb-8 pt-8 border-t border-zinc-800/50">
-          <h3 className="text-2xl font-black text-primary uppercase tracking-tight">Step 2: Select your package below</h3>
+          <h3 className={`text-2xl font-black uppercase tracking-tight transition-colors
+            ${activeStep === 2 ? 'text-primary animate-blink' : 'text-primary/70'}
+          `}>
+            Step 2: Select your package below
+          </h3>
         </div>
 
         {/* Premium 6-Box Service Grid */}
@@ -397,10 +417,16 @@ const CustomerPortal = () => {
         {/* Add-Ons - Collapsible Dropdown */}
         <Card className="mb-12 bg-gradient-card border-border">
           <button
-            onClick={() => setAddOnsExpanded(!addOnsExpanded)}
-            className="w-full p-6 flex items-center justify-between text-left hover:bg-muted/10 transition-colors"
+            onClick={() => { setAddOnsExpanded(!addOnsExpanded); setAddOnsInteracted(true); }}
+            className={`w-full p-6 flex items-center justify-between text-left hover:bg-muted/10 transition-colors
+              ${activeStep === 3 ? 'animate-pulse-subtle bg-primary/5' : ''}
+            `}
           >
-            <h2 className="text-2xl font-black text-primary uppercase tracking-tight">Step 3 Optional: Select Your Add-Ons</h2>
+            <h2 className={`text-2xl font-black uppercase tracking-tight transition-colors
+              ${activeStep === 3 ? 'text-primary animate-blink' : 'text-primary'}
+            `}>
+              Step 3 Optional: Select Your Add-Ons
+            </h2>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 {selectedAddOns.length > 0 && `${selectedAddOns.length} selected`}
@@ -514,7 +540,9 @@ const CustomerPortal = () => {
 
             <div className="space-y-3">
               <Button
-                className="w-full h-12 bg-gradient-hero text-white font-semibold text-lg shadow-glow hover:shadow-[0_0_40px_rgba(220,38,38,0.4)]"
+                className={`w-full h-12 text-white font-semibold text-lg shadow-glow transition-all
+                  ${activeStep === 4 ? 'bg-primary animate-blink shadow-[0_0_40px_rgba(220,38,38,0.6)]' : 'bg-gradient-hero'}
+                `}
                 onClick={() => {
                   const selectedPkg = livePackages.find(s => s.id === selectedService);
                   const price = selectedPkg ? selectedPkg.pricing[vehicleType] : 0;
@@ -523,12 +551,13 @@ const CustomerPortal = () => {
                   if (price > 0) params.set('price', String(price));
                   params.set('vehicle', vehicleType);
                   if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
+                  if (distance > 0) params.set('distance', String(distance));
+                  if (destinationFee > 0) params.set('destinationFee', String(destinationFee));
                   window.location.href = `/book-now?${params.toString()}`;
                 }}
               >
-                BOOK NOW → GET ESTIMATE
+                Schedule My Detail →
               </Button>
-              {/* Removed per request: View My Offers button */}
             </div>
           </Card>
         )}
