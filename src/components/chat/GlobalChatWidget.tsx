@@ -228,7 +228,7 @@ export function GlobalChatWidget() {
                     <div className="p-4 border-b bg-primary text-primary-foreground rounded-t-lg flex justify-between items-center">
                         <div>
                             <h3 className="font-bold flex items-center gap-2"><MessageCircle className="h-5 w-5" /> Chat with Us</h3>
-                            <p className="text-xs opacity-90">We typically reply in a few minutes.</p>
+                            <p className="text-xs opacity-90">We will get back to you as soon as possible.</p>
                         </div>
                         <div className="flex items-center gap-1">
                             {isIdentified && (

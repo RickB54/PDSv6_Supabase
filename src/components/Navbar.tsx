@@ -42,11 +42,11 @@ export const Navbar = () => {
   };
 
   const navLinks = [
+    { to: "/", label: "Home" },
     { to: "/about", label: "About" },
-    { to: "/", label: "Services" },
     { to: "/faq", label: "FAQ" },
     { to: "/contact", label: "Contact" },
-    { to: "/services", label: "Book Now" },
+    { to: "/services", label: "Services" },
   ];
 
   const isActive = (path: string) => location.pathname === path;

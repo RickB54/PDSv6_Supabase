@@ -386,10 +386,6 @@ const BookNow = () => {
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
 
-    // Validate Conditions
-    if (!formData.conditionInside) newErrors.package = "Please rate Inside Condition";
-    if (!formData.conditionOutside) newErrors.package = "Please rate Outside Condition";
-
     // If NOT logged in (Regular Customer), enforce strict validation
     if (!user) {
       if (!formData.email.trim()) {
