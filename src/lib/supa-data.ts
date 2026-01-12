@@ -201,32 +201,31 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
 export const getSupabaseCustomers = async (): Promise<Customer[]> => {
     try {
         // 1. Fetch CRM customers with their vehicles
+        // IMPORTANT: Photos are in customers table, NOT vehicles table
         const { data: crmData, error: crmError } = await supabase
             .from('customers')
             .select(`
                 *,
                 vehicles (
-                    id, make, model, year, type, color, vin,
-                    general_photos, before_photos, after_photos, video_urls
+                    id, make, model, year, type, color, vin
                 )
             `)
             .order('created_at', { ascending: false });
 
         if (crmError) {
-            console.error('getSupabaseCustomers error:', crmError);
-            // We continue to try fetching app_users even if CRM fails
+            console.error('⚠️ getSupabaseCustomers CRM fetch error:', crmError);
+            console.error('Error details:', { message: crmError.message, code: crmError.code, hint: crmError.hint });
+            // Don't throw - try to continue with auth data
         }
 
         // 2. Fetch Auth Users (App Users) with role = customer
-        // Use singleton anon client for auth table access if needed, or standard supabase
-        // Usually app_users is public read or user read
         const { data: authData, error: authError } = await supabase
             .from('app_users')
             .select('*')
             .eq('role', 'customer');
 
         if (authError) {
-            console.error('getSupabaseCustomers auth fetch error:', authError);
+            console.error('⚠️ getSupabaseCustomers auth fetch error:', authError);
         }
 
         // 3. Merge Strategies
@@ -291,9 +290,13 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             } as Customer;
         };
 
+        // processCrmRecord helper is already defined above
         // Add CRM Data
         (crmData || []).forEach((c: any) => {
-            uniqueCustomers.push(processCrmRecord(c));
+            const customer = processCrmRecord(c);
+            // Normalize type to lowercase
+            customer.type = (customer.type || 'customer').toLowerCase() as any;
+            uniqueCustomers.push(customer);
         });
 
         // Add Auth Data (if not duplicate)
@@ -315,7 +318,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                     vehicle_info: {},
                     notes: 'Registered Account (No CRM Profile)',
                     created_at: u.updated_at || new Date().toISOString(),
-                    type: 'customer',
+                    type: 'customer', // Auth users are always customers unless changed in CRM
                     is_archived: false
                 });
                 seenEmails.add(safeEmail);
@@ -328,20 +331,31 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             localCust.forEach(c => {
                 if (!c.isStaticMock) return;
                 const safeEmail = (c.email || '').toLowerCase().trim();
-                // Avoid checking email for mocks too strictly as they might not have one, 
-                // but if they do, respect it.
+                const safePhone = (c.phone || '').replace(/\D/g, '');
+
+                // Only skip if exact match from Supabase already exists
                 if (safeEmail && seenEmails.has(safeEmail)) return;
 
                 uniqueCustomers.push({
                     ...c,
+                    type: (c.type || 'customer').toLowerCase() as any,
                     vehicles: c.vehicles || [],
                     vehicle_info: { make: c.vehicle, model: c.model, year: c.year, type: c.vehicleType, color: 'Mock' }
                 });
             });
         } catch { }
 
+        if (uniqueCustomers.length === 0) {
+            console.log("⚠️ No customers found in Supabase CRM or Auth tables.");
+        }
+
         // Sort by created recent first
-        return uniqueCustomers.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        return uniqueCustomers.sort((a, b) => {
+            const da = new Date(a.created_at || 0).getTime();
+            const db = new Date(b.created_at || 0).getTime();
+            if (isNaN(da) || isNaN(db)) return (a.name || '').localeCompare(b.name || '');
+            return db - da;
+        });
 
     } catch (err) {
         console.error('getSupabaseCustomers exception:', err);
@@ -508,8 +522,21 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
 
 export const deleteSupabaseCustomer = async (id: string) => {
     try {
-        const { error } = await supabase.from('customers').delete().eq('id', id);
-        if (error) throw error;
+        // Validation: If ID is not a valid UUID (e.g. local temp ID), don't send to Supabase
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(id)) {
+            console.warn(`Skipping Supabase delete for non-UUID id: ${id}`);
+            return; // It's a local-only record, nothing to delete on backend
+        }
+
+        // 1. Delete from CRM 'customers'
+        const { error: crmError } = await supabase.from('customers').delete().eq('id', id);
+
+        // 2. Delete from Auth 'app_users' (if it exists there)
+        // We do this to ensure they are fully removed from the system as seen by UserManagement
+        const { error: authError } = await supabase.from('app_users').delete().eq('id', id);
+
+        if (crmError && authError) throw crmError || authError; // Throw if both fail
     } catch (err) {
         console.error('deleteSupabaseCustomer error:', err);
         throw err;
@@ -1357,31 +1384,23 @@ export async function uploadLibraryFile(file: File): Promise<{ url: string | nul
         const filePath = `library/${fileName}`;
 
         // 2. Dynamic Bucket Discovery
-        // Instead of guessing, check what buckets actually exist
-        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+        // Prioritize 'customer-photos' as it's the standard for this app
+        const { data: buckets } = await supabase.storage.listBuckets();
 
-        let targetBucket = 'images';
-        let availableBuckets: string[] = [];
+        // Preferred order of buckets to try
+        const preferredBuckets = ['customer-photos', 'images', 'public'];
+        let targetBucket = 'customer-photos'; // Default
 
         if (buckets && buckets.length > 0) {
-            // Prefer 'images', 'public', or just the first public one
-            const publicBuckets = buckets.filter(b => b.public);
-            if (publicBuckets.length > 0) {
-                const preferred = publicBuckets.find(b => b.name === 'images' || b.name === 'public');
-                targetBucket = preferred ? preferred.name : publicBuckets[0].name;
-                availableBuckets = publicBuckets.map(b => b.name);
-            } else {
-                // Try non-public if that's all there is
-                targetBucket = buckets[0].name;
-            }
-        } else {
-            console.log("No buckets found via listBuckets().");
+            const bucketNames = buckets.map(b => b.name);
+            const found = preferredBuckets.find(b => bucketNames.includes(b));
+            if (found) targetBucket = found;
+            else targetBucket = buckets[0].name; // Fallback to whatever exists
         }
 
-        console.log(`Dynamic Bucket Selection: Found ${buckets?.length || 0} buckets. Target: ${targetBucket}`);
+        console.log(`Uploading to bucket: ${targetBucket}`);
 
         // 3. Attempt Upload
-        // We focus on the target bucket, but if it fails (and we didn't find it in the list), we try to create it.
         const { error: uploadError } = await supabase.storage
             .from(targetBucket)
             .upload(filePath, compressedFile);
@@ -1393,33 +1412,20 @@ export async function uploadLibraryFile(file: File): Promise<{ url: string | nul
 
         console.warn(`Upload to '${targetBucket}' failed:`, uploadError.message);
 
-        // AUTO-FIX: Create bucket if missing (and we know it's missing)
+        // AUTO-FIX: Create bucket if specifically missing
         if (uploadError.message.includes('not found') || uploadError.message.includes('Bucket')) {
-            console.log(`Bucket '${targetBucket}' missing. Attempting to create...`);
-            const { data: bucketData, error: createError } = await supabase.storage.createBucket('images', {
-                public: true,
-                fileSizeLimit: 5242880, // 5MB
-                allowedMimeTypes: ['image/*', 'video/*']
-            });
-
-            if (!createError) {
-                console.log("Bucket 'images' created successfully! Retrying upload...", bucketData);
-                const { error: retryError } = await supabase.storage
-                    .from('images')
-                    .upload(filePath, compressedFile);
-
+            // Try to use 'images' as a backup if customer-photos failed
+            if (targetBucket !== 'images') {
+                console.log("Retrying with 'images' bucket...");
+                const { error: retryError } = await supabase.storage.from('images').upload(filePath, compressedFile);
                 if (!retryError) {
                     const { data } = supabase.storage.from('images').getPublicUrl(filePath);
                     return { url: data.publicUrl, error: null };
                 }
-            } else {
-                console.error("Failed to auto-create bucket. User permission likely insufficient.", createError);
-                return {
-                    url: null,
-                    error: `Storage Error: No storage buckets found. Auto-creation failed (User not authorized). Please go to Supabase Dashboard -> Storage and create a public bucket named 'images'.`
-                };
             }
         }
+
+        return { url: null, error: `Upload failed: ${uploadError.message}` };
 
         return {
             url: null,

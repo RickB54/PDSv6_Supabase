@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2 } from "lucide-react"; // Renamed Calendar icon
+import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle } from "lucide-react"; // Renamed Calendar icon
+import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -57,7 +58,7 @@ const BookNow = () => {
     conditionOutside: ""
   });
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
-  const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
+  const [addOns, setAddOns] = useState<string[]>(preselectedAddons.length ? preselectedAddons : []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const addBooking = useBookingsStore(state => state.add);
@@ -76,12 +77,13 @@ const BookNow = () => {
   const [lastSyncTs, setLastSyncTs] = useState<number | null>(null);
   // Dynamic vehicle type display labels
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
-    compact: "Compact/Sedan",
-    midsize: "Mid-Size/SUV",
-    truck: "Truck/Van/Large SUV",
-    luxury: "Luxury/High-End",
+    compact: "Compact/Sedan (Small cars and sedans)",
+    midsize: "Mid-Size/SUV (Mid-size cars and SUVs)",
+    truck: "Truck/Van/Large SUV (Trucks, vans, large SUVs)",
+    luxury: "Luxury/High-End (Luxury and premium vehicles)",
   });
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact', 'midsize', 'truck', 'luxury']);
+  const [showClassification, setShowClassification] = useState(false);
 
   useEffect(() => {
     // Load dynamic vehicle types
@@ -655,56 +657,62 @@ const BookNow = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="datetime">Preferred Date & Time *</Label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal border-zinc-700 bg-zinc-900/50 text-white",
-                            !formData.datetime && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.datetime ? format(new Date(formData.datetime), "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800 z-50" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formData.datetime ? new Date(formData.datetime) : undefined}
-                          onSelect={(d) => {
-                            if (!d) return;
-                            const current = formData.datetime ? new Date(formData.datetime) : new Date();
-                            current.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-                            setFormData({ ...formData, datetime: current.toISOString() });
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full sm:flex-1 justify-start text-left font-normal border-zinc-700 bg-zinc-900/50 text-white h-12",
+                              !formData.datetime && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                            {formData.datetime ? format(new Date(formData.datetime), "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800 z-50" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={formData.datetime ? new Date(formData.datetime) : undefined}
+                            onSelect={(d) => {
+                              if (!d) return;
+                              const current = formData.datetime ? new Date(formData.datetime) : new Date();
+                              current.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                              setFormData({ ...formData, datetime: current.toISOString() });
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
 
-                    <Select
-                      value={formData.datetime ? format(new Date(formData.datetime), "HH:mm") : "09:00"}
-                      onValueChange={(t) => {
-                        const [h, m] = t.split(':').map(Number);
-                        const current = formData.datetime ? new Date(formData.datetime) : new Date();
-                        current.setHours(h, m, 0, 0);
-                        setFormData({ ...formData, datetime: current.toISOString() });
-                      }}
-                    >
-                      <SelectTrigger className="w-full sm:w-[140px] border-zinc-700 bg-zinc-900/50 text-white">
-                        <SelectValue placeholder="Time" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-950 border-zinc-800">
-                        {Array.from({ length: 13 }).map((_, i) => {
-                          const h = i + 7; // 7 AM to 7 PM
-                          const timeStr = `${h.toString().padStart(2, '0')}:00`;
-                          const label = format(new Date().setHours(h, 0, 0, 0), "h:mm a");
-                          return <SelectItem key={timeStr} value={timeStr}>{label}</SelectItem>;
-                        })}
-                      </SelectContent>
-                    </Select>
+                      <Select
+                        value={formData.datetime ? format(new Date(formData.datetime), "HH:mm") : "09:00"}
+                        onValueChange={(t) => {
+                          const [h, m] = t.split(':').map(Number);
+                          const current = formData.datetime ? new Date(formData.datetime) : new Date();
+                          current.setHours(h, m, 0, 0);
+                          setFormData({ ...formData, datetime: current.toISOString() });
+                        }}
+                      >
+                        <SelectTrigger className="w-full sm:w-[160px] border-zinc-700 bg-zinc-900/50 text-white h-12">
+                          <Clock className="mr-2 h-4 w-4 text-primary" />
+                          <SelectValue placeholder="Time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-950 border-zinc-800">
+                          {Array.from({ length: 13 }).map((_, i) => {
+                            const h = i + 7; // 7 AM to 7 PM
+                            const timeStr = `${h.toString().padStart(2, '0')}:00`;
+                            const label = format(new Date().setHours(h, 0, 0, 0), "h:mm a");
+                            return <SelectItem key={timeStr} value={timeStr}>{label}</SelectItem>;
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-[12px] text-primary/80 leading-relaxed italic font-medium bg-primary/5 p-3 rounded-lg border border-primary/10">
+                      * Please note: Selected times are preferred and subject to availability. We will coordinate with you to confirm the final appointment slot.
+                    </p>
                   </div>
                 </div>
 
@@ -742,18 +750,43 @@ const BookNow = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Vehicle Type</Label>
+              <div className="mb-8 text-center animate-fade-in bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800">
+                <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">
+                  Follow the <span className="text-primary italic">3 easy steps</span> to choose your detail
+                </h2>
+              </div>
+
+              <div className="space-y-4 p-6 bg-primary/5 border-2 border-primary/20 rounded-xl shadow-lg animate-pulse-subtle">
+                <Label className="text-center block mb-3 text-lg font-black text-primary uppercase tracking-tight animate-blink">
+                  Step 1: Select Your Vehicle Type
+                </Label>
+                <p className="text-sm text-muted-foreground font-medium">Pricing adjusts automatically based on vehicle size. Please choose accurately.</p>
                 <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id="vehicle-type-select" className="h-16 text-lg md:text-xl border-2 border-primary/40 bg-zinc-900/80 hover:bg-zinc-900 transition-all shadow-xl focus:ring-4 focus:ring-primary/20">
+                    <SelectValue placeholder="Choose your vehicle size..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-zinc-950 border-zinc-800">
                     {vehicleOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{vehicleLabels[opt] || opt}</SelectItem>
+                      <SelectItem key={opt} value={opt} className="py-4 text-base md:text-lg border-b border-zinc-800/50 last:border-0">
+                        {vehicleLabels[opt] || opt}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="mt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowClassification(true)}
+                    className="text-xs text-primary/70 hover:text-primary font-bold uppercase tracking-widest flex items-center justify-center gap-2 mx-auto transition-all group py-2"
+                  >
+                    <HelpCircle className="w-4 h-4 group-hover:animate-pulse" />
+                    Not sure what your vehicle classification is? Click here
+                  </button>
+                </div>
+                {/* Visual indicator for higher prices */}
+                <div className="flex items-center gap-2 text-primary font-semibold text-sm animate-bounce-horizontal">
+                  <span>← Choosing a larger vehicle updates pricing below</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -807,7 +840,8 @@ const BookNow = () => {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="pt-8 border-t border-zinc-800/50 space-y-4">
+                <h3 className="text-xl font-black text-primary uppercase tracking-tight">Step 2: Select your package below</h3>
                 <Label>Package *</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {livePackages.map((pkg: any) => {
@@ -844,7 +878,8 @@ const BookNow = () => {
                 {errors.package && <p className="text-xs text-destructive">{errors.package}</p>}
               </div>
 
-              <div className="space-y-2">
+              <div className="pt-8 border-t border-zinc-800/50 space-y-4">
+                <h3 className="text-xl font-black text-primary uppercase tracking-tight">Step 3 Optional: Select Your Add-Ons</h3>
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="addons" className="border border-border rounded-md px-4">
                     <AccordionTrigger className="hover:no-underline py-4">
@@ -1041,6 +1076,19 @@ const BookNow = () => {
       </main>
       {/* Removed bottom debug banner for production */}
       {/* Debug Bar removed: production environment with Supabase enabled */}
+      <VehicleClassificationDialog
+        open={showClassification}
+        onOpenChange={setShowClassification}
+        onSelect={(cat) => {
+          // Normalize the category back to the internal IDs if possible
+          const lower = cat.toLowerCase();
+          if (lower.includes("compact")) setVehicleType("compact");
+          else if (lower.includes("mid-size") || lower.includes("midsize")) setVehicleType("midsize");
+          else if (lower.includes("truck") || lower.includes("van") || lower.includes("large suv")) setVehicleType("truck");
+          else if (lower.includes("luxury")) setVehicleType("luxury");
+          else setVehicleType("midsize"); // Fallback
+        }}
+      />
     </div>
   );
 };

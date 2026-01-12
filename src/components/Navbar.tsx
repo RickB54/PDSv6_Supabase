@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { LayoutDashboard, LogOut, Phone } from "lucide-react";
 
 // Helper for admin unlock removed
 
@@ -62,7 +62,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo & Sidebar Toggle */}
           <div className="flex items-center gap-2">
-            {user && user.role === 'admin' && (
+            {user && (
               <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
                 <SidebarIcon className="h-5 w-5" />
               </Button>
@@ -136,6 +136,17 @@ export const Navbar = () => {
                 </Link>
               </Button>
             )}
+            {user && (user.role === 'admin' || user.role === 'employee') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
+                className="bg-primary/10 border-primary/20 text-primary font-black uppercase tracking-tighter hover:bg-primary hover:text-white transition-all animate-pulse-subtle"
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                Phone Assistant
+              </Button>
+            )}
             {user && user.role === 'admin' && (
               <div className="ml-2"><NotificationBell /></div>
             )}
@@ -200,8 +211,22 @@ export const Navbar = () => {
                       Dashboard
                     </Link>
                   )}
+                  {(user.role === 'admin' || user.role === 'employee') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.dispatchEvent(new Event('open-call-assistant'));
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full bg-primary/10 border-primary/20 text-primary font-black uppercase tracking-tighter mb-2"
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Phone Assistant
+                    </Button>
+                  )}
                   {user.role === 'admin' && (
-                    <div className="px-2"><NotificationBell /></div>
+                    <div className="px-2 mb-2"><NotificationBell /></div>
                   )}
                   <Button onClick={handleLogout} variant="outline" size="sm" className="w-full">
                     Logout

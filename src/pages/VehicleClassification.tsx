@@ -17,13 +17,13 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 
-type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
+type ClassificationType = "Compact/Sedan (Small cars and sedans)" | "Mid-Size/SUV (Mid-size cars and SUVs)" | "Truck/Van/Large SUV (Trucks, vans, large SUVs)" | "Luxury/High-End (Luxury and premium vehicles)";
 
 const CLASSIFICATION_OPTIONS: ClassificationType[] = [
-    "Compact/Sedan",
-    "Mid-Size/SUV",
-    "Truck/Van/Large SUV",
-    "Luxury/High-End"
+    "Compact/Sedan (Small cars and sedans)",
+    "Mid-Size/SUV (Mid-size cars and SUVs)",
+    "Truck/Van/Large SUV (Trucks, vans, large SUVs)",
+    "Luxury/High-End (Luxury and premium vehicles)"
 ];
 
 // Stable data structure that handles both old and new formats
@@ -194,12 +194,12 @@ export default function VehicleClassification() {
                     const value = makeData[model];
                     if (value && typeof value === 'string') {
                         // Map legacy/JSON values to new User-Approved Categories
-                        if (value === "Compact") autoCategory = "Compact/Sedan";
-                        else if (value === "Midsize / Sedan") autoCategory = "Mid-Size/SUV";
-                        else if (value === "SUV / Crossover") autoCategory = "Mid-Size/SUV";
-                        else if (value === "Truck / Oversized") autoCategory = "Truck/Van/Large SUV";
-                        else if (value === "Oversized Specialty") autoCategory = "Luxury/High-End";
-                        else autoCategory = "Mid-Size/SUV"; // Default fallback
+                        if (value === "Compact") autoCategory = "Compact/Sedan (Small cars and sedans)";
+                        else if (value === "Midsize / Sedan") autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
+                        else if (value === "SUV / Crossover") autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
+                        else if (value === "Truck / Oversized") autoCategory = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+                        else if (value === "Oversized Specialty") autoCategory = "Luxury/High-End (Luxury and premium vehicles)";
+                        else autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)"; // Default fallback
                     }
                 }
             }
@@ -210,10 +210,10 @@ export default function VehicleClassification() {
             const pricingType = normalizeVehicleType(searchStr);
 
             // Force upgrade for Truck/Luxury detected vehicles
-            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
-            if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
-            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
-            if (pricingType === 'compact') autoCategory = "Compact/Sedan";
+            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+            if (pricingType === 'luxury') autoCategory = "Luxury/High-End (Luxury and premium vehicles)";
+            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
+            if (pricingType === 'compact') autoCategory = "Compact/Sedan (Small cars and sedans)";
 
             // 3. Check History (Highest Priority - Learning Behavior)
             // If the user has explicitly classified this vehicle before, respect their choice
@@ -408,13 +408,12 @@ export default function VehicleClassification() {
     };
 
     const getClassificationColor = (classif: string) => {
-        switch (classif) {
-            case "Compact/Sedan": return "text-emerald-400";
-            case "Mid-Size/SUV": return "text-blue-400";
-            case "Truck/Van/Large SUV": return "text-amber-400";
-            case "Luxury/High-End": return "text-purple-400";
-            default: return "text-zinc-400";
-        }
+        const c = String(classif || '').toLowerCase();
+        if (c.includes("compact")) return "text-emerald-400 font-bold drop-shadow-sm";
+        if (c.includes("mid-size") || c.includes("midsize")) return "text-blue-400 font-bold drop-shadow-sm";
+        if (c.includes("truck") || c.includes("van") || c.includes("large suv")) return "text-amber-400 font-bold drop-shadow-sm";
+        if (c.includes("luxury")) return "text-purple-400 font-bold drop-shadow-sm";
+        return "text-white font-bold"; // Pure white for generic results
     };
 
     return (
@@ -437,7 +436,7 @@ export default function VehicleClassification() {
 
                         <div className="space-y-6">
                             <div className="relative">
-                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Search Manufacturer</label>
+                                <label className="text-xs text-zinc-300 uppercase font-bold mb-2 block">Search Manufacturer</label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                                     <Input
@@ -461,7 +460,7 @@ export default function VehicleClassification() {
                             )}
 
                             <div>
-                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Browse All Makes</label>
+                                <label className="text-xs text-zinc-300 uppercase font-bold mb-2 block">Browse All Makes</label>
                                 <Select value={selectedMake} onValueChange={handleMakeSelect}>
                                     <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
                                         <SelectValue placeholder="Choose a vehicle make..." />
@@ -516,8 +515,8 @@ export default function VehicleClassification() {
                                 <AccordionItem key={item.id} value={item.id} className="border-b border-zinc-800 last:border-0">
                                     <AccordionTrigger className="px-6 hover:no-underline hover:bg-zinc-800/50 transition-colors py-4">
                                         <div className="flex items-center justify-between w-full pr-4">
-                                            <span className="font-semibold text-zinc-200">{item.make} {item.model}</span>
-                                            <span className={`text - sm font - medium ${getClassificationColor(item.category)} `}>
+                                            <span className="font-semibold text-zinc-100">{item.make} {item.model}</span>
+                                            <span className={`text-sm font-bold ${getClassificationColor(item.category)}`}>
                                                 {item.category}
                                             </span>
                                         </div>
@@ -589,7 +588,7 @@ export default function VehicleClassification() {
                             </div>
 
                             <div>
-                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Choose Model</label>
+                                <label className="text-xs text-zinc-300 uppercase font-bold mb-2 block">Choose Model</label>
                                 {isCustomModel ? (
                                     <div className="space-y-2">
                                         <Input
@@ -678,13 +677,13 @@ export default function VehicleClassification() {
                                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div>
-                                        <div className="text-xs text-zinc-500 uppercase font-bold mb-1">Vehicle Selected</div>
+                                        <div className="text-xs text-zinc-400 uppercase font-bold mb-1">Vehicle Selected</div>
                                         <div className="text-3xl font-bold text-white">
                                             {selectedMake} <span className="text-zinc-400 font-light">{selectedModel}</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-xs text-zinc-500 uppercase font-bold mb-1">System Classification</div>
+                                        <div className="text-xs text-zinc-400 uppercase font-bold mb-1">System Classification</div>
                                         <div className={`text - 3xl font - bold ${getClassificationColor(category)} `}>
                                             {category}
                                         </div>
@@ -703,7 +702,7 @@ export default function VehicleClassification() {
 
                             {/* Customer Field (Optional) */}
                             <div>
-                                <label className="text-xs text-zinc-500 uppercase font-bold mb-2 block">Link to Customer (Optional)</label>
+                                <label className="text-xs text-zinc-300 uppercase font-bold mb-2 block">Link to Customer (Optional)</label>
                                 <Select value={selectedCustomerId || "none"} onValueChange={(val) => setSelectedCustomerId(val === "none" ? "" : val)}>
                                     <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200 py-6">
                                         <SelectValue placeholder="Associate with a customer..." />

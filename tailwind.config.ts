@@ -100,12 +100,39 @@ export default {
             opacity: "1",
           },
         },
+        "pulse-subtle": {
+          "0%, 100%": {
+            opacity: "1",
+          },
+          "50%": {
+            opacity: "0.85",
+          },
+        },
+        "bounce-horizontal": {
+          "0%, 100%": {
+            transform: "translateX(0)",
+          },
+          "50%": {
+            transform: "translateX(-5px)",
+          },
+        },
+        "blink": {
+          "0%, 100%": {
+            opacity: "1",
+          },
+          "50%": {
+            opacity: "0.3",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
+        "pulse-subtle": "pulse-subtle 3s infinite ease-in-out",
+        "bounce-horizontal": "bounce-horizontal 2s infinite ease-in-out",
+        "blink": "blink 1.5s infinite ease-in-out",
       },
       backgroundImage: {
         "gradient-hero": "var(--gradient-hero)",

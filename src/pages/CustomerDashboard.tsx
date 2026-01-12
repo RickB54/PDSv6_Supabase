@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key } from "lucide-react";
+import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 
 const CustomerDashboard = () => {
@@ -24,54 +24,64 @@ const CustomerDashboard = () => {
             </div>
           </div>
 
-          <DashboardCard
-            title="Contact Support"
-            description="Message our team directly."
-            icon={MessageSquare}
-            to="/contact-support"
-            color="text-blue-500"
-            gradient="bg-gradient-to-br from-blue-500 to-cyan-500"
-          />
-          <DashboardCard
-            title="Active Jobs"
-            description="Track your current services."
-            icon={Clock}
-            to="/active-jobs"
-            color="text-amber-500"
-            gradient="bg-gradient-to-br from-amber-500 to-orange-500"
-          />
-          <DashboardCard
-            title="Job History"
-            description="View past services and details."
-            icon={History}
-            to="/job-history"
-            color="text-green-500"
-            gradient="bg-gradient-to-br from-green-500 to-emerald-500"
-          />
-          <DashboardCard
-            title="Payments & Cart"
-            description="Pay invoices and manage cart."
-            icon={ShoppingCart}
-            to="/payments-cart"
-            color="text-primary"
-            gradient="bg-gradient-to-br from-primary to-purple-600"
-          />
-          <DashboardCard
-            title="My Invoices"
-            description="Download and view invoices."
-            icon={FileText}
-            to="/my-invoices"
-            color="text-purple-500"
-            gradient="bg-gradient-to-br from-purple-500 to-pink-500"
-          />
-          <DashboardCard
-            title="User Settings"
-            description="Update your profile and password."
-            icon={Settings}
-            to="/user-settings"
-            color="text-zinc-500"
-            gradient="bg-gradient-to-br from-zinc-500 to-slate-500"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <DashboardCard
+              title="Book A Job"
+              description="Schedule your next detailing appointment."
+              icon={CalendarDays}
+              to="/book"
+              color="text-primary"
+              gradient="bg-gradient-to-br from-primary to-blue-600"
+            />
+            <DashboardCard
+              title="Contact Support"
+              description="Message our team directly."
+              icon={MessageSquare}
+              to="/contact-support"
+              color="text-blue-500"
+              gradient="bg-gradient-to-br from-blue-500 to-cyan-500"
+            />
+            <DashboardCard
+              title="Active Jobs"
+              description="Track your current services."
+              icon={Clock}
+              to="/active-jobs"
+              color="text-amber-500"
+              gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+            />
+            <DashboardCard
+              title="Job History"
+              description="View past services and details."
+              icon={History}
+              to="/job-history"
+              color="text-green-500"
+              gradient="bg-gradient-to-br from-green-500 to-emerald-500"
+            />
+            <DashboardCard
+              title="Payments & Cart"
+              description="Pay invoices and manage cart."
+              icon={ShoppingCart}
+              to="/payments-cart"
+              color="text-primary"
+              gradient="bg-gradient-to-br from-primary to-purple-600"
+            />
+            <DashboardCard
+              title="My Invoices"
+              description="Download and view invoices."
+              icon={FileText}
+              to="/my-invoices"
+              color="text-purple-500"
+              gradient="bg-gradient-to-br from-purple-500 to-pink-500"
+            />
+            <DashboardCard
+              title="User Settings"
+              description="Update your profile and password."
+              icon={Settings}
+              to="/user-settings"
+              color="text-zinc-500"
+              gradient="bg-gradient-to-br from-zinc-500 to-slate-500"
+            />
+          </div>
         </div>
       </main>
     </div>

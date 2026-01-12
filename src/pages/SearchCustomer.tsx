@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
+import { getUnifiedCustomers } from "@/lib/customers";
 import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, Customer } from "@/lib/supa-data";
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
@@ -51,13 +52,24 @@ const SearchCustomer = () => {
   const refresh = async () => {
     setIsRefreshing(true);
     try {
+      // PERMANENT FIX: Use the same data source as Users & Roles page
+      // This ensures complete consistency across all customer/prospect pages
       const list = await getSupabaseCustomers();
-      setCustomers(Array.isArray(list) ? (list as Customer[]) : []);
+      console.log('🔍 All Supabase customers in Customer Profiles:', list);
+
+      // Filter for customers only (same logic as Users & Roles)
+      const customersOnly = list.filter(c => {
+        const customerType = (c.type || '').toLowerCase();
+        return customerType === 'customer';
+      });
+
+      console.log('🔍 Filtered customers:', customersOnly);
+      setCustomers(customersOnly);
     } catch (err: any) {
       console.error('Refresh customers failed:', err);
       try {
         const fallback = await getCustomers();
-        setCustomers(Array.isArray(fallback) ? (fallback as Customer[]) : []);
+        setCustomers(Array.isArray(fallback) ? (fallback as any[]) : []);
       } catch (err2) {
         setCustomers([]);
       }

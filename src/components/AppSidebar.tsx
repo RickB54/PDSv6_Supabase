@@ -229,6 +229,7 @@ export function AppSidebar() {
   /* ---------------- CUSTOMER ITEMS ---------------- */
   const CUSTOMER_ITEMS: MenuItem[] = [
     { title: "Customer Dashboard", url: "/customer-dashboard", icon: LayoutDashboard },
+    { title: "Book A Job", url: "/book", icon: CalendarDays },
     { title: "Contact Support", url: "/contact-support", icon: MessageSquare },
     { title: "Active Jobs", url: "/active-jobs", icon: Clock },
     { title: "Job History", url: "/job-history", icon: History },
@@ -303,13 +304,9 @@ export function AppSidebar() {
                 const isActive = location.pathname === item.url || (item.url.includes('#') && location.pathname + location.hash === item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild onClick={handleNavClick}>
-                      {/* Use standard Link. Hash navigation might require simple anchor if router link doesn't scroll.
-                           However, Link is usually preferred for client-side routing.
-                           We might need a small click handler to force scroll if hash is present.
-                       */}
+                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
                       <Link to={item.url}
-                        className={isActive ? 'font-semibold text-blue-500' : 'text-zinc-400 hover:text-white'}
+                        className={isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors'}
                         onClick={() => {
                           if (item.url.includes('#')) {
                             const id = item.url.split('#')[1];
@@ -428,19 +425,33 @@ export function AppSidebar() {
                             return (
                               <SidebarMenuSubItem key={item.title}>
                                 <SidebarMenuSubButton asChild isActive={isActive} onClick={handleNavClick} className="ring-0 outline-none">
-                                  <Link
-                                    to={item.url}
-                                    className={className}
-                                  >
-                                    {item.icon && <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />}
-                                    {open && <span>{item.title}</span>}
-                                    {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
-                                    {open && item.badge !== undefined && !isChatAlert && (
-                                      <span className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white`}>
-                                        {item.badge}
-                                      </span>
-                                    )}
-                                  </Link>
+                                  {item.url.startsWith('#') ? (
+                                    <button
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
+                                        handleNavClick();
+                                      }}
+                                      className={className}
+                                    >
+                                      {item.icon && <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />}
+                                      {open && <span>{item.title}</span>}
+                                    </button>
+                                  ) : (
+                                    <Link
+                                      to={item.url}
+                                      className={className}
+                                    >
+                                      {item.icon && <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />}
+                                      {open && <span>{item.title}</span>}
+                                      {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
+                                      {open && item.badge !== undefined && !isChatAlert && (
+                                        <span className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white`}>
+                                          {item.badge}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  )}
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             );

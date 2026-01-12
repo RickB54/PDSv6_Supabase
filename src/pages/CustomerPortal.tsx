@@ -13,8 +13,11 @@ import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { contentService } from "@/lib/content";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { useCartStore } from "@/store/cart";
+import { useToast } from "@/hooks/use-toast";
+import { Check, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
+import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import packageBasic from "@/assets/package-basic.jpg";
 import packageExpress from "@/assets/package-express.jpg";
 import packageExterior from "@/assets/package-exterior.jpg";
@@ -48,6 +51,7 @@ const CustomerPortal = () => {
   const [distance, setDistance] = useState(0);
   const [addOnsExpanded, setAddOnsExpanded] = useState(false);
   const [learnMorePackage, setLearnMorePackage] = useState<any | null>(null);
+  const [showClassification, setShowClassification] = useState(false);
 
   // Live data pulled from backend
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
@@ -256,11 +260,18 @@ const CustomerPortal = () => {
       <Navbar />
       <HeroSection />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Step Guide Intro */}
+        <div className="mb-8 text-center animate-fade-in bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800">
+          <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">
+            Follow the <span className="text-primary italic">3 easy steps</span> to choose your detail
+          </h2>
+        </div>
+
         {/* Vehicle Type Selector - Centered */}
         <div className="flex justify-center mb-12">
-          <div className="w-full max-w-md">
-            <Label className="text-center block mb-3 text-lg font-semibold text-foreground">
-              Select Your Vehicle Type
+          <div className="w-full max-w-md animate-pulse-subtle bg-primary/5 p-6 rounded-xl border-2 border-primary/20 shadow-lg">
+            <Label className="text-center block mb-3 text-lg font-black text-primary uppercase tracking-tight animate-blink">
+              Step 1: Select Your Vehicle Type
             </Label>
             <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
               <SelectTrigger className="w-full h-12 text-base bg-card border-border">
@@ -272,7 +283,21 @@ const CustomerPortal = () => {
                 ))}
               </SelectContent>
             </Select>
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => setShowClassification(true)}
+                className="text-xs text-primary/70 hover:text-primary font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mx-auto transition-colors group"
+              >
+                <HelpCircle className="w-3.5 h-3.5 group-hover:animate-pulse" />
+                Not sure which size to pick? Click here
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Step 2 Header */}
+        <div className="mb-8 pt-8 border-t border-zinc-800/50">
+          <h3 className="text-2xl font-black text-primary uppercase tracking-tight">Step 2: Select your package below</h3>
         </div>
 
         {/* Premium 6-Box Service Grid */}
@@ -375,7 +400,7 @@ const CustomerPortal = () => {
             onClick={() => setAddOnsExpanded(!addOnsExpanded)}
             className="w-full p-6 flex items-center justify-between text-left hover:bg-muted/10 transition-colors"
           >
-            <h2 className="text-2xl font-bold text-foreground">Add-On Services</h2>
+            <h2 className="text-2xl font-black text-primary uppercase tracking-tight">Step 3 Optional: Select Your Add-Ons</h2>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 {selectedAddOns.length > 0 && `${selectedAddOns.length} selected`}
@@ -521,6 +546,9 @@ const CustomerPortal = () => {
               Important: Final price may vary based on vehicle condition, size, or additional work required.
               All quotes are estimates until vehicle is inspected.
             </p>
+            <p className="font-semibold text-foreground">
+              All bookings are subject to professional scheduling confirmation.
+            </p>
           </div>
           {/* Removed confirmation button per request */}
         </Card>
@@ -583,10 +611,22 @@ const CustomerPortal = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <VehicleClassificationDialog
+        open={showClassification}
+        onOpenChange={setShowClassification}
+        onSelect={(cat) => {
+          // Normalize the category back to the internal IDs if possible
+          const lower = cat.toLowerCase();
+          if (lower.includes("compact")) setVehicleType("compact");
+          else if (lower.includes("mid-size") || lower.includes("midsize")) setVehicleType("midsize");
+          else if (lower.includes("truck") || lower.includes("van") || lower.includes("large suv")) setVehicleType("truck");
+          else if (lower.includes("luxury")) setVehicleType("luxury");
+          else setVehicleType("midsize"); // Fallback
+        }}
+      />
     </div>
   );
 };
 
 export default CustomerPortal;
-import { useCartStore } from "@/store/cart";
-import { useToast } from "@/hooks/use-toast";

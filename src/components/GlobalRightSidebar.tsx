@@ -13,7 +13,8 @@ import {
     ChevronRight,
     Users,
     FlaskConical,
-    Video
+    Video,
+    Phone
 } from "lucide-react";
 
 export function GlobalRightSidebar() {
@@ -39,6 +40,18 @@ export function GlobalRightSidebar() {
             >
                 {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
+            {/* Top Priority Action */}
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
+                title="Phone Assistant"
+                className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-primary/20 hover:text-primary transition-all`}
+            >
+                <Phone className="w-5 h-5 text-primary animate-pulse" />
+                {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
+            </Button>
+
             {/* Existing Icons */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/team-chat')} title="Team Chat" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <MessageSquare className="w-5 h-5 text-emerald-500" />

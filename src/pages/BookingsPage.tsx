@@ -133,11 +133,15 @@ export default function BookingsPage() {
     const cat = data.category;
 
     // Map ClassificationTool categories
-    if (cat === "Compact") mappedType = "Compact/Sedan";
-    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan";
-    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV";
-    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV";
-    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV";
+    if (cat === "Compact") mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
+    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (cat.includes("Compact/Sedan")) mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (cat.includes("Mid-Size/SUV")) mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
+    else if (cat.includes("Truck/Van/Large SUV")) mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (cat.includes("Luxury/High-End")) mappedType = "Luxury/High-End (Luxury and premium vehicles)";
 
     setFormData(prev => ({
       ...prev,

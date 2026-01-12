@@ -19,7 +19,8 @@ import {
     BookOpen,
     Settings,
     UserCircle,
-    Book
+    Book,
+    Phone
 } from "lucide-react";
 
 export type MenuItem = {
@@ -59,6 +60,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Customer Intake", icon: UserPlus,
             items: [
+                { title: "Phone Assistant", url: "#call-assistant", icon: Phone },
                 { title: "Package Comparison", url: "/package-selection", icon: Package },
                 { title: "Vehicle Classification", url: "/vehicle-classification", icon: FileText },
                 { title: "Client Evaluation", url: "/client-evaluation", icon: ClipboardCheck },

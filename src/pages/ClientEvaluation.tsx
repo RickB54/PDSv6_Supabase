@@ -77,6 +77,28 @@ export default function ClientEvaluation() {
                 });
             }
         }
+
+        // Check for Phone Assistant handoff
+        const handoffRaw = localStorage.getItem("call_assistant_handoff");
+        if (handoffRaw) {
+            try {
+                const handoffData = JSON.parse(handoffRaw);
+                const firstVehicle = handoffData[0]; // Take first vehicle for now
+                if (firstVehicle) {
+                    const { vehicle } = firstVehicle;
+                    setVehicleType(vehicle.type);
+                    setCustomGoal(prev => prev + (vehicle.notes ? ` Call Notes: ${vehicle.notes}` : ""));
+
+                    toast({
+                        title: "Phone Data Imported",
+                        description: `Imported ${vehicle.make} ${vehicle.model} details.`
+                    });
+                }
+                localStorage.removeItem("call_assistant_handoff");
+            } catch (e) {
+                console.error("Handoff parse error", e);
+            }
+        }
     }, [customers, location.search]);
 
     // Reload customers when page becomes visible (handles navigation back to this page)

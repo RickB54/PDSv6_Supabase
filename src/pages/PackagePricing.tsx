@@ -116,10 +116,10 @@ export default function PackagePricing() {
   const [vehicleType, setVehicleType] = useState<string>("compact");
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(builtInSizes);
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
-    compact: "Compact",
-    midsize: "Midsize",
-    truck: "Truck",
-    luxury: "Luxury",
+    compact: "Compact/Sedan (Small cars and sedans)",
+    midsize: "Mid-Size/SUV (Mid-size cars and SUVs)",
+    truck: "Truck/Van/Large SUV (Trucks, vans, large SUVs)",
+    luxury: "Luxury/High-End (Luxury and premium vehicles)",
   });
 
   const getKey = (type: "package" | "addon", id: string, size: string) => `${type}:${id}:${size}`;
@@ -586,11 +586,15 @@ export default function PackagePricing() {
           if (Array.isArray(data)) {
             const opts = data.map((v: any) => v.id).filter(Boolean);
             const map: Record<string, string> = {};
-            data.forEach((v: any) => { if (v?.id) map[v.id] = v?.name || v.id; });
-            map.compact = map.compact || 'Compact';
-            map.midsize = map.midsize || 'Midsize';
-            map.truck = map.truck || 'Truck';
-            map.luxury = map.luxury || 'Luxury';
+            data.forEach((v: any) => {
+              if (v?.id) {
+                map[v.id] = v.name + (v.description ? ` (${v.description})` : '');
+              }
+            });
+            map.compact = map.compact || 'Compact/Sedan (Small cars and sedans)';
+            map.midsize = map.midsize || 'Mid-Size/SUV (Mid-size cars and SUVs)';
+            map.truck = map.truck || 'Truck/Van/Large SUV (Trucks, vans, large SUVs)';
+            map.luxury = map.luxury || 'Luxury/High-End (Luxury and premium vehicles)';
             setVehicleLabels(map);
             setVehicleOptions(opts.length ? opts : builtInSizes);
             // ensure current selection is valid

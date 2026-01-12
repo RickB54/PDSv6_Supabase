@@ -87,6 +87,7 @@ import { initTaskWorkflowListeners } from "./store/tasks";
 import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
 import { ChatAudioAlert } from "@/components/chat/ChatAudioAlert";
 import { useLocation as useRouterLocation } from "react-router-dom";
+import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +148,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 
 const App = () => {
   const [user, setUser] = useState(getCurrentUser());
+  const [callAssistantOpen, setCallAssistantOpen] = useState(false);
 
   useEffect(() => {
     // Force Supabase mode if environment requests it
@@ -164,9 +166,13 @@ const App = () => {
     // Initial global data fetch (triggers migration if needed)
     import("@/store/bookings").then(m => m.useBookingsStore.getState().refresh());
 
+    const onOpenCallAssistant = () => setCallAssistantOpen(true);
+    window.addEventListener('open-call-assistant', onOpenCallAssistant);
+
     return () => {
       window.removeEventListener('auth-changed', updateUser as EventListener);
       window.removeEventListener('storage', updateUser);
+      window.removeEventListener('open-call-assistant', onOpenCallAssistant);
     };
   }, []);
 
@@ -506,6 +512,7 @@ const App = () => {
                 {user && user.role !== 'customer' && <GlobalRightSidebar />}
               </ErrorBoundary>
             </div>
+            <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
           </SidebarProvider>
         </BrowserRouter>
       </TooltipProvider>

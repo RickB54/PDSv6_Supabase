@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper } from "lucide-react";
+import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -665,6 +665,13 @@ export default function AdminDashboard() {
             </div>
             <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
               <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-primary text-primary hover:bg-primary/10 w-fit"
+                >
+                  <Phone className="w-3.5 h-3.5 text-primary" />
+                  <span>Phone Assistant</span>
+                </button>
                 <Link to="/vehicle-classification" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
                   <Grid3X3 className="w-3.5 h-3.5 text-green-600" />
                   <span>Vehicle Classification</span>

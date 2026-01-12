@@ -15,31 +15,100 @@ export interface UnifiedCustomer {
   mileage?: string;
   vehicleType?: string;
   vehicles?: any[];
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
   type?: 'customer' | 'prospect';
+  is_archived?: boolean;
+  generalPhotos?: string[];
+  beforePhotos?: string[];
+  afterPhotos?: string[];
+  videoUrl?: string;
+  learningCenterUrl?: string;
+  videoNote?: string;
+  howFound?: string;
+  howFoundOther?: string;
+  conditionInside?: string;
+  conditionOutside?: string;
+  lastService?: string;
 }
 
+/**
+ * Merges multiple customer sources into a single unified list.
+ * Deduplicates by trying to find a match in:
+ * 1. Email (case-insensitive)
+ * 2. Phone (digits only)
+ * 3. Exact Name match (if no email/phone)
+ */
+/**
+ * Merges multiple customer sources into a single unified list.
+ * Strategy:
+ * 1. Match by ID (exact match)
+ * 2. Match by Email (if not placeholder)
+ * 3. Match by Phone (digits only, if not placeholder)
+ * 4. Match by Name (only as last resort, and not if it's a generic name)
+ */
 function dedupeByKey(items: UnifiedCustomer[]): UnifiedCustomer[] {
-  const seen = new Map<string, UnifiedCustomer>();
+  const mergedSource = new Map<string, UnifiedCustomer>(); // ID -> Record
+  const emailMap = new Map<string, string>(); // Email -> ID
+
+  const isPlaceholder = (val?: string) => {
+    if (!val) return true;
+    const lower = val.toLowerCase().trim();
+    return ['unknown', 'none', 'n/a', 'no-email'].some(p => lower.includes(p));
+  };
+
   for (const c of items) {
-    // Include type in the key to prevent merging prospects with customers who share phone/email
-    const baseKey = (c.email?.toLowerCase() || c.phone || c.name).trim();
-    const key = `${baseKey}|${c.type || 'customer'}`;
-    if (!baseKey) continue;
-    const prev = seen.get(key);
-    if (!prev) {
-      seen.set(key, c);
+    if (!c.name || c.name.trim() === '') continue; // Skip items without names
+
+    const emailKey = c.email?.toLowerCase().trim();
+    const idKey = c.id;
+
+    // 1. Try to find by ID
+    let existingId = idKey && mergedSource.has(idKey) ? idKey : null;
+
+    // 2. Try to find by Email (if valid)
+    if (!existingId && emailKey && !isPlaceholder(emailKey)) {
+      existingId = emailMap.get(emailKey) || null;
+    }
+
+    if (existingId) {
+      const existing = mergedSource.get(existingId)!;
+      // Merge new data into existing reference
+      // Prioritize Supabase UUID for the ID if available
+      const newId = (c.id && c.id.length > 20) ? c.id : existing.id;
+
+      Object.assign(existing, {
+        ...c,
+        id: newId,
+        // Prefer 'customer' if EITHER is customer. 
+        type: (existing.type === 'customer' || c.type === 'customer') ? 'customer' : (c.type || existing.type || 'customer'),
+        // Keep existing valid data if new is empty
+        phone: c.phone || existing.phone,
+        email: c.email || existing.email,
+        address: c.address || existing.address,
+        vehicle: c.vehicle || existing.vehicle,
+        model: c.model || existing.model,
+        year: c.year || existing.year,
+        vehicleType: c.vehicleType || existing.vehicleType,
+        updatedAt: (new Date(c.updatedAt || 0) > new Date(existing.updatedAt || 0)) ? c.updatedAt : existing.updatedAt
+      });
+
+      // Update maps
+      if (newId) mergedSource.set(newId, existing); // re-set in case ID changed
+      if (emailKey && !isPlaceholder(emailKey)) emailMap.set(emailKey, newId || existingId);
+
     } else {
-      // Prefer item with id and most recent updatedAt
-      const prevTs = prev.updatedAt ? new Date(prev.updatedAt).getTime() : 0;
-      const currTs = c.updatedAt ? new Date(c.updatedAt).getTime() : 0;
-      if (currTs >= prevTs) {
-        seen.set(key, { ...prev, ...c });
-      }
+      const entry = { ...c, type: c.type || 'customer' };
+      // If no ID, generate a temp one purely for map tracking (will use real ID if available)
+      const internalId = c.id || `temp-${Math.random().toString(36).slice(2, 9)}`;
+
+      mergedSource.set(internalId, entry);
+      if (emailKey && !isPlaceholder(emailKey)) emailMap.set(emailKey, internalId);
     }
   }
-  return Array.from(seen.values());
+
+  return Array.from(mergedSource.values());
 }
 
 export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
@@ -66,18 +135,31 @@ export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
     const rawSupa = await getSupabaseCustomers();
     supaCustomers = rawSupa.map((SC: any) => ({
       id: SC.id,
-      name: SC.full_name || SC.name, // Supabase uses full_name column
+      name: SC.full_name || SC.name,
       email: SC.email,
       phone: SC.phone,
       address: SC.address,
-      // Map flattened vehicle_info to top-level
-      vehicle: SC.vehicle_info?.make || '',
-      model: SC.vehicle_info?.model || '',
-      year: String(SC.vehicle_info?.year || ''),
-      vehicleType: SC.vehicle_info?.type || '',
+      vehicle: SC.vehicle_info?.make || SC.vehicle || '',
+      model: SC.vehicle_info?.model || SC.model || '',
+      year: String(SC.vehicle_info?.year || SC.year || ''),
+      vehicleType: SC.vehicle_info?.type || SC.vehicleType || '',
+      color: SC.vehicle_info?.color || SC.color || '',
+      mileage: SC.vehicle_info?.mileage || SC.mileage || '',
       vehicles: SC.vehicles || [],
       notes: SC.notes,
       type: SC.type,
+      is_archived: SC.is_archived || false,
+      generalPhotos: SC.generalPhotos || [],
+      beforePhotos: SC.beforePhotos || [],
+      afterPhotos: SC.afterPhotos || [],
+      videoUrl: SC.videoUrl || '',
+      learningCenterUrl: SC.learningCenterUrl || '',
+      videoNote: SC.videoNote || '',
+      howFound: SC.howFound || '',
+      howFoundOther: SC.howFoundOther || '',
+      conditionInside: SC.conditionInside || '',
+      conditionOutside: SC.conditionOutside || '',
+      lastService: SC.lastService || '',
       createdAt: SC.created_at,
       updatedAt: SC.created_at
     }));

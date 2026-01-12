@@ -194,11 +194,15 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const handleVehicleSelect = (data: { make: string; model: string; category: string }, index?: number) => {
     let mappedType = "";
     const cat = data.category;
-    if (cat === "Compact") mappedType = "Compact/Sedan";
-    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan";
-    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV";
-    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV";
-    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV";
+    if (cat === "Compact") mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
+    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (cat.includes("Compact/Sedan")) mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (cat.includes("Mid-Size/SUV")) mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
+    else if (cat.includes("Truck/Van/Large SUV")) mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (cat.includes("Luxury/High-End")) mappedType = "Luxury/High-End (Luxury and premium vehicles)";
 
     if (typeof index === 'number') {
       const updated = [...(form.vehicles || [])];
@@ -624,10 +628,10 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                               className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
                             >
                               <option value="">Select Type</option>
-                              <option value="Compact/Sedan">Compact/Sedan</option>
-                              <option value="Mid-Size/SUV">Mid-Size/SUV</option>
-                              <option value="Truck/Van/Large SUV">Truck/Van/Large SUV</option>
-                              <option value="Luxury/High-End">Luxury/High-End</option>
+                              <option value="Compact/Sedan (Small cars and sedans)">Compact/Sedan (Small cars and sedans)</option>
+                              <option value="Mid-Size/SUV (Mid-size cars and SUVs)">Mid-Size/SUV (Mid-size cars and SUVs)</option>
+                              <option value="Truck/Van/Large SUV (Trucks, vans, large SUVs)">Truck/Van/Large SUV (Trucks, vans, large SUVs)</option>
+                              <option value="Luxury/High-End (Luxury and premium vehicles)">Luxury/High-End (Luxury and premium vehicles)</option>
                               <option value="Motorcycle">Motorcycle</option>
                               <option value="RV/Boat">RV/Boat</option>
                             </select>

@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
-import { getUnifiedCustomers } from "@/lib/customers";
-import { upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
@@ -60,12 +59,19 @@ const Prospects = () => {
     setIsRefreshing(true);
     setLoading(true);
     try {
-      const list = await getUnifiedCustomers();
-      console.log('🔍 All unified customers:', list);
+      // PERMANENT FIX: Use the same data source as Users & Roles page
+      // This ensures Jen and all other prospects are always visible
+      const list = await getSupabaseCustomers();
+      console.log('🔍 All Supabase customers:', list);
       console.log('🔍 Total count:', list.length);
       console.log('🔍 Each customer:', list.map(c => ({ name: c.name, type: c.type })));
 
-      const prospects = (list as Customer[]).filter(c => c.type === 'prospect');
+      // Filter for prospects only (same logic as Users & Roles)
+      const prospects = list.filter(c => {
+        const customerType = (c.type || '').toLowerCase();
+        return customerType === 'prospect';
+      });
+
       console.log('🔍 Filtered prospects:', prospects);
       console.log('🔍 Prospects count:', prospects.length);
       console.log('🔍 Prospect names:', prospects.map(p => p.name));
@@ -89,7 +95,7 @@ const Prospects = () => {
   const openAdd = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (c: Customer) => { setEditing(c); setModalOpen(true); };
 
-  const onSaveModal = async (data: ModalCustomer) => {
+  const onSaveModal = async (data: any) => {
     if (!data.type) data.type = 'prospect';
     try {
       // Ensure we don't send a local/timestamp ID to Supabase UUID column
@@ -368,12 +374,13 @@ const Prospects = () => {
           </div>
         </div>
 
-        {/* Accordion Cards View */}
-        <div className="space-y-4">
+        {/* Desktop Accordion Cards View */}
+        <div className="hidden md:block space-y-4">
           {[...filteredCustomers]
             .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
+              // If we are selectively expanding (not allExpanded), we only show the expanded one
               if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
@@ -394,14 +401,6 @@ const Prospects = () => {
                               <img src={photo} alt={`${customer.name} - General ${idx + 1}`} className="h-full w-full object-cover" />
                             </div>
                           ))}
-                          {(customer.beforePhotos?.length || 0) + (customer.afterPhotos?.length || 0) + (customer.generalPhotos?.length || 0) > 3 && (
-                            <button
-                              onClick={() => openGallery(customer, 0)}
-                              className="h-12 w-12 rounded-lg border-2 border-purple-500/50 bg-purple-500/10 flex items-center justify-center text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-all hover:scale-105"
-                            >
-                              +{(customer.beforePhotos?.length || 0) + (customer.afterPhotos?.length || 0) + (customer.generalPhotos?.length || 0) - 3}
-                            </button>
-                          )}
                         </div>
                       ) : (
                         <div
@@ -412,7 +411,14 @@ const Prospects = () => {
                         </div>
                       )}
 
-                      <div><h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3><div className="flex gap-3 text-sm text-zinc-400"><span>{customer.phone || 'No phone'}</span><span className="hidden sm:inline">•</span><span className="hidden sm:inline">{customer.vehicle} {customer.model}</span></div></div>
+                      <div>
+                        <h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3>
+                        <div className="flex gap-3 text-sm text-zinc-400">
+                          <span>{customer.phone || 'No phone'}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:inline">{customer.vehicle} {customer.model}</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                       <div className="flex gap-1 mr-4">
@@ -435,9 +441,6 @@ const Prospects = () => {
                           </Button>
                         )}
                         <Button asChild variant="outline" size="sm" className="h-9 border-zinc-700 hover:bg-zinc-800"><Link to={`/service-checklist?customerId=${customer.id}`}><FileBarChart className="h-4 w-4 mr-2" /> Start Service</Link></Button>
-                        <Button asChild variant="outline" size="sm" className="h-9 border-pink-500/30 text-pink-400 hover:bg-pink-500/10 hover:text-pink-300">
-                          <Link to={`/vehicle-gallery?customerId=${customer.id}`}><Video className="h-4 w-4 mr-2" /> Gallery</Link>
-                        </Button>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -446,7 +449,6 @@ const Prospects = () => {
                             <div className="grid grid-cols-2 gap-4">
                               <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Vehicle</div><div className="text-zinc-200 font-medium">{customer.year} {customer.vehicle} {customer.model}</div></div>
                               <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Type/Color</div><div className="text-zinc-200 font-medium">{customer.vehicleType || '-'} / {customer.color || '-'}</div></div>
-                              <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Mileage</div><div className="text-zinc-200 font-medium">{customer.mileage || '-'}</div></div>
                             </div>
                           </section>
                           <section><h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact info</h4>
@@ -457,102 +459,6 @@ const Prospects = () => {
                             </div>
                           </section>
                           {customer.notes && (<section className="bg-amber-900/10 border border-amber-500/20 p-3 rounded"><div className="text-amber-500 text-xs font-bold mb-1">Notes</div><div className="text-amber-200/80 text-sm italic">{customer.notes}</div></section>)}
-
-                          {/* Media Gallery Section */}
-                          {((customer.generalPhotos && customer.generalPhotos.length > 0) ||
-                            (customer.beforePhotos && customer.beforePhotos.length > 0) ||
-                            (customer.afterPhotos && customer.afterPhotos.length > 0) ||
-                            customer.videoUrl) && (
-                              <section>
-                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"><ImageIcon className="h-3 w-3" /> Media Gallery</h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                  {customer.generalPhotos?.map((p, i) => {
-                                    const photoIndex = i;
-                                    return (
-                                      <div
-                                        key={`g-${i}`}
-                                        className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
-                                        onClick={() => openGallery(customer, photoIndex)}
-                                      >
-                                        <img src={p} alt="General" className="w-full h-full object-cover" />
-                                      </div>
-                                    );
-                                  })}
-                                  {customer.beforePhotos?.map((p, i) => {
-                                    const photoIndex = (customer.generalPhotos?.length || 0) + i;
-                                    return (
-                                      <div
-                                        key={`b-${i}`}
-                                        className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
-                                        onClick={() => openGallery(customer, photoIndex)}
-                                      >
-                                        <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">Before</div>
-                                        <img src={p} alt="Before" className="w-full h-full object-cover" />
-                                      </div>
-                                    );
-                                  })}
-                                  {customer.afterPhotos?.map((p, i) => {
-                                    const photoIndex = (customer.generalPhotos?.length || 0) + (customer.beforePhotos?.length || 0) + i;
-                                    return (
-                                      <div
-                                        key={`a-${i}`}
-                                        className="relative aspect-square rounded overflow-hidden border border-zinc-700 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
-                                        onClick={() => openGallery(customer, photoIndex)}
-                                      >
-                                        <div className="absolute top-0 left-0 bg-black/50 text-[10px] px-1 text-white">After</div>
-                                        <img src={p} alt="After" className="w-full h-full object-cover" />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                {customer.videoUrl && (
-                                  <div className="mt-4">
-                                    <a
-                                      href={customer.videoUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="relative block aspect-video rounded overflow-hidden border-2 border-purple-500/30 bg-zinc-950 hover:border-purple-400 transition-all group"
-                                    >
-                                      {getYouTubeThumbnail(customer.videoUrl) ? (
-                                        <>
-                                          <img
-                                            src={getYouTubeThumbnail(customer.videoUrl)!}
-                                            alt="Video thumbnail"
-                                            className="w-full h-full object-cover"
-                                          />
-                                          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex items-center justify-center">
-                                            <div className="bg-red-600 rounded-full p-4 group-hover:scale-110 transition-transform">
-                                              <Video className="h-8 w-8 text-white" />
-                                            </div>
-                                          </div>
-                                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                                            <p className="text-white text-sm font-medium flex items-center gap-2">
-                                              <Video className="h-4 w-4" /> Before/After Showcase Video
-                                            </p>
-                                          </div>
-                                        </>
-                                      ) : (
-                                        <div className="flex items-center justify-center gap-2 text-purple-400 hover:text-purple-300">
-                                          <Video className="h-4 w-4" /> Watch Video
-                                        </div>
-                                      )}
-                                    </a>
-                                  </div>
-                                )}
-                                {customer.learningCenterUrl && (
-                                  <div className="mt-2 text-sm">
-                                    <Link to={`/learning-library?videoUrl=${encodeURIComponent(customer.learningCenterUrl)}`} className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
-                                      <Video className="h-4 w-4" /> Learning Center
-                                    </Link>
-                                  </div>
-                                )}
-                                {customer.videoNote && (
-                                  <div className="mt-2 p-2 rounded bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 italic">
-                                    Note: {customer.videoNote}
-                                  </div>
-                                )}
-                              </section>
-                            )}
                         </div>
 
                         <div>
@@ -560,7 +466,6 @@ const Prospects = () => {
                           <div className="space-y-3 bg-zinc-950 p-4 rounded border border-zinc-800/50">
                             <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Source:</span><span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-300">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || '—'}</span></div>
                             <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Created:</span><span className="text-zinc-300 text-sm">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span></div>
-                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Last Updated:</span><span className="text-zinc-300 text-sm">{(customer as any).updated_at ? new Date((customer as any).updated_at).toLocaleDateString() : '—'}</span></div>
                           </div>
                         </div>
                       </div>
@@ -571,47 +476,38 @@ const Prospects = () => {
             })}
         </div>
 
-        {/* Mobile View - Keep Existing */}
+        {/* Mobile List View */}
         <div className="md:hidden space-y-4">
-          {filteredCustomers.map(c => (
-            <div key={c.id} className="bg-zinc-900 border border-purple-500/20 p-4 rounded-xl space-y-3">
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-3">
-                  <div
-                    className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
-                    onClick={(e) => { e.stopPropagation(); openEdit(c); }}
-                  >
-                    {(c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]) ? (
-                      <img
-                        src={c.generalPhotos?.[0] || c.beforePhotos?.[0] || c.afterPhotos?.[0]}
-                        alt={c.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
-                    )}
+          {[...filteredCustomers]
+            .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
+            .map(c => (
+              <div key={c.id} className="bg-zinc-900 border border-purple-500/20 p-4 rounded-xl space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-zinc-400 font-bold">
+                      {<span>{(c.name || 'U').charAt(0).toUpperCase()}</span>}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-zinc-200 text-lg">{c.name}</h3>
+                      <p className="text-zinc-400 text-sm">{c.phone}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-zinc-200 text-lg">{c.name}</h3>
-                    <p className="text-zinc-400 text-sm">{c.phone}</p>
-                  </div>
+                  {!c.is_archived && (
+                    <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 bg-purple-500/10">
+                      <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                    </Button>
+                  )}
                 </div>
-                {!c.is_archived && (
-                  <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 bg-purple-500/10">
-                    <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                {c.notes && <div className="text-sm text-zinc-500 italic border-l-2 border-zinc-700 pl-2">{c.notes}</div>}
+                <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                  <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 text-zinc-400">
+                    {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                   </Button>
-                )}
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 text-zinc-400"><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                </div>
               </div>
-              {c.notes && <div className="text-sm text-zinc-500 italic border-l-2 border-zinc-700 pl-2">{c.notes}</div>}
-              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
-                <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 text-zinc-400 hover:text-amber-400">
-                  {c.is_archived ? <><RotateCcw className="h-4 w-4 mr-2" /> Restore</> : <><Archive className="h-4 w-4 mr-2" /> Archive</>}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 text-zinc-400"><Pencil className="h-4 w-4 mr-2" /> Edit</Button>
-                <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 text-red-500"><Trash2 className="h-4 w-4 mr-2" /> Del</Button>
-              </div>
-            </div>
-          ))}
+            ))}
         </div>
       </main>
 
