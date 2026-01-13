@@ -43,126 +43,171 @@ function getPricingOverrides(): Record<string, Partial<ServicePackage["pricing"]
 
 const overrides = getPricingOverrides();
 
+/** 
+ * 2026 PRICING PACKAGES (ACTIVE)
+ * Consolidated into Prime Essential and Prime Elite tiers.
+ */
 export const servicePackages: ServicePackage[] = [
+  // --- PRIME ESSENTIAL ---
+  {
+    id: 'prime-essential-exterior',
+    name: 'Prime Essential Exterior',
+    description: 'A high-quality exterior refresh designed to safely remove surface dirt and road grime while enhancing shine and protection. Ideal for regularly maintained vehicles.',
+    basePrice: 90,
+    pricing: { compact: 90, midsize: 110, truck: 120, luxury: 130 },
+    steps: [
+      { id: 'foam-pre-soak', name: 'Exterior foam pre-soak', category: 'exterior' },
+      { id: 'hand-wash', name: 'Two-bucket hand wash with grit guards', category: 'exterior' },
+      { id: 'wheel-rim-shine', name: 'Wheel and rim cleaning with tire shine', category: 'exterior' },
+      { id: 'gas-cap-clean', name: 'Gas cap area cleaning', category: 'exterior' },
+      { id: 'blow-dry', name: 'Air blow-dry followed by microfiber hand drying', category: 'exterior' },
+      { id: 'sealant', name: 'Premium spray wax / paint sealant', category: 'final' }
+    ]
+  },
+  {
+    id: 'prime-essential-interior',
+    name: 'Prime Essential Interior',
+    description: 'A maintenance-level interior service designed to refresh vehicles in decent condition. Focuses on cleaning and tidying without deep extraction.',
+    basePrice: 180,
+    pricing: { compact: 180, midsize: 200, truck: 210, luxury: 240 },
+    steps: [
+      { id: 'vac-interior', name: 'Thorough interior vacuum', category: 'interior' },
+      { id: 'wipe-plastics', name: 'Wipe-down of all plastics, vinyl, and leather', category: 'interior' },
+      { id: 'window-clean', name: 'Interior window cleaning', category: 'interior' },
+      { id: 'mat-clean', name: 'Floor mat cleaning', category: 'interior' },
+      { id: 'jamb-clean', name: 'Door jamb cleaning', category: 'final' }
+    ]
+  },
+  {
+    id: 'prime-essential-full',
+    name: 'Prime Essential Full Detail',
+    description: 'A comprehensive refresh for both exterior and interior, ensuring your vehicle is clean, fresh, and well-maintained.',
+    basePrice: 230,
+    pricing: { compact: 230, midsize: 270, truck: 290, luxury: 320 },
+    steps: [
+      { id: 'ext-hand-wash', name: 'Safe hand wash to remove surface dirt', category: 'exterior' },
+      { id: 'wheel-faces', name: 'Wheel and tire cleaning (faces only)', category: 'exterior' },
+      { id: 'bug-removal', name: 'Bug splatter and light road residue removal', category: 'exterior' },
+      { id: 'interior-vac-full', name: 'Full interior vacuum (seats, carpets, trunk)', category: 'interior' },
+      { id: 'dash-wipe', name: 'Wipe-down of dashboard, console, and door panels', category: 'interior' },
+      { id: 'spot-clean', name: 'Spot cleaning of minor spills (non-set stains)', category: 'interior' },
+      { id: 'windows-in-out', name: 'Interior & Exterior glass cleaned', category: 'final' }
+    ]
+  },
+  // --- PRIME ELITE ---
+  {
+    id: 'prime-elite-exterior',
+    name: 'Prime Elite Exterior',
+    description: 'Designed to restore and protect paint by removing bonded contaminants and enhancing gloss with ceramic-infused protection.',
+    basePrice: 160,
+    pricing: { compact: 160, midsize: 180, truck: 190, luxury: 210 },
+    steps: [
+      { id: 'foam-wash-elite', name: 'Foam bath and two-bucket wash', category: 'exterior' },
+      { id: 'wheel-detail-elite', name: 'Wheel, rim, and tire detailing', category: 'exterior' },
+      { id: 'well-clean', name: 'Wheel well cleaning', category: 'exterior' },
+      { id: 'clay-decon', name: 'Clay bar decontamination', category: 'exterior' },
+      { id: 'trim-uv', name: 'Trim restoration with UV protection', category: 'exterior' },
+      { id: 'ceramic-sealant', name: 'Premium ceramic-based sealant', category: 'final' }
+    ]
+  },
+  {
+    id: 'prime-elite-interior',
+    name: 'Prime Elite Interior',
+    description: 'A deep-clean service built for heavily used or neglected interiors. Includes steam cleaning and full extraction.',
+    basePrice: 390,
+    pricing: { compact: 390, midsize: 475, truck: 495, luxury: 590 },
+    steps: [
+      { id: 'deep-vac', name: 'Deep vacuum of all interior areas and trunk', category: 'interior' },
+      { id: 'steam-clean', name: 'Steam cleaning of panels, vents, and surfaces', category: 'interior' },
+      { id: 'upholstery-extract', name: 'Carpet and upholstery steam extraction', category: 'interior' },
+      { id: 'seat-extract', name: 'Seat and fabric extraction', category: 'interior' },
+      { id: 'leather-cond', name: 'Leather conditioning and protection', category: 'interior' },
+      { id: 'elite-final', name: 'Windows, door jambs, and floor mats cleaned', category: 'final' }
+    ]
+  },
+  {
+    id: 'prime-elite-full',
+    name: 'Prime Elite Full Detail',
+    description: 'The ultimate restoration and protection package. Showroom-ready results for every inch of your vehicle.',
+    basePrice: 495,
+    pricing: { compact: 495, midsize: 595, truck: 695, luxury: 850 },
+    steps: [
+      { id: 'paint-safe-wash', name: 'Premium paint-safe hand wash', category: 'exterior' },
+      { id: 'deep-wheel', name: 'Deep wheel cleaning (barrels & lug areas)', category: 'exterior' },
+      { id: 'full-decon', name: 'Full exterior decontamination (clay & iron)', category: 'exterior' },
+      { id: 'gloss-enhance', name: 'Paint enhancement step (gloss improvement)', category: 'exterior' },
+      { id: 'elite-sealant', name: 'High-quality protective sealant application', category: 'exterior' },
+      { id: 'restorative-vac', name: 'Complete restorative interior vacuum', category: 'interior' },
+      { id: 'surface-detail', name: 'Deep cleaning of all interior surfaces & vents', category: 'interior' },
+      { id: 'shampoo-extract', name: 'Shampooing of carpets and floor mats', category: 'interior' },
+      { id: 'leather-elite', name: 'Seat cleaning and conditioning (Premium)', category: 'interior' },
+      { id: 'odor-neutral', name: 'Light odor neutralization & final detail', category: 'final' }
+    ]
+  },
+  // --- 2025 ARCHIVED PACKAGES ---
   {
     id: 'basic-exterior',
-    name: 'Basic Exterior Wash',
-    description: 'Essential exterior cleaning',
-    basePrice: 40,
-    pricing: { ...{ compact: 40, midsize: 50, truck: 60, luxury: 75 }, ...(overrides["basic-exterior"] || {}) },
+    name: '2025 Basic Exterior Wash',
+    description: 'Archive: Standard exterior wash and dry.',
+    basePrice: 50,
+    pricing: { compact: 50, midsize: 60, truck: 70, luxury: 80 },
     steps: [
-      { id: 'pre-rinse-foam', name: 'Pre-rinse & foam', category: 'exterior' },
-      { id: 'two-bucket-wash', name: 'Two-bucket wash', category: 'exterior' },
-      { id: 'hand-dry', name: 'Hand dry', category: 'exterior' },
-      { id: 'final-inspection', name: 'Final inspection', category: 'final' }
+      { id: 'wash', name: 'Exterior Hand Wash', category: 'exterior' },
+      { id: 'dry', name: 'Microfiber Dry', category: 'exterior' }
     ]
   },
   {
     id: 'express-wax',
-    name: 'Express Wash & Wax',
-    description: 'Quick wash with protective wax',
-    basePrice: 60,
-    pricing: { ...{ compact: 60, midsize: 75, truck: 90, luxury: 110 }, ...(overrides["express-wax"] || {}) },
+    name: '2025 Express Wash & Wax',
+    description: 'Archive: Fast exterior wash with spray wax protection.',
+    basePrice: 85,
+    pricing: { compact: 85, midsize: 100, truck: 115, luxury: 130 },
     steps: [
-      { id: 'quick-wash', name: 'Quick wash', category: 'exterior' },
-      { id: 'spray-wax', name: 'Spray wax', category: 'exterior' },
-      { id: 'tire-shine', name: 'Tire shine', category: 'exterior' },
-      { id: 'final-inspection-express', name: 'Final inspection', category: 'final' }
+      { id: 'wash-wax', name: 'Wash and Wax', category: 'exterior' }
     ]
   },
   {
     id: 'full-exterior',
-    name: 'Full Exterior Detail',
-    description: 'Complete exterior restoration',
-    basePrice: 120,
-    pricing: { ...{ compact: 120, midsize: 150, truck: 180, luxury: 210 }, ...(overrides["full-exterior"] || {}) },
-    steps: [
-      { id: 'pre-rinse-vehicle', name: 'Pre-rinse vehicle', category: 'exterior' },
-      { id: 'apply-foam-cannon', name: 'Apply foam cannon', category: 'exterior' },
-      { id: 'two-bucket-wash-full', name: 'Two-bucket wash', category: 'exterior' },
-      { id: 'clay-bar-treatment', name: 'Clay bar treatment', category: 'exterior' },
-      { id: 'iron-remover', name: 'Iron remover application', category: 'exterior' },
-      { id: 'dry-vehicle', name: 'Dry vehicle', category: 'exterior' },
-      { id: 'apply-sealant-wax', name: 'Apply sealant/wax', category: 'exterior' },
-      { id: 'tire-dressing', name: 'Tire dressing', category: 'exterior' },
-      { id: 'clean-windows-ext', name: 'Clean windows', category: 'final' },
-      { id: 'final-inspection-full', name: 'Final inspection', category: 'final' }
-    ]
+    name: '2025 Full Exterior Detail',
+    description: 'Archive: Comprehensive exterior cleaning and protection.',
+    basePrice: 150,
+    pricing: { compact: 150, midsize: 175, truck: 200, luxury: 250 },
+    steps: []
   },
   {
     id: 'interior-cleaning',
-    name: 'Interior Cleaning',
-    description: 'Deep interior detailing',
-    basePrice: 80,
-    pricing: { ...{ compact: 80, midsize: 100, truck: 120, luxury: 150 }, ...(overrides["interior-cleaning"] || {}) },
-    steps: [
-      { id: 'vacuum-interior', name: 'Vacuum all surfaces', category: 'interior' },
-      { id: 'clean-dashboard', name: 'Clean dashboard', category: 'interior' },
-      { id: 'clean-door-panels', name: 'Clean door panels', category: 'interior' },
-      { id: 'clean-seats', name: 'Clean seats', category: 'interior' },
-      { id: 'clean-carpets', name: 'Clean carpets/mats', category: 'interior' },
-      { id: 'apply-uv-protectant', name: 'Apply UV protectant', category: 'interior' },
-      { id: 'clean-windows-int', name: 'Clean windows', category: 'final' },
-      { id: 'final-inspection-int', name: 'Final inspection', category: 'final' }
-    ]
+    name: '2025 Interior Cleaning',
+    description: 'Archive: Standard interior vacuum and wipe down.',
+    basePrice: 120,
+    pricing: { compact: 120, midsize: 140, truck: 160, luxury: 200 },
+    steps: []
   },
   {
     id: 'full-detail',
-    name: 'Full Detail (BEST VALUE)',
-    description: 'Complete interior and exterior',
-    basePrice: 180,
-    pricing: { ...{ compact: 180, midsize: 225, truck: 270, luxury: 320 }, ...(overrides["full-detail"] || {}) },
-    steps: [
-      // Exterior
-      { id: 'pre-rinse-full', name: 'Pre-rinse vehicle', category: 'exterior' },
-      { id: 'foam-cannon-full', name: 'Apply foam cannon', category: 'exterior' },
-      { id: 'two-bucket-full', name: 'Two-bucket wash', category: 'exterior' },
-      { id: 'clay-bar-full', name: 'Clay bar treatment', category: 'exterior' },
-      { id: 'iron-remover-full', name: 'Iron remover application', category: 'exterior' },
-      { id: 'dry-full', name: 'Dry vehicle', category: 'exterior' },
-      { id: 'sealant-full', name: 'Apply sealant', category: 'exterior' },
-      { id: 'tire-dressing-full', name: 'Tire dressing', category: 'exterior' },
-      // Interior
-      { id: 'vacuum-full', name: 'Vacuum all surfaces', category: 'interior' },
-      { id: 'dashboard-full', name: 'Clean dashboard', category: 'interior' },
-      { id: 'door-panels-full', name: 'Clean door panels', category: 'interior' },
-      { id: 'seats-full', name: 'Clean seats', category: 'interior' },
-      { id: 'carpets-full', name: 'Clean carpets/mats', category: 'interior' },
-      { id: 'uv-full', name: 'Apply UV protectant', category: 'interior' },
-      // Final
-      { id: 'windows-full', name: 'Clean windows', category: 'final' },
-      { id: 'final-inspection-detail', name: 'Final inspection', category: 'final' }
-    ]
+    name: '2025 Full Detail (BEST VALUE)',
+    description: 'Archive: Complete interior and exterior care.',
+    basePrice: 200,
+    pricing: { compact: 200, midsize: 250, truck: 300, luxury: 350 },
+    steps: []
   },
   {
     id: 'premium-detail',
-    name: 'Premium Detail',
-    description: 'Ultimate detailing experience',
-    basePrice: 280,
-    pricing: { ...{ compact: 280, midsize: 350, truck: 420, luxury: 500 }, ...(overrides["premium-detail"] || {}) },
-    steps: [
-      // Exterior
-      { id: 'pre-rinse-premium', name: 'Pre-rinse vehicle', category: 'exterior' },
-      { id: 'foam-cannon-premium', name: 'Apply foam cannon', category: 'exterior' },
-      { id: 'two-bucket-premium', name: 'Two-bucket wash', category: 'exterior' },
-      { id: 'clay-bar-premium', name: 'Clay bar treatment', category: 'exterior' },
-      { id: 'iron-remover-premium', name: 'Iron remover application', category: 'exterior' },
-      { id: 'dry-premium', name: 'Dry vehicle', category: 'exterior' },
-      { id: 'ceramic-coating', name: 'Apply ceramic coating', category: 'exterior' },
-      { id: 'tire-dressing-premium', name: 'Tire dressing', category: 'exterior' },
-      // Interior
-      { id: 'vacuum-premium', name: 'Vacuum all surfaces', category: 'interior' },
-      { id: 'dashboard-premium', name: 'Clean dashboard', category: 'interior' },
-      { id: 'door-panels-premium', name: 'Clean door panels', category: 'interior' },
-      { id: 'seats-premium', name: 'Clean seats', category: 'interior' },
-      { id: 'carpets-premium', name: 'Clean carpets/mats', category: 'interior' },
-      { id: 'uv-premium', name: 'Apply UV protectant', category: 'interior' },
-      // Final
-      { id: 'windows-premium', name: 'Clean windows', category: 'final' },
-      { id: 'final-inspection-premium', name: 'Final inspection', category: 'final' }
-    ]
+    name: '2025 Premium Detail',
+    description: 'Archive: The ultimate show-room prep.',
+    basePrice: 350,
+    pricing: { compact: 350, midsize: 450, truck: 550, luxury: 700 },
+    steps: []
   }
 ];
+
+/* REFERENCE: 2025 Archived Packages (Refer to Supabase for full history)
+{ id: 'basic-exterior', name: 'Basic Exterior Wash', ... },
+{ id: 'express-wax', name: 'Express Wash & Wax', ... },
+{ id: 'full-exterior', name: 'Full Exterior Detail', ... },
+{ id: 'interior-cleaning', name: 'Interior Cleaning', ... },
+{ id: 'full-detail', name: 'Full Detail (BEST VALUE)', ... },
+{ id: 'premium-detail', name: 'Premium Detail', ... }
+*/
 
 export const addOns: AddOn[] = [
   { id: 'wheel-cleaning', name: 'Wheel Cleaning', category: 'exterior', description: 'Thorough cleaning of wheels and brake dust using safe, non-acidic products; includes lug areas and wheel faces.', basePrice: 20, pricing: { compact: 20, midsize: 25, truck: 30, luxury: 40 } },
@@ -224,4 +269,14 @@ export function setAddOnPricingOverride(addOnId: string, pricing: AddOn["pricing
   const current = getAddOnOverrides();
   current[addOnId] = pricing;
   localStorage.setItem("addOnPricingOverrides", JSON.stringify(current));
+}
+// Helper for estimated duration based on package ID
+export function getServiceDuration(id: string = ''): number {
+  if (id.includes('prime-elite-full')) return 6;
+  if (id.includes('prime-elite-interior')) return 4;
+  if (id.includes('prime-elite-exterior')) return 3;
+  if (id.includes('prime-essential-full')) return 4;
+  if (id.includes('prime-essential-interior')) return 2.5;
+  if (id.includes('prime-essential-exterior')) return 2;
+  return 3;
 }

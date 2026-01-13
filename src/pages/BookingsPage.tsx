@@ -32,6 +32,7 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import supabase from "@/lib/supabase"; // Realtime import
+import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } from "@/lib/unifiedCalendar";
 
 // --- Types ---
 type ViewMode = "day" | "week" | "month" | "year" | "analytics";
@@ -99,6 +100,8 @@ export default function BookingsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
@@ -264,6 +267,47 @@ export default function BookingsPage() {
   }, [location.state, isAddModalOpen, navigate]);
 
 
+  // Load unified events (bookings + manual blocks + Google Calendar)
+  const loadUnifiedEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      let startDate: Date, endDate: Date;
+
+      if (viewMode === 'day') {
+        startDate = startOfDay(currentDate);
+        endDate = endOfDay(currentDate);
+      } else if (viewMode === 'week') {
+        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+      } else if (viewMode === 'month') {
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+      } else {
+        // Year view - get full year
+        startDate = startOfYear(currentDate);
+        endDate = endOfYear(currentDate);
+      }
+
+      const events = await getUnifiedCalendarEvents(startDate, endDate, items);
+      setUnifiedEvents(events);
+    } catch (error) {
+      console.error('Failed to load unified events:', error);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [viewMode, currentDate, items]);
+
+  // Refresh unified events when view changes or bookings change
+  useEffect(() => {
+    loadUnifiedEvents();
+
+    // Listen for availability changes
+    const handleAvailabilityChange = () => loadUnifiedEvents();
+    window.addEventListener('availability-changed', handleAvailabilityChange);
+
+    return () => window.removeEventListener('availability-changed', handleAvailabilityChange);
+  }, [loadUnifiedEvents]);
+
   // Refresh data on mount and focus
   useEffect(() => {
     refresh();
@@ -291,6 +335,17 @@ export default function BookingsPage() {
   }, [items, currentDate, showArchived]);
 
   const getBookingsForDay = (day: Date) => {
+    // Get unified events for this day
+    const dayEvents = unifiedEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return isSameDay(eventDate, day);
+    });
+
+    return dayEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  // Get real bookings only (for legacy compatibility)
+  const getRealBookingsForDay = (day: Date) => {
     return items.filter(b => {
       if (!showArchived && b.isArchived) return false;
       return isSameDay(parseISO(b.date), day);
@@ -769,16 +824,16 @@ export default function BookingsPage() {
                   return null;
                 })()}
 
-                {/* Render Bookings */}
-                {getBookingsForDay(currentDate).map(booking => {
-                  const start = parseISO(booking.date);
+                {/* Render Unified Events (Bookings + Manual Blocks + Google Calendar) */}
+                {getBookingsForDay(currentDate).map(event => {
+                  const start = new Date(event.date);
                   const startH = start.getHours();
                   const startM = start.getMinutes();
 
                   // Duration - assume 1h default if no end time, or calc diff
                   let durationMin = 60;
-                  if (booking.endTime) {
-                    const end = parseISO(booking.endTime);
+                  if (event.endTime) {
+                    const end = new Date(event.endTime);
                     durationMin = (end.getTime() - start.getTime()) / 60000;
                   }
                   // Min height 30px
@@ -790,13 +845,52 @@ export default function BookingsPage() {
                   // Skip if outside 7am-8pm roughly or negative
                   if (top < 0) return null;
 
+                  // Determine styling based on event type
+                  let eventColor = '';
+                  let eventIcon = '';
+
+                  if (event.source === 'manual') {
+                    eventColor = 'bg-blue-500/20 border-blue-500 text-blue-200';
+                    eventIcon = '🔵';
+                  } else if (event.source === 'google') {
+                    eventColor = 'bg-purple-500/20 border-purple-500 text-purple-200';
+                    eventIcon = '📅';
+                  } else {
+                    // Real booking - use status color
+                    const booking = items.find(b => b.id === event.id);
+                    eventColor = booking ? getStatusColor(booking.status) : 'bg-primary/20 border-primary text-primary-foreground';
+                    eventIcon = booking ? getStatusIcon(booking.status) : '✓';
+                  }
+
+                  const handleEventClick = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+
+                    if (event.source === 'booking') {
+                      // Open booking modal
+                      const booking = items.find(b => b.id === event.id);
+                      if (booking) {
+                        handleBookingClick(e, booking);
+                      }
+                    } else if (event.source === 'manual') {
+                      // Show delete confirmation for manual block
+                      if (confirm(`Delete manual block: "${event.title}"?`)) {
+                        deleteCalendarEvent(event, remove);
+                        toast.success('Manual block deleted');
+                        loadUnifiedEvents();
+                      }
+                    } else {
+                      // Google Calendar event - show info
+                      toast.info('This is a Google Calendar event. Manage it in Google Calendar.');
+                    }
+                  };
+
                   return (
                     <div
-                      key={booking.id}
-                      onClick={(e) => handleBookingClick(e, booking)}
+                      key={event.id}
+                      onClick={handleEventClick}
                       className={cn(
                         "absolute left-20 right-4 rounded-md border p-2 text-xs shadow-sm cursor-pointer hover:brightness-110 transition-all z-10 overflow-hidden flex flex-col",
-                        getStatusColor(booking.status)
+                        eventColor
                       )}
                       style={{
                         top: `${top}px`,
@@ -805,14 +899,16 @@ export default function BookingsPage() {
                       }}
                     >
                       <div className="flex items-center gap-2 font-semibold">
+                        <span>{eventIcon}</span>
                         <span>{format(start, "h:mm a")}</span>
-                        <span className="truncate">{booking.customer}</span>
+                        <span className="truncate">{event.customer || event.title}</span>
                       </div>
-                      <div className="opacity-90 truncate">{booking.title}</div>
-                      {booking.vehicle && <div className="opacity-75 truncate text-[10px]">{booking.vehicle}</div>}
+                      {event.source === 'booking' && <div className="opacity-90 truncate">{event.title}</div>}
+                      {event.source === 'manual' && <div className="opacity-75 text-[10px]">Manual Block</div>}
+                      {event.source === 'google' && <div className="opacity-75 text-[10px]">Google Calendar</div>}
                       <div className="mt-auto pt-1 flex items-center gap-1 text-[10px] uppercase font-bold opacity-80">
-                        <span>{getStatusIcon(booking.status)}</span>
-                        <span>{booking.status}</span>
+                        {event.isDeletable && <span className="text-red-400">Click to delete</span>}
+                        {!event.isDeletable && <span className="text-zinc-500">Read-only</span>}
                       </div>
                     </div>
                   );

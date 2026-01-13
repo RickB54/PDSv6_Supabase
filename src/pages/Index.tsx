@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
@@ -13,7 +13,8 @@ import {
   Sparkles,
   CheckCircle2,
   Droplets,
-  Zap
+  Zap,
+  Star
 } from "lucide-react";
 
 // Import local assets copied earlier
@@ -29,177 +30,165 @@ import familySuv from "@/assets/home/family_suv.png";
 import luxurySport from "@/assets/home/luxury_sport.png";
 import workTruck from "@/assets/home/work_truck.png";
 import enthusiastCar from "@/assets/home/enthusiast_car.png";
+import { contentService } from "@/lib/content";
 
 const Index = () => {
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [homeData, setHomeData] = useState<any>({
+    heroTitle: 'PRIME AUTO DETAIL',
+    heroSubtitle: 'Premium auto detailing services that exceed expectations',
+    whyMattersTitle: 'More Than Just',
+    whyMattersAccent: 'Detailing Matters',
+    whyMatters: 'Most people mistake a quick car wash for detailing. While automated washes often leave behind micro-scratches and strip protective layers, professional detailing is a restorative process.',
+    whyMattersList: ["Decontamination of all surfaces", "Paint correction to remove swirl marks", "Ceramic coatings for long-term protection", "Deep interior restoration and conditioning"],
+    beyondSurfaceTitle: 'Beyond the Surface',
+    beyondSurfaceSubtitle: 'Specialized care for every inch of your investment.',
+    precisionProcessTitle: 'Our Precision Process',
+    precisionProcessSteps: [
+      { step: "01", name: "Booking", desc: "Easily schedule through our portal with transparent upfront pricing." },
+      { step: "02", name: "Evaluation", desc: "On-site condition assessment to tailor our plan to your vehicle." },
+      { step: "03", name: "The Detail", desc: "Clock-out service where we don't leave until the job is perfect." }
+    ],
+    eliteResultsTitle: 'Elite Results. Delivered.',
+    eliteResultsText: 'We bring the high-end studio experience to your driveway. No lines, no wait, just unmatched precision.',
+    perfectedTitle: 'Perfected for Every Driver',
+    perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.'
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [t, meta] = await Promise.all([
+          contentService.getTestimonials(),
+          contentService.getServiceMeta('home_content')
+        ]);
+        setTestimonials(t);
+        if (meta && meta.meta) {
+          setHomeData((prev: any) => ({ ...prev, ...meta.meta }));
+        }
+      } catch { }
+    };
+    load();
+    const refresh = () => load();
+    window.addEventListener('content-changed', refresh);
+    return () => window.removeEventListener('content-changed', refresh);
+  }, []);
   const navigate = useNavigate();
 
   // Redirect "VIEW SERVICES" button in the reused HeroSection to the /services page
-  useEffect(() => {
-    const handleHeroClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'BUTTON' && target.innerText.includes('VIEW SERVICES')) {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate('/services');
-      }
-    };
-    window.addEventListener('click', handleHeroClick, true);
-    return () => window.removeEventListener('click', handleHeroClick, true);
-  }, [navigate]);
+  const handleViewServices = () => {
+    navigate("/services");
+  };
 
   return (
     <div className="min-h-screen bg-white text-zinc-900 font-sans selection:bg-red-600 selection:text-white">
       <Navbar />
-
-      {/* Hero Section (Reused As-Is) */}
       <HeroSection />
 
       {/* SECTION 1: Why Professional Detailing Matters */}
-      <section className="py-24 bg-white overflow-hidden">
+      <section className="py-24 bg-zinc-50 overflow-hidden" id="services">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="flex-1 space-y-8">
-              <div className="w-20 h-1.5 bg-red-600 mb-8" />
-              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">
-                Why Professional Auto <br />
-                <span className="text-red-600">Detailing Matters</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
+                {homeData.whyMattersTitle}<br />
+                <span className="text-red-600">{homeData.whyMattersAccent}</span>
               </h2>
               <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
-                <p>
-                  Most people mistake a quick car wash for detailing. While automated washes often leave behind micro-scratches and strip protective layers, professional detailing is a <strong>restorative process</strong>.
-                </p>
-                <p>
-                  We don't just "clean" your car; we decontaminate surfaces, correct paint imperfections, and apply long-lasting protection that a spray-on wax simply cannot match. Professional detailing preserves your vehicle's value and ensures it looks show-room ready every single day.
-                </p>
+                {homeData.whyMatters.split('\n\n').map((para, i) => (
+                  <p key={i}>
+                    {para.includes('quality over quantity') ? (
+                      <span dangerouslySetInnerHTML={{ __html: para.replace('quality over quantity', '<strong>quality over quantity</strong>') }} />
+                    ) : (
+                      para
+                    )}
+                  </p>
+                ))}
               </div>
               <ul className="space-y-4">
-                {[
-                  "Eliminate microscopic surface contaminants",
-                  "Remove paint swirls and light oxidation",
-                  "Preserve interior materials from UV damage",
-                  "Significantly increase resale value"
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 font-bold uppercase text-sm tracking-widest text-zinc-800">
-                    <CheckCircle2 className="w-5 h-5 text-red-600" />
-                    {item}
+                {homeData.whyMattersList?.map((item: string, i: number) => (
+                  <li key={i} className="flex items-center gap-3 text-zinc-900 font-bold uppercase tracking-tight italic">
+                    <CheckCircle2 className="w-5 h-5 text-red-600" /> {item}
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="flex-1 relative">
-              <BeforeAfterSlider
-                beforeImage={paintBefore}
-                afterImage={paintAfter}
-              />
+            <div className="relative">
+              <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl skew-x-1 border-8 border-white">
+                <BeforeAfterSlider beforeImage={paintBefore} afterImage={paintAfter} />
+              </div>
+              <div className="absolute -bottom-6 -right-6 bg-red-600 text-white p-8 rounded-xl shadow-xl hidden md:block">
+                <p className="text-4xl font-black italic tracking-tighter">100%</p>
+                <p className="text-xs uppercase font-black tracking-widest opacity-80">Restoration Guarantee</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: What Auto Detailing Really Includes */}
-      <section className="py-24 bg-zinc-50">
+      {/* SECTION 2: Beyond the Surface */}
+      <section className="py-24 bg-white">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic">Beyond the Surface</h2>
-            <p className="text-zinc-500 max-w-2xl mx-auto text-lg">Meticulous care for every inch of your vehicle.</p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">{homeData.beyondSurfaceTitle}</h2>
+            <p className="text-zinc-500 text-lg">{homeData.beyondSurfaceSubtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Card 1 */}
-            <Card className="group overflow-hidden border-none shadow-xl bg-white transition-all hover:-translate-y-2">
+            <Card className="p-0 overflow-hidden border-none bg-zinc-50 group">
               <div className="h-64 overflow-hidden">
-                <img src={proTools} alt="Exterior Detailing" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                <img src={interiorDetail} alt="Interior" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
               </div>
               <div className="p-8 space-y-4">
-                <div className="bg-red-600 w-12 h-12 rounded-lg flex items-center justify-center -mt-14 relative z-10 shadow-lg shadow-red-600/20">
-                  <Sparkles className="text-white w-6 h-6" />
-                </div>
-                <h3 className="text-2xl font-bold uppercase tracking-tight">Exterior Detailing</h3>
-                <p className="text-zinc-600 leading-relaxed text-sm">
-                  Deep foam bath, iron decontamination, clay bar treatment, and machine polishing to restore depth and clarity to your paint.
-                </p>
+                <h3 className="text-2xl font-black uppercase tracking-tighter">Interior Refresh</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">Deep extraction, steam cleaning, and leather conditioning for a factory-new environment.</p>
               </div>
             </Card>
 
-            {/* Card 2 */}
-            <Card className="group overflow-hidden border-none shadow-xl bg-white transition-all hover:-translate-y-2">
-              <div className="h-64 overflow-hidden">
-                <img src={interiorDetail} alt="Interior Detailing" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-              </div>
-              <div className="p-8 space-y-4">
-                <div className="bg-blue-600 w-12 h-12 rounded-lg flex items-center justify-center -mt-14 relative z-10 shadow-lg shadow-blue-600/20">
-                  <Car className="text-white w-6 h-6" />
-                </div>
-                <h3 className="text-2xl font-bold uppercase tracking-tight">Interior Detailing</h3>
-                <p className="text-zinc-600 leading-relaxed text-sm">
-                  Steam cleaning, leather conditioning, stain extraction, and deep vacuuming. We return your cabin to its original factory feel.
-                </p>
-              </div>
-            </Card>
-
-            {/* Card 3 */}
-            <Card className="group overflow-hidden border-none shadow-xl bg-white transition-all hover:-translate-y-2">
+            <Card className="p-0 overflow-hidden border-none bg-zinc-50 group">
               <div className="h-64 overflow-hidden">
                 <img src={ceramicBeading} alt="Protection" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
               </div>
               <div className="p-8 space-y-4">
-                <div className="bg-zinc-900 w-12 h-12 rounded-lg flex items-center justify-center -mt-14 relative z-10 shadow-lg shadow-black/20">
-                  <ShieldCheck className="text-white w-6 h-6" />
+                <h3 className="text-2xl font-black uppercase tracking-tighter">Paint Protection</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">Advanced ceramic technology and premium sealants for a deep gloss and permanent shield.</p>
+              </div>
+            </Card>
+
+            <Card className="p-0 overflow-hidden border-none bg-zinc-50 group">
+              <div className="h-64 overflow-hidden border-8 border-red-600">
+                <div className="bg-red-600 h-full flex flex-col items-center justify-center p-8 text-white text-center">
+                  <Droplets className="w-16 h-16 mb-4" />
+                  <h3 className="text-3xl font-black uppercase tracking-tighter mb-2 italic">Pure Water</h3>
+                  <p className="text-xs uppercase font-black tracking-widest leading-loose">De-ionized water systems for a spot-free finish every single time.</p>
                 </div>
-                <h3 className="text-2xl font-bold uppercase tracking-tight">Protection & Preservation</h3>
-                <p className="text-zinc-600 leading-relaxed text-sm">
-                  Ceramic sealants, wax coatings, and UV inhibitors for plastics and leather to ensure your detail lasts for months, not days.
-                </p>
               </div>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* SECTION 3: Our Professional Detailing Process */}
-      <section className="py-24 bg-white">
+      {/* SECTION 3: Our Precision Process */}
+      <section className="py-24 bg-zinc-900 text-white overflow-hidden">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <div className="lg:w-1/2 relative order-2 lg:order-1">
-              <img src={proTools} alt="Detailing Process" className="rounded-2xl shadow-2xl relative z-10" />
-              <div className="absolute -bottom-8 -right-8 w-64 h-64 bg-red-50 -z-10 rounded-full blur-3xl opacity-60"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="relative order-2 lg:order-1">
+              <img src={mobileVan} alt="Mobile Unit" className="rounded-2xl shadow-2xl" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-red-600/10 animate-pulse rounded-2xl" />
             </div>
-            <div className="lg:w-1/2 order-1 lg:order-2 space-y-12">
-              <div className="space-y-4">
-                <span className="text-red-600 font-black uppercase tracking-widest text-sm">The Method</span>
-                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">Our Precision Process</h2>
+            <div className="space-y-12 order-1 lg:order-2">
+              <div className="space-y-4 text-center lg:text-left">
+                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none italic">{homeData.precisionProcessTitle.split(' ').slice(0, 2).join(' ')}<br />{homeData.precisionProcessTitle.split(' ').slice(2).join(' ')}</h2>
+                <div className="w-24 h-2 bg-red-600 mx-auto lg:mx-0" />
               </div>
 
-              <div className="space-y-10">
-                {[
-                  {
-                    title: "01. Vehicle Evaluation",
-                    desc: "We perform a thorough inspection of your vehicle's condition, identifying areas that need extra attention.",
-                    icon: <Clock className="w-6 h-6" />
-                  },
-                  {
-                    title: "02. Decontamination",
-                    desc: "Safe chemical and physical removal of iron particles, road tar, and embedded grime using pH-neutral soaps.",
-                    icon: <Droplets className="w-6 h-6" />
-                  },
-                  {
-                    title: "03. Precision Detailing",
-                    desc: "Painstaking care applied to every crack, crevice, and surface using high-end tools and professional techniques.",
-                    icon: <Zap className="w-6 h-6" />
-                  },
-                  {
-                    title: "04. Final Inspection",
-                    desc: "A meticulous multi-point check ensures everything meets our elite standards before we hand back the keys.",
-                    icon: <ShieldCheck className="w-6 h-6" />
-                  }
-                ].map((step, i) => (
-                  <div key={i} className="flex gap-6 group">
-                    <div className="flex-shrink-0 w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
-                      {step.icon}
-                    </div>
+              <div className="space-y-8">
+                {homeData.precisionProcessSteps?.map((item: any, i: number) => (
+                  <div key={i} className="flex gap-6 group hover:translate-x-2 transition-transform duration-300">
+                    <span className="text-4xl font-black text-red-600 italic tracking-tighter opacity-50">{item.step}</span>
                     <div className="space-y-1">
-                      <h4 className="text-xl font-bold uppercase tracking-tight">{step.title}</h4>
-                      <p className="text-zinc-500 leading-relaxed">{step.desc}</p>
+                      <h4 className="text-xl font-black uppercase italic tracking-tight">{item.name}</h4>
+                      <p className="text-zinc-400 text-sm leading-relaxed max-w-md">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -209,32 +198,27 @@ const Index = () => {
         </div>
       </section>
 
-      {/* SECTION 4: Mobile Detailing At Your Location */}
-      <section className="relative py-32 bg-zinc-900 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <img src={mobileVan} alt="Mobile Background" className="w-full h-full object-cover blur-sm" />
-        </div>
-        <div className="container mx-auto px-4 max-w-7xl relative z-10">
-          <div className="max-w-3xl space-y-8">
-            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none italic">
-              Elite Results. <br />
-              <span className="text-red-600">Delivered.</span>
-            </h2>
-            <div className="p-8 bg-black/40 backdrop-blur-md border-l-4 border-red-600 rounded-r-xl space-y-4">
-              <h3 className="text-2xl font-bold flex items-center gap-3">
-                <MapPin className="text-red-600 w-8 h-8" />
-                Mobile Service at Your Doorstep
-              </h3>
-              <p className="text-lg text-zinc-300 leading-relaxed">
-                Why waste your Saturday at a car wash? We bring our fully equipped mobile studio directly to your home or office. All we need is access to your vehicle—we handle the rest.
-              </p>
-              <div className="pt-4">
-                <Link to="/services">
-                  <Button size="lg" className="bg-red-600 hover:bg-red-700 font-bold uppercase tracking-widest px-10 h-14 rounded-full">
-                    Check Availability
-                  </Button>
-                </Link>
+      {/* SECTION 4: Elite Results. Delivered. */}
+      <section className="py-24 bg-white relative">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="bg-zinc-100 p-12 flex flex-col justify-center space-y-6">
+              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">{homeData.eliteResultsTitle.split(' ').slice(0, 2).join(' ')}<br />{homeData.eliteResultsTitle.split(' ').slice(2).join(' ')}</h2>
+              <p className="text-zinc-500 leading-relaxed text-lg">{homeData.eliteResultsText}</p>
+              <div className="flex gap-4 pt-4">
+                <div className="flex flex-col">
+                  <span className="text-3xl font-black italic tracking-tighter">500+</span>
+                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Vehicles Protected</span>
+                </div>
+                <div className="w-px h-12 bg-zinc-200" />
+                <div className="flex flex-col">
+                  <span className="text-3xl font-black italic tracking-tighter">100%</span>
+                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Client Satisfaction</span>
+                </div>
               </div>
+            </div>
+            <div className="h-[500px]">
+              <img src={proTools} alt="Professional Tools" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
@@ -244,8 +228,8 @@ const Index = () => {
       <section className="py-24 bg-zinc-50">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">Perfected for Every Driver</h2>
-            <p className="text-zinc-500 text-lg">Whether it's your daily commute or your weekend pride, we have a solution.</p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">{homeData.perfectedTitle}</h2>
+            <p className="text-zinc-500 text-lg">{homeData.perfectedSubtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -271,33 +255,64 @@ const Index = () => {
         </div>
       </section>
 
+      {/* SECTION 6: What Our Customers Say (Testimonials) */}
+      {testimonials.length > 0 && (
+        <section className="py-24 bg-white border-t border-zinc-100">
+          <div className="container mx-auto px-4 max-w-7xl">
+            <div className="text-center mb-16 space-y-4">
+              <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">What Our Customers Say</h2>
+              <p className="text-zinc-500 text-lg italic">Real stories from local vehicle owners.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {testimonials.map((t, i) => (
+                <Card key={i} className="p-8 bg-zinc-50 border-none shadow-sm flex flex-col justify-between transition-all hover:shadow-lg">
+                  <div className="space-y-4">
+                    <div className="flex text-yellow-500 gap-1">
+                      {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current" />)}
+                    </div>
+                    <p className="text-zinc-600 italic leading-relaxed">"{t.quote}"</p>
+                  </div>
+                  <div className="mt-8 flex items-center gap-4 border-t border-zinc-200 pt-6">
+                    <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                      {t.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-zinc-900 uppercase tracking-tighter text-lg">{t.name}</h4>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-black">Verified Client</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* SECTION 6: Call to Action */}
       <section className="py-32 bg-white flex justify-center">
         <div className="container mx-auto px-4 max-w-4xl text-center space-y-12">
-          <div className="space-y-4">
-            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
-              Protect, Restore, and <br />
-              <span className="text-red-600">Maintain Your Vehicle</span>
-            </h2>
-            <p className="text-xl text-zinc-500 max-w-2xl mx-auto">
-              Ready to experience the ultimate in automotive care? Choose your package and schedule your detail in seconds.
-            </p>
-            <div className="flex justify-center">
-              <Link to="/services">
-                <Button size="lg" className="group bg-zinc-900 hover:bg-red-600 text-white text-xl font-black uppercase tracking-tighter px-16 py-10 rounded-2xl transition-all duration-500 shadow-2xl hover:scale-[1.05]">
-                  View Our Detailing Services
-                  <ArrowRight className="ml-4 w-6 h-6 group-hover:translate-x-2 transition-transform" />
-                </Button>
-              </Link>
-            </div>
+          <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">Experience Pure<br /><span className="text-red-600">Perfection</span></h2>
+          <p className="text-zinc-500 text-xl font-medium max-w-2xl mx-auto italic">Your vehicle is one of your largest investments. Treat it with the respect it deserves.</p>
+          <div className="flex flex-col sm:flex-row gap-6 justify-center pt-8">
+            <Button size="lg" onClick={() => navigate("/services")} className="bg-red-600 hover:bg-zinc-900 text-white px-12 h-20 text-xl font-black uppercase italic tracking-tighter rounded-sm">Book Service Now</Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/contact")} className="border-4 border-zinc-900 px-12 h-20 text-xl font-black uppercase italic tracking-tighter rounded-sm group hover:bg-zinc-900 hover:text-white transition-all">Get a Quote <ArrowRight className="ml-2 w-6 h-6 group-hover:translate-x-2 transition-transform" /></Button>
           </div>
         </div>
       </section>
 
-      {/* Footer / Copyright */}
-      <footer className="py-12 border-t border-zinc-100 bg-white">
-        <div className="container mx-auto px-4 text-center text-zinc-400 text-xs uppercase tracking-widest font-bold">
-          © {new Date().getFullYear()} Prime Auto Detail • All Rights Reserved
+      {/* Footer Branding */}
+      <footer className="py-12 bg-zinc-950 text-white border-t border-zinc-900">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <h2 className="text-2xl font-black uppercase italic tracking-tighter">Prime Auto Detail</h2>
+            <p className="text-[10px] text-zinc-600 uppercase font-black tracking-[0.3em]">Precision. Protection. Perfection.</p>
+          </div>
+          <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+            <Link to="/about" className="hover:text-red-600 transition-colors">Our Story</Link>
+            <Link to="/portal" className="hover:text-red-600 transition-colors">Client Portal</Link>
+            <Link to="/services" className="hover:text-red-600 transition-colors">Maintenance</Link>
+          </div>
+          <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">© 2026 Prime Auto Detail. All Rights Reserved.</p>
         </div>
       </footer>
     </div>

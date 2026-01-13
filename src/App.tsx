@@ -89,6 +89,7 @@ import { ChatAudioAlert } from "@/components/chat/ChatAudioAlert";
 import { useLocation as useRouterLocation } from "react-router-dom";
 import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
 import ScrollToTop from "./components/ScrollToTop";
+import AvailabilityManager from "./pages/AvailabilityManager";
 
 const queryClient = new QueryClient();
 
@@ -394,6 +395,11 @@ const App = () => {
                     <Route path="/package-pricing" element={
                       <ProtectedRoute allowedRoles={['admin']}>
                         <PackagePricing />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/availability-manager" element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        <AvailabilityManager />
                       </ProtectedRoute>
                     } />
                     <Route path="/package-selection" element={

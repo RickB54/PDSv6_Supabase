@@ -19,8 +19,52 @@ import interiorLux2 from "@/assets/about/interior_lux_2.png";
 import interiorDashboard from "@/assets/about/interior_dashboard.png";
 import exteriorGloss from "@/assets/about/exterior_gloss.png";
 import exteriorWheels from "@/assets/about/exterior_wheels.png";
+import { contentService } from "@/lib/content";
+import { useEffect, useState } from "react";
 
 const About = () => {
+  const [sections, setSections] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [aboutData, setAboutData] = useState<any>({
+    heroBadge: 'Premium Craftsmanship',
+    heroTitle: 'About Prime Auto Detail',
+    heroSubtitle: 'Elevating automotive care through precision, passion, and a commitment to perfection. We don\'t just clean cars—we preserve investments.',
+    moreThanWashTitle: 'More Than a Car Wash',
+    moreThanWashSubtitle: 'Understanding the difference between cleaning and detailing.',
+    interiorRefreshTitle: 'Interior Refresh & Restoration',
+    interiorRefreshText: 'The cabin of your vehicle should be a sanctuary. Our interior detailing process goes beyond a simple wipe-down. We deep-clean every surface, extract deep-seated dirt from carpets, and condition leather to its original supple feel.',
+    interiorRefreshList: [
+      "Deep Steam Cleaning & Sanitization",
+      "Professional Carpet & Upholstery Extraction",
+      "Premium Leather Conditioning (Matte Finish)",
+      "Odor Elimination & Air Quality Improvement",
+      "Meticulous Cracks & Crevices Detail"
+    ],
+    exteriorCareTitle: 'Exterior Care That Protects',
+    exteriorCareText: 'Your paint is constantly under attack from UV rays, road salt, and environmental debris. We use multi-stage decontamination and professional polishing to restore clarity, followed by the best protective sealants in the industry.',
+    approachTitle: 'Our Approach',
+    approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.'
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [s, t, meta] = await Promise.all([
+          contentService.getAboutSections(),
+          contentService.getTestimonials(),
+          contentService.getServiceMeta('about_content')
+        ]);
+        setSections(s);
+        setTestimonials(t);
+        if (meta) setAboutData((prev: any) => ({ ...prev, ...meta }));
+      } catch { }
+    };
+    load();
+
+    const refresh = () => load();
+    window.addEventListener('content-changed', refresh);
+    return () => window.removeEventListener('content-changed', refresh);
+  }, []);
   return (
     <div className="min-h-screen bg-white text-zinc-900 font-sans selection:bg-blue-600 selection:text-white">
       <Navbar />
@@ -30,14 +74,18 @@ const About = () => {
         <div className="container mx-auto px-4 max-w-7xl relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-400 text-sm font-bold uppercase tracking-widest mb-8 animate-fade-in">
             <Award className="w-4 h-4" />
-            Premium Craftsmanship
+            {aboutData.heroBadge}
           </div>
           <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-6">
-            About <br />
-            <span className="text-blue-500">Prime Auto Detail</span>
+            {aboutData.heroTitle.split('<br />').map((text: string, i: number) => (
+              <span key={i}>
+                {text}
+                {i < aboutData.heroTitle.split('<br />').length - 1 && <br />}
+              </span>
+            ))}
           </h1>
           <p className="text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Elevating automotive care through precision, passion, and a commitment to perfection. We don't just clean cars—we preserve investments.
+            {aboutData.heroSubtitle}
           </p>
         </div>
         <div className="absolute inset-0 opacity-40">
@@ -56,12 +104,23 @@ const About = () => {
                 Who We Are
               </h2>
               <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
-                <p>
-                  Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash."
-                </p>
-                <p>
-                  Our focus is on <strong>quality over quantity</strong>. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We aren't in the business of hurried automated services; we are in the business of precision detailing and long-term vehicle preservation.
-                </p>
+                {sections.length > 0 ? (
+                  sections.map((s, i) => (
+                    <div key={i} className="space-y-4">
+                      {s.section_title && <h3 className="text-xl font-bold text-blue-800">{s.section_title}</h3>}
+                      <p>{s.content}</p>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <p>
+                      Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash."
+                    </p>
+                    <p>
+                      Our focus is on <strong>quality over quantity</strong>. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We aren't in the business of hurried automated services; we are in the business of precision detailing and long-term vehicle preservation.
+                    </p>
+                  </>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-8 pt-4">
                 <div className="space-y-2">
@@ -86,8 +145,8 @@ const About = () => {
       <section className="py-24 bg-blue-50/50">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter">More Than a Car Wash</h2>
-            <p className="text-zinc-500 max-w-2xl mx-auto text-lg">Understanding the difference between cleaning and detailing.</p>
+            <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter">{aboutData.moreThanWashTitle}</h2>
+            <p className="text-zinc-500 max-w-2xl mx-auto text-lg">{aboutData.moreThanWashSubtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -132,20 +191,13 @@ const About = () => {
             </div>
             <div className="lg:w-1/2 lg:order-1 space-y-8 text-left">
               <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
-                Interior Refresh <br />
-                <span className="text-red-600">& Restoration</span>
+                {aboutData.interiorRefreshTitle}
               </h2>
               <p className="text-lg text-zinc-600 leading-relaxed">
-                The cabin of your vehicle should be a sanctuary. Our interior detailing process goes beyond a simple wipe-down. We deep-clean every surface, extract deep-seated dirt from carpets, and condition leather to its original supple feel.
+                {aboutData.interiorRefreshText}
               </p>
               <ul className="space-y-4">
-                {[
-                  "Deep Steam Cleaning & Sanitization",
-                  "Professional Carpet & Upholstery Extraction",
-                  "Premium Leather Conditioning (Matte Finish)",
-                  "Odor Elimination & Air Quality Improvement",
-                  "Meticulous Cracks & Crevices Detail"
-                ].map((item, i) => (
+                {aboutData.interiorRefreshList?.map((item: string, i: number) => (
                   <li key={i} className="flex items-center gap-3 font-bold uppercase text-xs tracking-widest text-blue-900">
                     <CheckCircle2 className="w-4 h-4 text-blue-600" />
                     {item}
@@ -169,11 +221,10 @@ const About = () => {
             </div>
             <div className="lg:w-1/2 space-y-8">
               <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
-                Exterior Care <br />
-                <span className="text-blue-500">That Protects</span>
+                {aboutData.exteriorCareTitle}
               </h2>
               <p className="text-lg text-zinc-600 leading-relaxed">
-                Your paint is constantly under attack from UV rays, road salt, and environmental debris. We use multi-stage decontamination and professional polishing to restore clarity, followed by the best protective sealants in the industry.
+                {aboutData.exteriorCareText}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
@@ -197,10 +248,10 @@ const About = () => {
       <section className="py-24 bg-white">
         <div className="container mx-auto px-4 max-w-5xl text-center">
           <div className="space-y-6 mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter">Our Approach</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter">{aboutData.approachTitle}</h2>
             <div className="w-24 h-1.5 bg-red-600 mx-auto" />
             <p className="text-lg text-zinc-500 leading-relaxed italic max-w-3xl mx-auto">
-              Our philosophy is simple: Education first, upsell never. We evaluate your vehicle's specific condition and tailor our techniques to provide the best possible results without unnecessary additives.
+              {aboutData.approachText}
             </p>
           </div>
 
@@ -226,6 +277,39 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      {/* SECTION 6: What Our Customers Say (Testimonials) */}
+      {testimonials.length > 0 && (
+        <section className="py-24 bg-zinc-50">
+          <div className="container mx-auto px-4 max-w-7xl">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter">What Our Customers Say</h2>
+              <p className="text-zinc-500 mt-4 text-lg">Real feedback from satisfied clients.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {testimonials.map((t, i) => (
+                <Card key={i} className="p-8 bg-white border-blue-50 shadow-sm flex flex-col justify-between">
+                  <div className="space-y-4 text-left">
+                    <div className="flex text-yellow-400 gap-1">
+                      {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+                    </div>
+                    <p className="text-zinc-600 italic leading-relaxed">"{t.quote}"</p>
+                  </div>
+                  <div className="mt-8 flex items-center gap-4 border-t border-zinc-100 pt-6">
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                      {t.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-blue-900 text-sm uppercase">{t.name}</h4>
+                      <p className="text-xs text-zinc-400 uppercase tracking-widest font-black">Verified Customer</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-24 bg-blue-900 text-white text-center flex flex-col items-center">

@@ -75,44 +75,44 @@ const BRANDED_PACKAGES = [
     {
         id: "prime-essential-interior",
         name: "Prime Essential Interior",
-        actualId: "interior-cleaning",
-        description: "Maintenance-level interior detail",
-        script: "Our Prime Essential Interior is perfect for vehicles that just need a refresh. We do a deep vacuum, wipe down all surfaces, and clean the windows to give it that maintenance-level clean without the deep restoration price."
+        actualId: "prime-essential-interior",
+        description: "Interior Refresh (1.5 – 3 hours)",
+        script: "Our Prime Essential Interior is designed for a fast, high-quality refresh. It's perfect for vehicles that aren't heavily soiled but need a professional tidy-up with a deep vacuum and complete surface wipe-down."
     },
     {
         id: "prime-essential-exterior",
         name: "Prime Essential Exterior",
-        actualId: "express-wax",
-        description: "Maintenance-level exterior wash & wax",
-        script: "The Essential Exterior is our maintenance wash and wax. It removes road grime and applies a protective spray wax to keep your paint shielded and shiny between full details."
+        actualId: "prime-essential-exterior",
+        description: "Exterior Foam Wash (45 – 90 mins)",
+        script: "The Essential Exterior is our safest maintenance wash. We use a foam pre-soak, two-bucket hand wash, and apply a premium sealant to enhance shine and protect the paint from the elements."
     },
     {
         id: "prime-essential-full",
         name: "Prime Essential Full",
-        actualId: "full-detail",
-        description: "Maintenance-level full detail",
-        script: "The Essential Full combines our maintenance interior and exterior services. It's the best way to keep a well-maintained vehicle looking its best on a regular schedule."
+        actualId: "prime-essential-full",
+        description: "Full Maintenance Detail (2.5 – 4 hours)",
+        script: "The Essential Full Detail is our most popular maintenance-level package. It's perfect for vehicles that are in relatively good condition but need that professional deep-clean feel, both inside and out."
     },
     {
         id: "prime-elite-interior",
         name: "Prime Elite Interior",
-        actualId: "interior-cleaning",
-        description: "Deeper interior restoration",
-        script: "Our Prime Elite Interior is a deep restoration service. We go beyond a simple wipe-down, deep cleaning every crevice, treating the leather, and extracting dirt from carpets to bring your interior back to a like-new condition."
+        actualId: "prime-elite-interior",
+        description: "Interior Restoration (3.5 – 5 hours)",
+        script: "Our Prime Elite Interior is built for restoration. If the interior hasn't been deep-cleaned in a while, we use steam cleaning and full extraction to lift deep-seated dirt from carpets and seats, bringing it back to a showroom finish."
     },
     {
         id: "prime-elite-exterior",
         name: "Prime Elite Exterior",
-        actualId: "full-exterior",
-        description: "Decon & deep exterior protection",
-        script: "The Elite Exterior is for those who want serious paint protection. It includes a full clay bar decontamination to remove embedded grit, followed by a high-grade sealant that provides months of protection and a deep, mirror-like gloss."
+        actualId: "prime-elite-exterior",
+        description: "Decon & Protection (2.5 – 4 hours)",
+        script: "The Elite Exterior is where we focus on paint decontamination and deep protection. We use a clay bar to remove embedded grit and apply a ceramic-based sealant for a mirrored gloss and months of durable protection."
     },
     {
         id: "prime-elite-full",
         name: "Prime Elite Full",
-        actualId: "premium-detail",
-        description: "The ultimate detailing experience",
-        script: "The Prime Elite Full is our ultimate detailing experience. It combines our deepest interior restoration with our highest-level exterior protection. It's designed for those who want their vehicle to look as close to showroom condition as possible."
+        actualId: "prime-elite-full",
+        description: "The Ultimate Experience (4.5 – 6 hours)",
+        script: "The Prime Elite Full is our flagship showroom package. It's the ultimate combination of deep interior restoration and high-level exterior protection. We detail every inch to ensure the vehicle is returned in the best possible condition."
     },
 ];
 

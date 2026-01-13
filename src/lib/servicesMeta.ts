@@ -23,6 +23,10 @@ const CUSTOM_PKGS_KEY = 'customServicePackages';
 const CUSTOM_ADDONS_KEY = 'customAddOns';
 const CUSTOM_SERVICES_KEY = 'customServices';
 
+const LEGACY_PKG_IDS = [
+  'basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'
+];
+
 function loadMap<T>(key: string): Record<string, T> {
   try { return JSON.parse(localStorage.getItem(key) || '{}') as Record<string, T>; } catch { return {}; }
 }
@@ -32,7 +36,14 @@ function saveMap<T>(key: string, map: Record<string, T>) {
 
 export function getPackageMeta(id: string): PackageMeta | undefined {
   const all = loadMap<PackageMeta>(PKG_META_KEY);
-  return all[id];
+  if (all[id]) return all[id];
+
+  // Default for legacy 2025 packages is hidden (Archived)
+  if (LEGACY_PKG_IDS.includes(id)) {
+    return { id, visible: false };
+  }
+
+  return undefined;
 }
 export function setPackageMeta(id: string, meta: Partial<PackageMeta>) {
   const all = loadMap<PackageMeta>(PKG_META_KEY);
@@ -41,7 +52,16 @@ export function setPackageMeta(id: string, meta: Partial<PackageMeta>) {
   saveMap(PKG_META_KEY, all);
 }
 export function getAllPackageMeta(): Record<string, PackageMeta> {
-  return loadMap<PackageMeta>(PKG_META_KEY);
+  const all = loadMap<PackageMeta>(PKG_META_KEY);
+
+  // Ensure legacy packages are included with hidden status if not explicitly overridden
+  LEGACY_PKG_IDS.forEach(id => {
+    if (all[id] === undefined) {
+      all[id] = { id, visible: false };
+    }
+  });
+
+  return all;
 }
 
 export function getAddOnMeta(id: string): AddOnMeta | undefined {

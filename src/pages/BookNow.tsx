@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle } from "lucide-react"; // Renamed Calendar icon
+import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle, Check, CreditCard, ChevronRight, ArrowRight } from "lucide-react"; // Merged icons
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
@@ -29,9 +29,12 @@ import { upsertSupabaseEstimate } from "@/lib/supa-data";
 import { contentService } from "@/lib/content";
 import { getCurrentUser } from "@/lib/auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar"; // Actual Calendar component
+// Calendar component import removed (replaced by AvailabilityPicker)
+import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getServiceDuration } from "@/lib/services";
+import { formatTimeAMPM } from "@/lib/availability";
 
 const BookNow = () => {
   const { toast } = useToast();
@@ -42,6 +45,8 @@ const BookNow = () => {
   const urlPrice = parseFloat(urlParams.get('price') || '') || 0;
   const urlVehicle = urlParams.get('vehicle') || '';
   const urlDistance = parseFloat(urlParams.get('distance') || '0');
+  const urlDateStr = urlParams.get('date');
+  const urlTimeStr = urlParams.get('time');
   const urlDestFee = parseFloat(urlParams.get('destinationFee') || '0');
 
   const [formData, setFormData] = useState({
@@ -54,7 +59,7 @@ const BookNow = () => {
     year: "",
     datetime: "",
     package: urlPackage || "",
-    message: "",
+    message: urlTimeStr ? `Preferred Time: ${urlTimeStr}` : "",
     conditionInside: "",
     conditionOutside: ""
   });
@@ -73,7 +78,33 @@ const BookNow = () => {
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [couponError, setCouponError] = useState<string>('');
   const [showCouponField, setShowCouponField] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState<Date | undefined>(() => {
+    if (!urlDateStr) return undefined;
+    const parts = urlDateStr.split('-').map(Number);
+    if (parts.length !== 3) return undefined;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  });
+
+  const [selectedTime, setSelectedTime] = useState(() => {
+    if (!urlTimeStr) return '';
+    const match = urlTimeStr.match(/(\d+):(\d+)\s?(AM|PM)/i);
+    if (match) {
+      let [_, h, m, ap] = match;
+      let hour = parseInt(h);
+      if (ap.toUpperCase() === 'PM' && hour < 12) hour += 12;
+      if (ap.toUpperCase() === 'AM' && hour === 12) hour = 0;
+      return `${hour.toString().padStart(2, '0')}:${m}:00`;
+    }
+    return '';
+  });
+
+  // Map bookings for AvailabilityPicker
+  const mappedBookings = allBookings.map(b => ({
+    scheduled_at: b.date,
+    estimated_duration: b.endTime
+      ? (new Date(b.endTime).getTime() - new Date(b.date).getTime()) / (1000 * 60 * 60)
+      : 3
+  }));
 
   // Live pricing + meta state
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
@@ -277,15 +308,16 @@ const BookNow = () => {
       .map(([id, name]) => [id as string, { id: id as string, name: name as string }])
   );
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
+  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
 
   const visibleBuiltIns = builtInPackages.filter(p => (packageMetaLive[p.id]?.visible) !== false && !packageMetaLive[p.id]?.deleted);
   const visibleCustomPkgs = customPackagesLive.filter((p: any) => (packageMetaLive[p.id]?.visible) !== false && !packageMetaLive[p.id]?.deleted);
   const livePackages = [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
     const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing.compact,
-      midsize: parseFloat(savedPricesLive[getKey('package', p.id, 'midsize')]) || p.pricing.midsize,
-      truck: parseFloat(savedPricesLive[getKey('package', p.id, 'truck')]) || p.pricing.truck,
-      luxury: parseFloat(savedPricesLive[getKey('package', p.id, 'luxury')]) || p.pricing.luxury,
+      compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing?.compact || 0,
+      midsize: parseFloat(savedPricesLive[getKey('package', p.id, 'midsize')]) || p.pricing?.midsize || 0,
+      truck: parseFloat(savedPricesLive[getKey('package', p.id, 'truck')]) || p.pricing?.truck || 0,
+      luxury: parseFloat(savedPricesLive[getKey('package', p.id, 'luxury')]) || p.pricing?.luxury || 0,
     };
     // bring in any dynamically seeded vehicle-type pricing
     Object.keys(savedPricesLive).forEach((k) => {
@@ -293,7 +325,7 @@ const BookNow = () => {
       if (k.startsWith(prefix)) {
         const veh = k.slice(prefix.length);
         const val = parseFloat(savedPricesLive[k]);
-        if (!Number.isNaN(val)) pricing[veh] = val;
+        if (!Number.isNaN(val) && val > 0) pricing[veh] = val;
       }
     });
     const metaSteps: string[] | undefined = packageMetaLive[p.id]?.stepIds;
@@ -307,10 +339,10 @@ const BookNow = () => {
   const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
   const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
     const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing.compact,
-      midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing.midsize,
-      truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing.truck,
-      luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing.luxury,
+      compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing?.compact || 0,
+      midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing?.midsize || 0,
+      truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing?.truck || 0,
+      luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing?.luxury || 0,
     };
     Object.keys(savedPricesLive).forEach((k) => {
       const prefix = `addon:${a.id}:`;
@@ -438,7 +470,14 @@ const BookNow = () => {
     } catch { }
 
     // 1) Save booking to API and local store for instant calendar
-    const dateIso = date ? date.toISOString() : new Date().toISOString();
+    let submissionDate = date ? new Date(date) : new Date();
+
+    if (selectedTime && date) {
+      const [h, m] = selectedTime.split(':').map(Number);
+      submissionDate.setHours(h, m, 0, 0);
+    }
+
+    const dateIso = submissionDate.toISOString();
 
     const finalNotes = formData.message || "";
 
@@ -802,220 +841,197 @@ const BookNow = () => {
                   Select Preferred Date
                 </h3>
 
-                <div className="flex flex-col md:flex-row gap-8 items-start">
-                  <Card className="p-4 bg-blue-50/95 border-2 border-blue-400/30 shadow-xl mx-auto md:mx-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      className="rounded-md border-0 bg-transparent text-blue-950"
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      modifiers={{
-                        booked: (date) => {
-                          const dStr = format(date, 'yyyy-MM-dd');
-                          return allBookings.some(b => b.date.startsWith(dStr) && b.status !== 'blocked');
-                        }
-                      }}
-                      modifiersStyles={{
-                        booked: { fontWeight: 'bold', color: '#1e40af', borderBottom: '2px solid #1e40af' }
-                      }}
+                <div className="flex flex-col gap-6">
+                  <div className="w-full bg-white p-4 rounded-lg shadow-sm border border-zinc-200">
+                    <AvailabilityPicker
+                      selectedDate={date}
+                      selectedTime={selectedTime}
+                      onDateChange={setDate}
+                      onTimeChange={setSelectedTime}
+                      existingBookings={mappedBookings}
+                      serviceDuration={getServiceDuration(formData.package)}
                     />
-                  </Card>
+                  </div>
 
-                  <div className="flex-1 space-y-4">
-                    <div className="p-4 bg-blue-100/30 border border-blue-200/50 rounded-lg">
-                      <p className="text-sm font-medium text-blue-900 mb-1">📅 Why pick a date?</p>
-                      <p className="text-xs text-blue-800/80 leading-relaxed">
-                        Selecting a date helps us check availability. All bookings are <span className="text-blue-600 font-bold underline">requests pending confirmation</span>. Rick will contact you to finalize the exact time.
-                      </p>
+                  <div className="p-4 bg-blue-100/30 border border-blue-200/50 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <Label htmlFor="message" className="font-bold text-blue-900 uppercase text-xs tracking-wider">Special Requests / Notes</Label>
+                      {date && <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded">{format(date, 'EEEE, LLLL do, yyyy')} {selectedTime ? `@ ${formatTimeAMPM(selectedTime)}` : ''}</span>}
                     </div>
-
-                    {date && (
-                      <div className="p-4 bg-blue-600 border border-blue-500 rounded-lg animate-in fade-in slide-in-from-left-2 transition-all shadow-lg shadow-blue-500/20">
-                        <p className="text-sm font-bold text-white/80 mb-1 uppercase tracking-tight">Selected Date</p>
-                        <p className="text-lg font-black text-white">{format(date, 'EEEE, LLLL do, yyyy')}</p>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label htmlFor="message" className="text-blue-900 font-bold">Special Requests or Specific Timing (Optional)</Label>
-                      <div className="bg-blue-50/95 p-3 rounded-lg border-2 border-blue-400/30">
-                        <Textarea
-                          id="message"
-                          placeholder="e.g., Morning appointment preferred, parking details, etc."
-                          value={formData.message}
-                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                          rows={3}
-                          className="bg-transparent border-0 text-blue-950 placeholder:text-blue-400 focus-visible:ring-0 min-h-[80px]"
-                        />
-                      </div>
-                    </div>
+                    <Textarea
+                      id="message"
+                      placeholder="Any specific concerns? (e.g. stains, pet hair...)"
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      className="min-h-[120px] bg-white border-blue-200 focus:border-blue-500"
+                    />
                   </div>
                 </div>
+
               </div>
+            </div>
 
 
 
 
 
-              {/* === IMPROVED COUPON PLACEMENT === */}
-              <div className="pt-4">
-                {!showCouponField ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowCouponField(true)}
-                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
-                  >
-                    <Tag className="w-3.5 h-3.5" />
-                    Have a promo code?
-                  </button>
-                ) : (
-                  <div className="space-y-3 p-4 bg-zinc-900/30 border border-zinc-800 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        placeholder="Enter promo code"
-                        className="h-10 bg-black border-zinc-700 text-sm focus:border-primary uppercase"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
-                      />
-                      <Button
-                        className="h-10 px-4 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase transition-all"
-                        type="button"
-                        onClick={applyCoupon}
-                      >
-                        Apply
-                      </Button>
-                    </div>
-                    {appliedDiscount > 0 && (
-                      <div className="text-green-400 font-bold text-xs flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        {appliedCouponCode} applied! You saved ${appliedDiscount.toFixed(2)}
-                      </div>
-                    )}
-                    {couponError && (
-                      <div className="text-red-400 font-semibold text-xs flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {couponError}
-                      </div>
-                    )}
+            {/* === IMPROVED COUPON PLACEMENT === */}
+            <div className="pt-4">
+              {!showCouponField ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCouponField(true)}
+                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  Have a promo code?
+                </button>
+              ) : (
+                <div className="space-y-3 p-4 bg-zinc-900/30 border border-zinc-800 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter promo code"
+                      className="h-10 bg-black border-zinc-700 text-sm focus:border-primary uppercase"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                    />
+                    <Button
+                      className="h-10 px-4 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase transition-all"
+                      type="button"
+                      onClick={applyCoupon}
+                    >
+                      Apply
+                    </Button>
                   </div>
-                )}
-              </div>
+                  {appliedDiscount > 0 && (
+                    <div className="text-green-400 font-bold text-xs flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      {appliedCouponCode} applied! You saved ${appliedDiscount.toFixed(2)}
+                    </div>
+                  )}
+                  {couponError && (
+                    <div className="text-red-400 font-semibold text-xs flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {couponError}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-              {/* Estimated total */}
-              <div className="flex items-center justify-between p-4 border border-border rounded-md">
-                <div className="text-sm text-muted-foreground">Estimated Total</div>
-                <div className="text-xl font-bold text-foreground">${discountedTotal}</div>
-              </div>
+            {/* Estimated total */}
+            <div className="flex items-center justify-between p-4 border border-border rounded-md">
+              <div className="text-sm text-muted-foreground">Estimated Total</div>
+              <div className="text-xl font-bold text-foreground">${discountedTotal}</div>
+            </div>
 
-              <Button type="submit" className="w-full bg-gradient-hero text-lg py-7 font-black uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-transform" disabled={isSubmitting}>
-                {isSubmitting ? "Processing..." : "Schedule My Detail"}
-              </Button>
+            <Button type="submit" className="w-full bg-gradient-hero text-lg py-7 font-black uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-transform" disabled={isSubmitting}>
+              {isSubmitting ? "Processing..." : "Schedule My Detail"}
+            </Button>
 
-              {/* New: Separate Estimate and Payment actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full py-6"
-                  onClick={async () => {
-                    try {
-                      const dateIso = date ? date.toISOString() : new Date().toISOString();
+            {/* New: Separate Estimate and Payment actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full py-6"
+                onClick={async () => {
+                  try {
+                    const dateIso = date ? date.toISOString() : new Date().toISOString();
 
-                      // Construct Services List for Estimate
-                      const selectedPkg = livePackages.find((p: any) => p.id === formData.package);
-                      const servicesList = [];
-                      if (selectedPkg) {
-                        servicesList.push({ name: selectedPkg.name, price: selectedPkg.pricing[vehicleType] || 0 });
-                      }
-                      addOns.forEach(id => {
-                        const addon = liveAddOns.find((a: any) => a.id === id);
-                        if (addon) {
-                          servicesList.push({ name: addon.name, price: addon.pricing[vehicleType] || 0 });
-                        }
-                      });
-
-                      // Save to Supabase
-                      await upsertSupabaseEstimate({
-                        date: new Date().toLocaleDateString(),
-                        status: 'open',
-                        total: discountedTotal,
-                        services: servicesList,
-                        notes: formData.message,
-                        customer: {
-                          name: formData.name,
-                          email: formData.email,
-                          phone: formData.phone,
-                          type: 'prospect'
-                        },
-                        vehicle: {
-                          year: formData.year,
-                          make: formData.make,
-                          model: formData.model,
-                          type: vehicleType
-                        }
-                      } as any);
-
-                      const estimatePayload = {
-                        kind: 'estimate-request',
-                        customer: { name: formData.name, email: formData.email, phone: formData.phone },
-                        vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
-                        package: formData.package,
-                        addOns,
-                        preferredDate: dateIso,
-                        notes: formData.message,
-                      };
-
-                      // 1. Send email (simulated locally)
-                      await api('/api/email/admin', { method: 'POST', body: JSON.stringify(estimatePayload) });
-
-                      // 2. Generate PDF and save to File Manager
-                      const pdfDataUrl = generateBookingPDF({
-                        id: `est_${Date.now()}`,
-                        customer: formData.name,
-                        date: dateIso,
-                        title: "Estimate Request",
-                        status: "pending"
-                      } as any, {
-                        vehicle: `${formData.year} ${formData.make} ${formData.model}`,
-                        service: `Estimate: ${formData.package}`,
-                        price: discountedTotal,
-                        notes: formData.message
-                      });
-
-                      const d = new Date();
-                      const year = d.getFullYear();
-                      const monthName = d.toLocaleString(undefined, { month: 'long' });
-                      const path = `Estimates/${year}/${monthName}/`;
-
-                      savePDFToArchive(
-                        "Estimate",
-                        formData.name,
-                        `est_${Date.now()}`,
-                        pdfDataUrl,
-                        { fileName: `Estimate_${formData.name.replace(/\s/g, '_')}_${Date.now()}.pdf`, path }
-                      );
-
-                      toast({ title: "Your estimate request has been sent.", description: "Rick will reach out to confirm.", duration: 4000 });
-                    } catch (err) {
-                      console.error("Estimate error:", err);
-                      toast({ title: "Error sending estimate", description: "Please try again or contact us directly.", variant: "destructive", duration: 4000 });
+                    // Construct Services List for Estimate
+                    const selectedPkg = livePackages.find((p: any) => p.id === formData.package);
+                    const servicesList = [];
+                    if (selectedPkg) {
+                      servicesList.push({ name: selectedPkg.name, price: selectedPkg.pricing[vehicleType] || 0 });
                     }
-                  }}
-                >
-                  Schedule an Estimate
-                </Button>
-                {/* Checkout removed */}
-                <Button
-                  type="button"
-                  className="w-full bg-primary text-primary-foreground py-6"
-                  asChild
-                >
-                  <Link to="/checkout">Make a Payment / Checkout</Link>
-                </Button>
-              </div>
+                    addOns.forEach(id => {
+                      const addon = liveAddOns.find((a: any) => a.id === id);
+                      if (addon) {
+                        servicesList.push({ name: addon.name, price: addon.pricing[vehicleType] || 0 });
+                      }
+                    });
+
+                    // Save to Supabase
+                    await upsertSupabaseEstimate({
+                      date: new Date().toLocaleDateString(),
+                      status: 'open',
+                      total: discountedTotal,
+                      services: servicesList,
+                      notes: formData.message,
+                      customer: {
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        type: 'prospect'
+                      },
+                      vehicle: {
+                        year: formData.year,
+                        make: formData.make,
+                        model: formData.model,
+                        type: vehicleType
+                      }
+                    } as any);
+
+                    const estimatePayload = {
+                      kind: 'estimate-request',
+                      customer: { name: formData.name, email: formData.email, phone: formData.phone },
+                      vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
+                      package: formData.package,
+                      addOns,
+                      preferredDate: dateIso,
+                      notes: formData.message,
+                    };
+
+                    // 1. Send email (simulated locally)
+                    await api('/api/email/admin', { method: 'POST', body: JSON.stringify(estimatePayload) });
+
+                    // 2. Generate PDF and save to File Manager
+                    const pdfDataUrl = generateBookingPDF({
+                      id: `est_${Date.now()}`,
+                      customer: formData.name,
+                      date: dateIso,
+                      title: "Estimate Request",
+                      status: "pending"
+                    } as any, {
+                      vehicle: `${formData.year} ${formData.make} ${formData.model}`,
+                      service: `Estimate: ${formData.package}`,
+                      price: discountedTotal,
+                      notes: formData.message
+                    });
+
+                    const d = new Date();
+                    const year = d.getFullYear();
+                    const monthName = d.toLocaleString(undefined, { month: 'long' });
+                    const path = `Estimates/${year}/${monthName}/`;
+
+                    savePDFToArchive(
+                      "Estimate",
+                      formData.name,
+                      `est_${Date.now()}`,
+                      pdfDataUrl,
+                      { fileName: `Estimate_${formData.name.replace(/\s/g, '_')}_${Date.now()}.pdf`, path }
+                    );
+
+                    toast({ title: "Your estimate request has been sent.", description: "Rick will reach out to confirm.", duration: 4000 });
+                  } catch (err) {
+                    console.error("Estimate error:", err);
+                    toast({ title: "Error sending estimate", description: "Please try again or contact us directly.", variant: "destructive", duration: 4000 });
+                  }
+                }}
+              >
+                Schedule an Estimate
+              </Button>
+              {/* Checkout removed */}
+              <Button
+                type="button"
+                className="w-full bg-primary text-primary-foreground py-6"
+                asChild
+              >
+                <Link to="/checkout">Make a Payment / Checkout</Link>
+              </Button>
             </div>
           </form>
         </Card>

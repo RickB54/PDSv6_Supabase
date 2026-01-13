@@ -13,11 +13,15 @@ import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { contentService } from "@/lib/content";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { useCartStore } from "@/store/cart";
 import { useToast } from "@/hooks/use-toast";
 import { Check, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
+import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { formatTimeAMPM } from "@/lib/availability";
+import { useBookingsStore } from "@/store/bookings";
 import packageBasic from "@/assets/package-basic.jpg";
 import packageExpress from "@/assets/package-express.jpg";
 import packageExterior from "@/assets/package-exterior.jpg";
@@ -25,7 +29,23 @@ import packageInterior from "@/assets/package-interior.jpg";
 import packageFull from "@/assets/package-full.jpg";
 import packagePremium from "@/assets/package-premium.jpg";
 
+// 2026 Package Images (Using 2025 Collection for Essential)
+import primeEssentialExt from "@/assets/prime_essential_exterior_2025.png";
+import primeEssentialInt from "@/assets/prime_essential_interior_2025.png";
+import primeEssentialFull from "@/assets/prime_essential_full_2025.png";
+// Elite packages use placeholders or reuse until more generated
+import primeEliteExt from "@/assets/prime_essential_exterior.png";
+import primeEliteInt from "@/assets/prime_essential_interior.png";
+import primeEliteFull from "@/assets/prime_essential_full_detail.png";
+
 const packageImages: Record<string, string> = {
+  "prime-essential-exterior": primeEssentialExt,
+  "prime-essential-interior": primeEssentialInt,
+  "prime-essential-full": primeEssentialFull,
+  "prime-elite-exterior": primeEliteExt,
+  "prime-elite-interior": primeEliteInt,
+  "prime-elite-full": primeEliteFull,
+  // Keep legacy for backward compatibility if any are actually made visible
   "basic-exterior": packageBasic,
   "express-wax": packageExpress,
   "full-exterior": packageExterior,
@@ -34,8 +54,24 @@ const packageImages: Record<string, string> = {
   "premium-detail": packagePremium,
 };
 
+// Helper for estimated duration
+const getServiceDuration = (id: string = '') => {
+  if (id.includes('prime-elite-full')) return 6;
+  if (id.includes('prime-elite-interior')) return 4;
+  if (id.includes('prime-elite-exterior')) return 3;
+  if (id.includes('prime-essential-full')) return 4;
+  if (id.includes('prime-essential-interior')) return 2.5;
+  if (id.includes('prime-essential-exterior')) return 2;
+  return 3;
+};
+
 const CustomerPortal = () => {
   const navigate = useNavigate();
+  // ... (rest of hook calls)
+
+  // ... (skip down to AvailabilityPicker) ...
+  // Instead of replacing the whole file, I will target specific blocks. 
+  // This replacement is tricky due to size. I'll handle getDuration separately.
   const { toast } = useToast();
   const addToCart = useCartStore((s) => s.addItem);
   const [vehicleType, setVehicleType] = useState<string>('compact');
@@ -52,6 +88,11 @@ const CustomerPortal = () => {
   const [addOnsExpanded, setAddOnsExpanded] = useState(false);
   const [learnMorePackage, setLearnMorePackage] = useState<any | null>(null);
   const [showClassification, setShowClassification] = useState(false);
+
+  // Availability picker state
+  const [availDate, setAvailDate] = useState<Date | undefined>(undefined);
+  const [availTime, setAvailTime] = useState('');
+  const { items: allBookings } = useBookingsStore();
 
   // Sequential Step Blinking Logic
   const [vehicleInteracted, setVehicleInteracted] = useState(false);
@@ -81,31 +122,39 @@ const CustomerPortal = () => {
       try {
         const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
 
-        const newPackageMeta: Record<string, any> = {};
+        const newPackageMeta: Record<string, any> = { ...getAllPackageMeta() };
         const newSavedPrices: Record<string, string> = {};
 
         pkgs.forEach((p: any) => {
-          newPackageMeta[p.id] = {
+          const id = p.id;
+          // Preserve existing meta (like locally saved fields) but update from DB
+          newPackageMeta[id] = {
+            ...(newPackageMeta[id] || {}),
+            id,
             visible: p.is_active !== false,
-            deleted: false
+            deleted: false,
+            imageDataUrl: p.image_url || newPackageMeta[id]?.imageDataUrl || ""
           };
-          // Map prices
-          newSavedPrices[`package:${p.id}:compact`] = String(p.compact_price || 0);
-          newSavedPrices[`package:${p.id}:midsize`] = String(p.midsize_price || 0);
-          newSavedPrices[`package:${p.id}:truck`] = String(p.truck_price || 0);
-          newSavedPrices[`package:${p.id}:luxury`] = String(p.luxury_price || 0);
+          // Map prices to the live sync map
+          if (p.compact_price != null) newSavedPrices[`package:${id}:compact`] = String(p.compact_price);
+          if (p.midsize_price != null) newSavedPrices[`package:${id}:midsize`] = String(p.midsize_price);
+          if (p.truck_price != null) newSavedPrices[`package:${id}:truck`] = String(p.truck_price);
+          if (p.luxury_price != null) newSavedPrices[`package:${id}:luxury`] = String(p.luxury_price);
         });
 
         const newAddOnMeta: Record<string, any> = {};
         addons.forEach((a: any) => {
-          newAddOnMeta[a.id] = {
+          const id = a.id;
+          newAddOnMeta[id] = {
+            ...(newAddOnMeta[id] || {}),
+            id,
             visible: a.is_active !== false,
             deleted: false
           };
-          newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);
-          newSavedPrices[`addon:${a.id}:midsize`] = String(a.midsize_price || 0);
-          newSavedPrices[`addon:${a.id}:truck`] = String(a.truck_price || 0);
-          newSavedPrices[`addon:${a.id}:luxury`] = String(a.luxury_price || 0);
+          if (a.compact_price != null) newSavedPrices[`addon:${id}:compact`] = String(a.compact_price);
+          if (a.midsize_price != null) newSavedPrices[`addon:${id}:midsize`] = String(a.midsize_price);
+          if (a.truck_price != null) newSavedPrices[`addon:${id}:truck`] = String(a.truck_price);
+          if (a.luxury_price != null) newSavedPrices[`addon:${id}:luxury`] = String(a.luxury_price);
         });
 
         setPackageMetaLive(newPackageMeta);
@@ -197,6 +246,8 @@ const CustomerPortal = () => {
   }, []);
 
   // Build live packages and add-ons arrays
+  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
+
   const allBuiltInSteps: Record<string, { id: string; name: string }> = Object.fromEntries(
     builtInPackages.flatMap(p => p.steps.map(s => [typeof s === 'string' ? s : s.id, typeof s === 'string' ? s : s.name]))
       .map(([id, name]) => [id as string, { id: id as string, name: name as string }])
@@ -207,17 +258,17 @@ const CustomerPortal = () => {
   const visibleCustomPkgs = customPackagesLive.filter((p: any) => (packageMetaLive[p.id]?.visible) !== false);
   const livePackages = [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
     const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing.compact,
-      midsize: parseFloat(savedPricesLive[getKey('package', p.id, 'midsize')]) || p.pricing.midsize,
-      truck: parseFloat(savedPricesLive[getKey('package', p.id, 'truck')]) || p.pricing.truck,
-      luxury: parseFloat(savedPricesLive[getKey('package', p.id, 'luxury')]) || p.pricing.luxury,
+      compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing?.compact || 0,
+      midsize: parseFloat(savedPricesLive[getKey('package', p.id, 'midsize')]) || p.pricing?.midsize || 0,
+      truck: parseFloat(savedPricesLive[getKey('package', p.id, 'truck')]) || p.pricing?.truck || 0,
+      luxury: parseFloat(savedPricesLive[getKey('package', p.id, 'luxury')]) || p.pricing?.luxury || 0,
     };
     Object.keys(savedPricesLive).forEach((k) => {
       const prefix = `package:${p.id}:`;
       if (k.startsWith(prefix)) {
         const veh = k.slice(prefix.length);
         const val = parseFloat(savedPricesLive[k]);
-        if (!Number.isNaN(val)) pricing[veh] = val;
+        if (!Number.isNaN(val) && val > 0) pricing[veh] = val;
       }
     });
     const metaSteps: string[] | undefined = packageMetaLive[p.id]?.stepIds;
@@ -346,16 +397,42 @@ const CustomerPortal = () => {
                   </div>
                 )}
 
-                {/* Package Image (prefer live uploaded image if available) */}
-                {(packageMetaLive[pkg.id]?.imageDataUrl || packageImages[pkg.id]) && (
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={packageMetaLive[pkg.id]?.imageDataUrl || packageImages[pkg.id]}
-                      alt={pkg.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                )}
+                {/* Package Image Rendering Logic */}
+                {(() => {
+                  const customUrl = packageMetaLive[pkg.id]?.imageDataUrl;
+                  const defaultImg = packageImages[pkg.id];
+
+                  // Split screen logic for Full Detail packages
+                  const isFullDetail = pkg.id.includes('full-detail') || pkg.id.includes('full-detail-2025') || pkg.id.includes('full');
+
+                  if (isFullDetail && !customUrl) {
+                    // Show split screen if we have Essential assets, otherwise fallback
+                    return (
+                      <div className="relative h-48 overflow-hidden flex shadow-inner">
+                        <div className="w-1/2 h-full border-r border-white/20">
+                          <img src={primeEssentialExt} alt="Exterior" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        </div>
+                        <div className="w-1/2 h-full">
+                          <img src={primeEssentialInt} alt="Interior" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                      </div>
+                    );
+                  }
+
+                  if (customUrl || defaultImg) {
+                    return (
+                      <div className="relative h-48 overflow-hidden bg-zinc-100">
+                        <img
+                          src={customUrl || defaultImg}
+                          alt={pkg.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 <div className={`p-6 space-y-5 ${isBestValue ? 'pt-8' : ''}`}>
                   <div className="flex items-start justify-between min-h-[60px]">
@@ -385,25 +462,48 @@ const CustomerPortal = () => {
                   </div>
 
                   {/* Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                      <Button
+                        className={`flex-1 h-12 font-semibold transition-all duration-300 
+                          ${isSelected
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 border-none'
+                            : 'bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white border-none'
+                          }`}
+                        onClick={() => {
+                          setSelectedService(isSelected ? null : pkg.id);
+                          setSelectedService(pkg.id);
+                          setVehicleInteracted(true);
+                        }}
+                      >
+                        {isSelected ? '✓ Selected' : 'Select'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-12"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLearnMorePackage(pkg);
+                        }}
+                      >
+                        Learn More
+                      </Button>
+                    </div>
+
                     <Button
-                      className={`flex-1 h-12 font-semibold transition-all duration-300 
-                        ${isSelected
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 border-none'
-                          : 'bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white border-none'
-                        }`}
-                    >
-                      {isSelected ? '✓ Selected' : 'Select'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLearnMorePackage(pkg);
+                      className="w-full h-12 bg-blue-900 hover:bg-black text-white font-bold"
+                      onClick={() => {
+                        const price = pkg.pricing[vehicleType];
+                        const params = new URLSearchParams();
+                        params.set('package', pkg.id);
+                        if (price > 0) params.set('price', String(price));
+                        params.set('vehicle', vehicleType);
+                        if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
+                        if (distance > 0) params.set('distance', String(distance));
+                        window.location.href = `/book-now?${params.toString()}`;
                       }}
                     >
-                      Learn More
+                      Book Now →
                     </Button>
                   </div>
                 </div>
@@ -610,26 +710,59 @@ const CustomerPortal = () => {
               </ul>
             </div>
 
+            {/* Availability Calendar */}
+            <div className="border-t border-blue-50 pt-6">
+              <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">Check Availability</h4>
+              <AvailabilityPicker
+                selectedDate={availDate}
+                selectedTime={availTime}
+                onDateChange={setAvailDate}
+                onTimeChange={setAvailTime}
+                existingBookings={allBookings.map(b => ({
+                  scheduled_at: b.date,
+                  estimated_duration: b.endTime
+                    ? (new Date(b.endTime).getTime() - new Date(b.date).getTime()) / (1000 * 60 * 60)
+                    : 3
+                }))}
+                serviceDuration={learnMorePackage ? getServiceDuration(learnMorePackage.id) : 1}
+              />
+              <p className="text-xs text-zinc-500 italic mt-3 text-center">
+                * Availability subject to change. Final confirmation provided after booking.
+              </p>
+            </div>
+
             <div className="flex gap-4 pt-6 border-t border-blue-50">
               <Button
-                className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-widest"
+                className={availDate && availTime
+                  ? "flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold uppercase tracking-widest"
+                  : "flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-widest"
+                }
                 onClick={() => {
                   if (learnMorePackage) {
-                    // Add selected package to cart with current vehicleType pricing
                     const price = learnMorePackage.pricing[vehicleType];
-                    addToCart({
-                      id: learnMorePackage.id,
-                      name: learnMorePackage.name.replace(' (BEST VALUE)', ''),
-                      price,
-                      quantity: 1,
-                      vehicleType,
-                    });
-                    toast({ title: "Added to Cart", description: `${learnMorePackage.name} — $${price}`, duration: 2500 });
+
+                    if (availDate && availTime) {
+                      const dateStr = format(availDate, 'yyyy-MM-dd');
+                      const prettyTime = formatTimeAMPM(availTime);
+                      navigate(`/book?package=${learnMorePackage.id}&vehicle=${vehicleType}&price=${price}&date=${dateStr}&time=${encodeURIComponent(prettyTime)}`);
+                    } else {
+                      addToCart({
+                        id: learnMorePackage.id,
+                        name: learnMorePackage.name.replace(' (BEST VALUE)', ''),
+                        price,
+                        quantity: 1,
+                        vehicleType,
+                      });
+                      toast({ title: "Added to Cart", description: `${learnMorePackage.name} — $${price}`, duration: 2500 });
+                    }
                   }
                   setLearnMorePackage(null);
                 }}
               >
-                Add to Cart
+                {availDate && availTime
+                  ? `Continue: ${format(availDate, 'MMM d')} @ ${formatTimeAMPM(availTime)} (Est. ${learnMorePackage ? getServiceDuration(learnMorePackage.id) : 3} hrs)`
+                  : 'Add to Cart'
+                }
               </Button>
               <Button variant="outline" onClick={() => setLearnMorePackage(null)}>
                 Close

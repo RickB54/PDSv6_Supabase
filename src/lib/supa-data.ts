@@ -1484,24 +1484,24 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
         return (data || []).map((b: any) => {
             const meta = b.booking_vehicle || {};
-            // If date is missing (legacy?), try to recover from meta or ignore
-            const dateStr = b.date || meta.date || new Date().toISOString();
+            // If date is missing (legacy?), try to recover from scheduled_at, meta or ignore
+            const dateStr = b.date || b.scheduled_at || meta.date || new Date().toISOString();
 
             return {
                 id: b.id,
-                title: b.title || meta.title || b.service || 'Service',
-                customer: b.customer_name || meta.customer_name || 'Unknown',
+                title: b.title || b.service_package || meta.title || b.service || 'Service',
+                customer: b.customer_name || (b.customers ? b.customers.full_name : null) || meta.customer_name || 'Unknown',
                 customerId: b.customer_id,
                 date: dateStr,
                 endTime: b.end_time || meta.end_time,
                 status: b.status || 'confirmed',
                 notes: b.notes || meta.notes,
-                vehicle: meta.type || '', // Use meta for vehicle type 
-                vehicleMake: meta.make || '',
-                vehicleModel: meta.model || '',
-                vehicleYear: meta.year || '',
+                vehicle: b.vehicle_type || meta.type || '', // Use meta for vehicle type 
+                vehicleMake: b.make || meta.make || '',
+                vehicleModel: b.model || meta.model || '',
+                vehicleYear: b.year || meta.year || '',
                 addons: Array.isArray(b.add_ons) ? b.add_ons : [],
-                price: b.price || meta.price,
+                price: b.price || b.service_price || meta.price,
                 assignedEmployee: b.assigned_employee || meta.assigned_employee,
                 bookedBy: b.booked_by || meta.booked_by,
                 createdAt: b.created_at || meta.created_at,

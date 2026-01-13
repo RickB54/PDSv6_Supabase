@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import CustomerModal, { type Customer as ModalCustomer } from "@/components/customers/CustomerModal";
+import CustomerModal from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, Customer } from "@/lib/supa-data";
@@ -81,7 +81,7 @@ const SearchCustomer = () => {
   const openAdd = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (c: Customer) => { setEditing(c); setModalOpen(true); };
 
-  const onSaveModal = async (data: ModalCustomer) => {
+  const onSaveModal = async (data: Customer) => {
     try {
       // Ensure we don't send a local/timestamp ID to Supabase UUID column
       const safeId = data.id && data.id.length > 20 && !data.id.includes('_') ? data.id : undefined;
@@ -195,7 +195,14 @@ const SearchCustomer = () => {
   const handleDelete = async () => {
     if (!deleteCustomerId) return;
     try {
-      await deleteSupabaseCustomer(deleteCustomerId);
+      // Validation: If ID is not a valid UUID (e.g. local temp ID 'c_...'), don't send to Supabase
+      // This prevents the PostgreSQL 'invalid input syntax for type uuid' error
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(deleteCustomerId)) {
+        await deleteSupabaseCustomer(deleteCustomerId);
+      } else {
+        console.warn(`Skipping Supabase delete for local/non-UUID id: ${deleteCustomerId}`);
+      }
 
       // Also try local delete just in case
       await removeCustomer(deleteCustomerId).catch(() => { });

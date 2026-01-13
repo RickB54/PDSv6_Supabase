@@ -12,6 +12,7 @@ import { postFullSync, getAllPackageMeta, setPackageMeta, getCustomPackages, get
 import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { contentService } from "@/lib/content";
+import { Pencil, Trash2 } from "lucide-react";
 
 const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
@@ -26,6 +27,46 @@ export default function WebsiteAdministration() {
   const [aboutFeatures, setAboutFeatures] = useState<{ expertTeam: string; ecoFriendly: string; satisfactionGuarantee: string }>({ expertTeam: '', ecoFriendly: '', satisfactionGuarantee: '' });
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [servicesDisclaimer, setServicesDisclaimer] = useState<string>('');
+  const [homeData, setHomeData] = useState<any>({
+    heroTitle: 'PRIME AUTO DETAIL',
+    heroSubtitle: 'Premium auto detailing services that exceed expectations',
+    whyMattersTitle: 'More Than Just',
+    whyMattersAccent: 'Detailing Matters',
+    whyMatters: 'Most people mistake a quick car wash for detailing. While automated washes often leave behind micro-scratches and strip protective layers, professional detailing is a restorative process.',
+    whyMattersList: ["Decontamination of all surfaces", "Paint correction to remove swirl marks", "Ceramic coatings for long-term protection", "Deep interior restoration and conditioning"],
+    beyondSurfaceTitle: 'Beyond the Surface',
+    beyondSurfaceSubtitle: 'Specialized care for every inch of your investment.',
+    precisionProcessTitle: 'Our Precision Process',
+    precisionProcessSteps: [
+      { step: "01", name: "Booking", desc: "Easily schedule through our portal with transparent upfront pricing." },
+      { step: "02", name: "Evaluation", desc: "On-site condition assessment to tailor our plan to your vehicle." },
+      { step: "03", name: "The Detail", desc: "Clock-out service where we don't leave until the job is perfect." }
+    ],
+    eliteResultsTitle: 'Elite Results. Delivered.',
+    eliteResultsText: 'We bring the high-end studio experience to your driveway. No lines, no wait, just unmatched precision.',
+    perfectedTitle: 'Perfected for Every Driver',
+    perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.'
+  });
+  const [aboutData, setAboutData] = useState<any>({
+    heroBadge: 'Premium Craftsmanship',
+    heroTitle: 'About Prime Auto Detail',
+    heroSubtitle: 'Elevating automotive care through precision, passion, and a commitment to perfection. We don\'t just clean cars—we preserve investments.',
+    moreThanWashTitle: 'More Than a Car Wash',
+    moreThanWashSubtitle: 'Understanding the difference between cleaning and detailing.',
+    interiorRefreshTitle: 'Interior Refresh & Restoration',
+    interiorRefreshText: 'The cabin of your vehicle should be a sanctuary. Our interior detailing process goes beyond a simple wipe-down. We deep-clean every surface, extract deep-seated dirt from carpets, and condition leather to its original supple feel.',
+    interiorRefreshList: [
+      "Deep Steam Cleaning & Sanitization",
+      "Professional Carpet & Upholstery Extraction",
+      "Premium Leather Conditioning (Matte Finish)",
+      "Odor Elimination & Air Quality Improvement",
+      "Meticulous Cracks & Crevices Detail"
+    ],
+    exteriorCareTitle: 'Exterior Care That Protects',
+    exteriorCareText: 'Your paint is constantly under attack from UV rays, road salt, and environmental debris. We use multi-stage decontamination and professional polishing to restore clarity, followed by the best protective sealants in the industry.',
+    approachTitle: 'Our Approach',
+    approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.'
+  });
   const [learnMoreEdit, setLearnMoreEdit] = useState<Record<string, { description: string; stepIds: string[] }>>({});
   const [allStepOptions, setAllStepOptions] = useState<{ id: string; name: string }[]>([]);
   const [editTestimonial, setEditTestimonial] = useState<any | null>(null);
@@ -168,7 +209,19 @@ export default function WebsiteAdministration() {
       const allMeta = await contentService.getAllServiceMeta();
       // Find disclaimer
       const d = allMeta.find(m => m.key === 'disclaimer');
-      if (d) setServicesDisclaimer(d.description || ''); // we can store disclaimer in description field
+      if (d) setServicesDisclaimer(d.description || '');
+
+      // Home Data
+      const h = allMeta.find(m => m.key === 'home_content');
+      if (h && h.meta) {
+        setHomeData((prev: any) => ({ ...prev, ...h.meta }));
+      }
+
+      // About Data
+      const a = allMeta.find(m => m.key === 'about_content');
+      if (a && a.meta) {
+        setAboutData((prev: any) => ({ ...prev, ...a.meta }));
+      }
       else {
         // Local fallback
         const s = await api('/api/services', { method: 'GET' });
@@ -253,50 +306,181 @@ export default function WebsiteAdministration() {
 
         <Card className="p-1 bg-zinc-950/50 border-zinc-800 shadow-xl rounded-xl overflow-hidden">
           <Accordion type="single" collapsible className="w-full space-y-1">
-            {/* Vehicle Types */}
-            <AccordionItem value="vehicle-types" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Vehicle Types</AccordionTrigger>
-              <AccordionContent>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">Vehicle Types</h4>
-                  <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewVehicleOpen(true)}>Add New</Button>
+
+            {/* Home Page Sections */}
+            <AccordionItem value="home" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">Home Page Content Control</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-8">
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">1. Hero & Branding</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Main Brand Title</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black uppercase text-lg" value={homeData.heroTitle} onChange={(e) => setHomeData({ ...homeData, heroTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Subtitle (Italic)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white italic" value={homeData.heroSubtitle} onChange={(e) => setHomeData({ ...homeData, heroSubtitle: e.target.value })} />
+                    </div>
+                  </div>
                 </div>
-                <div className="w-full overflow-x-auto">
+
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">2. Why Detailing Matters (SEO/Education)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Section Title (Main)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white" value={homeData.whyMattersTitle} onChange={(e) => setHomeData({ ...homeData, whyMattersTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Accent Title (Red)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-red-500 font-bold" value={homeData.whyMattersAccent} onChange={(e) => setHomeData({ ...homeData, whyMattersAccent: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Detailed Description</Label>
+                    <textarea
+                      className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
+                      value={homeData.whyMatters}
+                      onChange={(e) => setHomeData({ ...homeData, whyMatters: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Checklist Items (one per line)</Label>
+                    <textarea
+                      className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-24 text-sm font-mono"
+                      value={homeData.whyMattersList?.join('\n')}
+                      onChange={(e) => setHomeData({ ...homeData, whyMattersList: e.target.value.split('\n').filter(Boolean) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">3. Precision Process Steps</h4>
+                  {homeData.precisionProcessSteps?.map((step: any, i: number) => (
+                    <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-zinc-950 rounded-lg border border-zinc-800">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Step #</Label>
+                        <Input className="bg-zinc-900 h-8 text-red-500 font-black italic" value={step.step} onChange={(e) => {
+                          const n = [...homeData.precisionProcessSteps]; n[i].step = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Step Name</Label>
+                        <Input className="bg-zinc-900 h-8 uppercase font-bold" value={step.name} onChange={(e) => {
+                          const n = [...homeData.precisionProcessSteps]; n[i].name = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Description</Label>
+                        <Input className="bg-zinc-900 h-8 text-xs" value={step.desc} onChange={(e) => {
+                          const n = [...homeData.precisionProcessSteps]; n[i].desc = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
+                    await contentService.upsertServiceMeta({ key: 'home_content', meta: homeData, description: 'Complete Home Content' });
+                    notifyChange('home');
+                    toast({ title: 'Home settings saved!', description: 'All sections updated live.' });
+                  }}>Save Home Content</Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* About Page Sections */}
+            <AccordionItem value="about-page" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-blue-400 [&[data-state=open]]:text-blue-500 font-bold uppercase tracking-tight">About Page Content Control</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-8">
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">1. About Hero</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Badge (Award)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-blue-400 font-bold uppercase" value={aboutData.heroBadge} onChange={(e) => setAboutData({ ...aboutData, heroBadge: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Main Header Title</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black uppercase" value={aboutData.heroTitle} onChange={(e) => setAboutData({ ...aboutData, heroTitle: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Subtitle</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm text-zinc-300" value={aboutData.heroSubtitle} onChange={(e) => setAboutData({ ...aboutData, heroSubtitle: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">2. Restoration Story</h4>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Title</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.interiorRefreshTitle} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshTitle: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Content</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm" value={aboutData.interiorRefreshText} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshText: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Benefits List (one per line)</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm font-mono" value={aboutData.interiorRefreshList?.join('\n')} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshList: e.target.value.split('\n').filter(Boolean) })} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">3. Exterior Strategy</h4>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Exterior Coverage Title</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.exteriorCareTitle} onChange={(e) => setAboutData({ ...aboutData, exteriorCareTitle: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Exterior Care Content</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm" value={aboutData.exteriorCareText} onChange={(e) => setAboutData({ ...aboutData, exteriorCareText: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button className="bg-blue-700 hover:bg-blue-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
+                    await contentService.upsertServiceMeta({ key: 'about_content', meta: aboutData, description: 'Complete About Content' });
+                    notifyChange('about');
+                    toast({ title: 'About settings saved!', description: 'Page sections updated.' });
+                  }}>Save About Content</Button>
+                </div>
+
+                <div className="h-px bg-zinc-800 my-8" />
+
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold uppercase text-zinc-400 tracking-widest text-xs">About Sections Table (Legacy)</h4>
+                  <Button className="bg-zinc-800 hover:bg-zinc-700 h-8 text-xs" onClick={() => setNewAboutOpen(true)}>Add Row</Button>
+                </div>
+                <div className="w-full overflow-x-auto mb-6">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-zinc-300">Name</TableHead>
-                        <TableHead className="text-zinc-300">Description</TableHead>
-                        <TableHead className="text-zinc-300">Edit</TableHead>
-                        <TableHead className="text-zinc-300">Delete</TableHead>
+                        <TableHead className="text-zinc-500 uppercase text-[10px]">Section</TableHead>
+                        <TableHead className="text-zinc-500 uppercase text-[10px]">Content</TableHead>
+                        <TableHead className="text-zinc-500 uppercase text-[10px] w-20">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {vehicleTypes.map((vt: any) => (
-                        <TableRow key={vt.id}>
-                          <TableCell className="text-white">{vt.name}</TableCell>
-                          <TableCell className="text-zinc-300">{vt.description || '—'}</TableCell>
-
-                          <TableCell>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(vt)}>Edit</Button>
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" disabled={vt.protected} onClick={async () => {
-                              if (!confirm('Delete this vehicle type? (removes from all dropdowns + pricing)')) return;
-                              await contentService.deleteVehicleType(vt.id);
-                              const updated = await contentService.getVehicleTypes();
-                              setVehicleTypes(updated.map(st => ({ id: st.id, name: st.name, description: st.description, multiplier: st.multiplier, protected: ['compact', 'midsize', 'truck', 'luxury'].includes(st.id) })));
-                              notifyChange('vehicle-types');
-                              toast({ title: 'Vehicle type deleted', description: vt.name });
-                            }}>Delete</Button>
+                      {aboutSections.map((s: any) => (
+                        <TableRow key={s.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium">{s.section}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{s.content}</TableCell>
+                          <TableCell className="flex gap-2">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white" onClick={() => setEditAbout(s)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-red-500" onClick={async () => {
+                              if (!confirm('Delete this section?')) return;
+                              await contentService.deleteAboutSection(s.id);
+                              const updated = await contentService.getAboutSections();
+                              setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
+                              toast({ title: 'Section deleted' });
+                            }}><Trash2 className="h-3 w-3" /></Button>
                           </TableCell>
                         </TableRow>
                       ))}
-                      {vehicleTypes.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No vehicle types</TableCell>
-                        </TableRow>
-                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -306,247 +490,193 @@ export default function WebsiteAdministration() {
             {/* FAQs */}
             <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">FAQs</AccordionTrigger>
-              <AccordionContent>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">FAQs</h4>
-                  <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewFaqOpen(true)}>Add New</Button>
+              <AccordionContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Manage FAQs</h4>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewFaqOpen(true)}>Add FAQ</Button>
                 </div>
                 <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-zinc-300">Question</TableHead>
-                        <TableHead className="text-zinc-300">Answer</TableHead>
-                        <TableHead className="text-zinc-300">Edit</TableHead>
-                        <TableHead className="text-zinc-300">Delete</TableHead>
+                      <TableRow className="border-zinc-800">
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Question</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Answer</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {faqs.map((fq: any) => (
-                        <TableRow key={fq.id}>
-                          <TableCell className="text-white">{fq.question}</TableCell>
-                          <TableCell className="text-zinc-300">{fq.answer}</TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(fq)}>Edit</Button>
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
+                        <TableRow key={fq.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium text-sm">{fq.question}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{fq.answer}</TableCell>
+                          <TableCell className="text-right flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
                               if (!confirm('Delete this FAQ?')) return;
                               await contentService.deleteFaq(fq.id);
                               const updated = await contentService.getFaqs();
                               setFaqs(updated);
                               notifyChange('faqs');
                               toast({ title: 'FAQ deleted' });
-                            }}>Delete</Button>
+                            }}><Trash2 className="h-3 w-3" /></Button>
                           </TableCell>
                         </TableRow>
                       ))}
-                      {faqs.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No FAQs</TableCell>
-                        </TableRow>
-                      )}
                     </TableBody>
                   </Table>
                 </div>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Contact */}
-            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Contact</AccordionTrigger>
-              <AccordionContent>
-                <h4 className="font-semibold mb-2">Contact</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-zinc-300">Hours</Label>
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label className="text-zinc-300">Phone</Label>
-                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label className="text-zinc-300">Address</Label>
-                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label className="text-zinc-300">Email</Label>
-                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
-                  </div>
+            {/* Vehicle Types */}
+            <AccordionItem value="vehicle-types" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Vehicle Types</AccordionTrigger>
+              <AccordionContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Register Vehicle Types</h4>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewVehicleOpen(true)}>Add Type</Button>
                 </div>
-                <div className="mt-3">
-                  <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                    await contentService.upsertContact(contactInfo);
-                    notifyChange('contact');
-                    toast({ title: 'Contact updated', description: 'Synced live to cloud' });
-                  }}>Save Contact</Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* About */}
-            <AccordionItem value="about" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">About</AccordionTrigger>
-              <AccordionContent>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">About Sections</h4>
-                  <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewAboutOpen(true)}>Add New</Button>
-                </div>
-                <div className="w-full overflow-x-auto mb-6">
+                <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-zinc-300">Section</TableHead>
-                        <TableHead className="text-zinc-300">Content</TableHead>
-                        <TableHead className="text-zinc-300">Edit</TableHead>
-                        <TableHead className="text-zinc-300">Delete</TableHead>
+                      <TableRow className="border-zinc-800">
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Type Name</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Multiplier</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {aboutSections.map((s: any) => (
-                        <TableRow key={s.id}>
-                          <TableCell className="text-white">{s.section}</TableCell>
-                          <TableCell className="text-zinc-300">{s.content}</TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(s)}>Edit</Button>
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
-                              if (!confirm('Delete this section?')) return;
-                              await contentService.deleteAboutSection(s.id);
-                              const updated = await contentService.getAboutSections();
-                              setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
-                              toast({ title: 'Section deleted' });
-                            }}>Delete</Button>
+                      {vehicleTypes.map((vt: any) => (
+                        <TableRow key={vt.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium text-sm">{vt.name}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm italic">${vt.multiplier}</TableCell>
+                          <TableCell className="text-right flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditVehicle(vt)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" disabled={vt.protected} onClick={async () => {
+                              if (!confirm('Delete this vehicle type?')) return;
+                              await contentService.deleteVehicleType(vt.id);
+                              const updated = await contentService.getVehicleTypes();
+                              setVehicleTypes(updated.map(st => ({ id: st.id, name: st.name, description: st.description, multiplier: st.multiplier, protected: ['compact', 'midsize', 'truck', 'luxury'].includes(st.id) })));
+                              notifyChange('vehicle-types');
+                              toast({ title: 'Vehicle type deleted' });
+                            }}><Trash2 className="h-3 w-3" /></Button>
                           </TableCell>
                         </TableRow>
                       ))}
-                      {aboutSections.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No sections</TableCell>
-                        </TableRow>
-                      )}
                     </TableBody>
                   </Table>
                 </div>
+              </AccordionContent>
+            </AccordionItem>
 
-                {/* About Features editing */}
-                <div className="space-y-3 mb-6">
-                  <h4 className="font-semibold">About Features</h4>
-                  <div>
-                    <Label className="text-zinc-300">Expert Team</Label>
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-20" value={aboutFeatures.expertTeam} onChange={(e) => setAboutFeatures({ ...aboutFeatures, expertTeam: e.target.value })} />
+            {/* Contact Information */}
+            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Contact Control</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Phone</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
                   </div>
-                  <div>
-                    <Label className="text-zinc-300">Eco-Friendly Products</Label>
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-20" value={aboutFeatures.ecoFriendly} onChange={(e) => setAboutFeatures({ ...aboutFeatures, ecoFriendly: e.target.value })} />
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Email Address</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
                   </div>
-                  <div>
-                    <Label className="text-zinc-300">100% Satisfaction Guarantee</Label>
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-20" value={aboutFeatures.satisfactionGuarantee} onChange={(e) => setAboutFeatures({ ...aboutFeatures, satisfactionGuarantee: e.target.value })} />
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Address / Location</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} placeholder="54 Boston Street Methuen, MA" />
                   </div>
-                  <div className="flex justify-end">
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                      await contentService.upsertServiceMeta({ key: 'about_features', meta: aboutFeatures });
-                      toast({ title: 'About features updated' });
-                    }}>Save Features</Button>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Service Hours</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 text-white rounded p-3 h-24 text-sm" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
                   </div>
                 </div>
-
-                {/* Testimonials */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">What Our Customers Say</h4>
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewTestimonialOpen(true)}>Add Testimonial</Button>
-                  </div>
-                  <div className="w-full overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-zinc-300">Name</TableHead>
-                          <TableHead className="text-zinc-300">Quote</TableHead>
-                          <TableHead className="text-zinc-300">Edit</TableHead>
-                          <TableHead className="text-zinc-300">Delete</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {testimonials.map((t: any) => (
-                          <TableRow key={t.id}>
-                            <TableCell className="text-white">{t.name}</TableCell>
-                            <TableCell className="text-zinc-300">{t.quote}</TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditTestimonial(t)}>Edit</Button>
-                            </TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
-                                if (!confirm('Delete this testimonial?')) return;
-                                await contentService.deleteTestimonial(t.id);
-                                const updated = await contentService.getTestimonials();
-                                setTestimonials(updated);
-                                toast({ title: 'Testimonial deleted' });
-                              }}>Delete</Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {testimonials.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No testimonials</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                <div className="flex justify-end">
+                  <Button className="bg-red-700 hover:bg-red-800 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    await contentService.upsertContact(contactInfo);
+                    notifyChange('contact');
+                    toast({ title: 'Contact Sync', description: 'Business details updated.' });
+                  }}>Save Contact Profile</Button>
                 </div>
               </AccordionContent>
             </AccordionItem>
 
             {/* Services */}
             <AccordionItem value="services" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Services</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3">
-                  <h4 className="font-semibold">Services</h4>
-                  <div>
-                    <Label className="text-zinc-300">Disclaimer</Label>
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-24" value={servicesDisclaimer} onChange={(e) => setServicesDisclaimer(e.target.value)} />
-                  </div>
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Learn More & Disclaimer</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-8">
+                <div className="space-y-2">
+                  <Label className="text-zinc-400 text-xs uppercase font-bold">Services Section Disclaimer</Label>
+                  <textarea
+                    className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
+                    value={servicesDisclaimer}
+                    onChange={(e) => setServicesDisclaimer(e.target.value)}
+                  />
                   <div className="flex justify-end">
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                    <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs uppercase font-bold" onClick={async () => {
                       await contentService.upsertServiceMeta({ key: 'disclaimer', description: servicesDisclaimer });
-                      toast({ title: 'Services updated', description: 'Disclaimer saved to cloud' });
-                    }}>Save Services</Button>
+                      toast({ title: 'Disclaimer Updated' });
+                    }}>Save Disclaimer</Button>
                   </div>
+                </div>
 
-                  {/* Learn More Modal Content Editor */}
-                  <div className="mt-8 space-y-6">
-                    <h4 className="font-semibold">Learn More Content</h4>
-                    <p className="text-sm text-zinc-400">Edit the description and what's included list for each pricing package. This controls the Learn More modal on the Services page.</p>
-                    <div className="space-y-5">
-                      {[...builtInPackages, ...getCustomPackages()].map((pkg: any) => (
-                        <Card key={pkg.id} className="p-4 bg-zinc-900 border-zinc-800">
-                          <div className="flex items-center justify-between mb-3">
-                            <h5 className="font-semibold text-white">{pkg.name.replace(' (BEST VALUE)', '')}</h5>
-                            <span className="text-xs text-zinc-500">ID: {pkg.id}</span>
+                <div className="space-y-6">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Package Details (Learn More)</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    {[...builtInPackages, ...getCustomPackages()].map((pkg: any) => (
+                      <Card key={pkg.id} className="p-4 bg-zinc-950 border-zinc-900 overflow-hidden">
+                        <div className="flex justify-between items-start mb-4">
+                          <h5 className="font-black text-white italic uppercase tracking-tighter">{pkg.name.replace(' (BEST VALUE)', '')}</h5>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-[10px] text-zinc-500 hover:text-white"
+                              onClick={() => {
+                                const defaultStepIds = (pkg.steps || []).map((s: any) => (typeof s === 'string' ? s : s.id));
+                                setLearnMoreEdit(prev => ({ ...prev, [pkg.id]: { description: pkg.description || '', stepIds: defaultStepIds } }));
+                              }}
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7 text-[10px] bg-red-700 hover:bg-red-800"
+                              onClick={async () => {
+                                const current = learnMoreEdit[pkg.id] || { description: '', stepIds: [] };
+                                await contentService.upsertServiceMeta({
+                                  key: pkg.id,
+                                  description: current.description,
+                                  meta: { stepIds: current.stepIds }
+                                });
+                                notifyChange('packages');
+                                toast({ title: 'Package Updated', description: pkg.name });
+                              }}
+                            >
+                              Save
+                            </Button>
                           </div>
-                          <div className="space-y-3">
-                            <div>
-                              <Label className="text-zinc-300">Description (Why Choose This Package?)</Label>
-                              <textarea
-                                className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-20"
-                                value={learnMoreEdit[pkg.id]?.description || ''}
-                                onChange={(e) => setLearnMoreEdit(prev => ({ ...prev, [pkg.id]: { ...(prev[pkg.id] || { description: '', stepIds: [] }), description: e.target.value } }))}
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-zinc-300">What's Included (select steps)</Label>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-zinc-800 border border-zinc-700 rounded-md">
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-zinc-600 uppercase font-bold">Marketing Description</Label>
+                            <textarea
+                              className="w-full bg-zinc-900 border-zinc-800 text-white rounded p-2 text-xs h-32"
+                              value={learnMoreEdit[pkg.id]?.description || ''}
+                              onChange={(e) => setLearnMoreEdit(prev => ({ ...prev, [pkg.id]: { ...(prev[pkg.id] || { description: '', stepIds: [] }), description: e.target.value } }))}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-zinc-600 uppercase font-bold">Steps Included</Label>
+                            <div className="bg-zinc-900 border border-zinc-800 rounded p-2 h-32 overflow-y-auto custom-scrollbar">
+                              <div className="grid grid-cols-1 gap-1">
                                 {allStepOptions.map(opt => {
                                   const checked = (learnMoreEdit[pkg.id]?.stepIds || []).includes(opt.id);
                                   return (
-                                    <label key={`${pkg.id}-${opt.id}`} className="flex items-center gap-2 text-sm text-white">
+                                    <label key={`${pkg.id}-${opt.id}`} className="flex items-center gap-2 cursor-pointer group">
                                       <input
                                         type="checkbox"
+                                        className="accent-red-600"
                                         checked={checked}
                                         onChange={(e) => {
                                           setLearnMoreEdit(prev => {
@@ -557,44 +687,16 @@ export default function WebsiteAdministration() {
                                           });
                                         }}
                                       />
-                                      <span>{opt.name}</span>
-                                      <span className="text-xs text-zinc-400">({opt.id})</span>
+                                      <span className="text-[10px] text-zinc-400 group-hover:text-white transition-colors">{opt.name}</span>
                                     </label>
                                   );
                                 })}
                               </div>
                             </div>
-                            <div className="flex justify-end gap-2 button-group-responsive">
-                              <Button
-                                variant="outline"
-                                className="border-red-700 text-red-700 hover:bg-red-700/10"
-                                onClick={() => {
-                                  const defaultStepIds = (pkg.steps || []).map((s: any) => (typeof s === 'string' ? s : s.id));
-                                  setLearnMoreEdit(prev => ({ ...prev, [pkg.id]: { description: pkg.description || '', stepIds: defaultStepIds } }));
-                                }}
-                              >
-                                Reset to defaults
-                              </Button>
-                              <Button
-                                className="bg-red-700 hover:bg-red-800"
-                                onClick={async () => {
-                                  const current = learnMoreEdit[pkg.id] || { description: '', stepIds: [] };
-                                  await contentService.upsertServiceMeta({
-                                    key: pkg.id,
-                                    description: current.description,
-                                    meta: { stepIds: current.stepIds }
-                                  });
-                                  notifyChange('packages');
-                                  toast({ title: 'Learn More updated', description: pkg.name.replace(' (BEST VALUE)', '') });
-                                }}
-                              >
-                                Save Learn More
-                              </Button>
-                            </div>
                           </div>
-                        </Card>
-                      ))}
-                    </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 </div>
               </AccordionContent>

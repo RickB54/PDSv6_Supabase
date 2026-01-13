@@ -46,6 +46,12 @@ import packageExterior from "@/assets/package-exterior.jpg";
 import packageInterior from "@/assets/package-interior.jpg";
 import packageFull from "@/assets/package-full.jpg";
 import packagePremium from "@/assets/package-premium.jpg";
+import primeEssentialExt from "@/assets/prime_essential_exterior_2025.png";
+import primeEssentialInt from "@/assets/prime_essential_interior_2025.png";
+import primeEssentialFull from "@/assets/prime_essential_full_2025.png";
+import primeEliteExt from "@/assets/prime_essential_exterior.png";
+import primeEliteInt from "@/assets/prime_essential_interior.png";
+import primeEliteFull from "@/assets/prime_essential_full_detail.png";
 import {
   Dialog,
   DialogContent,
@@ -88,6 +94,7 @@ export default function PackagePricing() {
   const [view, setView] = useState<"packages" | "addons" | "both">("packages");
   const [masterPct, setMasterPct] = useState("");
   const [globalPct, setGlobalPct] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [savedPrices, setSavedPrices] = useState<PriceMap>({});
   const [currentPrices, setCurrentPrices] = useState<PriceMap>({});
   const [pendingVisibilityPkg, setPendingVisibilityPkg] = useState<Record<string, boolean | undefined>>({});
@@ -492,53 +499,53 @@ export default function PackagePricing() {
         try {
           const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
 
-          if (pkgs.length > 0 || addons.length > 0) {
-            const cloudPrices: PriceMap = {};
+          const cloudPrices: PriceMap = {};
+          const cloudMetaPkgs: Record<string, any> = {};
+          const cloudMetaAddons: Record<string, any> = {};
 
+          if (pkgs.length > 0 || addons.length > 0) {
             // Map Package Data
             pkgs.forEach((p: any) => {
-              cloudPrices[getKey('package', p.id, 'compact')] = String(p.compact_price || 0);
-              cloudPrices[getKey('package', p.id, 'midsize')] = String(p.midsize_price || 0);
-              cloudPrices[getKey('package', p.id, 'truck')] = String(p.truck_price || 0);
-              cloudPrices[getKey('package', p.id, 'luxury')] = String(p.luxury_price || 0);
+              if (p.compact_price != null && p.compact_price > 0) cloudPrices[getKey('package', p.id, 'compact')] = String(p.compact_price);
+              if (p.midsize_price != null && p.midsize_price > 0) cloudPrices[getKey('package', p.id, 'midsize')] = String(p.midsize_price);
+              if (p.truck_price != null && p.truck_price > 0) cloudPrices[getKey('package', p.id, 'truck')] = String(p.truck_price);
+              if (p.luxury_price != null && p.luxury_price > 0) cloudPrices[getKey('package', p.id, 'luxury')] = String(p.luxury_price);
 
-              // Sync Meta (Visibility/Deleted)
-              setPackageMeta(p.id, {
+              cloudMetaPkgs[p.id] = {
+                id: p.id,
                 visible: p.is_active !== false,
-                deleted: false, // If it's in DB, it's not deleted (unless we add a deleted column later)
+                deleted: false,
                 imageDataUrl: p.image_url || ""
-              });
+              };
             });
 
             // Map Add-On Data
             addons.forEach((a: any) => {
-              cloudPrices[getKey('addon', a.id, 'compact')] = String(a.compact_price || 0);
-              cloudPrices[getKey('addon', a.id, 'midsize')] = String(a.midsize_price || 0);
-              cloudPrices[getKey('addon', a.id, 'truck')] = String(a.truck_price || 0);
-              cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.pricing?.luxury ?? (a as any).basePrice ?? 0); // specific fallback logic
-              // fix standard map if needed:
-              cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.luxury_price || 0);
+              if (a.compact_price != null && a.compact_price > 0) cloudPrices[getKey('addon', a.id, 'compact')] = String(a.compact_price);
+              if (a.midsize_price != null && a.midsize_price > 0) cloudPrices[getKey('addon', a.id, 'midsize')] = String(a.midsize_price);
+              if (a.truck_price != null && a.truck_price > 0) cloudPrices[getKey('addon', a.id, 'truck')] = String(a.truck_price);
+              if (a.luxury_price != null && a.luxury_price > 0) cloudPrices[getKey('addon', a.id, 'luxury')] = String(a.luxury_price);
 
-              setAddOnMeta(a.id, {
+              cloudMetaAddons[a.id] = {
+                id: a.id,
                 visible: a.is_active !== false,
                 deleted: false
-              });
+              };
             });
 
-            // Check for custom packages in DB that aren't local?
-            // For now, pricing sync is the main critical path.
+            // Merge Meta
+            Object.entries(cloudMetaPkgs).forEach(([id, meta]) => setPackageMeta(id, meta));
+            Object.entries(cloudMetaAddons).forEach(([id, meta]) => setAddOnMeta(id, meta));
 
-            // Merge with local just in case, but Cloud wins
+            // Merge Prices
             const localSaved = await getSavedPrices();
             const merged = { ...localSaved, ...cloudPrices };
 
             setSavedPrices(merged);
             setCurrentPrices(merged);
-
-            // Persist this fresh cloud state to local so offline works next time
             await saveToLocalforage(merged);
 
-            toast.success("Pricing loaded from Cloud.");
+            toast.success("Pricing and metadata loaded from Cloud.");
             return;
           }
         } catch (e) {
@@ -775,6 +782,12 @@ export default function PackagePricing() {
 
   // Utilities: image mapping for current live assets
   const packageImages: Record<string, string> = {
+    "prime-essential-exterior": primeEssentialExt,
+    "prime-essential-interior": primeEssentialInt,
+    "prime-essential-full": primeEssentialFull,
+    "prime-elite-exterior": primeEliteExt,
+    "prime-elite-interior": primeEliteInt,
+    "prime-elite-full": primeEliteFull,
     "basic-exterior": packageBasic,
     "express-wax": packageExpress,
     "full-exterior": packageExterior,
@@ -785,7 +798,8 @@ export default function PackagePricing() {
 
   const getLiveImage = (id: string) => {
     const meta = getPackageMeta(id);
-    return meta?.imageDataUrl || packageImages[id] || "";
+    if (meta?.imageDataUrl) return meta.imageDataUrl;
+    return packageImages[id] || packageBasic;
   };
 
   const handleImageUpload = async (id: string, file: File) => {
@@ -831,37 +845,27 @@ export default function PackagePricing() {
       setPendingVisibilityAddon(prev => ({ ...prev, [id]: visible }));
       setAddOnMeta(id, { visible });
     }
-    try {
-      if (isSupabaseEnabled()) {
-        // Sync visibility to Supabase immediately
-        const pkg = type === 'package' ? [...builtInPackages, ...getCustomPackages()].find(p => p.id === id) : null;
-        const addon = type === 'addon' ? [...builtInAddOns, ...getCustomAddOns()].find(a => a.id === id) : null;
 
-        if (type === 'package' && pkg) {
-          await supaPkgs.upsert([{
-            id: pkg.id,
-            name: pkg.name,
-            is_active: visible,
-            // minimal fields update to avoid overwriting prices with potential stale data if not careful, 
-            // but our upsert might require all fields depending on constraints. 
-            // safer to re-run saveToBackend logic for this single item or all.
-          }]);
-          // Actually, easiest is just to call saveToBackend with current saved prices
-          await saveToBackend(savedPrices);
-        } else if (type === 'addon' && addon) {
-          await saveToBackend(savedPrices);
+    // Immediate Supabase Update for Visibility
+    if (isSupabaseEnabled()) {
+      try {
+        if (type === 'package') {
+          await supaPkgs.update(id, { is_active: visible });
+        } else {
+          await supaAddOns.update(id, { is_active: visible });
         }
+      } catch (err) {
+        console.error("Failed to sync visibility to Supabase", err);
       }
+    }
 
+    try {
       await postFullSync();
-      forceWebsiteTabRefresh();
-      forceBookNowTabRefresh();
-      openPackagesLiveInBrowser();
+      await forceWebsiteTabRefresh();
+      await forceBookNowTabRefresh();
       const statusText = visible ? "LIVE on website" : "HIDDEN from website";
       toast.success(`${type === 'package' ? 'Package' : 'Add-On'} is now ${statusText}`);
-    } catch (e) {
-      toast.error('Failed to sync. Please try again.');
-    }
+    } catch { }
   };
 
   const openEditServices = (type: 'package' | 'addon', id: string) => {
@@ -1039,8 +1043,12 @@ export default function PackagePricing() {
     setNewAddonForm({ name: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
   };
 
-  const totalPkgs = [...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted).length;
-  const totalAddons = [...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted).length;
+  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
+
+  const totalPkgs = [...builtInPackages, ...getCustomPackages()]
+    .filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false).length;
+  const totalAddons = [...builtInAddOns, ...getCustomAddOns()]
+    .filter(a => !getAddOnMeta(a.id)?.deleted && getAddOnMeta(a.id)?.visible !== false).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -1195,6 +1203,24 @@ export default function PackagePricing() {
             </AccordionItem>
           </Accordion>
 
+          <div className="mt-8 pt-6 border-t border-zinc-800">
+            <div className="flex items-center gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800 w-fit">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+              <Label htmlFor="show-archived" className="text-white font-medium cursor-pointer">
+                Show Archived (Hidden) Packages & Add-Ons
+              </Label>
+              {showArchived && (
+                <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded border border-red-600/30 font-bold uppercase tracking-wider animate-pulse-subtle">
+                  Viewing All
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Action Buttons */}
           <div className="mt-6 flex items-center gap-4 flex-wrap">
             <Button
@@ -1226,183 +1252,221 @@ export default function PackagePricing() {
         {/* Packages grid */}
         {(view === "packages" || view === "both") && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...builtInPackages, ...getCustomPackages()].filter(pkg => !getPackageMeta(pkg.id)?.deleted).map(pkg => (
-              <Card key={pkg.id} className="p-4 space-y-3">
-                <h3 className="font-semibold">{pkg.name}</h3>
-                {/* Picture Upload Area (packages only) */}
-                <div className="flex flex-col xl:flex-row xl:flex-nowrap items-start gap-3">
-                  <img
-                    src={getLiveImage(pkg.id) || packageImages[pkg.id] || packageBasic}
-                    onError={(e) => {
-                      const fallback = packageImages[pkg.id] || packageBasic;
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback;
-                      }
-                    }}
-                    alt={pkg.name}
-                    className="w-full xl:w-[300px] xl:h-[200px] object-contain xl:shrink-0 rounded border border-zinc-700 shadow"
-                  />
-                  <div className="min-w-0 flex-1 w-full">
-                    <Label className="text-xs text-white mb-1 block">Change Package Image</Label>
-                    <input type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files && handleImageUpload(pkg.id, e.target.files[0])} />
-                    <div className="mt-2 flex items-center gap-2">
-                      <Label className="text-white">Show on Live Website</Label>
-                      <Switch
-                        className={(typeof pendingVisibilityPkg[pkg.id] !== 'undefined')
-                          ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
-                          : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
-                        checked={(pendingVisibilityPkg[pkg.id] ?? (getPackageMeta(pkg.id)?.visible !== false)) as boolean}
-                        onCheckedChange={(checked) => queueVisibility('package', pkg.id, checked)}
-                      />
-                      {typeof pendingVisibilityPkg[pkg.id] !== 'undefined' ? (
-                        <span className="text-red-500 text-xs">Pending</span>
-                      ) : (getPackageMeta(pkg.id)?.visible === false ? (
-                        <span className="text-red-500 text-xs">Hidden</span>
-                      ) : (
-                        <span className="text-green-500 text-xs">Live</span>
-                      ))}
+            {[...builtInPackages, ...getCustomPackages()]
+              .filter(pkg => !getPackageMeta(pkg.id)?.deleted)
+              .filter(pkg => showArchived || !legacyIds.includes(pkg.id) || getPackageMeta(pkg.id)?.visible !== false)
+              .map(pkg => {
+                const isArchived = getPackageMeta(pkg.id)?.visible === false;
+                return (
+                  <Card key={pkg.id} className={`p-4 space-y-3 transition-all duration-300 ${isArchived ? 'opacity-60 border-zinc-800 grayscale-[0.5]' : ''}`}>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-semibold">{pkg.name}</h3>
+                      {isArchived && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-black uppercase tracking-widest">Archived</span>}
                     </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground">{vehicleLabels[vehicleType] || vehicleType}</label>
-                    <Input
-                      type="number"
-                      step="1"
-                      value={currentPrices[getKey('package', pkg.id, vehicleType)] || ''}
-                      onChange={(e) => handleChange(getKey('package', pkg.id, vehicleType), e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="button-group-responsive flex gap-2 flex-wrap xl:flex-nowrap max-w-full">
-                  <Button variant="outline" onClick={() => applyIncrease(pkg.id, 5)}>Apply 5%</Button>
-                  <Button variant="outline" onClick={() => applyIncrease(pkg.id, 10)}>Apply 10%</Button>
-                  <Button variant="outline" onClick={() => reset(pkg.id)}>Reset</Button>
-                  <Button
-                    className="bg-red-600 hover:bg-red-700"
-                    onClick={() => saveOne([getKey('package', pkg.id, vehicleType)])}
-                  >
-                    Save
-                  </Button>
-                  <Button variant="outline" className="border-red-600 text-red-500" onClick={() => openEditServices('package', pkg.id)}>Edit Services</Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="bg-red-700">
-                        <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</span>
+                    {/* Picture Upload Area (packages only) */}
+                    <div className="flex flex-col xl:flex-row xl:flex-nowrap items-start gap-3 w-full">
+                      {(() => {
+                        const customUrl = getPackageMeta(pkg.id)?.imageDataUrl;
+                        const isFullDetail = pkg.id.includes('full-detail') || pkg.id.includes('full-detail-2025') || pkg.id.includes('full');
+
+                        if (isFullDetail && !customUrl) {
+                          return (
+                            <div className="w-full xl:w-[300px] xl:h-[200px] flex overflow-hidden rounded border border-zinc-700 shadow shrink-0">
+                              <div className="w-1/2 h-full border-r border-white/10">
+                                <img src={primeEssentialExt} alt="Ext" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="w-1/2 h-full">
+                                <img src={primeEssentialInt} alt="Int" className="w-full h-full object-cover" />
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <img
+                            src={getLiveImage(pkg.id)}
+                            onError={(e) => {
+                              const fallback = packageImages[pkg.id] || packageBasic;
+                              if (e.currentTarget.src !== fallback) {
+                                e.currentTarget.src = fallback;
+                              }
+                            }}
+                            alt={pkg.name}
+                            className="w-full xl:w-[300px] xl:h-[200px] object-cover xl:shrink-0 rounded border border-zinc-700 shadow"
+                          />
+                        );
+                      })()}
+                      <div className="min-w-0 flex-1 w-full">
+                        <Label className="text-xs text-white mb-1 block">Change Package Image</Label>
+                        <input type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files && handleImageUpload(pkg.id, e.target.files[0])} />
+                        <div className="mt-2 flex items-center gap-2">
+                          <Label className="text-white">Show on Live Website</Label>
+                          <Switch
+                            className={(typeof pendingVisibilityPkg[pkg.id] !== 'undefined')
+                              ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
+                              : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
+                            checked={(pendingVisibilityPkg[pkg.id] ?? (getPackageMeta(pkg.id)?.visible !== false)) as boolean}
+                            onCheckedChange={(checked) => queueVisibility('package', pkg.id, checked)}
+                          />
+                          {typeof pendingVisibilityPkg[pkg.id] !== 'undefined' ? (
+                            <span className="text-red-500 text-xs">Pending</span>
+                          ) : (getPackageMeta(pkg.id)?.visible === false ? (
+                            <span className="text-red-500 text-xs">Hidden</span>
+                          ) : (
+                            <span className="text-green-500 text-xs">Live</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">{vehicleLabels[vehicleType] || vehicleType}</label>
+                        <Input
+                          type="number"
+                          step="1"
+                          value={currentPrices[getKey('package', pkg.id, vehicleType)] || ''}
+                          onChange={(e) => handleChange(getKey('package', pkg.id, vehicleType), e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="button-group-responsive flex gap-2 flex-wrap xl:flex-nowrap max-w-full">
+                      <Button variant="outline" onClick={() => applyIncrease(pkg.id, 5)}>Apply 5%</Button>
+                      <Button variant="outline" onClick={() => applyIncrease(pkg.id, 10)}>Apply 10%</Button>
+                      <Button variant="outline" onClick={() => reset(pkg.id)}>Reset</Button>
+                      <Button
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => saveOne([getKey('package', pkg.id, vehicleType)])}
+                      >
+                        Save
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
-                        <AlertDialogDescription>This will remove the package from admin and live site.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="button-group-responsive">
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => confirmDelete('package', pkg.id)}>Yes, delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </Card>
-            ))}
+                      <Button variant="outline" className="border-red-600 text-red-500" onClick={() => openEditServices('package', pkg.id)}>Edit Services</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="bg-red-700">
+                            <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
+                            <AlertDialogDescription>This will remove the package from admin and live site.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="button-group-responsive">
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => confirmDelete('package', pkg.id)}>Yes, delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </Card>
+                );
+              })}
           </div>
         )}
 
         {/* Add-ons grid */}
         {(view === "addons" || view === "both") && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted).map(addon => (
-              <Card key={addon.id} className="p-4 space-y-3">
-                <h3 className="font-semibold">{addon.name}</h3>
-                <div className="flex items-center gap-2">
-                  <Label className="text-white">Show on Live Website</Label>
-                  <Switch
-                    className={(typeof pendingVisibilityAddon[addon.id] !== 'undefined')
-                      ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
-                      : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
-                    checked={(pendingVisibilityAddon[addon.id] ?? (getAddOnMeta(addon.id)?.visible !== false)) as boolean}
-                    onCheckedChange={(checked) => queueVisibility('addon', addon.id, checked)}
-                  />
-                  {typeof pendingVisibilityAddon[addon.id] !== 'undefined' ? (
-                    <span className="text-red-500 text-xs">Pending</span>
-                  ) : (getAddOnMeta(addon.id)?.visible === false ? (
-                    <span className="text-red-500 text-xs">Hidden</span>
-                  ) : (
-                    <span className="text-green-500 text-xs">Live</span>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground">{vehicleLabels[vehicleType] || vehicleType}</label>
-                    <Input
-                      type="number"
-                      step="1"
-                      value={currentPrices[getKey('addon', addon.id, vehicleType)] || ''}
-                      onChange={(e) => handleChange(getKey('addon', addon.id, vehicleType), e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="button-group-responsive flex gap-2 flex-wrap xl:flex-nowrap max-w-full">
-                  <Button variant="outline" onClick={() => {
-                    const sizes: string[] = builtInSizes;
-                    const factor = 1 + (5 / 100);
-                    const upd = { ...currentPrices };
-                    sizes.forEach(sz => {
-                      const key = getKey('addon', addon.id, sz);
-                      const base = parseFloat(savedPrices[key]) || 0;
-                      upd[key] = String(Math.round(base * factor));
-                    });
-                    setCurrentPrices(upd);
-                  }}>Apply 5%</Button>
-                  <Button variant="outline" onClick={() => {
-                    const sizes: string[] = builtInSizes;
-                    const factor = 1 + (10 / 100);
-                    const upd = { ...currentPrices };
-                    sizes.forEach(sz => {
-                      const key = getKey('addon', addon.id, sz);
-                      const base = parseFloat(savedPrices[key]) || 0;
-                      upd[key] = String(Math.round(base * factor));
-                    });
-                    setCurrentPrices(upd);
-                  }}>Apply 10%</Button>
+            {[...builtInAddOns, ...getCustomAddOns()]
+              .filter(a => !getAddOnMeta(a.id)?.deleted)
+              .filter(a => showArchived || getAddOnMeta(a.id)?.visible !== false)
+              .map(addon => {
+                const isArchivedAddon = getAddOnMeta(addon.id)?.visible === false;
+                return (
+                  <Card key={addon.id} className={`p-4 space-y-3 transition-all duration-300 ${isArchivedAddon ? 'opacity-60 border-zinc-800 grayscale-[0.5]' : ''}`}>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-semibold">{addon.name}</h3>
+                      {isArchivedAddon && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-black uppercase tracking-widest">Archived</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-white">Show on Live Website</Label>
+                      <Switch
+                        className={(typeof pendingVisibilityAddon[addon.id] !== 'undefined')
+                          ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
+                          : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
+                        checked={(pendingVisibilityAddon[addon.id] ?? (getAddOnMeta(addon.id)?.visible !== false)) as boolean}
+                        onCheckedChange={(checked) => queueVisibility('addon', addon.id, checked)}
+                      />
+                      {typeof pendingVisibilityAddon[addon.id] !== 'undefined' ? (
+                        <span className="text-red-500 text-xs">Pending</span>
+                      ) : (getAddOnMeta(addon.id)?.visible === false ? (
+                        <span className="text-red-500 text-xs">Hidden</span>
+                      ) : (
+                        <span className="text-green-500 text-xs">Live</span>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">{vehicleLabels[vehicleType] || vehicleType}</label>
+                        <Input
+                          type="number"
+                          step="1"
+                          value={currentPrices[getKey('addon', addon.id, vehicleType)] || ''}
+                          onChange={(e) => handleChange(getKey('addon', addon.id, vehicleType), e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="button-group-responsive flex gap-2 flex-wrap xl:flex-nowrap max-w-full">
+                      <Button variant="outline" onClick={() => {
+                        const sizes: string[] = builtInSizes;
+                        const factor = 1 + (5 / 100);
+                        const upd = { ...currentPrices };
+                        sizes.forEach(sz => {
+                          const key = getKey('addon', addon.id, sz);
+                          const base = parseFloat(savedPrices[key]) || 0;
+                          upd[key] = String(Math.round(base * factor));
+                        });
+                        setCurrentPrices(upd);
+                      }}>Apply 5%</Button>
+                      <Button variant="outline" onClick={() => {
+                        const sizes: string[] = builtInSizes;
+                        const factor = 1 + (10 / 100);
+                        const upd = { ...currentPrices };
+                        sizes.forEach(sz => {
+                          const key = getKey('addon', addon.id, sz);
+                          const base = parseFloat(savedPrices[key]) || 0;
+                          upd[key] = String(Math.round(base * factor));
+                        });
+                        setCurrentPrices(upd);
+                      }}>Apply 10%</Button>
 
-                  <Button variant="outline" onClick={() => {
-                    const sizes: string[] = builtInSizes;
-                    const upd = { ...currentPrices };
-                    sizes.forEach(sz => {
-                      const key = getKey('addon', addon.id, sz);
-                      upd[key] = savedPrices[key] || '0';
-                    });
-                    setCurrentPrices(upd);
-                  }}>Reset</Button>
-                  <Button
-                    className="bg-red-600 hover:bg-red-700"
-                    onClick={() => saveOne([getKey('addon', addon.id, vehicleType)])}
-                  >
-                    Save
-                  </Button>
-                  <Button variant="outline" className="border-red-600 text-red-500" onClick={() => openEditServices('addon', addon.id)}>Edit Services</Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="bg-red-700">
-                        <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</span>
+                      <Button variant="outline" onClick={() => {
+                        const sizes: string[] = builtInSizes;
+                        const upd = { ...currentPrices };
+                        sizes.forEach(sz => {
+                          const key = getKey('addon', addon.id, sz);
+                          upd[key] = savedPrices[key] || '0';
+                        });
+                        setCurrentPrices(upd);
+                      }}>Reset</Button>
+                      <Button
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => saveOne([getKey('addon', addon.id, vehicleType)])}
+                      >
+                        Save
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
-                        <AlertDialogDescription>This will remove the add-on from admin and live site.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="button-group-responsive">
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => confirmDelete('addon', addon.id)}>Yes, delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </Card>
-            ))}
+                      <Button variant="outline" className="border-red-600 text-red-500" onClick={() => openEditServices('addon', addon.id)}>Edit Services</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="bg-red-700">
+                            <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
+                            <AlertDialogDescription>This will remove the add-on from admin and live site.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="button-group-responsive">
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => confirmDelete('addon', addon.id)}>Yes, delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </Card>
+                );
+              })}
           </div>
         )}
 

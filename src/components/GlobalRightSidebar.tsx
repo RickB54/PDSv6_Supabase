@@ -52,6 +52,18 @@ export function GlobalRightSidebar() {
                 {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
             </Button>
 
+            {/* Availability Manager - Admin Only */}
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => navigate('/availability-manager')}
+                title="Availability Manager"
+                className={collapsed ? "" : "w-full justify-start gap-2"}
+            >
+                <Calendar className="w-5 h-5 text-purple-500" />
+                {!collapsed && <span>Calendar</span>}
+            </Button>
+
             {/* Existing Icons */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/team-chat')} title="Team Chat" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <MessageSquare className="w-5 h-5 text-emerald-500" />
