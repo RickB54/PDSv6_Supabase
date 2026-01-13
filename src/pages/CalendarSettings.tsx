@@ -22,23 +22,39 @@ import { Calendar, Clock, Shield, AlertCircle } from 'lucide-react';
  */
 export default function CalendarSettings() {
     const { toast } = useToast();
-    const [config, setConfig] = useState<CalendarConfig>(getCalendarConfig());
+    const [config, setConfig] = useState<CalendarConfig>({
+        clientId: '',
+        apiKey: '',
+        calendarIds: ['primary'],
+        maxBookingsPerDay: 1,
+        bufferMinutes: 120,
+        recoveryDays: []
+    });
     const [signedIn, setSignedIn] = useState(false);
     const [loading, setLoading] = useState(false);
     const [apiConfigured, setApiConfigured] = useState(false);
 
     useEffect(() => {
-        // Check if API is configured
-        if (config.clientId && config.apiKey) {
-            setApiConfigured(true);
-            initGoogleCalendar(config)
-                .then(() => {
-                    setSignedIn(isSignedIn());
-                })
-                .catch(err => {
-                    console.error('Calendar init error:', err);
-                });
-        }
+        const load = async () => {
+            try {
+                const loadedConfig = await getCalendarConfig();
+                setConfig(loadedConfig);
+
+                if (loadedConfig.clientId && loadedConfig.apiKey) {
+                    setApiConfigured(true);
+                    initGoogleCalendar(loadedConfig)
+                        .then(() => {
+                            setSignedIn(isSignedIn());
+                        })
+                        .catch(err => {
+                            console.error('Calendar init error:', err);
+                        });
+                }
+            } catch (err) {
+                console.error('Failed to load config:', err);
+            }
+        };
+        load();
     }, []);
 
     const handleSignIn = async () => {

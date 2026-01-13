@@ -5,6 +5,7 @@ import {
     MessageSquare,
     CheckSquare,
     Calendar,
+    CalendarCheck,
     ClipboardList,
     User,
     FileText,
@@ -60,8 +61,8 @@ export function GlobalRightSidebar() {
                 title="Availability Manager"
                 className={collapsed ? "" : "w-full justify-start gap-2"}
             >
-                <Calendar className="w-5 h-5 text-purple-500" />
-                {!collapsed && <span>Calendar</span>}
+                <CalendarCheck className="w-5 h-5 text-blue-600" />
+                {!collapsed && <span>Availability</span>}
             </Button>
 
             {/* Existing Icons */}

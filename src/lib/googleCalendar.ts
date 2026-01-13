@@ -2,6 +2,7 @@
  * Google Calendar Availability Integration
  * Privacy-safe: Only checks free/busy status, never exposes event details
  */
+import { supabase } from '@/lib/supabase';
 
 export interface CalendarConfig {
     clientId: string;
@@ -251,25 +252,34 @@ export async function getAvailableSlots(
 }
 
 /**
- * Store calendar config in localStorage (admin only)
+ * Store calendar config in Supabase
  */
-export function saveCalendarConfig(config: Partial<CalendarConfig>): void {
-    const existing = getCalendarConfig();
+export async function saveCalendarConfig(config: Partial<CalendarConfig>): Promise<void> {
+    const existing = await getCalendarConfig();
     const updated = { ...existing, ...config };
-    localStorage.setItem('calendar_config', JSON.stringify(updated));
+
+    const { error } = await supabase
+        .from('app_settings')
+        .upsert({
+            key: 'calendar_config',
+            value: updated,
+            updated_at: new Date().toISOString()
+        });
+
+    if (error) console.error('Failed to save calendar config:', error);
 }
 
 /**
- * Get calendar config from localStorage
+ * Get calendar config from Supabase
  */
-export function getCalendarConfig(): CalendarConfig {
-    const stored = localStorage.getItem('calendar_config');
-    if (stored) {
-        return JSON.parse(stored);
-    }
+export async function getCalendarConfig(): Promise<CalendarConfig> {
+    const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'calendar_config')
+        .single();
 
-    // Default config
-    return {
+    const defaultConfig: CalendarConfig = {
         clientId: '',
         apiKey: '',
         calendarIds: ['primary'],
@@ -277,4 +287,17 @@ export function getCalendarConfig(): CalendarConfig {
         bufferMinutes: 120, // 2 hours
         recoveryDays: [] // No recovery days by default
     };
+
+    if (data?.value) {
+        return {
+            ...defaultConfig,
+            ...data.value,
+            // Explicitly fallback for arrays if missing in JSON
+            calendarIds: data.value.calendarIds || defaultConfig.calendarIds,
+            recoveryDays: data.value.recoveryDays || defaultConfig.recoveryDays
+        };
+    }
+
+    // Default config
+    return defaultConfig;
 }

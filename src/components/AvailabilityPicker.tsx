@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getDatesWithBlocks, formatTimeAMPM, getBlockedSlots } from '@/lib/availability';
-import { getHybridAvailability } from '@/lib/hybridAvailability';
+import { getHybridAvailability, getRangeBlockedDates } from '@/lib/hybridAvailability';
 import { AlertCircle, Clock, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { WeeklyScheduleView } from './WeeklyScheduleView';
 
@@ -28,7 +28,11 @@ export function AvailabilityPicker({
     existingBookings,
     serviceDuration = 1
 }: AvailabilityPickerProps) {
-    const [blockedDates, setBlockedDates] = useState<string[]>([]);
+    const [blockedWork, setBlockedWork] = useState<Date[]>([]);
+    const [blockedPersonal, setBlockedPersonal] = useState<Date[]>([]);
+    // blockedDates is deprecated effectively, but used in modifier math? 
+    // I'll keep it for legacy or simplify.
+
     const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string }>>([]);
     const [dayFullyBlocked, setDayFullyBlocked] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -69,8 +73,18 @@ export function AvailabilityPicker({
     }, [selectedDate, existingBookings]);
 
     const loadBlockedDates = async () => {
-        const dates = await getDatesWithBlocks();
-        setBlockedDates(dates);
+        // Load blocks for next 3 months to cover view
+        const start = new Date();
+        const end = addDays(start, 90);
+        const allBlocks = await getRangeBlockedDates(start, end);
+
+        // Split by source
+        const work = allBlocks.filter(b => b.source === 'manual').map(b => b.date); // Strings YYYY-MM-DD
+        const personal = allBlocks.filter(b => b.source === 'google').map(b => b.date);
+
+        // Convert to Date objects
+        setBlockedWork(work.map(d => new Date(d + 'T00:00:00')));
+        setBlockedPersonal(personal.map(d => new Date(d + 'T00:00:00')));
     };
 
     const loadDayAvailability = async () => {
@@ -98,31 +112,19 @@ export function AvailabilityPicker({
     };
 
     // Calendar modifiers for visual indicators
+    // Calendar modifiers for visual indicators
     const modifiers = {
-        blocked: blockedDates.map(d => new Date(d)),
+        work: blockedWork,
+        personal: blockedPersonal.filter(d =>
+            !blockedWork.some(w => w.toDateString() === d.toDateString())
+        ),
         today: new Date()
     };
 
-    const modifiersStyles = {
-        blocked: {
-            position: 'relative' as const,
-            '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: '2px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '4px',
-                height: '4px',
-                borderRadius: '50%',
-                backgroundColor: '#3b82f6'
-            }
-        }
-    };
-
     const modifiersClassNames = {
-        blocked: 'has-indicator',
-        today: 'bg-red-100 dark:bg-red-900'
+        work: 'work-indicator',
+        personal: 'personal-indicator',
+        today: 'bg-blue-50 text-blue-900 font-bold'
     };
 
     return (
@@ -135,10 +137,8 @@ export function AvailabilityPicker({
                 </Label>
 
                 <style>{`
-          .has-indicator {
-            position: relative;
-          }
-          .has-indicator::after {
+          .work-indicator { position: relative; }
+          .work-indicator::after {
             content: '';
             position: absolute;
             bottom: 2px;
@@ -148,6 +148,19 @@ export function AvailabilityPicker({
             height: 6px;
             border-radius: 50%;
             background-color: #3b82f6;
+          }
+          .personal-indicator { position: relative; }
+          .personal-indicator::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            border: 2px solid #a1a1aa;
+            background-color: transparent;
           }
         `}</style>
 
@@ -166,9 +179,15 @@ export function AvailabilityPicker({
                     className="rounded-md border border-zinc-200 bg-white p-3"
                 />
 
-                <div className="flex items-center gap-2 text-xs text-zinc-600 mt-2 bg-blue-50 p-2 rounded">
-                    <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
-                    <span className="font-medium">Blue dot = Limited or no availability (some times may be blocked)</span>
+                <div className="flex flex-col gap-2 mt-2 bg-zinc-50 border border-zinc-100 p-3 rounded-lg">
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+                        <span className="font-medium">Blue Dot = Booked / Work</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                        <div className="w-2.5 h-2.5 rounded-full border-2 border-zinc-400 flex-shrink-0" />
+                        <span className="font-medium">Gray Ring = Unavailable (Personal)</span>
+                    </div>
                 </div>
             </div>
 

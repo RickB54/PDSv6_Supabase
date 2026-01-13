@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addDays } from 'date-fns';
 import { getBlockedSlots, BlockedTimeSlot, formatTimeAMPM } from '@/lib/availability';
-import { Loader2, Clock } from 'lucide-react';
+import { getWeeklyBlocks } from '@/lib/hybridAvailability';
+import { Loader2, Clock, Lock, Shield } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface WeeklyScheduleViewProps {
@@ -23,12 +24,12 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const allBlocks = await getBlockedSlots();
-            setBlocks(allBlocks);
+            const allBlocks = await getWeeklyBlocks(weekStart);
+            setBlocks(allBlocks as any);
             setLoading(false);
         };
         load();
-    }, []);
+    }, [weekStart.toISOString()]);
 
     const getDayBlocks = (day: Date) => {
         const dayStr = format(day, 'yyyy-MM-dd');
@@ -92,19 +93,25 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
                             {/* Blocks List */}
                             {dayBlocks.length > 0 && (
                                 <div className="px-3 pb-3 space-y-2">
-                                    {dayBlocks.map(block => (
-                                        <div key={block.id} className="flex items-center justify-between text-xs bg-red-100 text-red-900 border border-red-200 rounded px-3 py-2 font-medium">
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-3.5 h-3.5 opacity-70" />
-                                                <span className="font-mono font-bold tracking-tight">
-                                                    {block.startTime ? `${formatTimeAMPM(block.startTime)} - ${formatTimeAMPM(block.endTime!)}` : 'Fully Booked'}
+                                    {dayBlocks.map(block => {
+                                        const isPersonal = (block as any).source === 'google';
+                                        return (
+                                            <div key={block.id} className={cn(
+                                                "flex items-center justify-between text-xs border rounded px-3 py-2 font-medium",
+                                                isPersonal ? "bg-zinc-50 text-zinc-500 border-zinc-200" : "bg-red-100 text-red-900 border-red-200"
+                                            )}>
+                                                <div className="flex items-center gap-2">
+                                                    {isPersonal ? <Lock className="w-3.5 h-3.5 opacity-60" /> : <Clock className="w-3.5 h-3.5 opacity-70" />}
+                                                    <span className="font-mono font-bold tracking-tight">
+                                                        {block.startTime !== '00:00' && block.startTime ? `${formatTimeAMPM(block.startTime)} - ${formatTimeAMPM(block.endTime!)}` : (isPersonal ? 'Unavailable' : 'Fully Booked')}
+                                                    </span>
+                                                </div>
+                                                <span className="italic opacity-80 text-[10px] uppercase tracking-wide truncate max-w-[120px]">
+                                                    {isPersonal ? 'Personal' : 'Booked'}
                                                 </span>
                                             </div>
-                                            <span className="italic opacity-80 text-[10px] uppercase tracking-wide truncate max-w-[120px]">
-                                                Booked
-                                            </span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

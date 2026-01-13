@@ -442,7 +442,10 @@ export function AppSidebar() {
                                       to={item.url}
                                       className={className}
                                     >
-                                      {item.icon && <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />}
+                                      {item.icon && <item.icon
+                                        className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`}
+                                        style={item.iconColor === 'blue' && !isChatAlert ? { color: '#2563eb' } : undefined}
+                                      />}
                                       {open && <span>{item.title}</span>}
                                       {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                                       {open && item.badge !== undefined && !isChatAlert && (

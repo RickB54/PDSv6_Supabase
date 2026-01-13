@@ -27,7 +27,8 @@ import {
     signOutFromGoogle,
     isSignedIn,
     saveCalendarConfig,
-    getCalendarConfig
+    getCalendarConfig,
+    CalendarConfig
 } from '@/lib/googleCalendar';
 import { getAvailabilityStatus } from '@/lib/hybridAvailability';
 import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw } from 'lucide-react';
@@ -56,7 +57,14 @@ export default function AvailabilityManager() {
     const [timeEnd, setTimeEnd] = useState('17:00');
 
     // Google Calendar states
-    const [googleConfig, setGoogleConfig] = useState(getCalendarConfig());
+    const [googleConfig, setGoogleConfig] = useState<CalendarConfig>({
+        clientId: '',
+        apiKey: '',
+        calendarIds: ['primary'],
+        maxBookingsPerDay: 1,
+        bufferMinutes: 120,
+        recoveryDays: []
+    });
     const [googleSignedIn, setGoogleSignedIn] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [availStatus, setAvailStatus] = useState<{
@@ -88,6 +96,7 @@ export default function AvailabilityManager() {
     useEffect(() => {
         loadBlocks();
         checkGoogleStatus();
+        loadConfig();
 
         const handleChange = () => loadBlocks();
         window.addEventListener('availability-changed', handleChange);
@@ -141,7 +150,7 @@ export default function AvailabilityManager() {
     const handleSaveGoogleConfig = async () => {
         setGoogleLoading(true);
         try {
-            saveCalendarConfig(googleConfig);
+            await saveCalendarConfig(googleConfig);
 
             if (googleConfig.clientId && googleConfig.apiKey) {
                 await initGoogleCalendar(googleConfig);
@@ -161,6 +170,11 @@ export default function AvailabilityManager() {
         } finally {
             setGoogleLoading(false);
         }
+    };
+
+    const loadConfig = async () => {
+        const config = await getCalendarConfig();
+        setGoogleConfig(config);
     };
 
     const loadBlocks = async () => {

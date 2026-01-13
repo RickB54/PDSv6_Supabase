@@ -4,6 +4,7 @@ import {
     UserPlus,
     ClipboardCheck,
     CalendarDays,
+    CalendarCheck,
     FileBarChart,
     CheckSquare,
     Users,
@@ -32,6 +33,7 @@ export type MenuItem = {
     badge?: number;
     badgeColor?: 'red' | 'blue'; // Color for the badge
     highlight?: 'red' | 'green';
+    iconColor?: string; // Custom icon color class (e.g., "text-blue-600")
 };
 
 export type MenuGroup = {
@@ -61,7 +63,7 @@ export const getMenuGroups = (counts: {
             title: "Customer Intake", icon: UserPlus,
             items: [
                 { title: "Phone Assistant", url: "#call-assistant", icon: Phone },
-                { title: "Availability Manager", url: "/availability-manager", role: "admin", icon: CalendarDays, highlight: "green" },
+                { title: "Availability Manager", url: "/availability-manager", role: "admin", icon: CalendarCheck, highlight: "green", iconColor: "blue" },
                 { title: "Package Comparison", url: "/package-selection", icon: Package },
                 { title: "Vehicle Classification", url: "/vehicle-classification", icon: FileText },
                 { title: "Client Evaluation", url: "/client-evaluation", icon: ClipboardCheck },

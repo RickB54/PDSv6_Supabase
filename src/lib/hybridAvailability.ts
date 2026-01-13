@@ -15,6 +15,7 @@ import {
     getCalendarConfig,
     isSignedIn
 } from './googleCalendar';
+import { addDays, format, parseISO } from 'date-fns';
 
 export interface HybridAvailability {
     date: string;
@@ -45,7 +46,7 @@ export async function getHybridAvailability(
     }
 
     // Check if Google Calendar is connected
-    const config = getCalendarConfig();
+    const config = await getCalendarConfig();
     const googleEnabled = config.clientId && config.apiKey && isSignedIn();
 
     if (!googleEnabled) {
@@ -120,8 +121,11 @@ export async function getHybridAvailability(
 /**
  * Check if Google Calendar is currently active
  */
-export function isGoogleCalendarActive(): boolean {
-    const config = getCalendarConfig();
+/**
+ * Check if Google Calendar is currently active
+ */
+export async function isGoogleCalendarActive(): Promise<boolean> {
+    const config = await getCalendarConfig();
     return !!(config.clientId && config.apiKey && isSignedIn());
 }
 
@@ -133,7 +137,7 @@ export async function getAvailabilityStatus(): Promise<{
     manualBlocksCount: number;
     mode: 'google+manual' | 'manual-only';
 }> {
-    const googleActive = isGoogleCalendarActive();
+    const googleActive = await isGoogleCalendarActive();
     const manualBlocks = await getManualBlocks();
 
     return {
@@ -142,3 +146,137 @@ export async function getAvailabilityStatus(): Promise<{
         mode: googleActive ? 'google+manual' : 'manual-only'
     };
 }
+
+/**
+ * Get blocked dates in a range with source (for calendar dots)
+ */
+export async function getRangeBlockedDates(start: Date, end: Date): Promise<Array<{ date: string; source: 'manual' | 'google' }>> {
+    // 1. Manual Blocks
+    const manualAll = await getManualBlocks();
+    const manualMapped = manualAll.map(b => ({ date: b.date, source: 'manual' as const }));
+
+    const config = await getCalendarConfig();
+    const googleEnabled = config.clientId && config.apiKey && isSignedIn();
+
+    if (!googleEnabled) {
+        return manualMapped;
+    }
+
+    // 2. Google Blocks
+    try {
+        const freeBusy = await getFreeBusy(config.calendarIds, start, end);
+        const googleDatesSet = new Set<string>();
+
+        for (const calId of config.calendarIds) {
+            const busy = freeBusy.calendars[calId]?.busy || [];
+            busy.forEach(p => {
+                let curr = new Date(p.start);
+                const endEvent = new Date(p.end);
+                // If event is less than 24h, it maps to start date based on locale?
+                // Simple logic: Mark the day of the start.
+                // Better logic: Mark all touched days.
+
+                // Normalize start to date string
+                const dateStr = format(curr, 'yyyy-MM-dd');
+                googleDatesSet.add(dateStr);
+
+                // If it spans days (checking loop)
+                let loopCurr = new Date(curr);
+                loopCurr.setHours(0, 0, 0, 0);
+                const loopEnd = new Date(endEvent);
+
+                while (addDays(loopCurr, 1) < loopEnd) {
+                    loopCurr = addDays(loopCurr, 1);
+                    googleDatesSet.add(format(loopCurr, 'yyyy-MM-dd'));
+                }
+            });
+        }
+
+        const googleMapped = Array.from(googleDatesSet).map(d => ({ date: d, source: 'google' as const }));
+        return [...manualMapped, ...googleMapped];
+    } catch (e) {
+        console.error("Failed to fetch Google range:", e);
+        return manualMapped;
+    }
+}
+
+/**
+ * Get combined blocks for a week (Manual + Google)
+ */
+export async function getWeeklyBlocks(startDate: Date): Promise<Array<{ id?: string; date: string; startTime: string | null; endTime: string | null; source: 'manual' | 'google'; reason?: string }>> {
+    const endDate = addDays(startDate, 7);
+    const manualAll = await getManualBlocks();
+
+    // Filter manual to range
+    const manualInRange = manualAll.filter(b => {
+        const d = new Date(b.date);
+        return d >= startDate && d <= endDate;
+    }).map(b => ({
+        id: b.id,
+        date: b.date,
+        startTime: b.startTime || null,
+        endTime: b.endTime || null,
+        source: 'manual' as const,
+        reason: b.reason
+    }));
+
+    const config = await getCalendarConfig();
+    const googleEnabled = config.clientId && config.apiKey && isSignedIn();
+
+    if (!googleEnabled) {
+        return manualInRange;
+    }
+
+    try {
+        // Fetch Google
+        const freeBusy = await getFreeBusy(config.calendarIds, startDate, endDate);
+        const googleBlocks: any[] = [];
+
+        for (const calId of config.calendarIds) {
+            const busy = freeBusy.calendars[calId]?.busy || [];
+            busy.forEach((p, idx) => {
+                const start = new Date(p.start);
+                const end = new Date(p.end);
+
+                let curr = new Date(start);
+                while (curr < end) {
+                    const dStr = format(curr, 'yyyy-MM-dd');
+
+                    // Start time
+                    const isFirstDay = curr.toDateString() === start.toDateString();
+                    const sTime = isFirstDay
+                        ? start.toTimeString().slice(0, 5)
+                        : '00:00';
+
+                    // End time
+                    const nextMidnight = new Date(curr);
+                    nextMidnight.setDate(nextMidnight.getDate() + 1);
+                    nextMidnight.setHours(0, 0, 0, 0);
+
+                    const isLastDay = end <= nextMidnight;
+                    const eTime = isLastDay
+                        ? end.toTimeString().slice(0, 5)
+                        : '23:59';
+
+                    googleBlocks.push({
+                        id: `g-${idx}-${dStr}`,
+                        date: dStr,
+                        startTime: sTime,
+                        endTime: eTime,
+                        source: 'google' as const,
+                        reason: 'Personal Time'
+                    });
+
+                    curr = addDays(curr, 1);
+                    curr.setHours(0, 0, 0, 0);
+                }
+            });
+        }
+
+        return [...manualInRange, ...googleBlocks];
+    } catch (error) {
+        console.error("Failed to fetch Google blocks:", error);
+        return manualInRange;
+    }
+}
+
