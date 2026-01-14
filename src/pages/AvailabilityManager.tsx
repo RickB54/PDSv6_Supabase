@@ -8,6 +8,16 @@ import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import {
     getBlockedSlots,
@@ -32,14 +42,16 @@ import {
 } from '@/lib/googleCalendar';
 import { getAvailabilityStatus } from '@/lib/hybridAvailability';
 import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useBookingsStore } from '@/store/bookings';
 
 /**
  * Admin Calendar Manager
  * Quick and easy availability blocking
  */
 export default function AvailabilityManager() {
+    const { items, refresh: refreshBookings } = useBookingsStore();
     const { toast } = useToast();
     const [blockedSlots, setBlockedSlots] = useState<BlockedTimeSlot[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -65,6 +77,7 @@ export default function AvailabilityManager() {
         bufferMinutes: 120,
         recoveryDays: []
     });
+    const [calIdsInput, setCalIdsInput] = useState('primary');
     const [googleSignedIn, setGoogleSignedIn] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [availStatus, setAvailStatus] = useState<{
@@ -78,9 +91,12 @@ export default function AvailabilityManager() {
     });
 
     // Loading and blocking states
-    const [isBlocking, setIsBlocking] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isBlocking, setIsBlocking] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+    // Google Config
     // Calendar navigation
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -97,10 +113,18 @@ export default function AvailabilityManager() {
         loadBlocks();
         checkGoogleStatus();
         loadConfig();
+        refreshBookings();
 
         const handleChange = () => loadBlocks();
+        const handleGoogleAuth = () => checkGoogleStatus();
+
         window.addEventListener('availability-changed', handleChange);
-        return () => window.removeEventListener('availability-changed', handleChange);
+        window.addEventListener('g_cal_auth_complete', handleGoogleAuth);
+
+        return () => {
+            window.removeEventListener('availability-changed', handleChange);
+            window.removeEventListener('g_cal_auth_complete', handleGoogleAuth);
+        };
     }, []);
 
     const checkGoogleStatus = async () => {
@@ -119,10 +143,11 @@ export default function AvailabilityManager() {
                 title: 'Google Calendar Connected',
                 description: 'Your appointments will now auto-block booking times.'
             });
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Connection Error:', error);
             toast({
                 title: 'Connection failed',
-                description: 'Please check your API credentials.',
+                description: error.message || 'Please check your API credentials.',
                 variant: 'destructive'
             });
         } finally {
@@ -150,10 +175,14 @@ export default function AvailabilityManager() {
     const handleSaveGoogleConfig = async () => {
         setGoogleLoading(true);
         try {
-            await saveCalendarConfig(googleConfig);
+            const parsedCalendarIds = calIdsInput.split(',').map(id => id.trim()).filter(id => id !== '');
+            const updatedConfig = { ...googleConfig, calendarIds: parsedCalendarIds };
+            setGoogleConfig(updatedConfig); // Update local state immediately
 
-            if (googleConfig.clientId && googleConfig.apiKey) {
-                await initGoogleCalendar(googleConfig);
+            await saveCalendarConfig(updatedConfig);
+
+            if (updatedConfig.clientId && updatedConfig.apiKey) {
+                await initGoogleCalendar(updatedConfig);
             }
 
             toast({
@@ -161,10 +190,12 @@ export default function AvailabilityManager() {
                 description: 'Google Calendar configuration updated.'
             });
             checkGoogleStatus();
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Google Config Save Error:', error);
+            const errorMessage = error.message || (typeof error === 'string' ? error : 'Please check your settings.');
             toast({
                 title: 'Save failed',
-                description: 'Please check your settings.',
+                description: errorMessage,
                 variant: 'destructive'
             });
         } finally {
@@ -173,8 +204,16 @@ export default function AvailabilityManager() {
     };
 
     const loadConfig = async () => {
-        const config = await getCalendarConfig();
-        setGoogleConfig(config);
+        try {
+            const config = await getCalendarConfig();
+            setGoogleConfig(config);
+            setCalIdsInput(config.calendarIds.join(', '));
+            if (config.clientId && config.apiKey) {
+                initGoogleCalendar(config).catch(console.error);
+            }
+        } catch (error) {
+            console.error('Load config error:', error);
+        }
     };
 
     const loadBlocks = async () => {
@@ -186,7 +225,10 @@ export default function AvailabilityManager() {
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await loadBlocks();
+        await Promise.all([
+            loadBlocks(),
+            refreshBookings()
+        ]);
         checkGoogleStatus();
         setTimeout(() => {
             setIsRefreshing(false);
@@ -399,6 +441,33 @@ export default function AvailabilityManager() {
         }
     };
 
+    // Unblock multiple selected dates
+    const handleDeleteSelectedDates = async () => {
+        if (selectedDates.length === 0) return;
+
+        setIsDeleting(true);
+        try {
+            await Promise.all(selectedDates.map(date => {
+                const dateStr = format(date, 'yyyy-MM-dd');
+                return unblockDay(dateStr);
+            }));
+
+            toast({
+                title: `✓ Blocks Cleared`,
+                description: `Cleared all blocks for ${selectedDates.length} selected date${selectedDates.length > 1 ? 's' : ''}.`
+            });
+
+            setSelectedDates([]);
+            setSelectedDate(undefined);
+            await loadBlocks();
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to clear blocks', variant: 'destructive' });
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteConfirm(false);
+        }
+    };
+
     // Modifier for calendar to show blocked dates
     const modifiers = {
         blocked: blockedDates.map(d => new Date(d))
@@ -503,39 +572,50 @@ export default function AvailabilityManager() {
 
                                                 // Check block status for this day
                                                 const dayBlocks = blockedSlots.filter(s => s.date === dateStr);
+                                                // Also include real bookings in the indicators
+                                                const dayBookings = items.filter(b => {
+                                                    try {
+                                                        return isSameDay(parseISO(b.date), day);
+                                                    } catch (e) { return false; }
+                                                });
+
                                                 const hasFullDayBlock = dayBlocks.some(b => !b.startTime && !b.endTime);
-                                                const hasPartialBlocks = dayBlocks.some(b => b.startTime && b.endTime);
-                                                const blockCount = dayBlocks.length;
+                                                const hasPartialBlocks = dayBlocks.some(b => b.startTime && b.endTime) || dayBookings.length > 0;
+                                                const blockCount = dayBlocks.length + dayBookings.length;
 
                                                 // Determine indicator style
                                                 let indicatorClass = '';
-                                                let indicatorStyle = {};
 
                                                 if (hasFullDayBlock) {
                                                     // Solid blue circle for full day block
                                                     indicatorClass = 'after:bg-blue-500';
                                                 } else if (hasPartialBlocks) {
-                                                    // Check if morning or afternoon blocks
-                                                    const morningBlocks = dayBlocks.filter(b => {
+                                                    // Check if morning or afternoon blocks/bookings
+                                                    const hasMorning = dayBlocks.some(b => {
                                                         if (!b.startTime) return false;
-                                                        const hour = parseInt(b.startTime.split(':')[0]);
+                                                        return parseInt(b.startTime.split(':')[0]) < 12;
+                                                    }) || dayBookings.some(b => {
+                                                        const hour = parseISO(b.date).getHours();
                                                         return hour < 12;
                                                     });
-                                                    const afternoonBlocks = dayBlocks.filter(b => {
+
+                                                    const hasAfternoon = dayBlocks.some(b => {
                                                         if (!b.startTime) return false;
-                                                        const hour = parseInt(b.startTime.split(':')[0]);
+                                                        return parseInt(b.startTime.split(':')[0]) >= 12;
+                                                    }) || dayBookings.some(b => {
+                                                        const hour = parseISO(b.date).getHours();
                                                         return hour >= 12;
                                                     });
 
-                                                    if (morningBlocks.length > 0 && afternoonBlocks.length > 0) {
-                                                        // Both morning and afternoon - striped indicator
-                                                        indicatorClass = 'after:bg-gradient-to-r after:from-blue-500 via-transparent after:to-blue-500';
-                                                    } else if (morningBlocks.length > 0) {
-                                                        // Morning only - left half
-                                                        indicatorClass = 'after:bg-gradient-to-r after:from-blue-500 after:to-transparent';
-                                                    } else {
-                                                        // Afternoon only - right half
-                                                        indicatorClass = 'after:bg-gradient-to-l after:from-blue-500 after:to-transparent';
+                                                    if (hasMorning && hasAfternoon) {
+                                                        // Both morning and afternoon - solid deep blue
+                                                        indicatorClass = 'after:bg-[#1e3a8a]';
+                                                    } else if (hasMorning) {
+                                                        // Morning only - left half (Deep dark blue transitioning smoothly to white)
+                                                        indicatorClass = 'after:bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] after:ring-1 after:ring-zinc-200';
+                                                    } else if (hasAfternoon) {
+                                                        // Afternoon only - right half (White transitioning smoothly to deep dark blue)
+                                                        indicatorClass = 'after:bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] after:ring-1 after:ring-zinc-200';
                                                     }
                                                 }
 
@@ -588,17 +668,28 @@ export default function AvailabilityManager() {
                                     </div>
 
                                     {selectedDates.length > 0 && (
-                                        <Button
-                                            onClick={() => {
-                                                setSelectedDates([]);
-                                                setSelectedDate(undefined);
-                                            }}
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full border-zinc-700 text-zinc-400"
-                                        >
-                                            Clear Selection
-                                        </Button>
+                                        <div className="space-y-2">
+                                            <Button
+                                                onClick={() => {
+                                                    setSelectedDates([]);
+                                                    setSelectedDate(undefined);
+                                                }}
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full border-zinc-700 text-zinc-400"
+                                            >
+                                                Clear Selection
+                                            </Button>
+                                            <Button
+                                                onClick={() => setShowDeleteConfirm(true)}
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full border-red-900/50 text-red-500 hover:bg-red-950/20"
+                                            >
+                                                <X className="w-3 h-3 mr-2" />
+                                                Delete Selection
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </Card>
@@ -819,13 +910,22 @@ export default function AvailabilityManager() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-zinc-400 text-xs uppercase font-bold">Calendar ID</Label>
+                                    <Label className="text-zinc-400 text-xs uppercase font-bold">Calendar IDs (comma separated)</Label>
                                     <Input
                                         className="bg-zinc-950 border-zinc-800 text-white font-mono text-xs"
-                                        value={googleConfig.calendarIds[0] || 'primary'}
-                                        onChange={(e) => setGoogleConfig({ ...googleConfig, calendarIds: [e.target.value] })}
-                                        placeholder="primary"
+                                        value={calIdsInput}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setCalIdsInput(val);
+                                            // Silently update config in background
+                                            const ids = val.split(',').map(s => s.trim()).filter(Boolean);
+                                            setGoogleConfig(prev => ({ ...prev, calendarIds: ids }));
+                                        }}
+                                        placeholder="primary, rberube54@gmail.com"
                                     />
+                                    <p className="text-[10px] text-zinc-500 italic">
+                                        Use "primary" for your main account. Add shared calendar emails separated by commas.
+                                    </p>
                                 </div>
 
                                 <div className="flex justify-end gap-2">
@@ -903,6 +1003,31 @@ export default function AvailabilityManager() {
                     </TabsContent>
                 </Tabs>
             </div>
+            {/* Deletion Warning Modal */}
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-red-500 flex items-center gap-2">
+                            <AlertCircle className="w-6 h-6" /> Warning: Unblocking Selection
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            You are about to clear ALL blocks for <strong>{selectedDates.length}</strong> selected dates. This will make these dates fully available for online booking again.
+                            <br /><br />
+                            This action cannot be undone. Are you sure?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteSelectedDates}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? 'Clearing...' : 'Yes, Delete Selection'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

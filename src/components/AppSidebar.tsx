@@ -32,11 +32,20 @@ import api from "@/lib/api";
 import { isViewed } from "@/lib/viewTracker";
 import localforage from "localforage"; // Using localforage for payroll check
 
-export function AppSidebar() {
+export function AppSidebar({ user: userProp }: { user?: any }) {
   const { open, setOpenMobile, setOpen } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState(getCurrentUser());
+  const [user, setUser] = useState(userProp || getCurrentUser());
+
+  // Keep local user in sync with prop
+  useEffect(() => {
+    if (userProp) {
+      // console.log("AppSidebar: Received user prop update", userProp.role);
+      setUser(userProp);
+    }
+  }, [userProp]);
+
   const isAdmin = user?.role === 'admin';
   const isEmployee = user?.role === 'employee';
   const isCustomer = user?.role === 'customer';
@@ -61,16 +70,12 @@ export function AppSidebar() {
   useEffect(() => {
     function onStorage() { setTick((t) => t + 1); }
     window.addEventListener('storage', onStorage as any);
-    const updateUser = () => setUser(getCurrentUser());
-    window.addEventListener('auth-changed', updateUser as any);
     const bump = () => setTick(t => t + 1);
-    window.addEventListener('admin_alerts_updated', bump as any);
     window.addEventListener('admin_alerts_updated', bump as any);
     window.addEventListener('pdf_archive_updated', bump as any);
 
     // Chat Alert Listener
     const handleChatAlert = () => {
-      // You might want to persist this in localStorage or just keep ephemeral
       localStorage.setItem('has_unread_chat', 'true');
       setTick(t => t + 1);
     };
@@ -78,50 +83,39 @@ export function AppSidebar() {
 
     // Force refresh role on mount to fix stale "customer" state
     const refreshRole = async () => {
-      // 1. Standard Auth Check
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData.user) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
 
-        // 2. AGGRESSIVE DB CHECK (Bypass Session)
-        // We fetch the row directly to see the REAL role
-        const { data: dbUser, error } = await supabase
-          .from('app_users')
-          .select('role, name')
-          .eq('id', authData.user.id)
-          .single();
+      const { data: dbUser } = await supabase
+        .from('app_users')
+        .select('role, name')
+        .eq('id', authUser.id)
+        .maybeSingle();
 
-        if (dbUser && !error) {
-          console.log("AppSidebar Self-Heal: DB says", dbUser.role);
-          // If DB role differs from current local role, FORCE UPDATE
-          const currentUser = getCurrentUser();
-          if (currentUser?.role !== dbUser.role) {
-            console.warn(`Role Mismatch! Local: ${currentUser?.role}, DB: ${dbUser.role}. Forcing update.`);
-
-            // Manually update the user object
-            const fixedUser = { ...currentUser, role: dbUser.role, name: dbUser.name || currentUser.name };
-
-            // Write to Auth System
-            await finalizeSupabaseSession(authData.user);
-
-            // Force local state update
-            setUser(fixedUser as any);
-            return; // Exit, we updated
-          }
-        } else {
-          console.error("AppSidebar Self-Heal: Failed to read DB role", error);
+      if (dbUser) {
+        const currentUser = getCurrentUser();
+        if (currentUser?.role !== dbUser.role) {
+          console.log("AppSidebar Auto-Heal: Upgrading role to", dbUser.role);
+          const { finalizeSupabaseSession } = await import('@/lib/auth');
+          await finalizeSupabaseSession(authUser);
+          setUser(getCurrentUser());
         }
-
-        // Standard Fallback
-        await finalizeSupabaseSession(authData.user);
       }
     };
+
     refreshRole();
+
+    // Aggressive retry for the first 10 seconds after mount
+    const interval = setInterval(refreshRole, 2000);
+    const timeout = setTimeout(() => clearInterval(interval), 10000);
 
     return () => {
       window.removeEventListener('storage', onStorage as any);
-      window.removeEventListener('auth-changed', updateUser as any);
       window.removeEventListener('admin_alerts_updated', bump as any);
       window.removeEventListener('pdf_archive_updated', bump as any);
+      window.removeEventListener('new-chat-alert', handleChatAlert);
+      clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, []);
 

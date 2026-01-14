@@ -148,12 +148,25 @@ export async function getAvailabilityStatus(): Promise<{
 }
 
 /**
- * Get blocked dates in a range with source (for calendar dots)
+ * Get blocked dates in a range with source and time info (for calendar dots)
  */
-export async function getRangeBlockedDates(start: Date, end: Date): Promise<Array<{ date: string; source: 'manual' | 'google' }>> {
+export async function getRangeBlockedDates(start: Date, end: Date): Promise<Array<{
+    date: string;
+    source: 'manual' | 'google';
+    startTime: string | null;
+    endTime: string | null;
+}>> {
     // 1. Manual Blocks
     const manualAll = await getManualBlocks();
-    const manualMapped = manualAll.map(b => ({ date: b.date, source: 'manual' as const }));
+    const manualMapped = manualAll.filter(b => {
+        const d = new Date(b.date);
+        return d >= start && d <= end;
+    }).map(b => ({
+        date: b.date,
+        source: 'manual' as const,
+        startTime: b.startTime || null,
+        endTime: b.endTime || null
+    }));
 
     const config = await getCalendarConfig();
     const googleEnabled = config.clientId && config.apiKey && isSignedIn();
@@ -165,35 +178,43 @@ export async function getRangeBlockedDates(start: Date, end: Date): Promise<Arra
     // 2. Google Blocks
     try {
         const freeBusy = await getFreeBusy(config.calendarIds, start, end);
-        const googleDatesSet = new Set<string>();
+        const googleBlocks: Array<{ date: string; source: 'google'; startTime: string | null; endTime: string | null }> = [];
 
         for (const calId of config.calendarIds) {
             const busy = freeBusy.calendars[calId]?.busy || [];
             busy.forEach(p => {
-                let curr = new Date(p.start);
+                const startEvent = new Date(p.start);
                 const endEvent = new Date(p.end);
-                // If event is less than 24h, it maps to start date based on locale?
-                // Simple logic: Mark the day of the start.
-                // Better logic: Mark all touched days.
 
-                // Normalize start to date string
-                const dateStr = format(curr, 'yyyy-MM-dd');
-                googleDatesSet.add(dateStr);
+                let curr = new Date(startEvent);
+                while (curr < endEvent) {
+                    const dStr = format(curr, 'yyyy-MM-dd');
 
-                // If it spans days (checking loop)
-                let loopCurr = new Date(curr);
-                loopCurr.setHours(0, 0, 0, 0);
-                const loopEnd = new Date(endEvent);
+                    // Simple logic for morning/afternoon in the dots
+                    const isFirstDay = curr.toDateString() === startEvent.toDateString();
+                    const sTime = isFirstDay ? startEvent.toTimeString().slice(0, 5) : '00:00';
 
-                while (addDays(loopCurr, 1) < loopEnd) {
-                    loopCurr = addDays(loopCurr, 1);
-                    googleDatesSet.add(format(loopCurr, 'yyyy-MM-dd'));
+                    const nextMidnight = new Date(curr);
+                    nextMidnight.setDate(nextMidnight.getDate() + 1);
+                    nextMidnight.setHours(0, 0, 0, 0);
+
+                    const isLastDay = endEvent <= nextMidnight;
+                    const eTime = isLastDay ? endEvent.toTimeString().slice(0, 5) : '23:59';
+
+                    googleBlocks.push({
+                        date: dStr,
+                        source: 'google' as const,
+                        startTime: sTime,
+                        endTime: eTime
+                    });
+
+                    curr = addDays(curr, 1);
+                    curr.setHours(0, 0, 0, 0);
                 }
             });
         }
 
-        const googleMapped = Array.from(googleDatesSet).map(d => ({ date: d, source: 'google' as const }));
-        return [...manualMapped, ...googleMapped];
+        return [...manualMapped, ...googleBlocks];
     } catch (e) {
         console.error("Failed to fetch Google range:", e);
         return manualMapped;

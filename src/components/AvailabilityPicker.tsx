@@ -28,11 +28,10 @@ export function AvailabilityPicker({
     existingBookings,
     serviceDuration = 1
 }: AvailabilityPickerProps) {
-    const [blockedWork, setBlockedWork] = useState<Date[]>([]);
+    const [blockedFull, setBlockedFull] = useState<Date[]>([]);
+    const [blockedMorning, setBlockedMorning] = useState<Date[]>([]);
+    const [blockedAfternoon, setBlockedAfternoon] = useState<Date[]>([]);
     const [blockedPersonal, setBlockedPersonal] = useState<Date[]>([]);
-    // blockedDates is deprecated effectively, but used in modifier math? 
-    // I'll keep it for legacy or simplify.
-
     const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string }>>([]);
     const [dayFullyBlocked, setDayFullyBlocked] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -78,13 +77,57 @@ export function AvailabilityPicker({
         const end = addDays(start, 90);
         const allBlocks = await getRangeBlockedDates(start, end);
 
-        // Split by source
-        const work = allBlocks.filter(b => b.source === 'manual').map(b => b.date); // Strings YYYY-MM-DD
-        const personal = allBlocks.filter(b => b.source === 'google').map(b => b.date);
+        // Group by date to determine morning/afternoon/full
+        const datesMap: Record<string, { workMorning: boolean; workAfternoon: boolean; workFull: boolean; personal: boolean }> = {};
 
-        // Convert to Date objects
-        setBlockedWork(work.map(d => new Date(d + 'T00:00:00')));
-        setBlockedPersonal(personal.map(d => new Date(d + 'T00:00:00')));
+        allBlocks.forEach(b => {
+            if (!datesMap[b.date]) {
+                datesMap[b.date] = { workMorning: false, workAfternoon: false, workFull: false, personal: false };
+            }
+            if (b.source === 'manual') {
+                if (!b.startTime && !b.endTime) {
+                    datesMap[b.date].workFull = true;
+                } else if (b.startTime) {
+                    const hour = parseInt(b.startTime.split(':')[0]);
+                    if (hour < 12) datesMap[b.date].workMorning = true;
+                    else datesMap[b.date].workAfternoon = true;
+                }
+            } else if (b.source === 'google') {
+                datesMap[b.date].personal = true;
+            }
+        });
+
+        // Add real bookings to the indicators
+        existingBookings.forEach(booking => {
+            const d = format(new Date(booking.scheduled_at), 'yyyy-MM-dd');
+            if (!datesMap[d]) datesMap[d] = { workMorning: false, workAfternoon: false, workFull: false, personal: false };
+            const hour = new Date(booking.scheduled_at).getHours();
+            if (hour < 12) datesMap[d].workMorning = true;
+            else datesMap[d].workAfternoon = true;
+        });
+
+        const full: Date[] = [];
+        const morning: Date[] = [];
+        const afternoon: Date[] = [];
+        const personal: Date[] = [];
+
+        Object.entries(datesMap).forEach(([dStr, info]) => {
+            const dateObj = new Date(dStr + 'T00:00:00');
+            if (info.workFull || (info.workMorning && info.workAfternoon)) {
+                full.push(dateObj);
+            } else if (info.workMorning) {
+                morning.push(dateObj);
+            } else if (info.workAfternoon) {
+                afternoon.push(dateObj);
+            } else if (info.personal) {
+                personal.push(dateObj);
+            }
+        });
+
+        setBlockedFull(full);
+        setBlockedMorning(morning);
+        setBlockedAfternoon(afternoon);
+        setBlockedPersonal(personal);
     };
 
     const loadDayAvailability = async () => {
@@ -112,17 +155,18 @@ export function AvailabilityPicker({
     };
 
     // Calendar modifiers for visual indicators
-    // Calendar modifiers for visual indicators
     const modifiers = {
-        work: blockedWork,
-        personal: blockedPersonal.filter(d =>
-            !blockedWork.some(w => w.toDateString() === d.toDateString())
-        ),
+        workFull: blockedFull,
+        workMorning: blockedMorning,
+        workAfternoon: blockedAfternoon,
+        personal: blockedPersonal,
         today: new Date()
     };
 
     const modifiersClassNames = {
-        work: 'work-indicator',
+        workFull: 'work-full-indicator',
+        workMorning: 'work-morning-indicator',
+        workAfternoon: 'work-afternoon-indicator',
         personal: 'personal-indicator',
         today: 'bg-blue-50 text-blue-900 font-bold'
     };
@@ -137,30 +181,31 @@ export function AvailabilityPicker({
                 </Label>
 
                 <style>{`
-          .work-indicator { position: relative; }
-          .work-indicator::after {
-            content: '';
-            position: absolute;
-            bottom: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: #3b82f6;
+          .work-full-indicator { position: relative; }
+          .work-full-indicator::after {
+            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; border-radius: 50%;
+            background-color: #1e3a8a; z-index: 10;
+          }
+          .work-morning-indicator { position: relative; }
+          .work-morning-indicator::after {
+            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; border-radius: 50%;
+            background: linear-gradient(90deg, #1e3a8a 0%, #ffffff 100%);
+            box-shadow: 0 0 0 1px #e4e4e7; z-index: 10;
+          }
+          .work-afternoon-indicator { position: relative; }
+          .work-afternoon-indicator::after {
+            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; border-radius: 50%;
+            background: linear-gradient(90deg, #ffffff 0%, #1e3a8a 100%);
+            box-shadow: 0 0 0 1px #e4e4e7; z-index: 10;
           }
           .personal-indicator { position: relative; }
           .personal-indicator::after {
-            content: '';
-            position: absolute;
-            bottom: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            border: 2px solid #a1a1aa;
-            background-color: transparent;
+            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; border-radius: 50%;
+            border: 2px solid #a1a1aa; background-color: transparent; z-index: 10;
           }
         `}</style>
 
@@ -272,7 +317,10 @@ export function AvailabilityPicker({
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <WeeklyScheduleView selectedDate={selectedDate} />
+                        <WeeklyScheduleView
+                            selectedDate={selectedDate}
+                            onDateSelect={onDateChange}
+                        />
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>

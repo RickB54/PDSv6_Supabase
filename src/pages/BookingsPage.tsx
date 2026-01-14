@@ -1,6 +1,6 @@
 import { SidebarTrigger } from "@/components/ui/sidebar"; // NEW IMPORT
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears, parseISO, isToday, isWithinInterval, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw } from "lucide-react"; // Added Copy, RotateCcw
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2 } from "lucide-react"; // Added Copy, RotateCcw, Trash2
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -33,6 +34,8 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import supabase from "@/lib/supabase"; // Realtime import
 import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } from "@/lib/unifiedCalendar";
+import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig } from "@/lib/googleCalendar";
+import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 
 // --- Types ---
 type ViewMode = "day" | "week" | "month" | "year" | "analytics";
@@ -55,6 +58,7 @@ export default function BookingsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [analyticsDefaultTab, setAnalyticsDefaultTab] = useState<string | undefined>(undefined);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const hasInitialized = useRef(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -188,6 +192,36 @@ export default function BookingsPage() {
     }
   }, []);
 
+  // Load unified events (bookings + manual blocks + Google Calendar)
+  const loadUnifiedEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      let startDate: Date, endDate: Date;
+
+      if (viewMode === 'day') {
+        startDate = startOfDay(currentDate);
+        endDate = endOfDay(currentDate);
+      } else if (viewMode === 'week') {
+        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+      } else if (viewMode === 'month') {
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+      } else {
+        // Year view - get full year
+        startDate = startOfYear(currentDate);
+        endDate = endOfYear(currentDate);
+      }
+
+      const events = await getUnifiedCalendarEvents(startDate, endDate, items);
+      setUnifiedEvents(events);
+    } catch (error) {
+      console.error('Failed to load unified events:', error);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [viewMode, currentDate, items, refresh]);
+
   useEffect(() => {
     // 1. Fetch Customers
     fetchCustomers();
@@ -199,10 +233,20 @@ export default function BookingsPage() {
         refresh();
         toast.info("Calendar updated from remote change");
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'availability_blocks' }, () => {
+        loadUnifiedEvents();
+      })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [refresh, fetchCustomers]);
+    // 3. Local event listener
+    const handleLocalChange = () => loadUnifiedEvents();
+    window.addEventListener('availability-changed', handleLocalChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('availability-changed', handleLocalChange);
+    };
+  }, [refresh, fetchCustomers, loadUnifiedEvents]);
 
   // Handle URL query parameters for pre-filling booking form
   const location = useLocation();
@@ -266,55 +310,41 @@ export default function BookingsPage() {
     }
   }, [location.state, isAddModalOpen, navigate]);
 
+  // 1. One-time Initialization
+  useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
 
-  // Load unified events (bookings + manual blocks + Google Calendar)
-  const loadUnifiedEvents = useCallback(async () => {
-    setEventsLoading(true);
-    try {
-      let startDate: Date, endDate: Date;
+    const initPage = async () => {
+      // Refresh store data first
+      await refresh();
 
-      if (viewMode === 'day') {
-        startDate = startOfDay(currentDate);
-        endDate = endOfDay(currentDate);
-      } else if (viewMode === 'week') {
-        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-      } else if (viewMode === 'month') {
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-      } else {
-        // Year view - get full year
-        startDate = startOfYear(currentDate);
-        endDate = endOfYear(currentDate);
+      // Initialize GCal in background
+      try {
+        const config = await getCalendarConfig();
+        if (config.clientId && config.apiKey) {
+          await initGoogleCalendar(config);
+        }
+      } catch (e) {
+        console.warn("[BookingsPage] GCal background init failed:", e);
       }
 
-      const events = await getUnifiedCalendarEvents(startDate, endDate, items);
-      setUnifiedEvents(events);
-    } catch (error) {
-      console.error('Failed to load unified events:', error);
-    } finally {
-      setEventsLoading(false);
-    }
-  }, [viewMode, currentDate, items]);
+      // Initial event load
+      loadUnifiedEvents();
+    };
 
-  // Refresh unified events when view changes or bookings change
+    initPage();
+  }, []); // Empty dependencies = run once on mount
+
+  // 2. Focus Refresh (only when tab becomes active)
   useEffect(() => {
-    loadUnifiedEvents();
-
-    // Listen for availability changes
-    const handleAvailabilityChange = () => loadUnifiedEvents();
-    window.addEventListener('availability-changed', handleAvailabilityChange);
-
-    return () => window.removeEventListener('availability-changed', handleAvailabilityChange);
-  }, [loadUnifiedEvents]);
-
-  // Refresh data on mount and focus
-  useEffect(() => {
-    refresh();
-    const onFocus = () => refresh();
+    const onFocus = () => {
+      refresh();
+      loadUnifiedEvents();
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [refresh]);
+  }, [loadUnifiedEvents, refresh]);
 
   // Calendar Grid Generation
   const calendarDays = useMemo(() => {
@@ -336,12 +366,9 @@ export default function BookingsPage() {
 
   const getBookingsForDay = (day: Date) => {
     // Get unified events for this day
-    const dayEvents = unifiedEvents.filter(event => {
-      const eventDate = new Date(event.date);
-      return isSameDay(eventDate, day);
-    });
-
-    return dayEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return unifiedEvents.filter(event => {
+      return isSameDay(parseISO(event.date), day);
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
   // Get real bookings only (for legacy compatibility)
@@ -353,7 +380,10 @@ export default function BookingsPage() {
   };
 
   // Status styling helpers
-  const getStatusColor = (status: BookingStatus | undefined) => {
+  const getStatusColor = (status: BookingStatus | undefined, type?: string) => {
+    if (type === 'google-event') return 'bg-purple-500/10 border-purple-500/50 text-purple-200';
+    if (type === 'manual-block') return 'bg-blue-500/20 border-blue-500 text-blue-200';
+
     switch (status) {
       case 'tentative':
         return 'bg-yellow-500/10 border-yellow-500/50 border-dashed text-yellow-200';
@@ -405,8 +435,31 @@ export default function BookingsPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleBookingClick = (e: React.MouseEvent, booking: Booking) => {
+  const handleBookingClick = async (e: React.MouseEvent, event: CalendarEvent) => {
     e.stopPropagation();
+
+    // If it's a manual block, handle separately
+    if (event.type === 'manual-block') {
+      if (window.confirm(`Delete manual block: "${event.title}"?`)) {
+        try {
+          await unblockSlot(event.id);
+          toast.success("Manual block removed");
+          // Refresh view
+          window.dispatchEvent(new Event('availability-changed'));
+        } catch (err) {
+          toast.error("Failed to remove manual block");
+        }
+      }
+      return;
+    }
+
+    if (event.type === 'google-event') {
+      toast.info("This is a Google Calendar event. Update it in your Google Calendar.");
+      return;
+    }
+
+    // It is a real booking
+    const booking = event as Booking; // Cast is safe here because type is not manual-block or google-event
     setSelectedBooking(booking);
     const matchingCust = customers.find(c => c.name === booking.customer);
     setSelectedCustomer(matchingCust || null);
@@ -424,7 +477,7 @@ export default function BookingsPage() {
       time: format(parseISO(booking.date), "HH:mm"),
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
       assignedEmployee: booking.assignedEmployee || "",
-      bookedBy: booking.bookedBy || "", // Load bookedBy
+      bookedBy: booking.bookedBy || "",
       notes: booking.notes || "",
       addons: booking.addons || [],
       hasReminder: booking.hasReminder || false,
@@ -432,7 +485,6 @@ export default function BookingsPage() {
       status: booking.status || "confirmed",
       vehicleId: booking.vehicleId
     });
-    setIsAddModalOpen(true);
     setIsAddModalOpen(true);
   };
 
@@ -588,6 +640,23 @@ export default function BookingsPage() {
 
       toast.success("Booking created");
     }
+
+    // Sync to Google Calendar if signed in
+    if (isSignedIn()) {
+      try {
+        await createGoogleEvent({
+          summary: `Detailing: ${resultingBooking.customer}`,
+          description: `Service: ${resultingBooking.title}\nVehicle: ${resultingBooking.vehicle}\nNotes: ${resultingBooking.notes || 'No notes'}`,
+          start: new Date(resultingBooking.date),
+          end: resultingBooking.endTime ? new Date(resultingBooking.endTime) : new Date(new Date(resultingBooking.date).getTime() + 3 * 60 * 60000),
+        });
+        toast.success("Synced to Google Calendar");
+      } catch (err) {
+        console.error("Google sync failed:", err);
+        toast.error("Google Calendar sync failed. Check console.");
+      }
+    }
+
     // Generate and Save PDF automatically
     handleSavePDF(); // Default customer copy
 
@@ -849,10 +918,10 @@ export default function BookingsPage() {
                   let eventColor = '';
                   let eventIcon = '';
 
-                  if (event.source === 'manual') {
+                  if (event.type === 'manual-block') {
                     eventColor = 'bg-blue-500/20 border-blue-500 text-blue-200';
                     eventIcon = '🔵';
-                  } else if (event.source === 'google') {
+                  } else if (event.type === 'google-event') {
                     eventColor = 'bg-purple-500/20 border-purple-500 text-purple-200';
                     eventIcon = '📅';
                   } else {
@@ -862,32 +931,10 @@ export default function BookingsPage() {
                     eventIcon = booking ? getStatusIcon(booking.status) : '✓';
                   }
 
-                  const handleEventClick = (e: React.MouseEvent) => {
-                    e.stopPropagation();
-
-                    if (event.source === 'booking') {
-                      // Open booking modal
-                      const booking = items.find(b => b.id === event.id);
-                      if (booking) {
-                        handleBookingClick(e, booking);
-                      }
-                    } else if (event.source === 'manual') {
-                      // Show delete confirmation for manual block
-                      if (confirm(`Delete manual block: "${event.title}"?`)) {
-                        deleteCalendarEvent(event, remove);
-                        toast.success('Manual block deleted');
-                        loadUnifiedEvents();
-                      }
-                    } else {
-                      // Google Calendar event - show info
-                      toast.info('This is a Google Calendar event. Manage it in Google Calendar.');
-                    }
-                  };
-
                   return (
                     <div
                       key={event.id}
-                      onClick={handleEventClick}
+                      onClick={(e) => handleBookingClick(e, event)}
                       className={cn(
                         "absolute left-20 right-4 rounded-md border p-2 text-xs shadow-sm cursor-pointer hover:brightness-110 transition-all z-10 overflow-hidden flex flex-col",
                         eventColor
@@ -899,13 +946,24 @@ export default function BookingsPage() {
                       }}
                     >
                       <div className="flex items-center gap-2 font-semibold">
-                        <span>{eventIcon}</span>
+                        {(() => {
+                          const h = parseISO(event.date).getHours();
+                          const isFull = event.type === 'manual-block' && !event.endTime;
+                          return (
+                            <div
+                              className={cn(
+                                "w-2 h-2 rounded-full shadow-sm flex-shrink-0",
+                                isFull ? "bg-[#1e3a8a]" : (h < 12 ? "bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400" : "bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400")
+                              )}
+                            />
+                          );
+                        })()}
                         <span>{format(start, "h:mm a")}</span>
                         <span className="truncate">{event.customer || event.title}</span>
                       </div>
-                      {event.source === 'booking' && <div className="opacity-90 truncate">{event.title}</div>}
-                      {event.source === 'manual' && <div className="opacity-75 text-[10px]">Manual Block</div>}
-                      {event.source === 'google' && <div className="opacity-75 text-[10px]">Google Calendar</div>}
+                      {event.type === 'booking' && <div className="opacity-90 truncate">{event.title}</div>}
+                      {event.type === 'manual-block' && <div className="opacity-75 text-[10px]">Manual Block</div>}
+                      {event.type === 'google-event' && <div className="opacity-75 text-[10px]">Google Calendar</div>}
                       <div className="mt-auto pt-1 flex items-center gap-1 text-[10px] uppercase font-bold opacity-80">
                         {event.isDeletable && <span className="text-red-400">Click to delete</span>}
                         {!event.isDeletable && <span className="text-zinc-500">Read-only</span>}
@@ -934,18 +992,18 @@ export default function BookingsPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg">{format(day, "MMMM d, yyyy")}</h3>
-                      <p className="text-sm text-muted-foreground">{bookings.length} Booking{bookings.length !== 1 && 's'}</p>
+                      <p className="text-sm text-muted-foreground">{bookings.length} Event{bookings.length !== 1 && 's'}</p>
                     </div>
                     <div className="ml-auto">
                       <Button size="sm" variant="ghost" onClick={() => handleDayClick(day)}><Plus className="h-4 w-4" /></Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    {bookings.length === 0 && <p className="text-sm text-zinc-600 italic pl-16">No bookings scheduled.</p>}
-                    {bookings.map(booking => (
+                    {bookings.length === 0 && <p className="text-sm text-zinc-600 italic pl-16">No events scheduled.</p>}
+                    {bookings.map((booking: CalendarEvent) => (
                       <div key={booking.id}
                         onClick={(e) => handleBookingClick(e, booking)}
-                        className={cn("flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-zinc-800/50 transition-all", getStatusColor(booking.status))}
+                        className={cn("flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-zinc-800/50 transition-all", getStatusColor(booking.status as any, booking.type))}
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-24 text-center text-xs font-mono flex flex-col items-center">
@@ -953,20 +1011,44 @@ export default function BookingsPage() {
                             {booking.endTime && <span className="text-zinc-500 opacity-80">- {format(parseISO(booking.endTime), "h:mm a")}</span>}
                           </div>
                           <div>
-                            <div className="font-semibold">{booking.customer}</div>
-                            <div className="text-sm opacity-80">{booking.title} • {booking.vehicle}</div>
+                            <div className="font-semibold">{booking.customer || (booking as any).title}</div>
+                            <div className="text-sm opacity-80 flex items-center gap-1.5">
+                              {(() => {
+                                const h = parseISO(booking.date).getHours();
+                                const isFull = booking.type === 'manual-block' && !booking.endTime;
+                                return (
+                                  <div
+                                    className={cn(
+                                      "w-2 h-2 rounded-full shadow-sm flex-shrink-0",
+                                      isFull ? "bg-[#1e3a8a]" : (h < 12 ? "bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400" : "bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400")
+                                    )}
+                                  />
+                                );
+                              })()}
+                              {booking.type === 'booking'
+                                ? `${(booking as any).title} • ${booking.vehicleYear || ''} ${booking.vehicleMake || ''} ${booking.vehicleModel || ''}`
+                                : (booking as any).title}
+                            </div>
                             <div className="flex items-center gap-1 text-xs mt-0.5 opacity-90 font-medium">
-                              <span>{getStatusIcon(booking.status)}</span>
-                              <span className="uppercase">{booking.status}</span>
+                              <span className="uppercase">{booking.status || (booking.type === 'manual-block' ? 'Blocked' : 'Event')}</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          {booking.hasReminder && <Bell className="h-4 w-4 text-yellow-500 animate-pulse" />}
-                          {booking.assignedEmployee && <Badge variant="secondary" className="text-xs">{booking.assignedEmployee}</Badge>}
+                          {booking.type === 'booking' && (booking as Booking).hasReminder && <Bell className="h-4 w-4 text-yellow-500 animate-pulse" />}
+                          {booking.type === 'booking' && (booking as Booking).assignedEmployee && <Badge variant="secondary" className="text-xs">{(booking as Booking).assignedEmployee}</Badge>}
                           <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleStartJob(); }}><Wrench className="h-4 w-4" /></Button>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleDuplicate(booking); }}><Copy className="h-4 w-4" /></Button>
+                            {booking.type === 'booking' && (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleStartJob(); }}><Wrench className="h-4 w-4" /></Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleDuplicate(booking as Booking); }}><Copy className="h-4 w-4" /></Button>
+                              </>
+                            )}
+                            {(booking.type === 'manual-block' || booking.type === 'booking') && (
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={(e) => handleBookingClick(e, booking)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1038,6 +1120,8 @@ export default function BookingsPage() {
                 const isSelectedMonth = isSameMonth(day, currentDate);
                 const isTodayDate = isToday(day);
 
+                // Removed Header Moons - Only showing inside cards now
+
                 return (
                   <div
                     key={day.toString()}
@@ -1049,7 +1133,7 @@ export default function BookingsPage() {
                   >
                     <div className="flex justify-between items-start">
                       <span className={cn(
-                        "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                        "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full relative",
                         isTodayDate ? "bg-primary text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
                       )}>
                         {format(day, "d")}
@@ -1060,49 +1144,84 @@ export default function BookingsPage() {
                     </div>
 
                     <div className="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
-                      {bookings.map(booking => (
-                        <div
-                          key={booking.id}
-                          onClick={(e) => handleBookingClick(e, booking)}
-                          className={cn(
-                            "text-xs px-2 py-1.5 rounded border truncate transition-all hover:scale-[1.02] shadow-sm",
-                            getStatusColor(booking.status)
-                          )}
-                        >
-                          <div className="flex items-center gap-1">
-                            <span className="mr-0.5">{getStatusIcon(booking.status)}</span>
-                            <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "h:mm a")}</span>
-                            <span className="font-semibold truncate">{booking.customer}</span>
-                          </div>
-                          <div className="truncate opacity-80 text-[10px]">{booking.title}</div>
+                      <TooltipProvider>
+                        {bookings.map(booking => (
+                          <Tooltip key={booking.id}>
+                            <TooltipTrigger asChild>
+                              <div
+                                onClick={(e) => handleBookingClick(e, booking)}
+                                className={cn(
+                                  "text-xs px-2 py-1.5 rounded border truncate transition-all hover:scale-[1.02] shadow-sm relative",
+                                  getStatusColor(booking.status as any, booking.type)
+                                )}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  {(() => {
+                                    const hour = parseISO(booking.date).getHours();
+                                    const isFull = booking.type === 'manual-block' && !booking.endTime;
+                                    return (
+                                      <div
+                                        className={cn(
+                                          "w-2 h-2 rounded-full shadow-sm flex-shrink-0",
+                                          isFull ? "bg-[#1e3a8a]" : (hour < 12 ? "bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400" : "bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400")
+                                        )}
+                                      />
+                                    );
+                                  })()}
+                                  <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "h:mm a")}</span>
+                                  <span className="font-semibold truncate">{booking.customer || booking.title}</span>
+                                </div>
+                                <div className="truncate opacity-80 text-[10px]">{booking.title}</div>
 
-                          {/* Status Text for Month View */}
-                          <div className="flex items-center gap-1 text-[9px] opacity-90 font-semibold uppercase mt-0.5">
-                            {/* Icon already in header, but user wants to see it 'stating' what status it is */}
-                            <span>{booking.status}</span>
-                          </div>
+                                {/* Status Text for Month View */}
+                                <div className="flex items-center gap-1 text-[9px] opacity-90 font-semibold uppercase mt-0.5">
+                                  <span>{booking.status || (booking.type === 'manual-block' ? 'Blocked' : 'Event')}</span>
+                                </div>
 
-                          {booking.vehicleYear && booking.vehicleMake && (
-                            <div className="truncate opacity-70 text-[9px]">
-                              {booking.vehicleYear} {booking.vehicleMake} {booking.vehicleModel}
-                            </div>
-                          )}
-                          {booking.assignedEmployee && (
-                            <div className="truncate opacity-70 text-[9px]">
-                              👤 {booking.assignedEmployee}
-                            </div>
-                          )}
-                          {booking.hasReminder && (
-                            <div
-                              className="absolute top-0.5 right-1 cursor-pointer hover:scale-110 z-10 p-0.5"
-                              onClick={(e) => handleBellClick(e, booking)}
-                              title="View/Edit Reminder in Analytics"
+                                {booking.type === 'booking' && (booking as Booking).vehicleYear && (booking as Booking).vehicleMake && (
+                                  <div className="truncate opacity-70 text-[9px]">
+                                    {(booking as Booking).vehicleYear} {(booking as Booking).vehicleMake} {(booking as Booking).vehicleModel}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="right"
+                              className="bg-zinc-900 text-white border-zinc-700 p-3 shadow-2xl z-[100] max-w-[250px]"
                             >
-                              <Bell className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500/20" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                              <div className="space-y-1.5">
+                                <div className="font-bold flex items-center gap-2 border-b border-zinc-800 pb-1 mb-1">
+                                  {(booking as any).icon || getStatusIcon(booking.status as any)}
+                                  {booking.customer || booking.title}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-mono text-blue-400">
+                                  <Clock className="w-3 h-3" />
+                                  {format(parseISO(booking.date), "PPP")}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-black text-white">
+                                  <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Time:</span>
+                                  {format(parseISO(booking.date), "h:mm a")}
+                                  {booking.endTime && ` - ${format(parseISO(booking.endTime), "h:mm a")}`}
+                                </div>
+                                <div className="text-xs text-zinc-300 italic">{booking.title}</div>
+                                {booking.type === 'booking' && (
+                                  <div className="pt-1 border-t border-zinc-800 mt-1 flex flex-col gap-1">
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                      <Badge variant="outline" className="text-[9px] h-4 px-1">{booking.status}</Badge>
+                                      {booking.assignedEmployee && <span className="text-zinc-400">👤 {booking.assignedEmployee}</span>}
+                                    </div>
+                                    {(booking as Booking).vehicleMake && (
+                                      <div className="text-[10px] text-blue-300 font-semibold px-1 py-0.5 bg-blue-500/10 rounded border border-blue-500/20">
+                                        🚗 {(booking as Booking).vehicleYear} {(booking as Booking).vehicleMake} {(booking as Booking).vehicleModel}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </TooltipProvider>
                     </div>
 
                     {/* Hover Add Button */}
@@ -1843,7 +1962,7 @@ export default function BookingsPage() {
                                   )}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleBookingClick(e as any, booking);
+                                    handleBookingClick(e as any, booking as any);
                                   }}
                                 >
                                   <div className="flex justify-between items-start">
@@ -1855,7 +1974,7 @@ export default function BookingsPage() {
                                     </div>
                                     <Badge
                                       variant="outline"
-                                      className={cn("text-xs", getStatusColor(booking.status))}
+                                      className={cn("text-xs", getStatusColor(booking.status as any))}
                                     >
                                       {booking.status}
                                     </Badge>

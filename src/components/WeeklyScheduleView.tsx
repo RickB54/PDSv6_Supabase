@@ -4,18 +4,23 @@ import { getBlockedSlots, BlockedTimeSlot, formatTimeAMPM } from '@/lib/availabi
 import { getWeeklyBlocks } from '@/lib/hybridAvailability';
 import { Loader2, Clock, Lock, Shield } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface WeeklyScheduleViewProps {
     selectedDate: Date | undefined;
+    onDateSelect?: (date: Date) => void;
     className?: string;
 }
 
-export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleViewProps) {
+export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: WeeklyScheduleViewProps) {
     const [blocks, setBlocks] = useState<BlockedTimeSlot[]>([]);
     const [loading, setLoading] = useState(false);
+    const [weekOffset, setWeekOffset] = useState(0);
 
-    // Sync to selected date (or today)
-    const displayDate = selectedDate || new Date();
+    // Sync to selected date (or today) + offset
+    const baseDate = selectedDate || new Date();
+    const displayDate = addDays(baseDate, weekOffset * 7);
+
     // Ensure we start on Monday
     const weekStart = startOfWeek(displayDate, { weekStartsOn: 1 });
     const weekEnd = addDays(weekStart, 6);
@@ -24,9 +29,14 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const allBlocks = await getWeeklyBlocks(weekStart);
-            setBlocks(allBlocks as any);
-            setLoading(false);
+            try {
+                const allBlocks = await getWeeklyBlocks(weekStart);
+                setBlocks(allBlocks as any);
+            } catch (error) {
+                console.error("Failed to load weekly schedule:", error);
+            } finally {
+                setLoading(false);
+            }
         };
         load();
     }, [weekStart.toISOString()]);
@@ -36,7 +46,7 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
         return blocks.filter(b => b.date === dayStr);
     };
 
-    if (loading) return (
+    if (loading && blocks.length === 0) return (
         <div className="flex items-center justify-center p-8 bg-muted/20 rounded-lg animate-pulse">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         </div>
@@ -45,9 +55,39 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
     return (
         <div className={cn("space-y-4", className)}>
             <div className="flex items-center justify-between border-b border-border pb-2 mb-4">
-                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    Week Schedule: {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d')}
-                </h3>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setWeekOffset(prev => prev - 1)}
+                    >
+                        <span className="sr-only">Previous Week</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                    </Button>
+                    <h3 className="text-[10px] md:text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d')}
+                    </h3>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setWeekOffset(prev => prev + 1)}
+                    >
+                        <span className="sr-only">Next Week</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    </Button>
+                </div>
+                {weekOffset !== 0 && (
+                    <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-[10px] text-primary"
+                        onClick={() => setWeekOffset(0)}
+                    >
+                        Jump to Today
+                    </Button>
+                )}
             </div>
 
             <div className="space-y-3">
@@ -59,9 +99,10 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
                     return (
                         <div
                             key={day.toISOString()}
+                            onClick={() => onDateSelect?.(day)}
                             className={cn(
-                                "group relative overflow-hidden rounded-lg border transition-all duration-200",
-                                isSelected ? "border-primary ring-1 ring-primary/20 shadow-md bg-primary/5" : "border-border bg-card",
+                                "group relative overflow-hidden rounded-lg border transition-all duration-200 cursor-pointer",
+                                isSelected ? "border-primary ring-1 ring-primary/20 shadow-md bg-primary/5" : "border-border bg-card hover:border-primary/50 hover:shadow-sm",
                                 isToday && !isSelected && "border-blue-300 bg-blue-50/30"
                             )}
                         >
@@ -69,11 +110,25 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
                             <div className="p-3 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
-                                        "w-10 h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold leading-none shadow-sm",
+                                        "w-10 h-10 rounded-md flex flex-col items-center justify-center text-xs font-bold leading-none shadow-sm relative",
                                         isSelected ? "bg-primary text-primary-foreground" : (isToday ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-100")
                                     )}>
                                         <span className="opacity-70 text-[10px] uppercase">{format(day, 'EEE')}</span>
                                         <span className="text-lg">{format(day, 'd')}</span>
+                                        {(() => {
+                                            const morning = dayBlocks.some(b => b.startTime && parseInt(b.startTime.split(':')[0]) < 12);
+                                            const afternoon = dayBlocks.some(b => b.startTime && parseInt(b.startTime.split(':')[0]) >= 12);
+                                            const isFull = dayBlocks.some(b => !b.startTime && (b as any).workFull);
+
+                                            let indClass = '';
+                                            if (isFull || (morning && afternoon)) indClass = 'bg-[#1e3a8a]';
+                                            else if (morning) indClass = 'bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400';
+                                            else if (afternoon) indClass = 'bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400';
+
+                                            return indClass ? (
+                                                <div className={cn("absolute -bottom-1 -right-1 w-3 h-3 rounded-full shadow-md z-10", indClass)} />
+                                            ) : null;
+                                        })()}
                                     </div>
                                     <div>
                                         <div className={cn("font-bold text-sm", isSelected || isToday ? "text-foreground" : "text-muted-foreground")}>
@@ -101,13 +156,25 @@ export function WeeklyScheduleView({ selectedDate, className }: WeeklyScheduleVi
                                                 isPersonal ? "bg-zinc-50 text-zinc-500 border-zinc-200" : "bg-red-100 text-red-900 border-red-200"
                                             )}>
                                                 <div className="flex items-center gap-2">
+                                                    {(() => {
+                                                        const h = block.startTime ? parseInt(block.startTime.split(':')[0]) : 12;
+                                                        const isFull = !block.startTime;
+                                                        return (
+                                                            <div
+                                                                className={cn(
+                                                                    "w-2 h-2 rounded-full shadow-sm flex-shrink-0",
+                                                                    isFull ? "bg-[#1e3a8a]" : (h < 12 ? "bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400" : "bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400")
+                                                                )}
+                                                            />
+                                                        );
+                                                    })()}
                                                     {isPersonal ? <Lock className="w-3.5 h-3.5 opacity-60" /> : <Clock className="w-3.5 h-3.5 opacity-70" />}
-                                                    <span className="font-mono font-bold tracking-tight">
+                                                    <span className="font-mono font-bold tracking-tight text-[11px]">
                                                         {block.startTime !== '00:00' && block.startTime ? `${formatTimeAMPM(block.startTime)} - ${formatTimeAMPM(block.endTime!)}` : (isPersonal ? 'Unavailable' : 'Fully Booked')}
                                                     </span>
                                                 </div>
                                                 <span className="italic opacity-80 text-[10px] uppercase tracking-wide truncate max-w-[120px]">
-                                                    {isPersonal ? 'Personal' : 'Booked'}
+                                                    {(block as any).source === 'google' ? 'Personal' : (block as any).source === 'manual' ? 'Blocked' : 'Booked'}
                                                 </span>
                                             </div>
                                         );

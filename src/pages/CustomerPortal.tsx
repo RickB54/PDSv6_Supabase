@@ -339,7 +339,11 @@ const CustomerPortal = () => {
             `}>
               Step 1: Select Your Vehicle Type
             </Label>
-            <Select value={vehicleType} onValueChange={(v) => { setVehicleType(v); setVehicleInteracted(true); }}>
+            <Select
+              value={vehicleType}
+              onValueChange={(v) => { setVehicleType(v); setVehicleInteracted(true); }}
+              onOpenChange={(open) => { if (open) setVehicleInteracted(true); }}
+            >
               <SelectTrigger className="w-full h-12 text-base bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
@@ -500,7 +504,7 @@ const CustomerPortal = () => {
                         params.set('vehicle', vehicleType);
                         if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
                         if (distance > 0) params.set('distance', String(distance));
-                        window.location.href = `/book-now?${params.toString()}`;
+                        window.location.href = `/book?${params.toString()}`;
                       }}
                     >
                       Book Now →
@@ -651,7 +655,7 @@ const CustomerPortal = () => {
                   if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
                   if (distance > 0) params.set('distance', String(distance));
                   if (destinationFee > 0) params.set('destinationFee', String(destinationFee));
-                  window.location.href = `/book-now?${params.toString()}`;
+                  window.location.href = `/book?${params.toString()}`;
                 }}
               >
                 Schedule My Detail →

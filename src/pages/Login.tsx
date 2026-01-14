@@ -24,6 +24,8 @@ export default function Login() {
             const user = await loginSupabase(email, password);
             if (user) {
                 toast.success(`Welcome back, ${user.name}`);
+                // Small delay to allow auth-changed event to propagate to App.tsx
+                await new Promise(resolve => setTimeout(resolve, 100));
                 // Role based redirect
                 if (user.role === 'admin') navigate("/dashboard/admin");
                 else if (user.role === 'employee') navigate("/dashboard/employee");

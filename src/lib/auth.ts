@@ -35,10 +35,6 @@ export function setAuthMode(mode: AuthMode) {
 
 export function getCurrentUser(): User | null {
   if (isSupabaseEnabled()) {
-    try {
-      const sid = localStorage.getItem('session_user_id');
-      if (!sid) return null;
-    } catch { }
     const cached = localStorage.getItem('currentUser');
     if (cached) return JSON.parse(cached);
     return null;
@@ -101,7 +97,7 @@ async function getSupabaseUserProfile(userId: string): Promise<{ role: 'admin' |
     // We cast to any because the Supabase builder is a "Thenable", not a strict Promise in all TS versions
     const res: any = await timeoutPromise(
       supabase.from('app_users').select('role,name').eq('id', userId).maybeSingle() as any,
-      10000,
+      3000,
       "getSupabaseUserProfile"
     );
 
@@ -157,8 +153,8 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
       };
 
       // Set Local State Immediately (Trigger UI updates)
-      setCurrentUser(optimisticUser);
       try { localStorage.setItem('session_user_id', u.id); } catch { }
+      setCurrentUser(optimisticUser);
 
       // Background Consistency Sync (Update DB without blocking User)
       (async () => {
@@ -257,8 +253,8 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
       role: finalRole as any
     };
 
-    setCurrentUser(mapped);
     try { localStorage.setItem('session_user_id', u.id); } catch { }
+    setCurrentUser(mapped);
     // Non-blocking background fetch
     getSupabaseCustomerProfile(u.id).catch(() => { });
 

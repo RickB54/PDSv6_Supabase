@@ -14,17 +14,16 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
 import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled } from "@/lib/auth";
-import "@/lib/storage-utils"; // Initialize all storage buckets
+import supabase from "@/lib/supabase";
+import "@/lib/storage-utils";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
-// Login page removed
 import CustomerPortal from "./pages/CustomerPortal";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import ServiceChecklist from "./pages/ServiceChecklist";
-// Legacy EmployeeChecklist removed; redirect old route to ServiceChecklist
 import SearchCustomer from "./pages/SearchCustomer";
 import InventoryControl from "./pages/InventoryControl";
 import Invoicing from "./pages/Invoicing";
@@ -33,7 +32,6 @@ import Accounting from "./pages/Accounting";
 import CompanyBudget from "./pages/CompanyBudget";
 import Reports from "./pages/Reports";
 import TrainingManual from "./pages/TrainingManual";
-// import EmployeeTrainingCourse from "./pages/EmployeeTrainingCourse"; // Removed
 import Certificate from "./pages/Certificate";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import CompanyEmployees from "./pages/CompanyEmployees";
@@ -93,7 +91,6 @@ import AvailabilityManager from "./pages/AvailabilityManager";
 
 const queryClient = new QueryClient();
 
-// Helper component to conditionally show GlobalChatWidget based on route
 function ConditionalGlobalChat() {
   const location = useRouterLocation();
   const isTeamChatPage = location.pathname === '/team-chat';
@@ -101,430 +98,207 @@ function ConditionalGlobalChat() {
   return <GlobalChatWidget />;
 }
 
-
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
   const user = getCurrentUser();
-  const [isChecking, setIsChecking] = useState(true);
-
-  // In Supabase mode, we trust getCurrentUser() if it's populated by the auth listener.
-  // However, on fresh load, there might be a split second where we are fetching session.
-  // Ideally we should wait for onAuthStateChange to fire at least once or check localStorage 'session_user_id'.
-
-  useEffect(() => {
-    // A simple timeout or check to allow auth to settle if needed.
-    // For now, if we have no user but a session_id in local storage, we might be loading.
-    const sid = localStorage.getItem('session_user_id');
-    if (!user && sid) {
-      // potentially loading, stay checking?
-      // But for simplicity in this migration, we'll let it pass through if it resolves quickly
-      // or redirect if it takes too long.
-      // Actually, initSupabaseAuth handles state sync.
-    }
-    setIsChecking(false);
-  }, [user]);
-
-  if (!user && allowedRoles.length > 0) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // SECURITY FIX: Actually check the role!
-  if (user && allowedRoles.length > 0 && user.role) {
-    if (!allowedRoles.includes(user.role)) {
-      // User is logged in but doesn't have permission -> Send to Home or Dashboard
-      return <Navigate to="/" replace />;
-    }
-  }
-
+  if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    // If admin tries to access employee, or vice versa
-    // Allow Admin to access Employee routes? usually yes, but code says !includes.
-    // Let's strictly follow the RBAC request: Admin sees all (maybe?), Employee sees Employee.
-    // For now, if role mismatch, redirect to their dashboard.
     if (user.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
     if (user.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
-    return <Navigate to="/customer-portal" replace />;
+    return <Navigate to="/customer-dashboard" replace />;
   }
-
   return <>{children}</>;
+};
+
+const DefaultRedirect = ({ user }: { user: any }) => {
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
+  if (user.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
+  return <Navigate to="/customer-dashboard" replace />;
 };
 
 const App = () => {
   const [user, setUser] = useState(getCurrentUser());
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    // Force Supabase mode if environment requests it
+    let mounted = true;
     try {
-      const envMode = import.meta.env.VITE_AUTH_MODE;
-      if (envMode === 'supabase') setAuthMode('supabase');
+      if (import.meta.env.VITE_AUTH_MODE === 'supabase') setAuthMode('supabase');
     } catch { }
-    // Initialize Supabase auth listener so roles map correctly in Supabase mode
-    try { initSupabaseAuth(); } catch { }
-    const updateUser = () => setUser(getCurrentUser());
-    window.addEventListener('auth-changed', updateUser as EventListener);
-    window.addEventListener('storage', updateUser);
+
+    const initAuth = async () => {
+      try {
+        initSupabaseAuth();
+        if (isSupabaseEnabled()) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.user && mounted) {
+            const { finalizeSupabaseSession } = await import('@/lib/auth');
+            await finalizeSupabaseSession(data.session.user);
+            setUser(getCurrentUser());
+          }
+        }
+      } catch (e) {
+        console.warn('Auth init failed', e);
+      } finally {
+        if (mounted) setAuthReady(true);
+      }
+    };
+
+    initAuth();
+
+    // SAFETY FALLBACK: Ensure the app loads even if Supabase/Finalize hangs
+    const safetyTimer = setTimeout(() => {
+      if (mounted) setAuthReady(true);
+    }, 5000);
+
+    const updateUser = () => mounted && setUser(getCurrentUser());
+    window.addEventListener('auth-changed', updateUser);
     window.addEventListener('storage', updateUser);
     try { initTaskWorkflowListeners(); } catch { }
-    // Initial global data fetch (triggers migration if needed)
     import("@/store/bookings").then(m => m.useBookingsStore.getState().refresh());
-
     const onOpenCallAssistant = () => setCallAssistantOpen(true);
     window.addEventListener('open-call-assistant', onOpenCallAssistant);
 
     return () => {
-      window.removeEventListener('auth-changed', updateUser as EventListener);
+      mounted = false;
+      clearTimeout(safetyTimer);
+      window.removeEventListener('auth-changed', updateUser);
       window.removeEventListener('storage', updateUser);
       window.removeEventListener('open-call-assistant', onOpenCallAssistant);
     };
   }, []);
 
+  if (!authReady) return <div className="flex items-center justify-center min-h-screen bg-black text-white">Initializing...</div>;
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <ConditionalGlobalChat />
-          <SidebarProvider defaultOpen={true}>
-            <div className={`flex min-h-screen w-full ${user?.role === 'admin' || user?.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
-              <ErrorBoundary>
-                <ChatAudioAlert />
-                {user && <AppSidebar />}
-                <div className={`flex-1 overflow-x-hidden ${user ? 'pt-24' : ''}`}>
-                  <Routes>
-                    <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
-                    <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
-                    <Route path="/company-employees" element={<ProtectedRoute allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
-                    <Route path="/staff-schedule" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
-                    <Route path="/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
-                    <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
-                    <Route path="/f150-setup" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><F150Setup /></ProtectedRoute>} />
-                    {/* Login route removed */}
-                    {/* QuickLogin removed: Supabase-only authentication */}
-                    {/* Public homepage routes */}
+        <SidebarProvider defaultOpen={true}>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ScrollToTop />
+            <ConditionalGlobalChat />
+            <ChatAudioAlert />
+            <ErrorBoundary>
+              {user ? (
+                <div className={`flex min-h-screen w-full ${user.role === 'admin' || user.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
+                  <AppSidebar key={user.id} user={user} />
+                  <div className="flex-1 overflow-x-hidden pt-24">
+                    <Routes>
+                      {/* Dashboard Routes */}
+                      <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+                      <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
+                      <Route path="/customer-dashboard" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
 
-                    {/* ... inside App component Routes */}
+                      {/* Operations & Bookings */}
+                      <Route path="/bookings" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
+                      <Route path="/bookings-analytics" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
+                      <Route path="/search-customer" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
+                      <Route path="/prospects" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />
+                      <Route path="/service-checklist" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
+                      <Route path="/tasks" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
+                      <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
+                      <Route path="/jobs-completed" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><JobsCompleted /></ProtectedRoute>} />
+
+                      {/* Finance & Sales */}
+                      <Route path="/invoicing" element={<ProtectedRoute allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
+                      <Route path="/estimates" element={<ProtectedRoute allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
+                      <Route path="/accounting" element={<ProtectedRoute allowedRoles={['admin']}><Accounting /></ProtectedRoute>} />
+                      <Route path="/payroll" element={<ProtectedRoute allowedRoles={['admin']}><Payroll /></ProtectedRoute>} />
+                      <Route path="/company-budget" element={<ProtectedRoute allowedRoles={['admin']}><CompanyBudget /></ProtectedRoute>} />
+                      <Route path="/discount-coupons" element={<ProtectedRoute allowedRoles={['admin']}><DiscountCoupons /></ProtectedRoute>} />
+                      <Route path="/package-pricing" element={<ProtectedRoute allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
+
+                      {/* Inventory & Assets */}
+                      <Route path="/inventory-control" element={<ProtectedRoute allowedRoles={['admin']}><InventoryControl /></ProtectedRoute>} />
+                      <Route path="/file-manager" element={<ProtectedRoute allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
+                      <Route path="/mobile-setup" element={<ProtectedRoute allowedRoles={['admin']}><MobileSetup /></ProtectedRoute>} />
+                      <Route path="/detailing-vendors" element={<ProtectedRoute allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
+
+                      {/* Training & Staff */}
+                      <Route path="/training-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
+                      <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
+                      <Route path="/chemicals" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
+                      <Route path="/admin/chemicals" element={<ProtectedRoute allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />
+                      <Route path="/orientation" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Orientation /></ProtectedRoute>} />
+                      <Route path="/staff-schedule" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
+                      <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+                      <Route path="/admin-users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
+                      <Route path="/company-employees" element={<ProtectedRoute allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
+                      <Route path="/exam/:examId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ExamPage /></ProtectedRoute>} />
+                      <Route path="/exam-admin" element={<ProtectedRoute allowedRoles={['admin']}><ExamAdmin /></ProtectedRoute>} />
+                      <Route path="/certificate/:id" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Certificate /></ProtectedRoute>} />
+                      <Route path="/cheat-sheet" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><CheatSheet /></ProtectedRoute>} />
+
+                      {/* Intake & Assistance */}
+                      <Route path="/package-selection" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><PackageSelection /></ProtectedRoute>} />
+                      <Route path="/vehicle-classification" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><VehicleClassification /></ProtectedRoute>} />
+                      <Route path="/client-evaluation" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ClientEvaluation /></ProtectedRoute>} />
+                      <Route path="/addon-upsell-script" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><AddonUpsellScript /></ProtectedRoute>} />
+                      <Route path="/package-guide" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><PackageExplanationGuide /></ProtectedRoute>} />
+                      <Route path="/availability-manager" element={<ProtectedRoute allowedRoles={['admin']}><AvailabilityManager /></ProtectedRoute>} />
+                      <Route path="/website-admin" element={<ProtectedRoute allowedRoles={['admin']}><WebsiteAdministration /></ProtectedRoute>} />
+
+                      {/* Common Shared Pages */}
+                      <Route path="/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
+                      <Route path="/notes" element={<ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
+                      <Route path="/vehicle-gallery" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
+                      <Route path="/app-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><AppManual /></ProtectedRoute>} />
+                      <Route path="/user-settings" element={<ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}><UserSettings /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
+                      <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+                      <Route path="/f150-setup" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><F150Setup /></ProtectedRoute>} />
+
+                      {/* Customer-Facing (when logged in) */}
+                      <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
+                      <Route path="/job-history" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
+                      <Route path="/my-invoices" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><MyInvoices /></ProtectedRoute>} />
+                      <Route path="/payments-cart" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><PaymentsAndCart /></ProtectedRoute>} />
+                      <Route path="/customer-account" element={<ProtectedRoute allowedRoles={['customer']}><CustomerAccount /></ProtectedRoute>} />
+                      <Route path="/customer-profile" element={<ProtectedRoute allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />
+                      <Route path="/portal" element={<ProtectedRoute allowedRoles={['customer']}><Portal /></ProtectedRoute>} />
+                      <Route path="/contact-support" element={<ContactSupport />} />
+
+                      {/* Fallbacks */}
+                      <Route path="/login" element={<Navigate to="/" replace />} />
+                      <Route path="/" element={<Index />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/faq" element={<FAQ />} />
+                      <Route path="/book" element={<BookNow />} />
+                      <Route path="/services" element={<CustomerPortal />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/thank-you" element={<ThankYou />} />
+                      <Route path="/update-password" element={<UpdatePassword />} />
+                      <Route path="*" element={<DefaultRedirect user={user} />} />
+                    </Routes>
+                  </div>
+                  {user.role !== 'customer' && <GlobalRightSidebar />}
+                </div>
+              ) : (
+                <div className="min-h-screen w-full">
+                  <Routes>
+                    <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/update-password" element={<UpdatePassword />} />
-
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/faq" element={<FAQ />} />
-                    <Route path="/thank-you" element={<ThankYou />} />
-                    <Route path="/payment-success" element={<ThankYou />} />
-                    <Route path="/payment-canceled" element={<Checkout />} />
                     <Route path="/book" element={<BookNow />} />
-                    <Route path="/book-now" element={<BookNow />} />
-                    {/* Public services page */}
                     <Route path="/services" element={<CustomerPortal />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/portal" element={<Portal />} />
-                    <Route path="/" element={<Index />} />
-                    <Route
-                      path="/dashboard"
-                      element={
-                        user?.role === 'admin' ? <Navigate to="/dashboard/admin" replace /> :
-                          user?.role === 'employee' ? <Navigate to="/dashboard/employee" replace /> :
-                            user?.role === 'customer' ? <Navigate to="/customer-dashboard" replace /> :
-                              <Navigate to="/login" replace /> // Fallback to Login
-                      }
-                    />
-                    <Route path="/customer-portal" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <CustomerPortal />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/customer-dashboard" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <CustomerDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/contact-support" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <ContactSupport />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/active-jobs" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <ActiveJobs />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/job-history" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <JobHistory />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/payments-cart" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <PaymentsAndCart />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/my-invoices" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <MyInvoices />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/customer-profile" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <CustomerProfile />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/customer-account" element={
-                      <ProtectedRoute allowedRoles={['customer']}>
-                        <CustomerAccount />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/checklist" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <ServiceChecklist />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/service-checklist" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <ServiceChecklist />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/tasks" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <Tasks />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/search-customer" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <SearchCustomer />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/prospects" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <Prospects />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/inventory-control" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <InventoryControl />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/invoicing" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <Invoicing />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/estimates" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <Estimates />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/accounting" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <Accounting />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/company-budget" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <CompanyBudget />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/payroll" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <Payroll />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/company-employees" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <CompanyEmployees />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/file-manager" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <FileManager />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/jobs-completed" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
-                        <JobsCompleted />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/reports" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <Reports />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/dashboard/admin" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <Navigate to="/admin-dashboard" replace />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin-dashboard" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <AdminDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/user-management" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <UserManagement />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/users" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <AdminUsers />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/website-admin" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <WebsiteAdministration />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/bookings" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
-                        <BookingsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/bookings-analytics" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
-                        <BookingsAnalyticsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/discount-coupons" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <DiscountCoupons />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/package-pricing" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <PackagePricing />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/availability-manager" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <AvailabilityManager />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/package-selection" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <PackageSelection />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/training-manual" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <TrainingManual />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/app-manual" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <AppManual />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/certificate" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <Certificate />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/exam" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <ExamPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/exam-admin" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <ExamAdmin />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/cheat-sheet" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <CheatSheet />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/notes" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}>
-                        <PersonalNotes />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/dashboard/employee" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <EmployeeDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/employee-dashboard" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <EmployeeDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/vehicle-gallery" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <VehicleGallery />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/mobile-setup" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <MobileSetup />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/orientation" element={
-                      <ProtectedRoute allowedRoles={['employee', 'admin']}>
-                        <Orientation />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/vehicle-classification" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <VehicleClassification />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/client-evaluation" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <ClientEvaluation />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/addon-upsell-script" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <AddonUpsellScript />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/package-explanation-guide" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <PackageExplanationGuide />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/detailing-vendors" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <DetailingVendors />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<NotFound />} />
-                    <Route path="/user-settings" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}>
-                        <UserSettings />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/section/:sectionId" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
-                        <SectionLanding />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/chemicals" element={
-                      <ProtectedRoute allowedRoles={['admin', 'employee']}>
-                        <ChemicalsLibrary />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/chemicals" element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        {/* We will create AdminChemicals next */}
-                        <AdminChemicals />
-                      </ProtectedRoute>
-                    } />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
                   </Routes>
                 </div>
-                {user && user.role !== 'customer' && <GlobalRightSidebar />}
-              </ErrorBoundary>
-            </div>
+              )}
+            </ErrorBoundary>
             <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
-          </SidebarProvider>
-        </BrowserRouter>
+          </BrowserRouter>
+        </SidebarProvider>
       </TooltipProvider>
-    </QueryClientProvider >
+    </QueryClientProvider>
   );
 };
 
