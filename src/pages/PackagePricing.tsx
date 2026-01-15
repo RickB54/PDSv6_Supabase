@@ -129,11 +129,6 @@ export default function PackagePricing() {
     luxury: "Luxury/High-End (Luxury and premium vehicles)",
   });
 
-  // Simple package mode toggle: "3-pack" or "6-pack"
-  const [packageMode, setPackageMode] = useState<"3-pack" | "6-pack">(() => {
-    return (localStorage.getItem('packageMode') as "3-pack" | "6-pack") || "6-pack";
-  });
-
   const getKey = (type: "package" | "addon", id: string, size: string) => `${type}:${id}:${size}`;
   const shouldUpdate = (key: string, target: "packages" | "addons" | "both") => {
     if (target === "both") return true;
@@ -1105,60 +1100,6 @@ export default function PackagePricing() {
                 ))}
               </SelectContent>
             </Select>
-
-            {/* Package Mode Toggle */}
-            <div className="ml-auto flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-lg border border-zinc-700">
-              <Label className="text-white font-semibold">Public Site Shows:</Label>
-              <Button
-                size="sm"
-                variant={packageMode === "3-pack" ? "default" : "outline"}
-                className={packageMode === "3-pack" ? "bg-blue-600 hover:bg-blue-700" : ""}
-                onClick={async () => {
-                  setPackageMode("3-pack");
-                  localStorage.setItem('packageMode', '3-pack');
-
-                  // Write to public file so public site can read it
-                  try {
-                    await fetch('/api/set-package-mode', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ mode: '3-pack' })
-                    });
-                  } catch (e) {
-                    // Fallback: write directly to public folder
-                    console.log('API not available, using localStorage only');
-                  }
-
-                  toast.success("✅ Public site will show 3 packages (refresh public page)");
-                }}
-              >
-                3 Packages
-              </Button>
-              <Button
-                size="sm"
-                variant={packageMode === "6-pack" ? "default" : "outline"}
-                className={packageMode === "6-pack" ? "bg-green-600 hover:bg-green-700" : ""}
-                onClick={async () => {
-                  setPackageMode("6-pack");
-                  localStorage.setItem('packageMode', '6-pack');
-
-                  // Write to public file so public site can read it
-                  try {
-                    await fetch('/api/set-package-mode', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ mode: '6-pack' })
-                    });
-                  } catch (e) {
-                    console.log('API not available, using localStorage only');
-                  }
-
-                  toast.success("✅ Public site will show 6 packages (refresh public page)");
-                }}
-              >
-                6 Packages
-              </Button>
-            </div>
           </div>
 
           <Accordion type="multiple" className="space-y-4">
