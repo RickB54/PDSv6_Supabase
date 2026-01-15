@@ -529,14 +529,28 @@ export const deleteSupabaseCustomer = async (id: string) => {
             return; // It's a local-only record, nothing to delete on backend
         }
 
-        // 1. Delete from CRM 'customers'
+        // 1. Delete linked Vehicles (Manual Cascade)
+        // Try Delete First
+        const { error: vehError } = await supabase.from('vehicles').delete().eq('customer_id', id);
+        if (vehError) console.warn('Error deleting vehicles:', vehError);
+        // Fallback: Unlink (Set customer_id = null) in case Delete failed (e.g. RLS)
+        await supabase.from('vehicles').update({ customer_id: null }).eq('customer_id', id);
+
+        // 1b. Delete linked Bookings (Manual Cascade)
+        // Try Delete First
+        const { error: bookError } = await supabase.from('bookings').delete().eq('customer_id', id);
+        if (bookError) console.warn('Error deleting bookings:', bookError);
+        // Fallback: Unlink
+        await supabase.from('bookings').update({ customer_id: null }).eq('customer_id', id);
+
+        // 2. Delete from CRM 'customers'
         const { error: crmError } = await supabase.from('customers').delete().eq('id', id);
 
-        // 2. Delete from Auth 'app_users' (if it exists there)
-        // We do this to ensure they are fully removed from the system as seen by UserManagement
+        // 3. Delete from Auth 'app_users' (if it exists there)
         const { error: authError } = await supabase.from('app_users').delete().eq('id', id);
 
-        if (crmError && authError) throw crmError || authError; // Throw if both fail
+        if (crmError) throw crmError;
+        if (authError) console.warn('Auth delete failed:', authError);
     } catch (err) {
         console.error('deleteSupabaseCustomer error:', err);
         throw err;
@@ -1481,6 +1495,9 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
             console.error('getSupabaseBookings error:', error);
             return [];
         }
+
+        console.log(`[getSupabaseBookings] Fetched ${data?.length} rows. Filtering by currentUser=${filterByCurrentUser}`);
+
 
         return (data || []).map((b: any) => {
             const meta = b.booking_vehicle || {};

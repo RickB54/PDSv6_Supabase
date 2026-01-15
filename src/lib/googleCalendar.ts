@@ -42,7 +42,8 @@ let gapiLoadPromise: Promise<void> | null = null;
 let lastInitConfig: string | null = null;
 
 const freeBusyCache: Record<string, { data: FreeBusyResponse; timestamp: number }> = {};
-const CACHE_TTL = 60 * 1000; // Increased to 60 seconds to reduce API pressure/quota hits
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes to safely avoid rate limits/quota issues
+
 
 /**
  * Initialize Google APIs (Singleton pattern)
@@ -636,6 +637,10 @@ export async function createGoogleEvent(event: {
     }
 }
 
+const eventsCache: Record<string, { data: any[]; timestamp: number }> = {};
+
+
+
 /**
  * List Events for a specific range and calendars
  */
@@ -646,6 +651,13 @@ export async function listCalendarEvents(calendarId: string, timeMin: Date, time
         } catch (e) {
             console.warn("[GoogleCalendar] Not signed in, attempting fetch with API Key for listEvents...");
         }
+    }
+
+    const cacheKey = `events_${calendarId}_${timeMin.toISOString().split('T')[0]}_${timeMax.toISOString().split('T')[0]}`;
+    const cached = eventsCache[cacheKey];
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+        console.log(`[GoogleCalendar] Returning cached events for ${calendarId}`);
+        return cached.data;
     }
 
     try {
@@ -660,9 +672,13 @@ export async function listCalendarEvents(calendarId: string, timeMin: Date, time
             singleEvents: true,
             orderBy: 'startTime',
         });
-        return response.result.items || [];
+
+        const items = response.result.items || [];
+        eventsCache[cacheKey] = { data: items, timestamp: Date.now() };
+        return items;
     } catch (e) {
         console.error(`[GoogleCalendar] List events failed for ${calendarId}:`, e);
         return [];
     }
 }
+

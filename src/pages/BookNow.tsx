@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,11 @@ const BookNow = () => {
     }
     return '';
   });
+
+  // UX Improvement: Check if we have valid pre-filled data.
+  // If so, default to NOT editing (Calendar Hidden) to reduce confusion.
+  // Use 'date' and 'selectedTime' which are initialized from URL params above.
+  const [isEditingDate, setIsEditingDate] = useState(!date || !selectedTime);
 
   // Map bookings for AvailabilityPicker
   const mappedBookings = allBookings.map(b => ({
@@ -335,6 +340,66 @@ const BookNow = () => {
     return { ...p, pricing, steps };
   });
 
+  // Filter packages based on mode (3-pack or 6-pack)
+  const [packageMode, setPackageMode] = React.useState<string>('6-pack');
+
+  React.useEffect(() => {
+    fetch('/package-mode.json?v=' + Date.now())
+      .then(res => res.json())
+      .then(data => {
+        console.log('📦 Package mode loaded:', data.mode);
+        setPackageMode(data.mode || '6-pack');
+      })
+      .catch(() => setPackageMode('6-pack'));
+  }, []);
+
+  // EMERGENCY HARDCODED PACKAGES
+  // This guarantees exactly these 3 packages appear.
+  const filteredPackages = [
+    {
+      id: "prime-2026-exterior",
+      name: "Prime Exterior Detail",
+      description: "Professional exterior detailing service",
+      basePrice: 90,
+      pricing: { compact: 90, midsize: 110, truck: 130, luxury: 150 },
+      steps: [
+        { id: "foam-pre-soak", name: "Exterior foam pre-soak" },
+        { id: "hand-wash", name: "Two-bucket hand wash" },
+        { id: "wheel-rim-shine", name: "Wheel and rim cleaning" },
+        { id: "blow-dry", name: "Air blow-dry and microfiber drying" },
+        { id: "sealant", name: "Premium spray wax" }
+      ]
+    },
+    {
+      id: "prime-2026-interior",
+      name: "Prime Interior Detail",
+      description: "Deep interior cleaning and conditioning",
+      basePrice: 180,
+      pricing: { compact: 180, midsize: 200, truck: 220, luxury: 250 },
+      steps: [
+        { id: "vac-interior", name: "Thorough interior vacuum" },
+        { id: "wipe-plastics", name: "Wipe-down of all surfaces" },
+        { id: "window-clean", name: "Interior window cleaning" },
+        { id: "mat-clean", name: "Floor mat cleaning" },
+        { id: "jamb-clean", name: "Door jamb cleaning" }
+      ]
+    },
+    {
+      id: "prime-2026-full",
+      name: "Prime Full Detail",
+      description: "Complete interior and exterior detailing",
+      basePrice: 230,
+      pricing: { compact: 230, midsize: 260, truck: 290, luxury: 330 },
+      steps: [
+        { id: "ext-hand-wash", name: "Safe hand wash" },
+        { id: "wheel-faces", name: "Wheel and tire cleaning" },
+        { id: "interior-vac-full", name: "Full interior vacuum" },
+        { id: "dash-wipe", name: "Dashboard and console wipe-down" },
+        { id: "windows-in-out", name: "Interior & Exterior glass cleaned" }
+      ]
+    }
+  ];
+
   const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
   const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
   const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
@@ -360,7 +425,7 @@ const BookNow = () => {
   });
 
   // Compute total (service + add-ons)
-  const selectedService = livePackages.find(s => s.id === formData.package);
+  const selectedService = filteredPackages.find(s => s.id === formData.package);
   const selectedServicePrice = selectedService ? (selectedService.pricing[vehicleType] ?? selectedService.pricing['compact'] ?? 0) : 0;
   const packagePrice = urlPrice > 0 ? urlPrice : selectedServicePrice;
   const addOnsTotal = addOns.reduce((sum, id) => {
@@ -614,7 +679,7 @@ const BookNow = () => {
         make: 'TestMake',
         model: 'TestModel',
         year: '2024',
-        package: prev.package || livePackages[0]?.id || "",
+        package: prev.package || filteredPackages[0]?.id || "",
         datetime: prev.datetime || new Date().toISOString().slice(0, 16) // Current time
       }));
       toast({ title: "Test Mode Activated", description: "Mock data prefilled." });
@@ -839,16 +904,41 @@ const BookNow = () => {
                 </h3>
 
                 <div className="flex flex-col gap-6">
-                  <div className="w-full bg-white p-4 rounded-lg shadow-sm border border-zinc-200">
-                    <AvailabilityPicker
-                      selectedDate={date}
-                      selectedTime={selectedTime}
-                      onDateChange={setDate}
-                      onTimeChange={setSelectedTime}
-                      existingBookings={mappedBookings}
-                      serviceDuration={getServiceDuration(formData.package)}
-                    />
-                  </div>
+                  {(!isEditingDate && date && selectedTime) ? (
+                    <div className="bg-green-50/50 border border-green-200 p-4 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-full text-green-700 shadow-sm border border-green-200">
+                          <CheckCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-green-900 text-xs uppercase tracking-wide mb-0.5">Date & Time Confirmed</div>
+                          <div className="text-lg font-bold text-green-950 flex items-center gap-2">
+                            {format(date, 'EEEE, MMMM do')} <span className="text-green-300">|</span> {formatTimeAMPM(selectedTime)}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-green-700 hover:text-green-900 hover:bg-green-100 font-medium"
+                        onClick={() => setIsEditingDate(true)}
+                        type="button"
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-full bg-white p-4 rounded-lg shadow-sm border border-zinc-200">
+                      <AvailabilityPicker
+                        selectedDate={date}
+                        selectedTime={selectedTime}
+                        onDateChange={setDate}
+                        onTimeChange={setSelectedTime}
+                        existingBookings={mappedBookings}
+                        serviceDuration={getServiceDuration(formData.package)}
+                      />
+                    </div>
+                  )}
 
                   <div className="p-4 bg-blue-100/30 border border-blue-200/50 rounded-lg">
                     <div className="flex justify-between items-center mb-2">
@@ -939,7 +1029,19 @@ const BookNow = () => {
                     const dateIso = date ? date.toISOString() : new Date().toISOString();
 
                     // Construct Services List for Estimate
-                    const selectedPkg = livePackages.find((p: any) => p.id === formData.package);
+                    const filteredPackages = packageMode === '3-pack'
+                      ? livePackages.filter(p => {
+                        const keep = p.id === 'prime-2026-exterior' ||
+                          p.id === 'prime-2026-interior' ||
+                          p.id === 'prime-2026-full';
+                        console.log(`Package ${p.id}: ${keep ? 'KEEP' : 'HIDE'}`);
+                        return keep;
+                      })
+                      : livePackages;
+
+                    console.log('📦 Final package count:', filteredPackages.length, 'Mode:', packageMode);
+
+                    const selectedPkg = filteredPackages.find((p: any) => p.id === formData.package);
                     const servicesList = [];
                     if (selectedPkg) {
                       servicesList.push({ name: selectedPkg.name, price: selectedPkg.pricing[vehicleType] || 0 });

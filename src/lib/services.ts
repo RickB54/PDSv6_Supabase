@@ -144,6 +144,50 @@ export const servicePackages: ServicePackage[] = [
       { id: 'odor-neutral', name: 'Light odor neutralization & final detail', category: 'final' }
     ]
   },
+
+  // --- 2026 SIMPLE 3-PACK (Alternative offering) ---
+  {
+    id: 'prime-2026-exterior',
+    name: 'Prime Exterior Detail',
+    description: 'Professional exterior detailing service',
+    basePrice: 90,
+    pricing: { compact: 90, midsize: 110, truck: 130, luxury: 150 },
+    steps: [
+      { id: 'foam-pre-soak', name: 'Exterior foam pre-soak', category: 'exterior' },
+      { id: 'hand-wash', name: 'Two-bucket hand wash', category: 'exterior' },
+      { id: 'wheel-rim-shine', name: 'Wheel and rim cleaning', category: 'exterior' },
+      { id: 'blow-dry', name: 'Air blow-dry and microfiber drying', category: 'exterior' },
+      { id: 'sealant', name: 'Premium spray wax', category: 'final' }
+    ]
+  },
+  {
+    id: 'prime-2026-interior',
+    name: 'Prime Interior Detail',
+    description: 'Deep interior cleaning and conditioning',
+    basePrice: 180,
+    pricing: { compact: 180, midsize: 200, truck: 220, luxury: 250 },
+    steps: [
+      { id: 'vac-interior', name: 'Thorough interior vacuum', category: 'interior' },
+      { id: 'wipe-plastics', name: 'Wipe-down of all surfaces', category: 'interior' },
+      { id: 'window-clean', name: 'Interior window cleaning', category: 'interior' },
+      { id: 'mat-clean', name: 'Floor mat cleaning', category: 'interior' },
+      { id: 'jamb-clean', name: 'Door jamb cleaning', category: 'final' }
+    ]
+  },
+  {
+    id: 'prime-2026-full',
+    name: 'Prime Full Detail',
+    description: 'Complete interior and exterior detailing',
+    basePrice: 230,
+    pricing: { compact: 230, midsize: 260, truck: 290, luxury: 330 },
+    steps: [
+      { id: 'ext-hand-wash', name: 'Safe hand wash', category: 'exterior' },
+      { id: 'wheel-faces', name: 'Wheel and tire cleaning', category: 'exterior' },
+      { id: 'interior-vac-full', name: 'Full interior vacuum', category: 'interior' },
+      { id: 'dash-wipe', name: 'Dashboard and console wipe-down', category: 'interior' },
+      { id: 'windows-in-out', name: 'Interior & Exterior glass cleaned', category: 'final' }
+    ]
+  },
 ];
 
 /* REFERENCE: 2025 Archived Packages (Refer to Supabase for full history)

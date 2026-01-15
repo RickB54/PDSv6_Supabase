@@ -4,7 +4,8 @@
  */
 
 import { getBlockedSlots } from './availability';
-import { getFreeBusy, isSignedIn, getCalendarConfig, listCalendarEvents } from './googleCalendar';
+import { getFreeBusy, isSignedIn, getCalendarConfig, listCalendarEvents, loadGCalTokenFromSupabase } from './googleCalendar';
+
 import type { Booking } from '@/store/bookings';
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 

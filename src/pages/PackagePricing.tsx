@@ -129,6 +129,9 @@ export default function PackagePricing() {
     luxury: "Luxury/High-End (Luxury and premium vehicles)",
   });
 
+  // Package mode toggle state
+  const [packageMode, setPackageMode] = useState<"3-pack" | "6-pack">("6-pack");
+
   const getKey = (type: "package" | "addon", id: string, size: string) => `${type}:${id}:${size}`;
   const shouldUpdate = (key: string, target: "packages" | "addons" | "both") => {
     if (target === "both") return true;
@@ -1045,9 +1048,9 @@ export default function PackagePricing() {
 
   const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
 
-  const totalPkgs = [...builtInPackages, ...getCustomPackages()]
+  const totalPkgs = Array.from(new Map([...builtInPackages, ...getCustomPackages()].map(p => [p.id, p])).values())
     .filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false).length;
-  const totalAddons = [...builtInAddOns, ...getCustomAddOns()]
+  const totalAddons = Array.from(new Map([...builtInAddOns, ...getCustomAddOns()].map(a => [a.id, a])).values())
     .filter(a => !getAddOnMeta(a.id)?.deleted && getAddOnMeta(a.id)?.visible !== false).length;
 
   return (
@@ -1100,6 +1103,51 @@ export default function PackagePricing() {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Package Mode Toggle */}
+            <div className="ml-auto flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-lg border border-zinc-700">
+              <Label className="text-white font-semibold">Public Site Shows:</Label>
+              <Button
+                size="sm"
+                variant={packageMode === "3-pack" ? "default" : "outline"}
+                className={packageMode === "3-pack" ? "bg-blue-600 hover:bg-blue-700" : ""}
+                onClick={async () => {
+                  setPackageMode("3-pack");
+                  localStorage.setItem('packageMode', '3-pack');
+
+                  // Manually update the JSON file
+                  const blob = new Blob([JSON.stringify({ mode: '3-pack' }, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'package-mode.json';
+
+                  toast.success("✅ Set to 3 packages. Click below to download the config file, then place it in the 'public' folder and refresh.");
+                }}
+              >
+                3 Packages
+              </Button>
+              <Button
+                size="sm"
+                variant={packageMode === "6-pack" ? "default" : "outline"}
+                className={packageMode === "6-pack" ? "bg-green-600 hover:bg-green-700" : ""}
+                onClick={async () => {
+                  setPackageMode("6-pack");
+                  localStorage.setItem('packageMode', '6-pack');
+
+                  // Manually update the JSON file
+                  const blob = new Blob([JSON.stringify({ mode: '6-pack' }, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'package-mode.json';
+
+                  toast.success("✅ Set to 6 packages. Click below to download the config file, then place it in the 'public' folder and refresh.");
+                }}
+              >
+                6 Packages
+              </Button>
+            </div>
           </div>
 
           <Accordion type="multiple" className="space-y-4">
@@ -1252,7 +1300,9 @@ export default function PackagePricing() {
         {/* Packages grid */}
         {(view === "packages" || view === "both") && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...builtInPackages, ...getCustomPackages()]
+            {Array.from(new Map([...builtInPackages, ...getCustomPackages()].map(p => [p.id, p])).values())
+
+
               .filter(pkg => !getPackageMeta(pkg.id)?.deleted)
               .filter(pkg => showArchived || !legacyIds.includes(pkg.id) || getPackageMeta(pkg.id)?.visible !== false)
               .map(pkg => {
@@ -1367,7 +1417,9 @@ export default function PackagePricing() {
         {/* Add-ons grid */}
         {(view === "addons" || view === "both") && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...builtInAddOns, ...getCustomAddOns()]
+            {Array.from(new Map([...builtInAddOns, ...getCustomAddOns()].map(a => [a.id, a])).values())
+
+
               .filter(a => !getAddOnMeta(a.id)?.deleted)
               .filter(a => showArchived || getAddOnMeta(a.id)?.visible !== false)
               .map(addon => {
@@ -1644,7 +1696,9 @@ export default function PackagePricing() {
                         if (!snap) return null;
                         const pkgMeta = snap.packageMeta || {};
                         const saved = snap.savedPrices || {};
-                        const visible = [...builtInPackages, ...(snap.customPackages || [])]
+                        const visible = Array.from(new Map([...builtInPackages, ...(snap.customPackages || [])].map(p => [p.id, p])).values())
+
+
                           .filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
                         return visible.map(p => {
                           const pricing = {
@@ -1687,7 +1741,9 @@ export default function PackagePricing() {
                         if (!snap) return null;
                         const addonMeta = snap.addOnMeta || {};
                         const saved = snap.savedPrices || {};
-                        const visible = [...builtInAddOns, ...(snap.customAddOns || [])]
+                        const visible = Array.from(new Map([...builtInAddOns, ...(snap.customAddOns || [])].map(a => [a.id, a])).values())
+
+
                           .filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
                         return visible.map(a => {
                           const pricing = {

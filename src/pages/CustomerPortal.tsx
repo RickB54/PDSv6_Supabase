@@ -45,6 +45,11 @@ const packageImages: Record<string, string> = {
   "prime-elite-exterior": primeEliteExt,
   "prime-elite-interior": primeEliteInt,
   "prime-elite-full": primeEliteFull,
+
+  // 3-Pack (Prime 2026) Images
+  "prime-2026-exterior": primeEssentialExt,
+  "prime-2026-interior": primeEssentialInt,
+  "prime-2026-full": primeEssentialFull,
   // Keep legacy for backward compatibility if any are actually made visible
   "basic-exterior": packageBasic,
   "express-wax": packageExpress,
@@ -254,30 +259,49 @@ const CustomerPortal = () => {
   );
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
 
-  const visibleBuiltIns = builtInPackages.filter(p => (packageMetaLive[p.id]?.visible) !== false && !legacyIds.includes(p.id) && !p.id.includes('2025'));
-  const visibleCustomPkgs = customPackagesLive.filter((p: any) => (packageMetaLive[p.id]?.visible) !== false && !legacyIds.includes(p.id) && !p.id.includes('2025'));
-  const livePackages = [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
-    const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing?.compact || 0,
-      midsize: parseFloat(savedPricesLive[getKey('package', p.id, 'midsize')]) || p.pricing?.midsize || 0,
-      truck: parseFloat(savedPricesLive[getKey('package', p.id, 'truck')]) || p.pricing?.truck || 0,
-      luxury: parseFloat(savedPricesLive[getKey('package', p.id, 'luxury')]) || p.pricing?.luxury || 0,
-    };
-    Object.keys(savedPricesLive).forEach((k) => {
-      const prefix = `package:${p.id}:`;
-      if (k.startsWith(prefix)) {
-        const veh = k.slice(prefix.length);
-        const val = parseFloat(savedPricesLive[k]);
-        if (!Number.isNaN(val) && val > 0) pricing[veh] = val;
-      }
-    });
-    const metaSteps: string[] | undefined = packageMetaLive[p.id]?.stepIds;
-    const steps = metaSteps && metaSteps.length > 0
-      ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
-      : p.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s));
-    const description = packageMetaLive[p.id]?.descriptionOverride || p.description;
-    return { ...p, pricing, steps, description };
-  });
+  // EMERGENCY HARDCODED PACKAGES for Services Page
+  // Guarantees only the 3 new Prime packages are shown
+  const livePackages = [
+    {
+      id: "prime-2026-exterior",
+      name: "Prime Exterior Detail",
+      description: "Professional exterior detailing service",
+      pricing: { compact: 90, midsize: 110, truck: 130, luxury: 150 },
+      steps: [
+        { id: "foam-pre-soak", name: "Exterior foam pre-soak" },
+        { id: "hand-wash", name: "Two-bucket hand wash" },
+        { id: "wheel-rim-shine", name: "Wheel and rim cleaning" },
+        { id: "blow-dry", name: "Air blow-dry and microfiber drying" },
+        { id: "sealant", name: "Premium spray wax" }
+      ]
+    },
+    {
+      id: "prime-2026-interior",
+      name: "Prime Interior Detail",
+      description: "Deep interior cleaning and conditioning",
+      pricing: { compact: 180, midsize: 200, truck: 220, luxury: 250 },
+      steps: [
+        { id: "vac-interior", name: "Thorough interior vacuum" },
+        { id: "wipe-plastics", name: "Wipe-down of all surfaces" },
+        { id: "window-clean", name: "Interior window cleaning" },
+        { id: "mat-clean", name: "Floor mat cleaning" },
+        { id: "jamb-clean", name: "Door jamb cleaning" }
+      ]
+    },
+    {
+      id: "prime-2026-full",
+      name: "Prime Full Detail",
+      description: "Complete interior and exterior detailing",
+      pricing: { compact: 230, midsize: 260, truck: 290, luxury: 330 },
+      steps: [
+        { id: "ext-hand-wash", name: "Safe hand wash" },
+        { id: "wheel-faces", name: "Wheel and tire cleaning" },
+        { id: "interior-vac-full", name: "Full interior vacuum" },
+        { id: "dash-wipe", name: "Dashboard and console wipe-down" },
+        { id: "windows-in-out", name: "Interior & Exterior glass cleaned" }
+      ]
+    }
+  ];
 
   const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false);
   const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false);
