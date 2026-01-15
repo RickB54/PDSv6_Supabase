@@ -82,12 +82,16 @@ export default function CalendarSettings() {
         try {
             await signOutFromGoogle();
             setSignedIn(false);
+            // Clear from local storage as well for immediate UI response
+            localStorage.removeItem('g_cal_token');
+            localStorage.removeItem('g_cal_connected');
             toast({
                 title: 'Disconnected',
                 description: 'Calendar sync has been disabled.'
             });
         } catch (error) {
             console.error('Sign out error:', error);
+            toast({ title: 'Logout failed', variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -96,7 +100,7 @@ export default function CalendarSettings() {
     const handleSaveConfig = async () => {
         setLoading(true);
         try {
-            saveCalendarConfig(config);
+            await saveCalendarConfig(config);
 
             // Reinitialize if credentials changed
             if (config.clientId && config.apiKey) {
@@ -115,6 +119,17 @@ export default function CalendarSettings() {
                 variant: 'destructive'
             });
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReset = async () => {
+        setLoading(true);
+        try {
+            await signOutFromGoogle();
+            localStorage.clear(); // Nuclear option for stuck local state
+            window.location.reload(); // Hard refresh to reset all singletons
+        } catch (e) {
             setLoading(false);
         }
     };
@@ -213,13 +228,25 @@ export default function CalendarSettings() {
                                 </p>
                             </div>
                         </div>
-                        <Button
-                            onClick={signedIn ? handleSignOut : handleSignIn}
-                            disabled={loading}
-                            className={signedIn ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-red-700 hover:bg-red-800'}
-                        >
-                            {loading ? 'Processing...' : signedIn ? 'Disconnect' : 'Connect Calendar'}
-                        </Button>
+                        <div className="flex gap-2">
+                            {signedIn && (
+                                <Button
+                                    variant="outline"
+                                    onClick={handleReset}
+                                    disabled={loading}
+                                    className="border-zinc-700 text-zinc-400 hover:text-white"
+                                >
+                                    Reset
+                                </Button>
+                            )}
+                            <Button
+                                onClick={signedIn ? handleSignOut : handleSignIn}
+                                disabled={loading}
+                                className={signedIn ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-red-700 hover:bg-red-800'}
+                            >
+                                {loading ? 'Processing...' : signedIn ? 'Disconnect' : 'Connect Calendar'}
+                            </Button>
+                        </div>
                     </div>
                 </Card>
             )}

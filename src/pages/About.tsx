@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -333,13 +334,7 @@ const About = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-white border-t border-zinc-100">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em]">
-            © {new Date().getFullYear()} Prime Auto Detail • Professional Craftsmanship
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

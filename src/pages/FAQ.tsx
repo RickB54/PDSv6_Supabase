@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ const FAQ = () => {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

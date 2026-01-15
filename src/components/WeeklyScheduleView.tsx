@@ -10,9 +10,17 @@ interface WeeklyScheduleViewProps {
     selectedDate: Date | undefined;
     onDateSelect?: (date: Date) => void;
     className?: string;
+    existingBookings?: Array<{ scheduled_at: string; estimated_duration: number }>;
+    publicView?: boolean;
 }
 
-export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: WeeklyScheduleViewProps) {
+export function WeeklyScheduleView({
+    selectedDate,
+    onDateSelect,
+    className,
+    existingBookings = [],
+    publicView = false
+}: WeeklyScheduleViewProps) {
     const [blocks, setBlocks] = useState<BlockedTimeSlot[]>([]);
     const [loading, setLoading] = useState(false);
     const [weekOffset, setWeekOffset] = useState(0);
@@ -30,7 +38,7 @@ export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: We
         const load = async () => {
             setLoading(true);
             try {
-                const allBlocks = await getWeeklyBlocks(weekStart);
+                const allBlocks = await getWeeklyBlocks(weekStart, existingBookings);
                 setBlocks(allBlocks as any);
             } catch (error) {
                 console.error("Failed to load weekly schedule:", error);
@@ -39,7 +47,7 @@ export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: We
             }
         };
         load();
-    }, [weekStart.toISOString()]);
+    }, [weekStart.toISOString(), existingBookings]);
 
     const getDayBlocks = (day: Date) => {
         const dayStr = format(day, 'yyyy-MM-dd');
@@ -116,14 +124,31 @@ export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: We
                                         <span className="opacity-70 text-[10px] uppercase">{format(day, 'EEE')}</span>
                                         <span className="text-lg">{format(day, 'd')}</span>
                                         {(() => {
+                                            const dayStr = format(day, 'yyyy-MM-dd');
+                                            const dayBlocks = blocks.filter(b => b.date === dayStr);
+
                                             const morning = dayBlocks.some(b => b.startTime && parseInt(b.startTime.split(':')[0]) < 12);
                                             const afternoon = dayBlocks.some(b => b.startTime && parseInt(b.startTime.split(':')[0]) >= 12);
-                                            const isFull = dayBlocks.some(b => !b.startTime && (b as any).workFull);
+                                            const isFullWorkday = dayBlocks.some(b => !b.startTime); // Manual full day block
+
+                                            // Calculate total blocked hours logic similar to Availability.tsx
+                                            const blockedHours = new Set();
+                                            dayBlocks.forEach(i => {
+                                                if (!i.startTime) {
+                                                    for (let h = 8; h < 16; h++) blockedHours.add(h);
+                                                } else {
+                                                    const [startH] = i.startTime.split(':').map(Number);
+                                                    const [endH] = i.endTime!.split(':').map(Number);
+                                                    for (let h = startH; h < endH; h++) {
+                                                        if (h >= 8 && h < 16) blockedHours.add(h);
+                                                    }
+                                                }
+                                            });
+                                            const isFull = isFullWorkday || blockedHours.size >= 8;
 
                                             let indClass = '';
-                                            if (isFull || (morning && afternoon)) indClass = 'bg-[#1e3a8a]';
-                                            else if (morning) indClass = 'bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400';
-                                            else if (afternoon) indClass = 'bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400';
+                                            if (isFull) indClass = 'bg-blue-600';
+                                            else if (blockedHours.size > 0) indClass = 'bg-gradient-to-r from-blue-600 from-50% to-white to-50% border border-blue-600';
 
                                             return indClass ? (
                                                 <div className={cn("absolute -bottom-1 -right-1 w-3 h-3 rounded-full shadow-md z-10", indClass)} />
@@ -150,10 +175,13 @@ export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: We
                                 <div className="px-3 pb-3 space-y-2">
                                     {dayBlocks.map(block => {
                                         const isPersonal = (block as any).source === 'google';
+                                        const isBooking = (block as any).source === 'booking';
                                         return (
                                             <div key={block.id} className={cn(
                                                 "flex items-center justify-between text-xs border rounded px-3 py-2 font-medium",
-                                                isPersonal ? "bg-zinc-50 text-zinc-500 border-zinc-200" : "bg-red-100 text-red-900 border-red-200"
+                                                (publicView || isBooking) ? "bg-blue-50 text-blue-900 border-blue-200" :
+                                                    isPersonal ? "bg-zinc-50 text-zinc-500 border-zinc-200" :
+                                                        "bg-red-100 text-red-900 border-red-200"
                                             )}>
                                                 <div className="flex items-center gap-2">
                                                     {(() => {
@@ -163,18 +191,19 @@ export function WeeklyScheduleView({ selectedDate, onDateSelect, className }: We
                                                             <div
                                                                 className={cn(
                                                                     "w-2 h-2 rounded-full shadow-sm flex-shrink-0",
-                                                                    isFull ? "bg-[#1e3a8a]" : (h < 12 ? "bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400" : "bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400")
+                                                                    (publicView || isBooking) ? "bg-blue-600" :
+                                                                        isFull ? "bg-[#1e3a8a]" : (h < 12 ? "bg-[linear-gradient(90deg,#1e3a8a_0%,#ffffff_100%)] ring-[0.5px] ring-zinc-400" : "bg-[linear-gradient(90deg,#ffffff_0%,#1e3a8a_100%)] ring-[0.5px] ring-zinc-400")
                                                                 )}
                                                             />
                                                         );
                                                     })()}
-                                                    {isPersonal ? <Lock className="w-3.5 h-3.5 opacity-60" /> : <Clock className="w-3.5 h-3.5 opacity-70" />}
+                                                    {(isPersonal || isBooking) ? <Shield className="w-3.5 h-3.5 opacity-70 text-blue-600" /> : <Clock className="w-3.5 h-3.5 opacity-70" />}
                                                     <span className="font-mono font-bold tracking-tight text-[11px]">
-                                                        {block.startTime !== '00:00' && block.startTime ? `${formatTimeAMPM(block.startTime)} - ${formatTimeAMPM(block.endTime!)}` : (isPersonal ? 'Unavailable' : 'Fully Booked')}
+                                                        {block.startTime !== '00:00' && block.startTime ? `${formatTimeAMPM(block.startTime)} - ${formatTimeAMPM(block.endTime!)}` : (publicView ? 'Booked' : (isPersonal ? 'Unavailable' : 'Fully Booked'))}
                                                     </span>
                                                 </div>
                                                 <span className="italic opacity-80 text-[10px] uppercase tracking-wide truncate max-w-[120px]">
-                                                    {(block as any).source === 'google' ? 'Personal' : (block as any).source === 'manual' ? 'Blocked' : 'Booked'}
+                                                    {publicView ? 'Booked' : ((block as any).source === 'google' ? 'Personal' : (block as any).source === 'booking' ? 'Confirmed' : (block as any).source === 'manual' ? 'Blocked' : 'Booked')}
                                                 </span>
                                             </div>
                                         );

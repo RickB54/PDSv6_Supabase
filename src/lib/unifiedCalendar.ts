@@ -113,7 +113,16 @@ export async function getUnifiedCalendarEvents(
 
     // 3. Add Google Calendar events (if connected)
     const config = await getCalendarConfig();
-    const isGcalSigned = isSignedIn();
+    let isGcalSigned = isSignedIn();
+
+    // Proactively try to load shared token if not signed in locally
+    if (!isGcalSigned && config.clientId && config.apiKey) {
+        const shared = await loadGCalTokenFromSupabase();
+        if (shared && (window as any).gapi?.client) {
+            (window as any).gapi.client.setToken({ access_token: shared.access_token });
+            isGcalSigned = true;
+        }
+    }
 
     if (config.clientId && config.apiKey && isGcalSigned) {
         try {
@@ -143,12 +152,12 @@ export async function getUnifiedCalendarEvents(
                 events.push({
                     id: gEvent.id,
                     type: 'google-event',
-                    title: gEvent.summary || 'Google Event',
+                    title: 'Booked (External Calendar Event)',
                     date: start,
                     endTime: end,
                     source: 'google',
                     isDeletable: false,
-                    color: 'purple',
+                    color: 'blue',
                     icon: '📅'
                 });
             });

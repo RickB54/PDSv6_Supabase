@@ -572,9 +572,6 @@ const BookNow = () => {
       }
     } catch { }
 
-    // Allow normal browser POST so Netlify can capture the submission
-    try { formEl.submit(); } catch { }
-
     // 6) Redirect to thank you
     window.location.href = `/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=${encodeURIComponent(new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}&date=${encodeURIComponent(new Date(dateIso).toLocaleDateString())}`;
 

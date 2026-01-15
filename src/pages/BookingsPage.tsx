@@ -381,7 +381,7 @@ export default function BookingsPage() {
 
   // Status styling helpers
   const getStatusColor = (status: BookingStatus | undefined, type?: string) => {
-    if (type === 'google-event') return 'bg-purple-500/10 border-purple-500/50 text-purple-200';
+    if (type === 'google-event') return 'bg-blue-600/20 border-blue-600 text-blue-200 shadow-[0_0_10px_rgba(37,99,235,0.2)]';
     if (type === 'manual-block') return 'bg-blue-500/20 border-blue-500 text-blue-200';
 
     switch (status) {

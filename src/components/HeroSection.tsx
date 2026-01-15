@@ -98,17 +98,28 @@ export const HeroSection = () => {
         </div>
       </div>
 
-      {/* Bottom Marquee - Faster and Spaced */}
-      <div className="relative z-30 w-full bg-black/90 border-t border-white/10 py-6 overflow-hidden">
-        <div className="scrolling-tagline">
-          <div className="flex items-center gap-24 text-4xl md:text-5xl font-bold uppercase italic px-12">
-            <span className="flex items-center">
-              <span className="text-zinc-600">★</span>
-              <span className="ml-10 text-[#ff3b30]">PRECISION.</span>
-              <span className="ml-10 text-white">PROTECTION.</span>
-              <span className="ml-10 text-[#007aff]">PERFECTION.</span>
-            </span>
-          </div>
+      {/* Bottom Marquee - Continuous Loop */}
+      <div className="relative z-30 w-full bg-black/95 border-t border-white/10 py-8 overflow-hidden">
+        <style>{`
+          @keyframes hero-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .hero-scroll-container {
+            display: flex;
+            width: max-content;
+            animation: hero-scroll 25s linear infinite;
+          }
+        `}</style>
+        <div className="hero-scroll-container">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="flex items-center gap-6 px-4 text-3xl md:text-5xl font-black uppercase italic tracking-tighter">
+              <span className="text-[#ff3b30]">Precision.</span>
+              <span className="text-white">Protection.</span>
+              <span className="text-[#007aff]">Perfection.</span>
+              <span className="ml-4 text-zinc-800">★</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

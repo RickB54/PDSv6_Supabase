@@ -160,14 +160,28 @@ export default function AvailabilityManager() {
         try {
             await signOutFromGoogle();
             setGoogleSignedIn(false);
-            checkGoogleStatus();
+            // Force status check
+            const status = await getAvailabilityStatus();
+            setAvailStatus(status);
             toast({
                 title: 'Disconnected',
                 description: 'Google Calendar sync disabled. Manual blocks still active.'
             });
         } catch (error) {
             console.error('Sign out error:', error);
+            toast({ title: 'Logout fail', variant: 'destructive' });
         } finally {
+            setGoogleLoading(false);
+        }
+    };
+
+    const handleReset = async () => {
+        setGoogleLoading(true);
+        try {
+            await signOutFromGoogle();
+            localStorage.clear();
+            window.location.reload();
+        } catch (e) {
             setGoogleLoading(false);
         }
     };
@@ -953,13 +967,25 @@ export default function AvailabilityManager() {
                                             </p>
                                         </div>
                                     </div>
-                                    <Button
-                                        onClick={googleSignedIn ? handleGoogleSignOut : handleGoogleSignIn}
-                                        disabled={googleLoading}
-                                        className={googleSignedIn ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-purple-700 hover:bg-purple-800'}
-                                    >
-                                        {googleLoading ? 'Processing...' : googleSignedIn ? 'Disconnect' : 'Connect Calendar'}
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        {googleSignedIn && (
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleReset}
+                                                disabled={googleLoading}
+                                                className="border-zinc-700 text-zinc-400 hover:text-white"
+                                            >
+                                                Reset
+                                            </Button>
+                                        )}
+                                        <Button
+                                            onClick={googleSignedIn ? handleGoogleSignOut : handleGoogleSignIn}
+                                            disabled={googleLoading}
+                                            className={googleSignedIn ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-purple-700 hover:bg-purple-800'}
+                                        >
+                                            {googleLoading ? 'Processing...' : googleSignedIn ? 'Disconnect' : 'Connect Calendar'}
+                                        </Button>
+                                    </div>
                                 </div>
                             </Card>
                         )}

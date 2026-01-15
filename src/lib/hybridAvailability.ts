@@ -5,17 +5,19 @@
 
 import {
     getBlockedSlots as getManualBlocks,
-    BlockedTimeSlot,
     getDayAvailability as getManualDayAvailability
 } from './availability';
 
 import {
+    initGoogleCalendar,
     getFreeBusy,
     isTimeSlotAvailable,
     getCalendarConfig,
-    isSignedIn
+    isSignedIn,
+    listCalendarEvents,
+    loadGCalTokenFromSupabase
 } from './googleCalendar';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, startOfMonth, startOfDay, endOfDay } from 'date-fns';
 
 export interface HybridAvailability {
     date: string;
@@ -45,21 +47,35 @@ export async function getHybridAvailability(
         };
     }
 
-    // Check if Google Calendar is connected
     const config = await getCalendarConfig();
-    const googleEnabled = config.clientId && config.apiKey && isSignedIn();
+    // Check if Google Calendar logic should be attempted
+    const googleEnabled = !!(config.clientId && config.apiKey);
 
     if (!googleEnabled) {
-        // No Google Calendar, use manual blocks only
+        // No Google Calendar config at all, use manual + bookings
+        const bookingSlots = existingBookings
+            .filter(b => format(new Date(b.scheduled_at), 'yyyy-MM-dd') === date)
+            .map(b => {
+                const start = format(new Date(b.scheduled_at), 'HH:mm');
+                const h = new Date(b.scheduled_at).getHours() + (b.estimated_duration || 1);
+                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(new Date(b.scheduled_at), 'mm')}`;
+                return { start, end, source: 'booking' as const };
+            });
+
         return {
             date,
-            fullyBlocked: false,
+            fullyBlocked: manualAvailability.availableSlots.length === 0,
             availableSlots: manualAvailability.availableSlots,
-            blockedSlots: manualAvailability.blockedSlots.map(s => ({ ...s, source: 'manual' as const }))
+            blockedSlots: [
+                ...manualAvailability.blockedSlots.map(s => ({ ...s, source: 'manual' as const })),
+                ...bookingSlots
+            ] as any
         };
     }
 
     try {
+        // Ensure API is initialized
+        await initGoogleCalendar(config);
         // Get Google Calendar busy periods
         const dayStart = new Date(date);
         dayStart.setHours(0, 0, 0, 0);
@@ -82,10 +98,22 @@ export async function getHybridAvailability(
             });
         }
 
+        // Distinguish bookings from manual blocks in the trace
+        const bookingSlots = existingBookings
+            .filter(b => format(new Date(b.scheduled_at), 'yyyy-MM-dd') === date)
+            .map(b => {
+                const start = format(new Date(b.scheduled_at), 'HH:mm');
+                // Estimating duration if not provided
+                const h = new Date(b.scheduled_at).getHours() + (b.estimated_duration || 1);
+                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(new Date(b.scheduled_at), 'mm')}`;
+                return { start, end, source: 'booking' as const };
+            });
+
         // Combine all blocked periods
         const allBlockedSlots = [
             ...manualAvailability.blockedSlots.map(s => ({ ...s, source: 'manual' as const })),
-            ...googleBusyPeriods.map(s => ({ ...s, source: 'google' as const }))
+            ...googleBusyPeriods.map(s => ({ ...s, source: 'google' as const })),
+            ...bookingSlots
         ];
 
         // Filter available slots to exclude Google Calendar blocks
@@ -103,17 +131,29 @@ export async function getHybridAvailability(
             date,
             fullyBlocked: finalAvailableSlots.length === 0,
             availableSlots: finalAvailableSlots,
-            blockedSlots: allBlockedSlots
+            blockedSlots: allBlockedSlots as any
         };
 
     } catch (error) {
-        console.error('Google Calendar check failed, using manual blocks only:', error);
-        // Fallback to manual blocks if Google Calendar fails
+        console.error('Google Calendar check failed, using manual + bookings:', error);
+
+        const bookingSlots = existingBookings
+            .filter(b => format(new Date(b.scheduled_at), 'yyyy-MM-dd') === date)
+            .map(b => {
+                const start = format(new Date(b.scheduled_at), 'HH:mm');
+                const h = new Date(b.scheduled_at).getHours() + (b.estimated_duration || 1);
+                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(new Date(b.scheduled_at), 'mm')}`;
+                return { start, end, source: 'booking' as const };
+            });
+
         return {
             date,
-            fullyBlocked: false,
+            fullyBlocked: manualAvailability.availableSlots.length === 0,
             availableSlots: manualAvailability.availableSlots,
-            blockedSlots: manualAvailability.blockedSlots.map(s => ({ ...s, source: 'manual' as const }))
+            blockedSlots: [
+                ...manualAvailability.blockedSlots.map(s => ({ ...s, source: 'manual' as const })),
+                ...bookingSlots
+            ] as any
         };
     }
 }
@@ -121,12 +161,13 @@ export async function getHybridAvailability(
 /**
  * Check if Google Calendar is currently active
  */
-/**
- * Check if Google Calendar is currently active
- */
 export async function isGoogleCalendarActive(): Promise<boolean> {
     const config = await getCalendarConfig();
-    return !!(config.clientId && config.apiKey && isSignedIn());
+    const isConfigured = !!(config.clientId && config.apiKey);
+    if (!isConfigured) return false;
+
+    // Also check if actually signed in (authorized)
+    return isSignedIn();
 }
 
 /**
@@ -150,9 +191,13 @@ export async function getAvailabilityStatus(): Promise<{
 /**
  * Get blocked dates in a range with source and time info (for calendar dots)
  */
-export async function getRangeBlockedDates(start: Date, end: Date): Promise<Array<{
+export async function getRangeBlockedDates(
+    start: Date,
+    end: Date,
+    existingBookings: Array<{ scheduled_at: string; estimated_duration: number }> = []
+): Promise<Array<{
     date: string;
-    source: 'manual' | 'google';
+    source: 'manual' | 'google' | 'booking';
     startTime: string | null;
     endTime: string | null;
 }>> {
@@ -168,63 +213,116 @@ export async function getRangeBlockedDates(start: Date, end: Date): Promise<Arra
         endTime: b.endTime || null
     }));
 
+    // 1.5 Real Bookings
+    const bookingMapped = existingBookings.filter(b => {
+        const d = new Date(b.scheduled_at);
+        return d >= start && d <= end;
+    }).map(b => {
+        const dateObj = new Date(b.scheduled_at);
+        const hStart = dateObj.getHours();
+        const mStart = dateObj.getMinutes();
+        const hEnd = Math.min(23, hStart + (b.estimated_duration || 1));
+
+        return {
+            date: format(dateObj, 'yyyy-MM-dd'),
+            source: 'booking' as const,
+            startTime: `${String(hStart).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
+            endTime: `${String(hEnd).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`
+        };
+    });
+
     const config = await getCalendarConfig();
-    const googleEnabled = config.clientId && config.apiKey && isSignedIn();
+    const googleEnabled = !!(config.clientId && config.apiKey);
 
     if (!googleEnabled) {
-        return manualMapped;
+        return [...manualMapped, ...bookingMapped];
     }
 
     // 2. Google Blocks
     try {
-        const freeBusy = await getFreeBusy(config.calendarIds, start, end);
-        const googleBlocks: Array<{ date: string; source: 'google'; startTime: string | null; endTime: string | null }> = [];
+        await initGoogleCalendar(config);
 
-        for (const calId of config.calendarIds) {
-            const busy = freeBusy.calendars[calId]?.busy || [];
-            busy.forEach(p => {
-                const startEvent = new Date(p.start);
-                const endEvent = new Date(p.end);
-
-                let curr = new Date(startEvent);
-                while (curr < endEvent) {
-                    const dStr = format(curr, 'yyyy-MM-dd');
-
-                    // Simple logic for morning/afternoon in the dots
-                    const isFirstDay = curr.toDateString() === startEvent.toDateString();
-                    const sTime = isFirstDay ? startEvent.toTimeString().slice(0, 5) : '00:00';
-
-                    const nextMidnight = new Date(curr);
-                    nextMidnight.setDate(nextMidnight.getDate() + 1);
-                    nextMidnight.setHours(0, 0, 0, 0);
-
-                    const isLastDay = endEvent <= nextMidnight;
-                    const eTime = isLastDay ? endEvent.toTimeString().slice(0, 5) : '23:59';
-
-                    googleBlocks.push({
-                        date: dStr,
-                        source: 'google' as const,
-                        startTime: sTime,
-                        endTime: eTime
-                    });
-
-                    curr = addDays(curr, 1);
-                    curr.setHours(0, 0, 0, 0);
-                }
-            });
+        let isGcalSigned = isSignedIn();
+        if (!isGcalSigned) {
+            const shared = await loadGCalTokenFromSupabase();
+            if (shared && (window as any).gapi?.client) {
+                (window as any).gapi.client.setToken({ access_token: shared.access_token });
+                isGcalSigned = true;
+            }
         }
 
-        return [...manualMapped, ...googleBlocks];
+        if (isGcalSigned) {
+            const googleBlocks: Array<{ date: string; source: 'google'; startTime: string | null; endTime: string | null }> = [];
+
+            for (const calId of config.calendarIds) {
+                const events = await listCalendarEvents(calId, startOfDay(start), endOfDay(end));
+
+                events.forEach((event: any) => {
+                    const startStr = event.start.dateTime || event.start.date;
+                    const endStr = event.end.dateTime || event.end.date;
+
+                    const startEvent = new Date(startStr);
+                    const endEvent = new Date(endStr);
+
+                    // Detect All-Day: Either just a date object, or spanning 24h starting at 00:00
+                    const isAllDay = !event.start.dateTime ||
+                        (startStr.includes('T00:00:00') && (endEvent.getTime() - startEvent.getTime() >= 23 * 60 * 60 * 1000));
+
+                    // Detect "12am-12am" or 0-duration blocks
+                    const isZeroDuration = event.start.dateTime && event.end.dateTime && (startStr === endStr || startStr.split('T')[1].startsWith('00:00') && endStr.split('T')[1].startsWith('00:00'));
+
+                    let curr = new Date(startEvent);
+                    do {
+                        const dStr = format(curr, 'yyyy-MM-dd');
+
+                        if (isAllDay || isZeroDuration) {
+                            googleBlocks.push({
+                                date: dStr,
+                                source: 'google',
+                                startTime: null,
+                                endTime: null
+                            });
+                        } else {
+                            const isFirstDay = curr.toDateString() === startEvent.toDateString();
+                            const sTime = isFirstDay ? startEvent.toTimeString().slice(0, 5) : '00:00';
+
+                            const nextMidnight = new Date(curr);
+                            nextMidnight.setDate(nextMidnight.getDate() + 1);
+                            nextMidnight.setHours(0, 0, 0, 0);
+
+                            const isLastDay = endEvent <= nextMidnight;
+                            const eTime = isLastDay ? endEvent.toTimeString().slice(0, 5) : '23:59';
+
+                            googleBlocks.push({
+                                date: dStr,
+                                source: 'google',
+                                startTime: sTime,
+                                endTime: eTime
+                            });
+                        }
+
+                        curr = addDays(curr, 1);
+                        curr.setHours(0, 0, 0, 0);
+                    } while (curr < endEvent);
+                });
+            }
+            return [...manualMapped, ...bookingMapped, ...googleBlocks];
+        }
+
+        return [...manualMapped, ...bookingMapped];
     } catch (e) {
         console.error("Failed to fetch Google range:", e);
-        return manualMapped;
+        return [...manualMapped, ...bookingMapped];
     }
 }
 
 /**
  * Get combined blocks for a week (Manual + Google)
  */
-export async function getWeeklyBlocks(startDate: Date): Promise<Array<{ id?: string; date: string; startTime: string | null; endTime: string | null; source: 'manual' | 'google'; reason?: string }>> {
+export async function getWeeklyBlocks(
+    startDate: Date,
+    existingBookings: Array<{ scheduled_at: string; estimated_duration: number }> = []
+): Promise<Array<{ id?: string; date: string; startTime: string | null; endTime: string | null; source: 'manual' | 'google' | 'booking'; reason?: string }>> {
     const endDate = addDays(startDate, 7);
     const manualAll = await getManualBlocks();
 
@@ -241,15 +339,36 @@ export async function getWeeklyBlocks(startDate: Date): Promise<Array<{ id?: str
         reason: b.reason
     }));
 
+    // 1.5 Filter bookings to range
+    const bookingsInRange = existingBookings.filter(b => {
+        const d = new Date(b.scheduled_at);
+        return d >= startDate && d <= endDate;
+    }).map((b, idx) => {
+        const dateObj = new Date(b.scheduled_at);
+        const hStart = dateObj.getHours();
+        const mStart = dateObj.getMinutes();
+        const hEnd = Math.min(23, hStart + (b.estimated_duration || 1));
+
+        return {
+            id: `b-${idx}-${b.scheduled_at}`,
+            date: format(dateObj, 'yyyy-MM-dd'),
+            startTime: `${String(hStart).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
+            endTime: `${String(hEnd).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
+            source: 'booking' as const,
+            reason: 'Confirmed Booking'
+        };
+    });
+
     const config = await getCalendarConfig();
-    const googleEnabled = config.clientId && config.apiKey && isSignedIn();
+    const googleEnabled = !!(config.clientId && config.apiKey);
 
     if (!googleEnabled) {
-        return manualInRange;
+        return [...manualInRange, ...bookingsInRange];
     }
 
     try {
         // Fetch Google
+        await initGoogleCalendar(config);
         const freeBusy = await getFreeBusy(config.calendarIds, startDate, endDate);
         const googleBlocks: any[] = [];
 
@@ -294,10 +413,9 @@ export async function getWeeklyBlocks(startDate: Date): Promise<Array<{ id?: str
             });
         }
 
-        return [...manualInRange, ...googleBlocks];
+        return [...manualInRange, ...bookingsInRange, ...googleBlocks];
     } catch (error) {
         console.error("Failed to fetch Google blocks:", error);
-        return manualInRange;
+        return [...manualInRange, ...bookingsInRange];
     }
 }
-

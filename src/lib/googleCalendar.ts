@@ -42,21 +42,42 @@ let gapiLoadPromise: Promise<void> | null = null;
 let lastInitConfig: string | null = null;
 
 const freeBusyCache: Record<string, { data: FreeBusyResponse; timestamp: number }> = {};
-const CACHE_TTL = 30 * 1000; // 30 seconds cache for more "instant" feel
+const CACHE_TTL = 60 * 1000; // Increased to 60 seconds to reduce API pressure/quota hits
 
 /**
  * Initialize Google APIs (Singleton pattern)
  * Loads GAPI for Calendar and GIS for Authentication
  */
 export async function initGoogleCalendar(config: CalendarConfig): Promise<void> {
-    const configHash = JSON.stringify({ c: config.clientId, a: config.apiKey });
-    if (isGapiLoaded && isGsiLoaded && lastInitConfig === configHash) return Promise.resolve();
-    if (gapiLoadPromise && lastInitConfig === configHash) return gapiLoadPromise;
+    const configHash = JSON.stringify({ c: config.clientId, a: config.apiKey, ids: config.calendarIds });
+
+    // Check if config has changed and reset state if necessary
+    if (lastInitConfig !== null && lastInitConfig !== configHash) {
+        console.log("[GoogleCalendar] Configuration changed. Resetting Google API state.");
+        tokenClient = null;
+        isGsiLoaded = false;
+        isGapiLoaded = false; // Force re-init of GAPI as well
+        gapiLoadPromise = null; // Clear any pending promise
+        // Also clear any existing token as it might be for a different client ID
+        localStorage.removeItem('g_cal_token');
+        localStorage.removeItem('g_cal_connected');
+    }
+
+    if (isGapiLoaded && isGsiLoaded && lastInitConfig === configHash && tokenClient) {
+        console.log("[GoogleCalendar] Reusing existing initialization");
+        return Promise.resolve();
+    }
+    if (gapiLoadPromise && lastInitConfig === configHash) {
+        console.log("[GoogleCalendar] Initialization already in progress, returning existing promise.");
+        return gapiLoadPromise;
+    }
 
     if (!config.apiKey || !config.clientId) {
+        console.error("[GoogleCalendar] Missing credentials. Client ID or API Key is empty.");
         return Promise.reject(new Error("Missing credentials. Please check your Client ID and API Key."));
     }
 
+    console.log("[GoogleCalendar] Initializing with Client ID:", config.clientId);
     lastInitConfig = configHash;
 
     gapiLoadPromise = new Promise((resolve, reject) => {
@@ -108,6 +129,12 @@ export async function initGoogleCalendar(config: CalendarConfig): Promise<void> 
                         if ((window as any).gapi?.client) {
                             (window as any).gapi.client.setToken({ access_token: response.access_token });
                         }
+
+                        // Share token globally via Supabase for "No Sync" robustness
+                        saveGCalTokenToSupabase({
+                            access_token: response.access_token,
+                            expires_at: Date.now() + (response.expires_in * 1000)
+                        });
 
                         window.dispatchEvent(new Event('g_cal_auth_complete'));
                     },
@@ -205,17 +232,30 @@ export async function signInToGoogle(): Promise<void> {
  * Sign out
  */
 export async function signOutFromGoogle(): Promise<void> {
-    const storedToken = localStorage.getItem('g_cal_token');
-    if (storedToken) {
-        const token = JSON.parse(storedToken);
-        (window as any).google.accounts.oauth2.revoke(token.access_token, () => {
-            console.log("Token revoked");
-        });
-    }
+    try {
+        const storedToken = localStorage.getItem('g_cal_token');
+        if (storedToken) {
+            const token = JSON.parse(storedToken);
+            if ((window as any).google?.accounts?.oauth2?.revoke) {
+                (window as any).google.accounts.oauth2.revoke(token.access_token, () => {
+                    console.log("[GoogleCalendar] Token revoked");
+                });
+            }
+        }
+    } catch (e) { console.warn("[GoogleCalendar] Revoke failed", e); }
+
     localStorage.removeItem('g_cal_token');
     localStorage.removeItem('g_cal_connected');
+
     if ((window as any).gapi?.client) {
-        (window as any).gapi.client.setToken(null);
+        try { (window as any).gapi.client.setToken(null); } catch (e) { }
+    }
+
+    // Also clear shared token from Supabase
+    if (isSupabaseEnabled()) {
+        try {
+            await supabase.from('app_settings').delete().eq('key', 'gcal_shared_token');
+        } catch (e) { console.error("[GoogleCalendar] Supabase delete error:", e); }
     }
 }
 
@@ -223,19 +263,55 @@ export async function signOutFromGoogle(): Promise<void> {
  * Check if signed in and token is valid
  */
 export function isSignedIn(): boolean {
+    // 1. Check local storage first
     const storedToken = localStorage.getItem('g_cal_token');
-    if (!storedToken) return false;
-
-    try {
-        const token = JSON.parse(storedToken);
-        const isValid = token.expires_at > Date.now();
-        if (isValid && (window as any).gapi?.client) {
-            (window as any).gapi.client.setToken({ access_token: token.access_token });
+    if (storedToken) {
+        try {
+            const token = JSON.parse(storedToken);
+            const isValid = token.expires_at > Date.now();
+            if (isValid && (window as any).gapi?.client) {
+                (window as any).gapi.client.setToken({ access_token: token.access_token });
+                return true;
+            }
+        } catch {
+            // Fall through to Supabase check if local storage is corrupt
         }
-        return isValid;
-    } catch {
-        return false;
     }
+
+    // 2. If local storage token is invalid or missing, try to load from Supabase
+    // This is an async operation, so we can't directly return its result here.
+    // Instead, we'll rely on `getFreeBusy` or `ensureSignedIn` to proactively load it.
+    // For `isSignedIn` to be synchronous, we can only check what's immediately available.
+    // The `getFreeBusy` function will handle the async loading from Supabase.
+    return false;
+}
+
+/**
+ * Shared Token Helpers
+ */
+async function saveGCalTokenToSupabase(token: any) {
+    if (!isSupabaseEnabled()) return;
+    try {
+        await supabase.from('app_settings').upsert({
+            key: 'gcal_shared_token',
+            value: {
+                access_token: token.access_token,
+                expires_at: token.expires_at,
+                updated_at: new Date().toISOString()
+            }
+        });
+    } catch (e) { }
+}
+
+export async function loadGCalTokenFromSupabase() {
+    if (!isSupabaseEnabled()) return null;
+    try {
+        const { data } = await supabase.from('app_settings').select('value').eq('key', 'gcal_shared_token').maybeSingle();
+        if (data?.value && data.value.expires_at > Date.now()) {
+            return data.value;
+        }
+    } catch (e) { }
+    return null;
 }
 
 /**
@@ -243,6 +319,17 @@ export function isSignedIn(): boolean {
  */
 export async function ensureSignedIn(): Promise<void> {
     if (isSignedIn()) return;
+
+    // Try to load from Supabase if local token is missing/expired
+    const sharedToken = await loadGCalTokenFromSupabase();
+    if (sharedToken) {
+        localStorage.setItem('g_cal_token', JSON.stringify(sharedToken));
+        localStorage.setItem('g_cal_connected', 'true');
+        if ((window as any).gapi?.client) {
+            (window as any).gapi.client.setToken({ access_token: sharedToken.access_token });
+        }
+        return; // Successfully loaded from Supabase
+    }
 
     const wasConnected = localStorage.getItem('g_cal_connected') === 'true';
     if (!wasConnected) throw new Error("Not previously connected");
@@ -295,12 +382,21 @@ export async function getFreeBusy(
     timeMin: Date,
     timeMax: Date
 ): Promise<FreeBusyResponse> {
-    // Try refresh if needed
+    // For customers (online), avoid hard error if not signed in.
     if (!isSignedIn()) {
         try {
-            await ensureSignedIn();
+            // First try to load a shared token from Supabase
+            const shared = await loadGCalTokenFromSupabase();
+            if (shared && (window as any).gapi?.client) {
+                (window as any).gapi.client.setToken({ access_token: shared.access_token });
+                // Update local storage for consistency
+                localStorage.setItem('g_cal_token', JSON.stringify(shared));
+                localStorage.setItem('g_cal_connected', 'true');
+            } else {
+                await ensureSignedIn();
+            }
         } catch (e) {
-            throw new Error("Not signed in to Google Calendar and refresh failed");
+            console.warn("[GoogleCalendar] No valid session or shared token, attempting fetch with API Key...");
         }
     }
 
@@ -312,6 +408,10 @@ export async function getFreeBusy(
     }
 
     try {
+        if (!(window as any).gapi?.client?.calendar) {
+            throw new Error("GAPI Calendar not initialized");
+        }
+
         const response = await (window as any).gapi.client.calendar.freebusy.query({
             timeMin: timeMin.toISOString(),
             timeMax: timeMax.toISOString(),
@@ -319,12 +419,39 @@ export async function getFreeBusy(
         });
 
         const result = response.result;
+        console.log(`[GoogleCalendar] FreeBusy Response for ${calendarIds.join(',')}:`, result);
         freeBusyCache[cacheKey] = { data: result, timestamp: Date.now() };
         return result;
     } catch (error: any) {
-        if (error.status === 401) {
+        if (error.status === 401 || error.status === 403) {
+            // Token likely expired or invalid
             localStorage.removeItem('g_cal_token');
             localStorage.removeItem('g_cal_connected');
+
+            // Try one-time recovery with Supabase shared token
+            const shared = await loadGCalTokenFromSupabase();
+            if (shared) {
+                try {
+                    (window as any).gapi.client.setToken({ access_token: shared.access_token });
+                    // Update local storage for consistency
+                    localStorage.setItem('g_cal_token', JSON.stringify(shared));
+                    localStorage.setItem('g_cal_connected', 'true');
+
+                    const retry = await (window as any).gapi.client.calendar.freebusy.query({
+                        timeMin: timeMin.toISOString(),
+                        timeMax: timeMax.toISOString(),
+                        items: calendarIds.map((id: string) => ({ id }))
+                    });
+                    return retry.result;
+                } catch (retryError) {
+                    console.warn("[GoogleCalendar] Supabase shared token failed on retry:", retryError);
+                }
+            }
+
+            // Fallback to empty
+            return {
+                calendars: {}
+            } as FreeBusyResponse;
         }
         throw error;
     }
@@ -513,8 +640,19 @@ export async function createGoogleEvent(event: {
  * List Events for a specific range and calendars
  */
 export async function listCalendarEvents(calendarId: string, timeMin: Date, timeMax: Date) {
-    if (!isSignedIn()) return [];
+    if (!isSignedIn()) {
+        try {
+            await ensureSignedIn();
+        } catch (e) {
+            console.warn("[GoogleCalendar] Not signed in, attempting fetch with API Key for listEvents...");
+        }
+    }
+
     try {
+        if (!(window as any).gapi?.client?.calendar) {
+            return [];
+        }
+
         const response = await (window as any).gapi.client.calendar.events.list({
             calendarId: calendarId,
             timeMin: timeMin.toISOString(),

@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { getDatesWithBlocks, formatTimeAMPM, getBlockedSlots } from '@/lib/availability';
 import { getHybridAvailability, getRangeBlockedDates } from '@/lib/hybridAvailability';
 import { AlertCircle, Clock, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { WeeklyScheduleView } from './WeeklyScheduleView';
 
@@ -63,7 +63,7 @@ export function AvailabilityPicker({
         const handleChange = () => loadBlockedDates();
         window.addEventListener('availability-changed', handleChange);
         return () => window.removeEventListener('availability-changed', handleChange);
-    }, []);
+    }, [existingBookings]);
 
     useEffect(() => {
         if (selectedDate) {
@@ -72,10 +72,10 @@ export function AvailabilityPicker({
     }, [selectedDate, existingBookings]);
 
     const loadBlockedDates = async () => {
-        // Load blocks for next 3 months to cover view
-        const start = new Date();
+        // Load blocks for the whole month to ensure manual blocks/past bookings are visible
+        const start = startOfMonth(new Date());
         const end = addDays(start, 90);
-        const allBlocks = await getRangeBlockedDates(start, end);
+        const allBlocks = await getRangeBlockedDates(start, end, existingBookings);
 
         // Group by date to determine morning/afternoon/full
         const datesMap: Record<string, { workMorning: boolean; workAfternoon: boolean; workFull: boolean; personal: boolean }> = {};
@@ -84,26 +84,31 @@ export function AvailabilityPicker({
             if (!datesMap[b.date]) {
                 datesMap[b.date] = { workMorning: false, workAfternoon: false, workFull: false, personal: false };
             }
-            if (b.source === 'manual') {
-                if (!b.startTime && !b.endTime) {
-                    datesMap[b.date].workFull = true;
-                } else if (b.startTime) {
-                    const hour = parseInt(b.startTime.split(':')[0]);
-                    if (hour < 12) datesMap[b.date].workMorning = true;
-                    else datesMap[b.date].workAfternoon = true;
-                }
-            } else if (b.source === 'google') {
-                datesMap[b.date].personal = true;
-            }
-        });
+            // All sources (manual, booking, google) now contribute to "work" indicators
+            if (!b.startTime || !b.endTime) {
+                datesMap[b.date].workFull = true;
+            } else {
+                const startH = parseInt(b.startTime.split(':')[0]);
+                const startM = parseInt(b.startTime.split(':')[1]);
+                const endH = parseInt(b.endTime.split(':')[0]);
 
-        // Add real bookings to the indicators
-        existingBookings.forEach(booking => {
-            const d = format(new Date(booking.scheduled_at), 'yyyy-MM-dd');
-            if (!datesMap[d]) datesMap[d] = { workMorning: false, workAfternoon: false, workFull: false, personal: false };
-            const hour = new Date(booking.scheduled_at).getHours();
-            if (hour < 12) datesMap[d].workMorning = true;
-            else datesMap[d].workAfternoon = true;
+                // If it starts exactly at 00:00 and lasts significant time, or is exactly 0-duration 12am block
+                if (startH === 0 && (endH === 0 || endH >= 16)) {
+                    datesMap[b.date].workFull = true;
+                } else {
+                    // Overlap Morning: [0, 12). If starts at 11:30, it overlaps morning.
+                    if (startH < 12) datesMap[b.date].workMorning = true;
+                    // Overlap Afternoon: [12, 24). If it ends after 12:00, or starts at/after 12:00
+                    if (endH >= 12 || startH >= 12) {
+                        // Special check: if it ends exactly at 12:00, it's just morning
+                        if (endH === 12 && parseInt(b.endTime.split(':')[1]) === 0) {
+                            // strictly morning
+                        } else {
+                            datesMap[b.date].workAfternoon = true;
+                        }
+                    }
+                }
+            }
         });
 
         const full: Date[] = [];
@@ -112,15 +117,17 @@ export function AvailabilityPicker({
         const personal: Date[] = [];
 
         Object.entries(datesMap).forEach(([dStr, info]) => {
-            const dateObj = new Date(dStr + 'T00:00:00');
-            if (info.workFull || (info.workMorning && info.workAfternoon)) {
+            const dateObj = new Date(dStr + 'T12:00:00'); // Use noon to avoid TZ shift
+            if (info.workFull) {
                 full.push(dateObj);
+            } else if (info.workMorning && info.workAfternoon) {
+                // Special case for multiple blocks on same day
+                // We'll use morning as the base but handle it specially in modifiers
+                personal.push(dateObj); // Misusing personal array for multiple blocks temporarily
             } else if (info.workMorning) {
                 morning.push(dateObj);
             } else if (info.workAfternoon) {
                 afternoon.push(dateObj);
-            } else if (info.personal) {
-                personal.push(dateObj);
             }
         });
 
@@ -159,7 +166,7 @@ export function AvailabilityPicker({
         workFull: blockedFull,
         workMorning: blockedMorning,
         workAfternoon: blockedAfternoon,
-        personal: blockedPersonal,
+        workMultiple: blockedPersonal, // Re-mapped
         today: new Date()
     };
 
@@ -167,7 +174,7 @@ export function AvailabilityPicker({
         workFull: 'work-full-indicator',
         workMorning: 'work-morning-indicator',
         workAfternoon: 'work-afternoon-indicator',
-        personal: 'personal-indicator',
+        workMultiple: 'work-multiple-indicator',
         today: 'bg-blue-50 text-blue-900 font-bold'
     };
 
@@ -176,36 +183,37 @@ export function AvailabilityPicker({
 
             {/* Calendar with Blue Dot Indicators */}
             <div className="space-y-2">
-                <Label className="text-sm font-bold uppercase tracking-wide text-zinc-900">
-                    Select Preferred Date
+                <Label className="text-sm font-black uppercase tracking-widest text-zinc-900">
+                    SELECT PREFERRED DATE
                 </Label>
 
                 <style>{`
           .work-full-indicator { position: relative; }
           .work-full-indicator::after {
-            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
             width: 8px; height: 8px; border-radius: 50%;
-            background-color: #1e3a8a; z-index: 10;
+            background-color: #2563eb; z-index: 10;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
           }
-          .work-morning-indicator { position: relative; }
+          .work-morning-indicator, .work-afternoon-indicator { position: relative; }
+          .work-morning-indicator::after, .work-afternoon-indicator::after {
+            content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+            width: 10px; height: 10px; border-radius: 50%;
+            z-index: 10; border: 1.5px solid #2563eb;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
+          }
           .work-morning-indicator::after {
-            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
-            width: 8px; height: 8px; border-radius: 50%;
-            background: linear-gradient(90deg, #1e3a8a 0%, #ffffff 100%);
-            box-shadow: 0 0 0 1px #e4e4e7; z-index: 10;
+            background: linear-gradient(90deg, #2563eb 0%, #e2e8f0 100%);
           }
-          .work-afternoon-indicator { position: relative; }
           .work-afternoon-indicator::after {
-            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
-            width: 8px; height: 8px; border-radius: 50%;
-            background: linear-gradient(90deg, #ffffff 0%, #1e3a8a 100%);
-            box-shadow: 0 0 0 1px #e4e4e7; z-index: 10;
+            background: linear-gradient(270deg, #2563eb 0%, #e2e8f0 100%);
           }
-          .personal-indicator { position: relative; }
-          .personal-indicator::after {
-            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
-            width: 8px; height: 8px; border-radius: 50%;
-            border: 2px solid #a1a1aa; background-color: transparent; z-index: 10;
+          .work-multiple-indicator::after {
+            content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+            width: 10px; height: 10px; border-radius: 50%;
+            z-index: 10; border: 1.5px solid #2563eb;
+            background: linear-gradient(90deg, #2563eb 0%, #e2e8f0 50%, #2563eb 100%);
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
           }
         `}</style>
 
@@ -226,12 +234,12 @@ export function AvailabilityPicker({
 
                 <div className="flex flex-col gap-2 mt-2 bg-zinc-50 border border-zinc-100 p-3 rounded-lg">
                     <div className="flex items-center gap-2 text-xs text-zinc-600">
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb] shadow-[0_0_8px_rgba(37,99,235,0.4)] flex-shrink-0" />
                         <span className="font-medium">Blue Dot = Booked / Work</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-zinc-600">
-                        <div className="w-2.5 h-2.5 rounded-full border-2 border-zinc-400 flex-shrink-0" />
-                        <span className="font-medium">Gray Ring = Unavailable (Personal)</span>
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-[#2563eb] to-[#e2e8f0] border border-[#2563eb] shadow-[0_0_8px_rgba(37,99,235,0.2)] flex-shrink-0" />
+                        <span className="font-medium">Half Moon = Partial Day Available</span>
                     </div>
                 </div>
             </div>
@@ -320,6 +328,7 @@ export function AvailabilityPicker({
                         <WeeklyScheduleView
                             selectedDate={selectedDate}
                             onDateSelect={onDateChange}
+                            existingBookings={existingBookings}
                         />
                     </AccordionContent>
                 </AccordionItem>

@@ -144,60 +144,6 @@ export const servicePackages: ServicePackage[] = [
       { id: 'odor-neutral', name: 'Light odor neutralization & final detail', category: 'final' }
     ]
   },
-  // --- 2025 ARCHIVED PACKAGES ---
-  {
-    id: 'basic-exterior',
-    name: '2025 Basic Exterior Wash',
-    description: 'Archive: Standard exterior wash and dry.',
-    basePrice: 50,
-    pricing: { compact: 50, midsize: 60, truck: 70, luxury: 80 },
-    steps: [
-      { id: 'wash', name: 'Exterior Hand Wash', category: 'exterior' },
-      { id: 'dry', name: 'Microfiber Dry', category: 'exterior' }
-    ]
-  },
-  {
-    id: 'express-wax',
-    name: '2025 Express Wash & Wax',
-    description: 'Archive: Fast exterior wash with spray wax protection.',
-    basePrice: 85,
-    pricing: { compact: 85, midsize: 100, truck: 115, luxury: 130 },
-    steps: [
-      { id: 'wash-wax', name: 'Wash and Wax', category: 'exterior' }
-    ]
-  },
-  {
-    id: 'full-exterior',
-    name: '2025 Full Exterior Detail',
-    description: 'Archive: Comprehensive exterior cleaning and protection.',
-    basePrice: 150,
-    pricing: { compact: 150, midsize: 175, truck: 200, luxury: 250 },
-    steps: []
-  },
-  {
-    id: 'interior-cleaning',
-    name: '2025 Interior Cleaning',
-    description: 'Archive: Standard interior vacuum and wipe down.',
-    basePrice: 120,
-    pricing: { compact: 120, midsize: 140, truck: 160, luxury: 200 },
-    steps: []
-  },
-  {
-    id: 'full-detail',
-    name: '2025 Full Detail (BEST VALUE)',
-    description: 'Archive: Complete interior and exterior care.',
-    basePrice: 200,
-    pricing: { compact: 200, midsize: 250, truck: 300, luxury: 350 },
-    steps: []
-  },
-  {
-    id: 'premium-detail',
-    name: '2025 Premium Detail',
-    description: 'Archive: The ultimate show-room prep.',
-    basePrice: 350,
-    pricing: { compact: 350, midsize: 450, truck: 550, luxury: 700 },
-    steps: []
-  }
 ];
 
 /* REFERENCE: 2025 Archived Packages (Refer to Supabase for full history)

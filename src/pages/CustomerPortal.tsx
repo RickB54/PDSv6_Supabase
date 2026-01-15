@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -14,7 +15,6 @@ import * as supaAddOns from "@/services/supabase/addOns";
 import { contentService } from "@/lib/content";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { useCartStore } from "@/store/cart";
 import { useToast } from "@/hooks/use-toast";
 import { Check, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
@@ -73,7 +73,6 @@ const CustomerPortal = () => {
   // Instead of replacing the whole file, I will target specific blocks. 
   // This replacement is tricky due to size. I'll handle getDuration separately.
   const { toast } = useToast();
-  const addToCart = useCartStore((s) => s.addItem);
   const [vehicleType, setVehicleType] = useState<string>('compact');
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
     compact: "Compact/Sedan",
@@ -92,6 +91,7 @@ const CustomerPortal = () => {
   // Availability picker state
   const [availDate, setAvailDate] = useState<Date | undefined>(undefined);
   const [availTime, setAvailTime] = useState('');
+  const [modalAddOns, setModalAddOns] = useState<string[]>([]);
   const { items: allBookings } = useBookingsStore();
 
   // Sequential Step Blinking Logic
@@ -254,8 +254,8 @@ const CustomerPortal = () => {
   );
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
 
-  const visibleBuiltIns = builtInPackages.filter(p => (packageMetaLive[p.id]?.visible) !== false);
-  const visibleCustomPkgs = customPackagesLive.filter((p: any) => (packageMetaLive[p.id]?.visible) !== false);
+  const visibleBuiltIns = builtInPackages.filter(p => (packageMetaLive[p.id]?.visible) !== false && !legacyIds.includes(p.id) && !p.id.includes('2025'));
+  const visibleCustomPkgs = customPackagesLive.filter((p: any) => (packageMetaLive[p.id]?.visible) !== false && !legacyIds.includes(p.id) && !p.id.includes('2025'));
   const livePackages = [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
     const pricing: Record<string, number> = {
       compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing?.compact || 0,
@@ -688,7 +688,7 @@ const CustomerPortal = () => {
       {/* Debug Bar removed: production environment with Supabase enabled */}
 
       {/* Learn More Dialog */}
-      <Dialog open={!!learnMorePackage} onOpenChange={() => setLearnMorePackage(null)}>
+      <Dialog open={!!learnMorePackage} onOpenChange={(open) => { if (!open) { setLearnMorePackage(null); setModalAddOns([]); setAvailDate(undefined); setAvailTime(''); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">{learnMorePackage?.name.replace(' (BEST VALUE)', '')}</DialogTitle>
@@ -714,6 +714,34 @@ const CustomerPortal = () => {
               </ul>
             </div>
 
+            {/* Add-Ons Pulldown in Modal */}
+            <div className="border-t border-blue-50 pt-6">
+              <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">Enhance Your Service:</h4>
+              <div className="space-y-4">
+                <Label className="text-xs text-zinc-500 font-bold uppercase tracking-widest pl-1">Optional Add-Ons</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {liveAddOns.map(addon => {
+                    const isSelected = modalAddOns.includes(addon.id);
+                    return (
+                      <div
+                        key={addon.id}
+                        onClick={() => setModalAddOns(prev => prev.includes(addon.id) ? prev.filter(id => id !== addon.id) : [...prev, addon.id])}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-600 shadow-sm' : 'bg-zinc-50 border-zinc-200 hover:border-blue-300'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-zinc-300'}`}>
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <span className="text-sm font-medium text-zinc-700">{addon.name}</span>
+                        </div>
+                        <span className="font-bold text-blue-700 text-sm">${addon.pricing[vehicleType]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* Availability Calendar */}
             <div className="border-t border-blue-50 pt-6">
               <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">Check Availability</h4>
@@ -737,35 +765,35 @@ const CustomerPortal = () => {
 
             <div className="flex gap-4 pt-6 border-t border-blue-50">
               <Button
-                className={availDate && availTime
-                  ? "flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold uppercase tracking-widest"
-                  : "flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-widest"
-                }
+                className="flex-1 h-12 bg-blue-600 hover:bg-black text-white font-bold uppercase tracking-widest"
                 onClick={() => {
                   if (learnMorePackage) {
                     const price = learnMorePackage.pricing[vehicleType];
+                    const params = new URLSearchParams();
+                    params.set('package', learnMorePackage.id);
+                    params.set('vehicle', vehicleType);
+                    params.set('price', String(price));
+
+                    // Combine modal and main page add-ons? No, let's just use modal selections if in modal.
+                    // Or merge them. User choice. Usually modal selection is what they want now.
+                    // Let's use modalAddOns.
+                    if (modalAddOns.length > 0) params.set('addons', modalAddOns.join(','));
 
                     if (availDate && availTime) {
-                      const dateStr = format(availDate, 'yyyy-MM-dd');
-                      const prettyTime = formatTimeAMPM(availTime);
-                      navigate(`/book?package=${learnMorePackage.id}&vehicle=${vehicleType}&price=${price}&date=${dateStr}&time=${encodeURIComponent(prettyTime)}`);
-                    } else {
-                      addToCart({
-                        id: learnMorePackage.id,
-                        name: learnMorePackage.name.replace(' (BEST VALUE)', ''),
-                        price,
-                        quantity: 1,
-                        vehicleType,
-                      });
-                      toast({ title: "Added to Cart", description: `${learnMorePackage.name} — $${price}`, duration: 2500 });
+                      params.set('date', format(availDate, 'yyyy-MM-dd'));
+                      params.set('time', formatTimeAMPM(availTime));
                     }
+
+                    if (distance > 0) params.set('distance', String(distance));
+
+                    window.location.href = `/book?${params.toString()}`;
                   }
                   setLearnMorePackage(null);
                 }}
               >
                 {availDate && availTime
-                  ? `Continue: ${format(availDate, 'MMM d')} @ ${formatTimeAMPM(availTime)} (Est. ${learnMorePackage ? getServiceDuration(learnMorePackage.id) : 3} hrs)`
-                  : 'Add to Cart'
+                  ? `Book Now: ${format(availDate, 'MMM d')} @ ${formatTimeAMPM(availTime)}`
+                  : 'Book This Service Now'
                 }
               </Button>
               <Button variant="outline" onClick={() => setLearnMorePackage(null)}>
@@ -789,6 +817,7 @@ const CustomerPortal = () => {
           else setVehicleType("midsize"); // Fallback
         }}
       />
+      <Footer />
     </div>
   );
 };

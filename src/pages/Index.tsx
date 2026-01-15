@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { HeroSection } from "@/components/HeroSection";
 import {
   ArrowRight,
@@ -22,7 +23,7 @@ import paintBefore from "@/assets/paint_before.png";
 import paintAfter from "@/assets/paint_after.png";
 import interiorDetail from "@/assets/home/interior_detail.png";
 import ceramicBeading from "@/assets/home/ceramic_beading.png";
-import mobileVan from "@/assets/home/mobile_van.png";
+import fordF150 from "@/assets/home/ford_f150.png";
 import proTools from "@/assets/home/pro_tools.png";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import dailyDriver from "@/assets/home/daily_driver.png";
@@ -173,7 +174,7 @@ const Index = () => {
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative order-2 lg:order-1">
-              <img src={mobileVan} alt="Mobile Unit" className="rounded-2xl shadow-2xl" />
+              <img src={fordF150} alt="Mobile Unit" className="rounded-2xl shadow-2xl" />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-red-600/10 animate-pulse rounded-2xl" />
             </div>
             <div className="space-y-12 order-1 lg:order-2">
@@ -301,20 +302,7 @@ const Index = () => {
       </section>
 
       {/* Footer Branding */}
-      <footer className="py-12 bg-zinc-950 text-white border-t border-zinc-900">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <h2 className="text-2xl font-black uppercase italic tracking-tighter">Prime Auto Detail</h2>
-            <p className="text-[10px] text-zinc-600 uppercase font-black tracking-[0.3em]">Precision. Protection. Perfection.</p>
-          </div>
-          <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">
-            <Link to="/about" className="hover:text-red-600 transition-colors">Our Story</Link>
-            <Link to="/portal" className="hover:text-red-600 transition-colors">Client Portal</Link>
-            <Link to="/services" className="hover:text-red-600 transition-colors">Maintenance</Link>
-          </div>
-          <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">© 2026 Prime Auto Detail. All Rights Reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

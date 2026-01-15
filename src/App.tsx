@@ -88,6 +88,7 @@ import { useLocation as useRouterLocation } from "react-router-dom";
 import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
 import ScrollToTop from "./components/ScrollToTop";
 import AvailabilityManager from "./pages/AvailabilityManager";
+import Availability from "./pages/Availability";
 
 const queryClient = new QueryClient();
 
@@ -268,6 +269,7 @@ const App = () => {
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/faq" element={<FAQ />} />
                       <Route path="/book" element={<BookNow />} />
+                      <Route path="/availability" element={<Availability />} />
                       <Route path="/services" element={<CustomerPortal />} />
                       <Route path="/checkout" element={<Checkout />} />
                       <Route path="/thank-you" element={<ThankYou />} />
@@ -288,7 +290,9 @@ const App = () => {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/faq" element={<FAQ />} />
                     <Route path="/book" element={<BookNow />} />
+                    <Route path="/availability" element={<Availability />} />
                     <Route path="/services" element={<CustomerPortal />} />
+                    <Route path="/thank-you" element={<ThankYou />} />
                     <Route path="*" element={<Navigate to="/login" replace />} />
                   </Routes>
                 </div>

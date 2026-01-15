@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import AboutDialog from "@/components/AboutDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -385,6 +386,7 @@ const Contact = () => {
         </div>
       </main>
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
+      <Footer />
     </div>
   );
 };
