@@ -335,6 +335,25 @@ const BookNow = () => {
     return { ...p, pricing, steps };
   });
 
+  // Filter packages based on mode (3-pack or 6-pack)
+  // Read from public JSON file so it works across browser contexts
+  const [packageMode, setPackageMode] = React.useState<string>('6-pack');
+
+  React.useEffect(() => {
+    fetch('/package-mode.json?v=' + Date.now())
+      .then(res => res.json())
+      .then(data => setPackageMode(data.mode || '6-pack'))
+      .catch(() => setPackageMode('6-pack'));
+  }, []);
+
+  const filteredPackages = packageMode === '3-pack'
+    ? livePackages.filter(p =>
+      p.id === 'prime-essential-exterior' ||
+      p.id === 'prime-essential-interior' ||
+      p.id === 'prime-essential-full'
+    )
+    : livePackages;
+
   const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
   const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
   const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
@@ -360,7 +379,7 @@ const BookNow = () => {
   });
 
   // Compute total (service + add-ons)
-  const selectedService = livePackages.find(s => s.id === formData.package);
+  const selectedService = filteredPackages.find(s => s.id === formData.package);
   const selectedServicePrice = selectedService ? (selectedService.pricing[vehicleType] ?? selectedService.pricing['compact'] ?? 0) : 0;
   const packagePrice = urlPrice > 0 ? urlPrice : selectedServicePrice;
   const addOnsTotal = addOns.reduce((sum, id) => {
@@ -939,7 +958,7 @@ const BookNow = () => {
                     const dateIso = date ? date.toISOString() : new Date().toISOString();
 
                     // Construct Services List for Estimate
-                    const selectedPkg = livePackages.find((p: any) => p.id === formData.package);
+                    const selectedPkg = filteredPackages.find((p: any) => p.id === formData.package);
                     const servicesList = [];
                     if (selectedPkg) {
                       servicesList.push({ name: selectedPkg.name, price: selectedPkg.pricing[vehicleType] || 0 });
