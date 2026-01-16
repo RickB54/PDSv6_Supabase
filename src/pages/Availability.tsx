@@ -102,7 +102,10 @@ const Availability = () => {
     useEffect(() => {
         refreshBookings();
         loadInitialData();
-    }, []);
+        // Auto-refresh bookings every 10 seconds to show new online bookings immediately
+        const interval = setInterval(refreshBookings, 10000);
+        return () => clearInterval(interval);
+    }, [refreshBookings]);
 
     const loadInitialData = async () => {
         try {

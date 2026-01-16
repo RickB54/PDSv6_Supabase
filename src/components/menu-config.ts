@@ -57,6 +57,7 @@ export const getMenuGroups = (counts: {
     payrollDueCount: number;
     inventoryCount: number;
     fileCount: number;
+    tentativeBookingsCount: number;
 }): MenuGroup[] => [
 
         {
@@ -74,7 +75,7 @@ export const getMenuGroups = (counts: {
             title: "Operations", icon: ClipboardCheck,
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "employee", icon: CalendarDays },
-                { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays },
+                { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays, badge: counts.tentativeBookingsCount > 0 ? counts.tentativeBookingsCount : undefined, badgeColor: 'red' },
                 { title: "Analytics", url: "/bookings-analytics", key: "bookings-analytics", icon: FileBarChart },
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
                 { title: "Tasks", url: "/tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare },

@@ -31,12 +31,14 @@ import { getMenuGroups, TOP_ITEMS as CONFIGURED_TOP_ITEMS } from "@/components/m
 import api from "@/lib/api";
 import { isViewed } from "@/lib/viewTracker";
 import localforage from "localforage"; // Using localforage for payroll check
+import { useBookingsStore } from "@/store/bookings";
 
 export function AppSidebar({ user: userProp }: { user?: any }) {
   const { open, setOpenMobile, setOpen } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(userProp || getCurrentUser());
+  const { items: allBookings } = useBookingsStore();
 
   // Keep local user in sync with prop
   useEffect(() => {
@@ -236,12 +238,16 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   // --- MENU CONFIG ---
   // Using shared config to ensure Sidebar and Section Landing pages match
-  const MENU_GROUPS = useMemo(() => getMenuGroups({
-    todoCount,
-    payrollDueCount,
-    inventoryCount,
-    fileCount
-  }), [todoCount, payrollDueCount, inventoryCount, fileCount, tick]);
+  const MENU_GROUPS = useMemo(() => {
+    const tentativeCount = allBookings.filter(b => b.status === 'tentative').length;
+    return getMenuGroups({
+      todoCount,
+      payrollDueCount,
+      inventoryCount,
+      fileCount,
+      tentativeBookingsCount: tentativeCount
+    });
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings, tick]);
 
   // Helper: Are ANY groups open?
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
