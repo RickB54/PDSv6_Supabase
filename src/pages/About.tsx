@@ -24,6 +24,7 @@ import primeBlackCar from "@/assets/prime_essential_full_2025.png";
 import aboutYellowCar from "@/assets/about_yellow_sports.png";
 import aboutEliteProducts from "@/assets/about_elite_products.png";
 import mobileRigPremium from "@/assets/about/mobile_rig_premium.png";
+import aboutHero4k from "@/assets/about/about_hero_4k.png";
 import { contentService } from "@/lib/content";
 import { useEffect, useState } from "react";
 
@@ -75,27 +76,42 @@ const About = () => {
       <Navbar />
 
       {/* Hero Header */}
-      <section className="relative pt-32 pb-24 bg-zinc-900 text-white overflow-hidden">
-        <div className="container mx-auto px-4 max-w-7xl relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-400 text-sm font-bold uppercase tracking-widest mb-8 animate-fade-in">
+      <section className="group relative pt-48 pb-32 bg-black text-white overflow-hidden">
+        <div className="container mx-auto px-4 max-w-7xl relative z-20 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-400 text-sm font-bold uppercase tracking-widest mb-8 animate-fade-in relative z-30">
             <Award className="w-4 h-4" />
             {aboutData.heroBadge}
           </div>
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-6">
-            {aboutData.heroTitle.split('<br />').map((text: string, i: number) => (
-              <span key={i}>
-                {text}
-                {i < aboutData.heroTitle.split('<br />').length - 1 && <br />}
-              </span>
-            ))}
+          <h1 className="text-6xl md:text-8xl uppercase tracking-tighter leading-[0.9] mb-8 relative z-30">
+            {aboutData.heroTitle.split('<br />').map((text: string, i: number) => {
+              const words = text.split(' ');
+              return (
+                <span key={i} className="block font-light">
+                  {words.map((word, wIdx) => {
+                    const isAbout = word.toUpperCase() === 'ABOUT';
+                    return (
+                      <span key={wIdx} className={isAbout ? 'font-black' : ''}>
+                        {word}{wIdx < words.length - 1 ? ' ' : ''}
+                      </span>
+                    );
+                  })}
+                </span>
+              );
+            })}
           </h1>
-          <p className="text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed font-light relative z-30">
             {aboutData.heroSubtitle}
           </p>
         </div>
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900" />
-          <img src={exteriorGloss} alt="Background" className="w-full h-full object-cover grayscale" />
+
+        {/* Clearer, Interactive Hero Background */}
+        <div className="absolute inset-0 z-0 transition-transform duration-1000 ease-out group-hover:scale-110">
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black z-10" />
+          <img
+            src={aboutHero4k}
+            alt="Background"
+            className="w-full h-full object-cover brightness-[0.9] contrast-[1.1] transition-all duration-700"
+          />
         </div>
       </section>
 

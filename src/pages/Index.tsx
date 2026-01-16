@@ -165,7 +165,7 @@ const Index = () => {
               <div className="w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white bg-white">
                 <BeforeAfterSlider beforeImage={paintBefore} afterImage={paintAfter} />
               </div>
-              <div className="absolute -bottom-6 -right-4 lg:-right-8 hidden md:block z-20">
+              <div className="absolute -bottom-20 -right-4 lg:-right-8 hidden md:block z-20">
                 <HoverCard openDelay={0} closeDelay={200}>
                   <HoverCardTrigger asChild>
                     <div className="bg-blue-700 text-white p-6 rounded-xl shadow-xl cursor-pointer hover:bg-zinc-900 transition-colors duration-300 group relative">
