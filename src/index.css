@@ -146,8 +146,8 @@ All colors MUST be HSL.
     animation: pulse-subtle 3s ease-in-out infinite;
   }
 
-  .animate-marquee {
-    animation: marquee 12s linear infinite;
+  .animate-pulse-grow {
+    animation: pulse-grow 2s ease-in-out infinite;
   }
 }
 
@@ -184,5 +184,21 @@ All colors MUST be HSL.
   50% {
     transform: scale(1.02);
     opacity: 0.95;
+  }
+}
+
+@keyframes pulse-grow {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    text-shadow: 0 0 0px transparent;
+  }
+
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+    text-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
   }
 }

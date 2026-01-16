@@ -312,15 +312,16 @@ export function AvailabilityPicker({
 
             {/* Weekly Overview */}
             {/* Weekly Overview - Accordion */}
-            <Accordion type="single" collapsible className="w-full mt-8 border-t border-zinc-200 pt-2">
-                <AccordionItem value="weekly-view" className="border-b-0">
-                    <AccordionTrigger className="hover:no-underline py-4">
+            <Accordion type="single" collapsible className="w-full mt-8 border-t border-zinc-200 pt-4">
+                <AccordionItem value="weekly-view" className="border-none">
+                    <AccordionTrigger className="hover:no-underline py-4 px-4 bg-zinc-100 rounded-lg border border-zinc-200 shadow-sm transition-all hover:bg-zinc-200 group">
                         <div className="flex flex-col items-start gap-1">
-                            <div className="text-sm font-bold uppercase tracking-wide text-zinc-900 flex items-center gap-2">
-                                <CalendarIcon className="w-4 h-4 text-blue-600" /> Weekly Availability
+                            <div className="text-sm font-black uppercase tracking-widest text-blue-900 flex items-center gap-2">
+                                <CalendarIcon className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                                <span>Weekly Availability & Calendar View</span>
                             </div>
-                            <p className="text-xs text-muted-foreground font-normal text-left">
-                                Expand to see booked times for the week.
+                            <p className="text-[11px] text-blue-700 font-bold uppercase tracking-tight opacity-80">
+                                Click to expand and see booked times for the entire week
                             </p>
                         </div>
                     </AccordionTrigger>

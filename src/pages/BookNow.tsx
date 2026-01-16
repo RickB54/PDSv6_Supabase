@@ -68,14 +68,15 @@ const BookNow = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { add: addBooking, items: allBookings, refresh: refreshBookings } = useBookingsStore();
+  const { refresh: refreshCoupons } = useCouponsStore();
 
   useEffect(() => {
     refreshBookings();
-  }, [refreshBookings]);
+    refreshCoupons();
+  }, [refreshBookings, refreshCoupons]);
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCouponCode, setAppliedCouponCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState<string>('');
   const [showCouponField, setShowCouponField] = useState(false);
   const [date, setDate] = useState<Date | undefined>(() => {
@@ -434,6 +435,9 @@ const BookNow = () => {
     return sum + price;
   }, 0);
   const total = packagePrice + addOnsTotal + urlDestFee;
+  const appliedDiscount = matchedCoupon
+    ? (matchedCoupon.percent ? (total * matchedCoupon.percent / 100) : (matchedCoupon.amount || 0))
+    : 0;
   const discountedTotal = Math.max(0, total - appliedDiscount);
 
   // NUKES ANY OLD GHOST DATA ON EVERY LOAD
@@ -456,24 +460,29 @@ const BookNow = () => {
       const code = couponCode.trim().toUpperCase();
       if (!code) return;
       setCouponError('');
-      const now = new Date();
-      const coupons = useCouponsStore.getState().items.filter(
-        (c: any) => c.active && c.usesLeft > 0 && (!c.startDate || new Date(c.startDate) <= now) && (!c.endDate || new Date(c.endDate) >= now)
-      );
-      const match = coupons.find((c: any) => c.code === code);
+      const allItems = useCouponsStore.getState().items;
+      const match = allItems.find((c: any) => c.code === code);
+
       if (!match) {
-        setAppliedDiscount(0);
-        setAppliedCouponCode('');
+        setMatchedCoupon(null);
         setCouponError('This coupon code is not valid');
         return;
       }
-      let newTotal = total;
-      if (match.percent) newTotal = Math.max(0, newTotal * (1 - match.percent / 100));
-      if (match.amount) newTotal = Math.max(0, newTotal - match.amount);
-      const discount = total - newTotal;
-      setAppliedDiscount(discount);
-      setAppliedCouponCode(match.code);
+
+      // Detailed validation check
+      const now = new Date();
+      const isActive = match.active && match.usesLeft > 0;
+      const isDateValid = (!match.startDate || new Date(match.startDate) <= now) && (!match.endDate || new Date(match.endDate) >= now);
+
+      if (!isActive || !isDateValid) {
+        setMatchedCoupon(null);
+        setCouponError('This coupon is currently inactive or expired');
+        return;
+      }
+
+      setMatchedCoupon(match);
       setCouponError('');
+      toast({ title: "Success!", description: `Coupon ${match.code} applied.` });
     } catch { }
   };
 
@@ -778,14 +787,7 @@ const BookNow = () => {
         </div>
 
         <Card className="p-8 bg-gradient-card border-border">
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-6"
-            name="booking"
-            method="POST"
-            data-netlify="true"
-            netlify-honeypot="bot-field"
-          >
+          <form onSubmit={handleSubmit} className="space-y-4" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" noValidate>
             <input type="hidden" name="form-name" value="booking" />
             <input type="hidden" name="bot-field" />
             {/* Netlify reCAPTCHA v2 */}
@@ -807,7 +809,7 @@ const BookNow = () => {
                       required
                       className={errors.name ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                    {errors.name && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.name}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -821,7 +823,7 @@ const BookNow = () => {
                       required
                       className={errors.email ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                    {errors.email && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.email}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -835,7 +837,7 @@ const BookNow = () => {
                       required
                       className={errors.phone ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                    {errors.phone && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.phone}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -846,8 +848,9 @@ const BookNow = () => {
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       required
-                      className="h-12"
+                      className={errors.address ? "border-destructive h-12" : "h-12"}
                     />
+                    {errors.address && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.address}</p>}
                   </div>
                 </div>
               </div>
@@ -859,8 +862,15 @@ const BookNow = () => {
                     <HelpCircle className="h-5 w-5 text-primary" />
                     Vehicle Details
                   </h3>
-                  <Button type="button" variant="link" size="sm" onClick={() => setShowClassification(true)} className="text-primary text-xs p-0 h-auto font-bold underline">
-                    Not sure about size?
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={() => setShowClassification(true)}
+                    className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-full text-[10px] h-auto font-black uppercase tracking-widest shadow-lg shadow-blue-500/20"
+                    title="Our Vehicle Classifier helps you determine exactly which size category (Compact, Mid-Size, Truck) your specific vehicle belongs to, ensuring accurate pricing."
+                  >
+                    Vehicle Classifier
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -872,8 +882,9 @@ const BookNow = () => {
                       value={formData.make}
                       onChange={(e) => setFormData({ ...formData, make: e.target.value })}
                       required
-                      className="h-11"
+                      className={errors.make ? "border-destructive h-11" : "h-11"}
                     />
+                    {errors.make && <p className="text-[12px] text-white bg-red-600 py-1 px-2 rounded-md font-black animate-pulse-grow uppercase tracking-tight ml-1 mt-1 inline-block shadow-lg ring-2 ring-red-400">⚠️ {errors.make}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -884,8 +895,9 @@ const BookNow = () => {
                       value={formData.model}
                       onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                       required
-                      className="h-11"
+                      className={errors.model ? "border-destructive h-11" : "h-11"}
                     />
+                    {errors.model && <p className="text-[12px] text-white bg-red-600 py-1 px-2 rounded-md font-black animate-pulse-grow uppercase tracking-tight ml-1 mt-1 inline-block shadow-lg ring-2 ring-red-400">⚠️ {errors.model}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -896,8 +908,9 @@ const BookNow = () => {
                       value={formData.year}
                       onChange={(e) => setFormData({ ...formData, year: e.target.value })}
                       required
-                      className="h-11"
+                      className={errors.year ? "border-destructive h-11" : "h-11"}
                     />
+                    {errors.year && <p className="text-[12px] text-white bg-red-600 py-1 px-2 rounded-md font-black animate-pulse-grow uppercase tracking-tight ml-1 mt-1 inline-block shadow-lg ring-2 ring-red-400">⚠️ {errors.year}</p>}
                   </div>
                 </div>
               </div>
@@ -933,7 +946,7 @@ const BookNow = () => {
                       </Button>
                     </div>
                   ) : (
-                    <div className="w-full bg-white p-4 rounded-lg shadow-sm border border-zinc-200">
+                    <div className={cn("w-full bg-white p-4 rounded-lg shadow-sm border", errors.date ? "border-red-500 ring-2 ring-red-500/20" : "border-zinc-200")}>
                       <AvailabilityPicker
                         selectedDate={date}
                         selectedTime={selectedTime}
@@ -942,6 +955,7 @@ const BookNow = () => {
                         existingBookings={mappedBookings}
                         serviceDuration={getServiceDuration(formData.package)}
                       />
+                      {errors.date && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight mt-4 text-center block decoration-red-600 underline underline-offset-2">⚠️ {errors.date}</p>}
                     </div>
                   )}
 
@@ -997,10 +1011,10 @@ const BookNow = () => {
                       Apply
                     </Button>
                   </div>
-                  {appliedDiscount > 0 && (
+                  {matchedCoupon && (
                     <div className="text-green-400 font-bold text-xs flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" />
-                      {appliedCouponCode} applied! You saved ${appliedDiscount.toFixed(2)}
+                      {matchedCoupon.code} applied! You saved ${appliedDiscount.toFixed(2)}
                     </div>
                   )}
                   {couponError && (
@@ -1019,119 +1033,28 @@ const BookNow = () => {
               <div className="text-xl font-bold text-foreground">${discountedTotal}</div>
             </div>
 
+            {/* Tentative Booking Disclaimer */}
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-amber-900 uppercase tracking-tight">Important Note Regarding Your Booking</p>
+                  <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                    Please note that this is a <span className="underline decoration-amber-400 decoration-2 underline-offset-2">tentative booking request</span>. Your appointment is not finalized until we personally review our schedule and send a formal confirmation email. We will reach out shortly to confirm the exact time and details.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <Button type="submit" className="w-full bg-gradient-hero text-lg py-7 font-black uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-transform" disabled={isSubmitting}>
               {isSubmitting ? "Processing..." : "Schedule My Detail"}
             </Button>
 
-            {/* New: Separate Estimate and Payment actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div className="flex justify-center mt-6">
               <Button
                 type="button"
-                variant="outline"
-                className="w-full py-6"
-                onClick={async () => {
-                  try {
-                    const dateIso = date ? date.toISOString() : new Date().toISOString();
-
-                    // Construct Services List for Estimate
-                    const filteredPackages = packageMode === '3-pack'
-                      ? livePackages.filter(p => {
-                        const keep = p.id === 'prime-2026-exterior' ||
-                          p.id === 'prime-2026-interior' ||
-                          p.id === 'prime-2026-full';
-                        console.log(`Package ${p.id}: ${keep ? 'KEEP' : 'HIDE'}`);
-                        return keep;
-                      })
-                      : livePackages;
-
-                    console.log('📦 Final package count:', filteredPackages.length, 'Mode:', packageMode);
-
-                    const selectedPkg = filteredPackages.find((p: any) => p.id === formData.package);
-                    const servicesList = [];
-                    if (selectedPkg) {
-                      servicesList.push({ name: selectedPkg.name, price: selectedPkg.pricing[vehicleType] || 0 });
-                    }
-                    addOns.forEach(id => {
-                      const addon = liveAddOns.find((a: any) => a.id === id);
-                      if (addon) {
-                        servicesList.push({ name: addon.name, price: addon.pricing[vehicleType] || 0 });
-                      }
-                    });
-
-                    // Save to Supabase
-                    await upsertSupabaseEstimate({
-                      date: new Date().toLocaleDateString(),
-                      status: 'open',
-                      total: discountedTotal,
-                      services: servicesList,
-                      notes: formData.message,
-                      customer: {
-                        name: formData.name,
-                        email: formData.email,
-                        phone: formData.phone,
-                        type: 'prospect'
-                      },
-                      vehicle: {
-                        year: formData.year,
-                        make: formData.make,
-                        model: formData.model,
-                        type: vehicleType
-                      }
-                    } as any);
-
-                    const estimatePayload = {
-                      kind: 'estimate-request',
-                      customer: { name: formData.name, email: formData.email, phone: formData.phone },
-                      vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
-                      package: formData.package,
-                      addOns,
-                      preferredDate: dateIso,
-                      notes: formData.message,
-                    };
-
-                    // 1. Send email (simulated locally)
-                    await api('/api/email/admin', { method: 'POST', body: JSON.stringify(estimatePayload) });
-
-                    // 2. Generate PDF and save to File Manager
-                    const pdfDataUrl = generateBookingPDF({
-                      id: `est_${Date.now()}`,
-                      customer: formData.name,
-                      date: dateIso,
-                      title: "Estimate Request",
-                      status: "pending"
-                    } as any, {
-                      vehicle: `${formData.year} ${formData.make} ${formData.model}`,
-                      service: `Estimate: ${formData.package}`,
-                      price: discountedTotal,
-                      notes: formData.message
-                    });
-
-                    const d = new Date();
-                    const year = d.getFullYear();
-                    const monthName = d.toLocaleString(undefined, { month: 'long' });
-                    const path = `Estimates/${year}/${monthName}/`;
-
-                    savePDFToArchive(
-                      "Estimate",
-                      formData.name,
-                      `est_${Date.now()}`,
-                      pdfDataUrl,
-                      { fileName: `Estimate_${formData.name.replace(/\s/g, '_')}_${Date.now()}.pdf`, path }
-                    );
-
-                    toast({ title: "Your estimate request has been sent.", description: "Rick will reach out to confirm.", duration: 4000 });
-                  } catch (err) {
-                    console.error("Estimate error:", err);
-                    toast({ title: "Error sending estimate", description: "Please try again or contact us directly.", variant: "destructive", duration: 4000 });
-                  }
-                }}
-              >
-                Schedule an Estimate
-              </Button>
-              {/* Checkout removed */}
-              <Button
-                type="button"
-                className="w-full bg-primary text-primary-foreground py-6"
+                variant="ghost"
+                className="text-primary hover:text-primary/80 font-bold underline p-0 h-auto"
                 asChild
               >
                 <Link to="/checkout">Make a Payment / Checkout</Link>

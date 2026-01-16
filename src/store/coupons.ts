@@ -70,7 +70,7 @@ export const useCouponsStore = create<CouponsState>((set, get) => ({
         await couponsSvc.update(row.code, row);
         await get().refresh();
         return;
-      } catch {}
+      } catch { }
     }
     const items = get().items.map(i => i.id === id ? { ...i, ...patch } : i); save(items); set({ items });
   },
@@ -118,18 +118,24 @@ export const useCouponsStore = create<CouponsState>((set, get) => ({
           title: String(r.code || '').toUpperCase(),
           percent: r.type === 'percent' ? Number(r.value || 0) : undefined,
           amount: r.type === 'amount' ? Number(r.value || 0) : undefined,
-          usesLeft: r.usage_limit ?? 0,
+          usesLeft: typeof r.usage_limit === 'number' ? r.usage_limit : 99999,
           startDate: r.start || undefined,
           endDate: r.end || undefined,
           active: !!r.active,
         } as Coupon));
         set({ items });
         return;
-      } catch {}
+      } catch { }
+    } else {
+      set({ items: load() });
     }
-    set({ items: load() });
   }
 }));
+
+// Initialize store from Supabase if possible
+if (isSupabaseConfigured()) {
+  useCouponsStore.getState().refresh();
+}
 
 export function applyBestCoupon(total: number): { total: number; applied?: Coupon } {
   const now = new Date();

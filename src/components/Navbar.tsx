@@ -88,8 +88,7 @@ export const Navbar = () => {
             {/* Checkout link with cart count */}
             <Link to="/checkout" className="relative">
               <Button variant="outline" size="sm" className="flex items-center">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Checkout
+                <ShoppingCart className="h-5 w-5" />
               </Button>
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs px-2 py-0.5">

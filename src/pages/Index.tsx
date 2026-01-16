@@ -36,6 +36,7 @@ import familySuv from "@/assets/home/family_suv.png";
 import luxurySport from "@/assets/home/luxury_sport.png";
 import workTruck from "@/assets/home/work_truck.png";
 import enthusiastCar from "@/assets/home/enthusiast_car.png";
+import motorcycle from "@/assets/home/motorcycle_harley.png";
 import { contentService } from "@/lib/content";
 
 const Index = () => {
@@ -227,12 +228,14 @@ const Index = () => {
               </div>
             </Card>
 
-            <Card className="p-0 overflow-hidden border-none bg-zinc-50 group">
-              <div className="h-64 overflow-hidden border-8 border-red-600">
-                <div className="bg-red-600 h-full flex flex-col items-center justify-center p-8 text-white text-center">
-                  <Droplets className="w-16 h-16 mb-4" />
+            <Card className="p-0 border-none bg-zinc-50 group transition-all duration-500 hover:scale-140 z-10 hover:z-50 shadow-none hover:shadow-2xl ring-0 hover:ring-2 hover:ring-blue-400">
+              <div className="h-64 border-8 border-blue-600 overflow-hidden group-hover:overflow-visible group-hover:h-auto group-hover:min-h-[16rem] transition-all duration-500">
+                <div className="bg-blue-600 h-full flex flex-col items-center justify-center p-8 text-white text-center transition-all">
+                  <Droplets className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform" />
                   <h3 className="text-3xl font-black uppercase tracking-tighter mb-2 italic">Pure Water</h3>
-                  <p className="text-xs uppercase font-black tracking-widest leading-loose">De-ionized water systems for a spot-free finish every single time.</p>
+                  <p className="text-[11px] leading-relaxed font-bold uppercase tracking-tight group-hover:text-[12px] group-hover:font-black transition-all">
+                    Our detailing process includes measures to manage water quality and reduce mineral and contaminant exposure, helping deliver consistent, high-quality results and significantly reduce the likelihood of water spots.
+                  </p>
                 </div>
               </div>
             </Card>
@@ -280,8 +283,8 @@ const Index = () => {
               <p className="text-zinc-500 leading-relaxed text-lg">{homeData.eliteResultsText}</p>
               <div className="flex gap-4 pt-4">
                 <div className="flex flex-col">
-                  <span className="text-3xl font-black italic tracking-tighter">500+</span>
-                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Vehicles Protected</span>
+                  <span className="text-3xl font-black italic tracking-tighter">95%</span>
+                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Referral Rate</span>
                 </div>
                 <div className="w-px h-12 bg-zinc-200" />
                 <div className="flex flex-col">
@@ -305,13 +308,14 @@ const Index = () => {
             <p className="text-zinc-500 text-lg">{homeData.perfectedSubtitle}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { name: "Daily Drivers", img: dailyDriver, desc: "Maintain cleanliness and comfort for the daily grind." },
               { name: "Families", img: familySuv, desc: "Deep cleaning for SUVs and vans that handle messy routines." },
               { name: "Luxury Vehicles", img: luxurySport, desc: "Elite-level care for high-performance and luxury marques." },
               { name: "Work Trucks", img: workTruck, desc: "Tough cleaning for the hardest-working vehicles on the road." },
-              { name: "Enthusiasts", img: enthusiastCar, desc: "Show-quality results for your classic or custom project." }
+              { name: "Enthusiasts", img: enthusiastCar, desc: "Show-quality results for your classic or custom project." },
+              { name: "Motorcycles", img: motorcycle, desc: "Precision detailing for bikes, from cruisers to sport bikes." }
             ].map((veh, i) => (
               <div key={i} className="group relative h-[400px] overflow-hidden rounded-2xl shadow-lg border border-zinc-200 bg-black">
                 <img src={veh.img} alt={veh.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-80 group-hover:opacity-100" />

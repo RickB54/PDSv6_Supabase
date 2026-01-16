@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { servicePackages as builtInPackages, addOns as builtInAddOns, VehicleType, calculateDestinationFee } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { isSupabaseEnabled } from "@/lib/auth";
@@ -16,7 +18,7 @@ import { contentService } from "@/lib/content";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
@@ -666,25 +668,83 @@ const CustomerPortal = () => {
           </Card>
         )}
 
-        {/* Service & Pricing Disclaimer */}
-        <Card className="mt-12 p-8 border-none bg-blue-50/50">
-          <h3 className="font-bold text-xl mb-4 text-blue-900 flex items-center gap-2">
-            <span className="text-red-600">⚠️</span> Service & Pricing Disclaimer
-          </h3>
-          <div className="space-y-3 text-sm text-zinc-600 leading-relaxed">
-            <p>• <strong className="text-blue-800">Paint Protection & Ceramic Coating</strong> NOT included. Available only in Premium packages or add-ons.</p>
-            <p>• We do <strong className="text-blue-800">NOT</strong> offer: → Biological Cleanup → Emergency Services</p>
-            <p>• We focus on <strong className="text-blue-800">premium cosmetic and protective detailing</strong>.</p>
-            <p className="font-bold mt-4 text-blue-900 border-t border-blue-100 pt-4 italic">
-              Important: Final price may vary based on vehicle condition, size, or additional work required.
-              All quotes are estimates until vehicle is inspected.
-            </p>
-            <p className="font-bold text-blue-900 border-t border-blue-100 pt-3">
-              All bookings are subject to professional scheduling confirmation.
-            </p>
-          </div>
-          {/* Removed confirmation button per request */}
-        </Card>
+        {/* Service Coverage & Policy Notice */}
+        <section className="mt-20 border-t border-zinc-100 pt-16">
+          <Card className="overflow-hidden border border-blue-100 bg-white shadow-xl">
+            <div className="bg-blue-900 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <ShieldCheck className="w-5 h-5 text-blue-100" />
+                </div>
+                <h3 className="font-black text-white uppercase tracking-widest text-sm">Service Coverage & Policy Notice</h3>
+              </div>
+              <Badge className="bg-blue-600 text-white border-none px-3 uppercase text-[10px] tracking-widest">Official Policy</Badge>
+            </div>
+
+            <CardContent className="p-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-100">
+                {/* Scope of Service column */}
+                <div className="p-8 space-y-6">
+                  <div className="space-y-1">
+                    <h4 className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]">Our Core Focus</h4>
+                    <p className="text-xl font-black text-zinc-900 leading-tight">Elite Cosmetic & <br />Protective Detailing.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="h-2 w-2 rounded-full bg-blue-600 mt-2 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-zinc-800">Included Scope</p>
+                        <p className="text-xs text-zinc-500 leading-relaxed mt-1">Deep restoration, paint correction, and interior sanitation. Ceramic protection is primary to our premium tiers.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="h-2 w-2 rounded-full bg-zinc-300 mt-2 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-zinc-800">Excluded Core Elements</p>
+                        <p className="text-xs text-zinc-500 leading-relaxed mt-1 italic">General paint protection & ceramic coatings are omitted from standard packages unless specified.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Limitations column */}
+                <div className="p-8 space-y-6 bg-zinc-50/50">
+                  <div className="space-y-1">
+                    <h4 className="text-amber-600 text-[10px] font-black uppercase tracking-[0.2em]">Restricted Services</h4>
+                    <p className="text-xl font-black text-zinc-900 leading-tight">Prohibited Cleanup & <br />Emergency Operations.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {["Biological & Hazmat Cleanup", "Emergency/Rescue Vehicles", "Structural Restoration"].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-white border border-zinc-200 p-3 rounded-lg">
+                        <X className="w-4 h-4 text-red-500" />
+                        <span className="text-xs font-bold text-zinc-700 uppercase tracking-tight">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Final Condition Policy Bar - Softened */}
+              <div className="bg-zinc-100/80 p-6 border-t border-zinc-200">
+                <div className="flex flex-col md:flex-row items-center gap-4 justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-amber-500/10 rounded-lg shrink-0">
+                      <AlertCircle className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] font-black text-zinc-800 uppercase tracking-widest leading-none">Professional Policy</p>
+                      <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed">
+                        Digital quotes are estimates. Final rates are confirmed on-site based on vehicle dimensions and condition.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       </main>
       {/* Debug Bar removed: production environment with Supabase enabled */}
       {/* Debug Bar removed: production environment with Supabase enabled */}
@@ -716,32 +776,37 @@ const CustomerPortal = () => {
               </ul>
             </div>
 
-            {/* Add-Ons Pulldown in Modal */}
+            {/* Add-Ons Accordion in Modal */}
             <div className="border-t border-blue-50 pt-6">
-              <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">Enhance Your Service:</h4>
-              <div className="space-y-4">
-                <Label className="text-xs text-zinc-500 font-bold uppercase tracking-widest pl-1">Optional Add-Ons</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {liveAddOns.map(addon => {
-                    const isSelected = modalAddOns.includes(addon.id);
-                    return (
-                      <div
-                        key={addon.id}
-                        onClick={() => setModalAddOns(prev => prev.includes(addon.id) ? prev.filter(id => id !== addon.id) : [...prev, addon.id])}
-                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-600 shadow-sm' : 'bg-zinc-50 border-zinc-200 hover:border-blue-300'}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-zinc-300'}`}>
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="addons" className="border-none">
+                  <AccordionTrigger className="hover:no-underline py-0">
+                    <h4 className="font-bold text-blue-900 uppercase text-sm tracking-wider">Enhance Your Service:</h4>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <div className="grid grid-cols-1 gap-2">
+                      {liveAddOns.map(addon => {
+                        const isSelected = modalAddOns.includes(addon.id);
+                        return (
+                          <div
+                            key={addon.id}
+                            onClick={() => setModalAddOns(prev => prev.includes(addon.id) ? prev.filter(id => id !== addon.id) : [...prev, addon.id])}
+                            className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-600 shadow-sm' : 'bg-zinc-50 border-zinc-200 hover:border-blue-300'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-zinc-300'}`}>
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className="text-sm font-medium text-zinc-700">{addon.name}</span>
+                            </div>
+                            <span className="font-bold text-blue-700 text-sm">${addon.pricing[vehicleType]}</span>
                           </div>
-                          <span className="text-sm font-medium text-zinc-700">{addon.name}</span>
-                        </div>
-                        <span className="font-bold text-blue-700 text-sm">${addon.pricing[vehicleType]}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
 
             {/* Availability Calendar */}

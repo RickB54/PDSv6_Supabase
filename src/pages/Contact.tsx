@@ -42,6 +42,11 @@ const Contact = () => {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone is required";
+    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
+      newErrors.phone = "Phone must be 10 digits";
+    }
     if (!formData.message.trim()) newErrors.message = "Message is required";
 
     setErrors(newErrors);
@@ -222,7 +227,7 @@ const Contact = () => {
           {/* Contact Form */}
           <Card className="p-6 md:p-8 bg-gradient-card border-border">
             <h2 className="text-2xl font-bold text-foreground mb-6">Send us a message</h2>
-            <form onSubmit={handleSubmit} className="space-y-4" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+            <form onSubmit={handleSubmit} className="space-y-4" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" noValidate>
               <input type="hidden" name="form-name" value="contact" />
               <input type="hidden" name="bot-field" />
               <div>
@@ -235,7 +240,7 @@ const Contact = () => {
                   required
                   className={errors.name ? "border-destructive" : ""}
                 />
-                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.name}</p>}
               </div>
 
               <div>
@@ -249,18 +254,21 @@ const Contact = () => {
                   required
                   className={errors.email ? "border-destructive" : ""}
                 />
-                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.email}</p>}
               </div>
 
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Phone *</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="(555) 123-4567"
+                  required
+                  className={errors.phone ? "border-destructive" : ""}
                 />
+                {errors.phone && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.phone}</p>}
               </div>
 
               <div>
@@ -284,7 +292,7 @@ const Contact = () => {
                   required
                   className={errors.message ? "border-destructive" : ""}
                 />
-                {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
+                {errors.message && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.message}</p>}
               </div>
 
               {/* Netlify reCAPTCHA v2 */}
