@@ -31,6 +31,7 @@ import ceramicBeading from "@/assets/home/ceramic_beading.png";
 import fordF150 from "@/assets/home/ford_f150.png";
 import proTools from "@/assets/home/pro_tools.png";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
+import mobileRigPremium from "@/assets/about/mobile_rig_premium.png";
 import dailyDriver from "@/assets/home/daily_driver.png";
 import familySuv from "@/assets/home/family_suv.png";
 import luxurySport from "@/assets/home/luxury_sport.png";
@@ -109,7 +110,7 @@ const Index = () => {
       <HeroSection />
 
       {/* SECTION 1: Why Professional Detailing Matters */}
-      <section className="py-24 bg-zinc-50 overflow-hidden" id="services">
+      <section className="py-32 bg-zinc-50 overflow-hidden" id="services">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             {/* Left Content - Typography & List */}
@@ -248,8 +249,8 @@ const Index = () => {
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative order-2 lg:order-1">
-              <img src={fordF150} alt="Mobile Unit" className="rounded-2xl shadow-2xl" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-red-600/10 animate-pulse rounded-2xl" />
+              <img src={mobileRigPremium} alt="Mobile Detailing Unit" className="rounded-2xl shadow-2xl hover:scale-[1.01] transition-transform duration-700" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-600/5 animate-pulse rounded-2xl -z-10" />
             </div>
             <div className="space-y-12 order-1 lg:order-2">
               <div className="w-16 h-1 bg-blue-700 mx-auto rounded-full" />
@@ -321,8 +322,8 @@ const Index = () => {
                 <img src={veh.img} alt={veh.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-80 group-hover:opacity-100" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 p-6 space-y-2">
-                  <h4 className="text-xl font-bold text-white uppercase tracking-tight">{veh.name}</h4>
-                  <p className="text-zinc-300 text-xs leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <h4 className="text-xl font-bold text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">{veh.name}</h4>
+                  <p className="text-zinc-300 text-xs leading-relaxed opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
                     {veh.desc}
                   </p>
                 </div>
@@ -338,7 +339,7 @@ const Index = () => {
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="text-center space-y-8">
               <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-zinc-900">
-                Wait Until You See It
+                The Standard of Excellence
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
                 {displayTestimonials.map((t, i) => (
@@ -381,11 +382,11 @@ const Index = () => {
               Your vehicle is one of your largest investments. <br className="hidden md:block" />
               Treat it with the respect it deserves.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
-              <Button onClick={() => window.location.href = '/book'} className="h-14 px-10 bg-blue-700 hover:bg-blue-600 text-white uppercase font-black tracking-widest text-lg rounded-xl shadow-2xl shadow-blue-900/50 hover:shadow-blue-500/50 transition-all hover:scale-105">
+            <div className="flex flex-col items-center justify-center gap-4 pt-4">
+              <Button onClick={() => window.location.href = '/book'} className="h-14 w-full sm:w-64 px-10 bg-blue-700 hover:bg-blue-600 text-white uppercase font-black tracking-widest text-lg rounded-xl shadow-2xl shadow-blue-900/50 hover:shadow-blue-500/50 transition-all hover:scale-105">
                 Book Service Now
               </Button>
-              <Button onClick={() => window.location.href = '/contact'} variant="outline" className="h-14 px-10 border-2 border-white bg-transparent hover:bg-white hover:text-blue-900 text-white uppercase font-black tracking-widest text-lg rounded-xl transition-all">
+              <Button onClick={() => window.location.href = '/contact'} variant="outline" className="h-14 w-full sm:w-64 px-10 border-2 border-zinc-900 bg-transparent hover:bg-zinc-50 text-zinc-900 uppercase font-black tracking-widest text-lg rounded-xl transition-all">
                 Get A Quote <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </div>

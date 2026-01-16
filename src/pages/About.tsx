@@ -23,6 +23,7 @@ import exteriorWheels from "@/assets/about/exterior_wheels.png";
 import primeBlackCar from "@/assets/prime_essential_full_2025.png";
 import aboutYellowCar from "@/assets/about_yellow_sports.png";
 import aboutEliteProducts from "@/assets/about_elite_products.png";
+import mobileRigPremium from "@/assets/about/mobile_rig_premium.png";
 import { contentService } from "@/lib/content";
 import { useEffect, useState } from "react";
 
@@ -139,7 +140,11 @@ const About = () => {
       <section className="py-24 bg-zinc-50 overflow-hidden">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="lg:w-1/2 space-y-8">
+            <div className="lg:w-1/2 relative order-1 lg:order-1">
+              <img src={mobileRigPremium} alt="Mobile Service Execution" className="rounded-2xl shadow-2xl w-full h-auto object-cover hover:scale-[1.01] transition-transform duration-700" />
+              <div className="absolute -z-10 top-12 -left-12 w-64 h-64 bg-blue-200/50 rounded-full blur-3xl"></div>
+            </div>
+            <div className="lg:w-1/2 space-y-8 order-2 lg:order-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-widest">
                 <Car className="w-4 h-4" />
                 We Come To You
@@ -156,21 +161,16 @@ const About = () => {
                   Whether you are at home, at the office, or at the gym, our fully equipped mobile unit arrives with everything needed—including power and water—to transform your vehicle right where it parks.
                 </p>
                 <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100">
+                  <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-shadow">
                     <h4 className="font-bold text-blue-900 mb-1">Office Friendly</h4>
                     <p className="text-sm text-zinc-500">We work quietly while you close deals.</p>
                   </div>
-                  <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100">
+                  <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-shadow">
                     <h4 className="font-bold text-blue-900 mb-1">Home Comfort</h4>
                     <p className="text-sm text-zinc-500">Relax inside while we elevate your driveway.</p>
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="lg:w-1/2 relative">
-              {/* Visualizing Mobile Service - Using Exterior Shot as proxy for 'On Location' */}
-              <img src={exteriorGloss} alt="Mobile Service Execution" className="rounded-2xl shadow-2xl w-full h-auto object-cover grayscale-[20%]" />
-              <div className="absolute -z-10 top-12 -right-12 w-64 h-64 bg-blue-200/50 rounded-full blur-3xl"></div>
             </div>
           </div>
         </div>
@@ -180,11 +180,7 @@ const About = () => {
       <section className="py-24 bg-white">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="lg:w-1/2 order-2 lg:order-1 relative">
-              <img src={aboutEliteProducts} alt="Premium Detailing Supplies" className="rounded-2xl shadow-2xl w-full h-auto object-cover hover:scale-[1.01] transition-transform duration-700" />
-              <div className="absolute -z-10 bottom-12 -left-12 w-64 h-64 bg-yellow-100/50 rounded-full blur-3xl"></div>
-            </div>
-            <div className="lg:w-1/2 order-1 lg:order-2 space-y-8">
+            <div className="lg:w-1/2 space-y-8 order-1 lg:order-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase tracking-widest">
                 <Sparkles className="w-4 h-4" />
                 Chemistry Matters
@@ -204,13 +200,17 @@ const About = () => {
                   <h4 className="font-bold text-blue-900 uppercase text-sm tracking-widest mb-4 border-b border-zinc-100 pb-2">Our Preferred Brands</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {['Chemical Guys', 'Koch-Chemie', "Meguiar's Pro", 'P&S Detail'].map(brand => (
-                      <div key={brand} className="px-3 py-2 bg-zinc-50 text-zinc-700 font-bold text-center rounded-lg border border-zinc-200 text-xs uppercase">
+                      <div key={brand} className="px-3 py-2 bg-zinc-50 text-zinc-700 font-bold text-center rounded-lg border border-zinc-200 text-xs uppercase hover:bg-zinc-100 transition-colors">
                         {brand}
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
+            </div>
+            <div className="lg:w-1/2 order-2 lg:order-2 relative">
+              <img src={aboutEliteProducts} alt="Premium Detailing Supplies" className="rounded-2xl shadow-2xl w-full h-auto object-cover hover:scale-[1.01] transition-transform duration-700" />
+              <div className="absolute -z-10 bottom-12 -right-12 w-64 h-64 bg-yellow-100/50 rounded-full blur-3xl"></div>
             </div>
           </div>
         </div>
