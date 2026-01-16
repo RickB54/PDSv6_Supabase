@@ -32,7 +32,7 @@ export const HeroSection = () => {
   };
 
   return (
-    <div className="relative w-full h-screen min-h-[700px] flex flex-col overflow-hidden bg-black select-none font-sans">
+    <div className="group relative w-full h-screen min-h-[700px] flex flex-col overflow-hidden bg-black select-none font-sans">
       {/* Inline styles for guaranteed scrolling behavior and elegant font styling */}
       <style>{`
         @keyframes hero-marquee {
@@ -53,7 +53,7 @@ export const HeroSection = () => {
 
       {/* Background Image */}
       <div
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-0 transition-transform duration-1000 ease-out group-hover:scale-110"
         style={{
           backgroundImage: `url(${heroCar})`,
           backgroundSize: 'cover',

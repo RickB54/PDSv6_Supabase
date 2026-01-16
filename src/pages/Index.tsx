@@ -239,37 +239,43 @@ const Index = () => {
                   </p>
                 </div>
               </div>
+              <div className="p-8 space-y-4">
+                <h3 className="text-2xl font-black uppercase tracking-tighter">Spot-Free Finish</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">De-ionized water filtration for a crystal-clear, mineral-free results on every surface.</p>
+              </div>
             </Card>
           </div>
         </div>
       </section>
 
       {/* SECTION 3: Our Precision Process */}
-      <section className="py-24 bg-zinc-900 text-white overflow-hidden">
+      <section className="py-32 bg-zinc-900 text-white overflow-hidden">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="relative order-2 lg:order-1">
-              <img src={mobileRigPremium} alt="Mobile Detailing Unit" className="rounded-2xl shadow-2xl hover:scale-[1.01] transition-transform duration-700" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-600/5 animate-pulse rounded-2xl -z-10" />
-            </div>
-            <div className="space-y-12 order-1 lg:order-2">
-              <div className="w-16 h-1 bg-blue-700 mx-auto rounded-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 items-center">
+            {/* Left Side: Title and Step Grid */}
+            <div className="lg:col-span-2 space-y-16 order-2 lg:order-1">
               <h3 className="text-5xl md:text-7xl font-black italic text-white uppercase tracking-tighter">
-                Our Precision <br /> Process
+                Our Precision Process
               </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-left">
+                {[
+                  { id: "01", title: "Booking", desc: "Easily schedule through our portal with transparent upfront pricing." },
+                  { id: "02", title: "Evaluation", desc: "On-site condition assessment to tailor our plan to your vehicle." },
+                  { id: "03", title: "The Detail", desc: "Clock-out service where we don't leave until the job is perfect." }
+                ].map((step) => (
+                  <div key={step.id} className="space-y-4 group">
+                    <span className="text-4xl font-black text-zinc-800 group-hover:text-blue-700 transition-colors italic">{step.id}</span>
+                    <h4 className="text-2xl font-black uppercase italic tracking-tighter leading-tight">{step.title}</h4>
+                    <p className="text-zinc-400 font-medium leading-relaxed">{step.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-left">
-              {[
-                { id: "01", title: "Booking", desc: "Easily schedule through our portal with transparent upfront pricing." },
-                { id: "02", title: "Evaluation", desc: "On-site condition assessment to tailor our plan to your vehicle." },
-                { id: "03", title: "The Detail", desc: "Clock-out service where we don't leave until the job is perfect." }
-              ].map((step) => (
-                <div key={step.id} className="space-y-2 group">
-                  <span className="text-4xl font-black text-zinc-700 group-hover:text-blue-700 transition-colors italic">{step.id}</span>
-                  <h4 className="text-2xl font-black uppercase italic tracking-tighter">{step.title}</h4>
-                  <p className="text-zinc-400 font-medium">{step.desc}</p>
-                </div>
-              ))}
+
+            {/* Right Side: Image */}
+            <div className="lg:col-span-1 relative order-1 lg:order-2">
+              <img src={fordF150} alt="Mobile Detailing Unit" className="rounded-2xl shadow-2xl w-full" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-600/5 animate-pulse rounded-2xl -z-10" />
             </div>
           </div>
         </div>
