@@ -129,7 +129,7 @@ const About = () => {
               </div>
             </div>
             <div className="lg:w-1/2 relative">
-              <img src={primeBlackCar} alt="Prime Auto Detail - Elite Exterior" className="rounded-2xl shadow-2xl relative z-10 w-full h-auto object-cover" />
+              <img src={primeBlackCar} alt="Prime Auto Detail - Elite Exterior" className="rounded-2xl shadow-2xl relative z-10 w-full h-auto object-cover transition-transform duration-500 hover:scale-[1.01]" />
               <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-blue-50 -z-0 rounded-full blur-3xl opacity-60" />
             </div>
           </div>

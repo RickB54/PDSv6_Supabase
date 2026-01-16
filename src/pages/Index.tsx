@@ -112,21 +112,23 @@ const Index = () => {
       {/* SECTION 1: Why Professional Detailing Matters */}
       <section className="py-32 bg-zinc-50 overflow-hidden" id="services">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          {/* Main Title - Spanning Top */}
+          <div className="mb-12">
+            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter uppercase leading-[0.9] text-zinc-900">
+              More Than Just <br />
+              <span className="text-blue-700">Detailing Matters</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-start">
             {/* Left Content - Typography & List */}
-            <div className="space-y-12">
-              <div className="space-y-4">
-                <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.85]">
-                  More Than Just <br />
-                  <span className="text-blue-700">Detailing Matters</span>
-                </h2>
-                <p className="text-xl text-zinc-600 font-medium max-w-xl leading-relaxed">
-                  Most people mistake a quick car wash for detailing. While automated washes often leave behind micro-scratches and strip protective layers, professional detailing is a restorative process.
-                </p>
-              </div>
+            <div className="flex flex-col space-y-10">
+              <p className="text-xl text-zinc-600 font-medium max-w-xl leading-relaxed">
+                Most people mistake a quick car wash for detailing. While automated washes often leave behind micro-scratches and strip protective layers, professional detailing is a restorative process.
+              </p>
 
               {/* Enhanced Interactive List */}
-              <ul className="space-y-6">
+              <ul className="space-y-5">
                 {homeData.whyMattersList?.map((item: string, i: number) => {
                   const desc = serviceDescriptions[item] || "Experience our premium tiered service focusing on this specific aspect of vehicle care.";
                   return (
@@ -157,16 +159,18 @@ const Index = () => {
                 })}
               </ul>
             </div>
+
+            {/* Right Content - Visuals */}
             <div className="relative">
-              <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl skew-x-1 border-8 border-white">
+              <div className="w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white bg-white">
                 <BeforeAfterSlider beforeImage={paintBefore} afterImage={paintAfter} />
               </div>
-              <div className="absolute -bottom-6 -right-6 hidden md:block">
+              <div className="absolute -bottom-6 -right-4 lg:-right-8 hidden md:block z-20">
                 <HoverCard openDelay={0} closeDelay={200}>
                   <HoverCardTrigger asChild>
-                    <div className="bg-blue-700 text-white p-8 rounded-xl shadow-xl cursor-pointer hover:bg-zinc-900 transition-colors duration-300 group z-20 relative">
-                      <p className="text-4xl font-black italic tracking-tighter group-hover:text-blue-500 transition-colors">100%</p>
-                      <p className="text-xs uppercase font-black tracking-widest opacity-80 group-hover:text-white transition-colors">Satisfaction</p>
+                    <div className="bg-blue-700 text-white p-6 rounded-xl shadow-xl cursor-pointer hover:bg-zinc-900 transition-colors duration-300 group relative">
+                      <p className="text-4xl font-black italic tracking-tighter group-hover:text-blue-500 transition-colors leading-none">100%</p>
+                      <p className="text-[10px] uppercase font-black tracking-widest opacity-80 group-hover:text-white transition-colors mt-1 text-center">Satisfaction</p>
                     </div>
                   </HoverCardTrigger>
                   <HoverCardContent side="left" className="w-[450px] bg-zinc-950 border-zinc-800 text-white p-8 shadow-2xl mr-4 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=left]:slide-in-from-right-2">

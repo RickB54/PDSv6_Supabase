@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -12,9 +12,20 @@ import { Badge } from "@/components/ui/badge";
 
 export default function DiscountCoupons() {
   const { toast } = useToast();
-  const { items, add, update, remove, toggle } = useCouponsStore();
+  const { items, add, update, remove, toggle, refresh } = useCouponsStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refresh();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ code: "", title: "", type: "percent", value: 10, usesLeft: 100 } as any);
+
+  useEffect(() => {
+    handleRefresh();
+  }, []);
 
   const createCoupon = async () => {
     const code = String(form.code || '').trim().toUpperCase();
@@ -40,13 +51,13 @@ export default function DiscountCoupons() {
     };
 
     try {
-      add(c);
+      await add(c);
       setOpen(false);
       setForm({ code: "", title: "", type: "percent", value: 10, usesLeft: 100 });
-      toast({ title: "Coupon created", description: `${code} is now active and ready for use.` });
+      toast({ title: "Coupon created", description: `${code} has been successfully synced to Cloud storage.` });
     } catch (err) {
       console.error('[DiscountCoupons] add failed', err);
-      toast({ title: "Error", description: "Could not save coupon. Please try again.", variant: "destructive" });
+      toast({ title: "Creation Alert", description: "Coupon saved locally, but Cloud sync failed. It will sync on next refresh.", variant: "warning" as any });
     }
   };
 
@@ -94,9 +105,27 @@ export default function DiscountCoupons() {
         {/* Coupons List */}
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="border-b border-zinc-800/50 pb-4">
-            <div className="flex items-center gap-2">
-              <Hash className="w-5 h-5 text-zinc-400" />
-              <CardTitle className="text-white text-lg">Manage Coupons</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Hash className="w-5 h-5 text-zinc-400" />
+                <CardTitle className="text-white text-lg">Manage Coupons</CardTitle>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Supabase Online</span>
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="h-8 text-xs text-zinc-400 hover:text-white"
+                >
+                  <Save className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Syncing...' : 'Sync Now'}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <div className="overflow-x-auto">
@@ -142,7 +171,14 @@ export default function DiscountCoupons() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggle(c.id)}
+                          onClick={async () => {
+                            try {
+                              await toggle(c.id);
+                              toast({ title: "Status Updated", description: `${c.code} is now ${!c.active ? 'active' : 'inactive'} in Cloud storage.` });
+                            } catch (err) {
+                              toast({ title: "Sync Alert", description: "Status changed locally, but Cloud sync failed.", variant: "warning" as any });
+                            }
+                          }}
                           className={`h-8 w-8 p-0 ${c.active ? 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30' : 'text-zinc-500 hover:text-zinc-400 hover:bg-zinc-800'}`}
                           title={c.active ? "Deactivate" : "Activate"}
                         >
@@ -151,7 +187,15 @@ export default function DiscountCoupons() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => remove(c.id)}
+                          onClick={async () => {
+                            if (!confirm("Delete this coupon forever?")) return;
+                            try {
+                              await remove(c.id);
+                              toast({ title: "Coupon Deleted", description: "Successfully removed from Cloud storage." });
+                            } catch (err) {
+                              toast({ title: "Sync Alert", description: "Removed locally, but Cloud sync failed.", variant: "warning" as any });
+                            }
+                          }}
                           className="h-8 w-8 p-0 text-zinc-500 hover:text-red-400 hover:bg-red-950/30"
                           title="Delete Coupon"
                         >

@@ -37,74 +37,98 @@ export const useCouponsStore = create<CouponsState>((set, get) => ({
   items: load(),
   add: async (c) => {
     // Optimistic local update first so UI never stalls
-    const itemsLocal = [...get().items, c];
+    const existingItems = get().items;
+    const itemsLocal = [...existingItems, c];
     save(itemsLocal);
     set({ items: itemsLocal });
 
-    // Attempt Supabase create in the background when configured
+    // Attempt Supabase create
     if (isSupabaseConfigured()) {
       try {
         const row = {
           code: c.code.toUpperCase(),
           type: c.percent != null ? 'percent' : 'amount',
           value: Number(c.percent ?? c.amount ?? 0) || 0,
-          usage_limit: c.usesLeft ?? null,
+          usage_limit: (c.usesLeft === 0 || c.usesLeft >= 9999) ? null : c.usesLeft,
           active: c.active ?? true,
           start: c.startDate || null,
           end: c.endDate || null,
         } as any;
         await couponsSvc.create(row);
-        // Refresh from server to ensure consistency
         await get().refresh();
+        console.log(`[coupons.store] SUCCESS: Coupon ${c.code} synced to Supabase`);
       } catch (err) {
-        console.error("[coupons.store] Supabase create failed; keeping local item", err);
+        console.error("[coupons.store] Supabase create failed", err);
+        // We keep the local item but throw so UI knows sync failed
+        throw err;
       }
     }
   },
   update: async (id, patch) => {
     const existing = get().items.find(i => i.id === id);
-    if (isSupabaseConfigured() && existing) {
+    if (!existing) return;
+
+    // Optimistic local update
+    const itemsLocal = get().items.map(i => i.id === id ? { ...i, ...patch } : i);
+    save(itemsLocal);
+    set({ items: itemsLocal });
+
+    if (isSupabaseConfigured()) {
       try {
         const next = { ...existing, ...patch } as Coupon;
-        const row = { code: next.code.toUpperCase(), type: next.percent != null ? 'percent' : 'amount', value: Number(next.percent ?? next.amount ?? 0) || 0, usage_limit: next.usesLeft ?? null, active: next.active ?? true, start: next.startDate || null, end: next.endDate || null } as any;
+        const row = {
+          code: next.code.toUpperCase(),
+          type: next.percent != null ? 'percent' : 'amount',
+          value: Number(next.percent ?? next.amount ?? 0) || 0,
+          usage_limit: (next.usesLeft === 0 || next.usesLeft >= 9999) ? null : next.usesLeft,
+          active: next.active ?? true,
+          start: next.startDate || null,
+          end: next.endDate || null
+        } as any;
         await couponsSvc.update(row.code, row);
         await get().refresh();
-        return;
-      } catch { }
+      } catch (err) {
+        console.error("[coupons.store] Supabase update failed", err);
+        throw err;
+      }
     }
-    const items = get().items.map(i => i.id === id ? { ...i, ...patch } : i); save(items); set({ items });
   },
   remove: async (id) => {
     const existing = get().items.find(i => i.id === id);
-    // Optimistic local removal first
+    if (!existing) return;
+
+    // Optimistic local removal
     const itemsLocal = get().items.filter(i => i.id !== id);
     save(itemsLocal);
     set({ items: itemsLocal });
 
-    // Background Supabase sync when configured
-    if (isSupabaseConfigured() && existing) {
+    if (isSupabaseConfigured()) {
       try {
         await couponsSvc.remove(existing.code.toUpperCase());
         await get().refresh();
       } catch (err) {
-        console.error('[coupons.store] Supabase remove failed; keeping local removal', err);
+        console.error('[coupons.store] Supabase remove failed', err);
+        throw err;
       }
     }
   },
   toggle: async (id) => {
     const existing = get().items.find(i => i.id === id);
-    // Optimistic local toggle first
-    const itemsLocal = get().items.map(i => i.id === id ? { ...i, active: !i.active } : i);
+    if (!existing) return;
+
+    // Optimistic local toggle
+    const nextActive = !existing.active;
+    const itemsLocal = get().items.map(i => i.id === id ? { ...i, active: nextActive } : i);
     save(itemsLocal);
     set({ items: itemsLocal });
 
-    // Background Supabase sync when configured
-    if (isSupabaseConfigured() && existing) {
+    if (isSupabaseConfigured()) {
       try {
-        await couponsSvc.toggle(existing.code.toUpperCase(), !existing.active);
+        await couponsSvc.toggle(existing.code.toUpperCase(), nextActive);
         await get().refresh();
       } catch (err) {
-        console.error('[coupons.store] Supabase toggle failed; keeping local toggle', err);
+        console.error('[coupons.store] Supabase toggle failed', err);
+        throw err;
       }
     }
   },
@@ -118,14 +142,20 @@ export const useCouponsStore = create<CouponsState>((set, get) => ({
           title: String(r.code || '').toUpperCase(),
           percent: r.type === 'percent' ? Number(r.value || 0) : undefined,
           amount: r.type === 'amount' ? Number(r.value || 0) : undefined,
-          usesLeft: typeof r.usage_limit === 'number' ? r.usage_limit : 99999,
+          usesLeft: (r.usage_limit === null || r.usage_limit === undefined || r.usage_limit === 0) ? 99999 : Number(r.usage_limit),
           startDate: r.start || undefined,
           endDate: r.end || undefined,
           active: !!r.active,
         } as Coupon));
+
+        save(items); // Sync remote data back to local storage for offline use
         set({ items });
+        console.log(`[coupons.store] SUCCESS: Refreshed ${items.length} coupons from Supabase`);
         return;
-      } catch { }
+      } catch (err) {
+        console.error("[coupons.store] Refresh failed, falling back to local storage", err);
+        set({ items: load() });
+      }
     } else {
       set({ items: load() });
     }

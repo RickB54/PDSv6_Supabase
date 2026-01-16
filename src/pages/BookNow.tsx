@@ -68,7 +68,7 @@ const BookNow = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { add: addBooking, items: allBookings, refresh: refreshBookings } = useBookingsStore();
-  const { refresh: refreshCoupons } = useCouponsStore();
+  const { refresh: refreshCoupons, items: allCoupons } = useCouponsStore();
 
   useEffect(() => {
     refreshBookings();
@@ -428,7 +428,10 @@ const BookNow = () => {
   // Compute total (service + add-ons)
   const selectedService = filteredPackages.find(s => s.id === formData.package);
   const selectedServicePrice = selectedService ? (selectedService.pricing[vehicleType] ?? selectedService.pricing['compact'] ?? 0) : 0;
-  const packagePrice = urlPrice > 0 ? urlPrice : selectedServicePrice;
+
+  // If we have a selected package, use its dynamic price. 
+  // If not, fall back to urlPrice (e.g. custom link).
+  const packagePrice = selectedService ? selectedServicePrice : (urlPrice > 0 ? urlPrice : 0);
   const addOnsTotal = addOns.reduce((sum, id) => {
     const found = liveAddOns.find(a => a.id === id);
     const price = found ? (found.pricing[vehicleType] ?? found.pricing['compact'] ?? 0) : 0;
@@ -455,13 +458,18 @@ const BookNow = () => {
   }, []);
 
   // Apply coupon against live coupons
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     try {
       const code = couponCode.trim().toUpperCase();
       if (!code) return;
       setCouponError('');
-      const allItems = useCouponsStore.getState().items;
-      const match = allItems.find((c: any) => c.code === code);
+
+      // Force refresh to catch newly created coupons from admin
+      await refreshCoupons();
+
+      // Use reactive items if available, else fallback to store state
+      const itemsToSearch = allCoupons && allCoupons.length > 0 ? allCoupons : useCouponsStore.getState().items;
+      const match = itemsToSearch.find((c: any) => c.code === code);
 
       if (!match) {
         setMatchedCoupon(null);
@@ -471,7 +479,7 @@ const BookNow = () => {
 
       // Detailed validation check
       const now = new Date();
-      const isActive = match.active && match.usesLeft > 0;
+      const isActive = match.active && (match.usesLeft === undefined || match.usesLeft > 0);
       const isDateValid = (!match.startDate || new Date(match.startDate) <= now) && (!match.endDate || new Date(match.endDate) >= now);
 
       if (!isActive || !isDateValid) {
@@ -483,7 +491,9 @@ const BookNow = () => {
       setMatchedCoupon(match);
       setCouponError('');
       toast({ title: "Success!", description: `Coupon ${match.code} applied.` });
-    } catch { }
+    } catch (err) {
+      console.error('[BookNow] applyCoupon error', err);
+    }
   };
 
   const validateForm = () => {
@@ -634,7 +644,7 @@ const BookNow = () => {
 
     // 5) Admin toast + sound (local only)
     try {
-      toast({ title: `NEW BOOKING! $${discountedTotal} — ${formData.name}`, description: `${new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, duration: 8000 });
+      toast({ title: `NEW BOOKING! $${discountedTotal.toFixed(2)} — ${formData.name}`, description: `${new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, duration: 8000 });
       const audio = new Audio('/sounds/cash-register.mp3');
       audio.play().catch(() => { });
       if (typeof Notification !== 'undefined') {
@@ -745,11 +755,11 @@ const BookNow = () => {
                   <div>
                     <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-1">Price Estimate</div>
                     <div className="text-3xl font-black text-primary italic">
-                      ${discountedTotal}
+                      ${discountedTotal.toFixed(2)}
                     </div>
                     {appliedDiscount > 0 && (
                       <div className="text-sm text-green-600 font-bold">
-                        -${appliedDiscount} {appliedCouponCode} applied
+                        -${appliedDiscount.toFixed(2)} {matchedCoupon?.code} applied
                       </div>
                     )}
                   </div>
@@ -1030,7 +1040,7 @@ const BookNow = () => {
             {/* Estimated total */}
             <div className="flex items-center justify-between p-4 border border-border rounded-md">
               <div className="text-sm text-muted-foreground">Estimated Total</div>
-              <div className="text-xl font-bold text-foreground">${discountedTotal}</div>
+              <div className="text-xl font-bold text-foreground">${discountedTotal.toFixed(2)}</div>
             </div>
 
             {/* Tentative Booking Disclaimer */}
