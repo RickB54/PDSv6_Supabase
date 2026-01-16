@@ -22,6 +22,7 @@ import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Cl
 import { HeroSection } from "@/components/HeroSection";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { CompareServicesModal } from "@/components/CompareServicesModal";
 import { formatTimeAMPM } from "@/lib/availability";
 import { useBookingsStore } from "@/store/bookings";
 import packageBasic from "@/assets/package-basic.jpg";
@@ -95,6 +96,7 @@ const CustomerPortal = () => {
   const [addOnsExpanded, setAddOnsExpanded] = useState(false);
   const [learnMorePackage, setLearnMorePackage] = useState<any | null>(null);
   const [showClassification, setShowClassification] = useState(false);
+  const [comparePkgId, setComparePkgId] = useState<string | null>(null);
 
   // Availability picker state
   const [availDate, setAvailDate] = useState<Date | undefined>(undefined);
@@ -479,7 +481,6 @@ const CustomerPortal = () => {
                             : 'bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white border-none'
                           }`}
                         onClick={() => {
-                          setSelectedService(isSelected ? null : pkg.id);
                           setSelectedService(pkg.id);
                           setVehicleInteracted(true);
                         }}
@@ -488,7 +489,7 @@ const CustomerPortal = () => {
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-12"
+                        className="flex-1 h-12"
                         onClick={(e) => {
                           e.stopPropagation();
                           setLearnMorePackage(pkg);
@@ -497,6 +498,17 @@ const CustomerPortal = () => {
                         Learn More
                       </Button>
                     </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full h-10 text-[10px] font-black uppercase tracking-[0.15em] border-zinc-200 text-zinc-500 hover:border-blue-700 hover:text-blue-700 hover:bg-zinc-50 transition-all rounded-lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setComparePkgId(pkg.id);
+                      }}
+                    >
+                      Compare Packages
+                    </Button>
 
                     <Button
                       className="w-full h-12 bg-blue-900 hover:bg-black text-white font-bold"
@@ -887,6 +899,18 @@ const CustomerPortal = () => {
           else setVehicleType("midsize"); // Fallback
         }}
       />
+
+      <CompareServicesModal
+        open={!!comparePkgId}
+        onOpenChange={(open) => !open && setComparePkgId(null)}
+        allPackages={livePackages}
+        initialPackageId={comparePkgId || ""}
+        onSelect={(id) => {
+          setSelectedService(id);
+          setVehicleInteracted(true);
+        }}
+      />
+
       <Footer />
     </div>
   );
