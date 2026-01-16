@@ -394,7 +394,8 @@ export async function getFreeBusy(
                 localStorage.setItem('g_cal_token', JSON.stringify(shared));
                 localStorage.setItem('g_cal_connected', 'true');
             } else {
-                await ensureSignedIn();
+                // Do not force sign in for read-only checks if shared token fails
+                console.warn("[GoogleCalendar] No session/shared token. Skipping silent auth to avoid popup.");
             }
         } catch (e) {
             console.warn("[GoogleCalendar] No valid session or shared token, attempting fetch with API Key...");
@@ -647,9 +648,12 @@ const eventsCache: Record<string, { data: any[]; timestamp: number }> = {};
 export async function listCalendarEvents(calendarId: string, timeMin: Date, timeMax: Date) {
     if (!isSignedIn()) {
         try {
-            await ensureSignedIn();
+            const shared = await loadGCalTokenFromSupabase();
+            if (shared && (window as any).gapi?.client) {
+                (window as any).gapi.client.setToken({ access_token: shared.access_token });
+            }
         } catch (e) {
-            console.warn("[GoogleCalendar] Not signed in, attempting fetch with API Key for listEvents...");
+            console.warn("[GoogleCalendar] Not signed in and no shared token found. Skipping auto-auth.");
         }
     }
 

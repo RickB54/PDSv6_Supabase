@@ -45,6 +45,9 @@ import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, 
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useBookingsStore } from '@/store/bookings';
+import * as bookingsSvc from '@/services/supabase/bookings';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /**
  * Admin Calendar Manager
@@ -58,6 +61,19 @@ export default function AvailabilityManager() {
     const [selectedDates, setSelectedDates] = useState<Date[]>([]); // Multi-select support
     const [lastClickedDate, setLastClickedDate] = useState<Date | undefined>(undefined); // For shift-select
     const [blockedDates, setBlockedDates] = useState<string[]>([]);
+
+    // Manual Booking State
+    const [showManualBooking, setShowManualBooking] = useState(false);
+    const [manualBooking, setManualBooking] = useState({
+        name: '',
+        phone: '',
+        email: '',
+        service: 'Prime Essential Interior',
+        time: '09:00',
+        make: '',
+        model: '',
+        year: ''
+    });
 
     // Quick block states
     const [rangeStart, setRangeStart] = useState('');
@@ -495,6 +511,48 @@ export default function AvailabilityManager() {
         }
     };
 
+    const handleCreateManualBooking = async () => {
+        if (!selectedDate) {
+            toast({ title: "Select a date first", variant: "destructive" });
+            return;
+        }
+        if (!manualBooking.name) {
+            toast({ title: "Name is required", variant: "destructive" });
+            return;
+        }
+
+        try {
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            const dateTime = `${dateStr}T${manualBooking.time}:00`;
+
+            await bookingsSvc.create({
+                customer_name: manualBooking.name,
+                phone: manualBooking.phone,
+                email: manualBooking.email,
+                vehicle_type: 'Unknown',
+                make: manualBooking.make,
+                model: manualBooking.model,
+                year: manualBooking.year,
+                package: manualBooking.service,
+                add_ons: [],
+                date: new Date(dateTime).toISOString(),
+                price_total: 0,
+                status: 'confirmed',
+                booked_by: 'Admin Manual',
+                notes: 'Manual Entry via Availability Manager'
+            });
+
+            toast({ title: "Booking Created", description: `${manualBooking.name} on ${dateStr}` });
+            setShowManualBooking(false);
+            setManualBooking({ name: '', phone: '', email: '', service: 'Prime Essential Interior', time: '09:00', make: '', model: '', year: '' });
+            await refreshBookings();
+            await loadBlocks();
+        } catch (e: any) {
+            console.error(e);
+            toast({ title: "Error creating booking", description: e.message || "Unknown error", variant: "destructive" });
+        }
+    };
+
     return (
         <div>
             <PageHeader title="Availability Manager" />
@@ -542,6 +600,78 @@ export default function AvailabilityManager() {
 
                     {/* Manual Blocking Tab */}
                     <TabsContent value="manual" className="space-y-6 mt-6">
+                        <div className="flex justify-between items-center bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+                            <div>
+                                <h3 className="font-bold text-white">Quick Actions</h3>
+                                <p className="text-xs text-zinc-400">Manage blocks and bookings</p>
+                            </div>
+                            <Dialog open={showManualBooking} onOpenChange={setShowManualBooking}>
+                                <DialogTrigger asChild>
+                                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Manual Booking
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                                    <DialogHeader>
+                                        <DialogTitle>Add Manual Booking</DialogTitle>
+                                        <DialogDescription>Create a confirmed booking for {selectedDate ? format(selectedDate, 'MMM d, yyyy') : 'selected date'}.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label>Customer Name</Label>
+                                                <Input value={manualBooking.name} onChange={e => setManualBooking({ ...manualBooking, name: e.target.value })} className="bg-zinc-900 border-zinc-700" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Phone</Label>
+                                                <Input value={manualBooking.phone} onChange={e => setManualBooking({ ...manualBooking, phone: e.target.value })} className="bg-zinc-900 border-zinc-700" />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="space-y-2">
+                                                <Label>Year</Label>
+                                                <Input value={manualBooking.year} onChange={e => setManualBooking({ ...manualBooking, year: e.target.value })} className="bg-zinc-900 border-zinc-700" placeholder="2024" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Make</Label>
+                                                <Input value={manualBooking.make} onChange={e => setManualBooking({ ...manualBooking, make: e.target.value })} className="bg-zinc-900 border-zinc-700" placeholder="Ford" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Model</Label>
+                                                <Input value={manualBooking.model} onChange={e => setManualBooking({ ...manualBooking, model: e.target.value })} className="bg-zinc-900 border-zinc-700" placeholder="F-150" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Service Package</Label>
+                                            <Select value={manualBooking.service} onValueChange={v => setManualBooking({ ...manualBooking, service: v })}>
+                                                <SelectTrigger className="bg-zinc-900 border-zinc-700">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                    <SelectItem value="Prime Essential Interior">Prime Essential Interior</SelectItem>
+                                                    <SelectItem value="Prime Essential Exterior">Prime Essential Exterior</SelectItem>
+                                                    <SelectItem value="Prime Essential Full">Prime Essential Full</SelectItem>
+                                                    <SelectItem value="Prime Elite Interior">Prime Elite Interior</SelectItem>
+                                                    <SelectItem value="Prime Elite Exterior">Prime Elite Exterior</SelectItem>
+                                                    <SelectItem value="Prime Elite Full">Prime Elite Full</SelectItem>
+                                                    <SelectItem value="Custom Service">Custom Service</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Time</Label>
+                                            <Input type="time" value={manualBooking.time} onChange={e => setManualBooking({ ...manualBooking, time: e.target.value })} className="bg-zinc-900 border-zinc-700" />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button onClick={handleCreateManualBooking} className="bg-emerald-600 hover:bg-emerald-700">Confirm Booking</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                             {/* Calendar Picker with Multi-Select */}
