@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/PageHeader";
+import { getCurrentUser } from "@/lib/auth";
+import { Navbar } from "@/components/Navbar";
+import { ArrowLeft, Trash2, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, CreditCard } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useToast } from "@/hooks/use-toast";
-import { getInvoices, upsertInvoice } from "@/lib/db";
-import { upsertReceivable } from "@/lib/receivables";
-import { getCurrentUser } from "@/lib/auth";
+import { getInvoices } from "@/lib/db";
 
 interface Invoice {
   id?: string;
@@ -29,6 +29,7 @@ const Checkout = () => {
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
   const [prepayAmount, setPrepayAmount] = useState<string>("");
   const user = getCurrentUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -92,8 +93,12 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader title="Checkout" />
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <Navbar />
+      <main className="container mx-auto px-4 py-24 max-w-6xl">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-8 hover:bg-zinc-100 text-zinc-500 hover:text-black font-bold uppercase tracking-widest text-[10px]">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
         <div className="space-y-6">
           <Card className="p-6 bg-gradient-card border-border">
             <h2 className="text-2xl font-bold text-foreground mb-4">Cart</h2>

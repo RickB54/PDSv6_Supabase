@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { signupSupabase } from "@/lib/auth";
 import { toast } from "sonner";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 export default function SignUp() {
     const [email, setEmail] = useState("");
@@ -38,7 +38,13 @@ export default function SignUp() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 px-4">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 px-4 relative flex flex-col items-center justify-center">
+            <div className="absolute top-8 left-8">
+                <Button variant="ghost" onClick={() => navigate(-1)} className="hover:bg-zinc-200 text-zinc-600 hover:text-black font-bold uppercase tracking-widest text-[10px]">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                </Button>
+            </div>
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
