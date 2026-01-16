@@ -645,15 +645,14 @@ const BookNow = () => {
       const endTimeDate = new Date(submissionDate.getTime() + durationHours * 60 * 60 * 1000);
       const endTimeIso = endTimeDate.toISOString();
 
-      // Sync to local store for instant UI feedback (using primary ID from Supabase if available)
-      // This now handles Supabase persistence, PDF generation, and local Alert Archive automatically
-      await addBooking({
+      // Trigger notifications and PDF generation (booking already saved to Supabase above)
+      const bookingRecord = {
         id: finalId,
         title: bookingPayload.service || "Booking",
         customer: formData.name,
         date: dateIso,
         endTime: endTimeIso,
-        status: "tentative",
+        status: "tentative" as const,
         bookedBy: 'Customer Web',
         vehicle: vehicleType,
         vehicleYear: formData.year,
@@ -661,10 +660,21 @@ const BookNow = () => {
         vehicleModel: formData.model,
         price: discountedTotal,
         notes: finalNotes
-      });
+      };
 
-      // Explicitly notify for the bell icon (ensures the red dot appears immediately)
+      // Trigger bell notification immediately
       notify('booking_created', `Web Booking: ${formData.name} — ${bookingPayload.service}`, 'system', { id: finalId });
+
+      // Generate and save PDF to File Manager
+      try {
+        const { onBookingCreated } = await import("@/lib/bookingsSync");
+        await onBookingCreated(bookingRecord);
+      } catch (syncErr) {
+        console.error("PDF/Alert generation failed:", syncErr);
+      }
+
+      // Refresh the bookings store to show the new booking immediately
+      await refreshBookings();
 
       // 2) Admin & Customer Email + SMS (awaits response before redirect to ensure success)
       try {
