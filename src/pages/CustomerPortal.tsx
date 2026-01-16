@@ -682,74 +682,88 @@ const CustomerPortal = () => {
 
         {/* Service Coverage & Policy Notice */}
         <section className="mt-20 border-t border-zinc-100 pt-16">
-          <Card className="overflow-hidden border border-blue-100 bg-white shadow-xl">
-            <div className="bg-blue-900 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/10 rounded-lg">
-                  <ShieldCheck className="w-5 h-5 text-blue-100" />
+          <Card className="overflow-hidden border border-blue-100 bg-white shadow-2xl rounded-2xl">
+            <div className="bg-blue-900 px-8 py-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-blue-800/50 rounded-xl border border-blue-700/50">
+                  <ShieldCheck className="w-6 h-6 text-blue-100" />
                 </div>
-                <h3 className="font-black text-white uppercase tracking-widest text-sm">Service Coverage & Policy Notice</h3>
+                <div>
+                  <h3 className="font-black text-white uppercase tracking-[0.2em] text-xs">Contractual Disclosure</h3>
+                  <p className="text-blue-200 text-xs font-medium">Service Coverage & Professional Policies</p>
+                </div>
               </div>
-              <Badge className="bg-blue-600 text-white border-none px-3 uppercase text-[10px] tracking-widest">Official Policy</Badge>
+              <Badge className="bg-blue-600 text-white border-none px-4 py-1.5 uppercase text-[10px] font-black tracking-widest shadow-lg">Official Notice</Badge>
             </div>
 
             <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-100">
                 {/* Scope of Service column */}
-                <div className="p-8 space-y-6">
-                  <div className="space-y-1">
-                    <h4 className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]">Our Core Focus</h4>
-                    <p className="text-xl font-black text-zinc-900 leading-tight">Elite Cosmetic & <br />Protective Detailing.</p>
+                <div className="p-10 space-y-8">
+                  <div className="space-y-2">
+                    <h4 className="text-blue-600 text-[10px] font-black uppercase tracking-[0.25em]">Our Specialization</h4>
+                    <p className="text-2xl font-black text-zinc-900 leading-[1.1]">Elite Cosmetic & <br />Structural Preservation.</p>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex gap-4">
-                      <div className="h-2 w-2 rounded-full bg-blue-600 mt-2 shrink-0" />
+                  <div className="space-y-5">
+                    <div className="flex gap-5">
+                      <div className="h-2 w-2 rounded-full bg-blue-600 mt-2.5 shrink-0 shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
                       <div>
-                        <p className="text-sm font-bold text-zinc-800">Included Scope</p>
-                        <p className="text-xs text-zinc-500 leading-relaxed mt-1">Deep restoration, paint correction, and interior sanitation. Ceramic protection is primary to our premium tiers.</p>
+                        <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">Standard Inclusion Scope</p>
+                        <p className="text-[13px] text-zinc-500 leading-relaxed mt-1.5 font-medium">Precision paint decontamination, high-level interior sanitation, and hydrophobic surface sealing. Premium tiers focus on long-term ceramic preservation.</p>
                       </div>
                     </div>
-                    <div className="flex gap-4">
-                      <div className="h-2 w-2 rounded-full bg-zinc-300 mt-2 shrink-0" />
+                    <div className="flex gap-5">
+                      <div className="h-2 w-2 rounded-full bg-zinc-300 mt-2.5 shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-zinc-800">Excluded Core Elements</p>
-                        <p className="text-xs text-zinc-500 leading-relaxed mt-1 italic">General paint protection & ceramic coatings are omitted from standard packages unless specified.</p>
+                        <p className="text-sm font-black text-zinc-400 uppercase tracking-tight">Technical Omissions</p>
+                        <p className="text-[13px] text-zinc-500 leading-relaxed mt-1.5 italic font-medium">Multi-stage paint correction & ceramic coating applications are specialized services available upon consultation and are not included in maintenance-focused packages.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Limitations column */}
-                <div className="p-8 space-y-6 bg-zinc-50/50">
-                  <div className="space-y-1">
-                    <h4 className="text-amber-600 text-[10px] font-black uppercase tracking-[0.2em]">Restricted Services</h4>
-                    <p className="text-xl font-black text-zinc-900 leading-tight">Prohibited Cleanup & <br />Emergency Operations.</p>
+                <div className="p-10 space-y-8 bg-zinc-50/30">
+                  <div className="space-y-2">
+                    <h4 className="text-red-600 text-[10px] font-black uppercase tracking-[0.25em]">Strict Limitations</h4>
+                    <p className="text-2xl font-black text-zinc-900 leading-[1.1]">Excluded Conditions & <br />Restricted Environments.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    {["Biological & Hazmat Cleanup", "Emergency/Rescue Vehicles", "Structural Restoration"].map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-white border border-zinc-200 p-3 rounded-lg">
-                        <X className="w-4 h-4 text-red-500" />
-                        <span className="text-xs font-bold text-zinc-700 uppercase tracking-tight">{item}</span>
+                  <div className="grid grid-cols-1 gap-4">
+                    {[
+                      { label: "Biological & Hazmat Cleanup", icon: <X className="w-4 h-4 text-red-500" /> },
+                      { label: "Emergency Response Vehicles", icon: <X className="w-4 h-4 text-red-500" /> },
+                      { label: "Heavy Industrial Machinery", icon: <X className="w-4 h-4 text-red-500" /> }
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 bg-white border border-zinc-200/60 p-4 rounded-xl shadow-sm group hover:border-red-200 transition-colors">
+                        <div className="p-1.5 bg-zinc-50 rounded-lg group-hover:bg-red-50 transition-colors">
+                          {item.icon}
+                        </div>
+                        <span className="text-[11px] font-black text-zinc-800 uppercase tracking-wider">{item.label}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Final Condition Policy Bar - Softened */}
-              <div className="bg-zinc-100/80 p-6 border-t border-zinc-200">
-                <div className="flex flex-col md:flex-row items-center gap-4 justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-amber-500/10 rounded-lg shrink-0">
-                      <AlertCircle className="w-4 h-4 text-amber-600" />
+              {/* Professional Pricing Policy Bar */}
+              <div className="bg-zinc-900 p-8 border-t border-zinc-800">
+                <div className="flex flex-col md:flex-row items-center gap-6 justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-amber-500/10 rounded-xl shrink-0 border border-amber-500/20">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
                     </div>
-                    <div className="space-y-0.5">
-                      <p className="text-[11px] font-black text-zinc-800 uppercase tracking-widest leading-none">Professional Policy</p>
-                      <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed">
-                        Digital quotes are estimates. Final rates are confirmed on-site based on vehicle dimensions and condition.
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] leading-none">Valuation Disclaimer</p>
+                      <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed font-medium">
+                        Automated digital quotations serve as initial estimates based on standard vehicle metadata. Prime Auto Detail reserves the right to adjust final invoicing on-site upon verification of actual vehicle dimensions, surface contamination levels, and overall condition.
                       </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <div className="bg-zinc-800 px-4 py-2 rounded-lg border border-zinc-700">
+                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Est. 2024</span>
                     </div>
                   </div>
                 </div>

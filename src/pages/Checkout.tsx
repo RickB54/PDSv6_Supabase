@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/store/cart";
 import { useToast } from "@/hooks/use-toast";
 import { getInvoices } from "@/lib/db";
+import { useCouponsStore } from "@/store/coupons";
+import { Tag, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 interface Invoice {
   id?: string;
@@ -31,6 +33,14 @@ const Checkout = () => {
   const user = getCurrentUser();
   const navigate = useNavigate();
 
+  // Coupon states
+  const { refresh: refreshCoupons } = useCouponsStore();
+  const [couponCode, setCouponCode] = useState("");
+  const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [showCouponField, setShowCouponField] = useState(false);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
   useEffect(() => {
     (async () => {
       const invs = await getInvoices<Invoice>();
@@ -45,7 +55,45 @@ const Checkout = () => {
   const invoicesTotal = invoices.filter(i => selectedInvoiceIds.includes(String(i.id))).reduce((sum, i) => sum + (i.total || 0), 0);
   const cartSubtotal = subtotal();
   const prepay = parseFloat(prepayAmount) || 0;
-  const grandTotal = cartSubtotal + invoicesTotal + prepay;
+
+  const totalBeforeDiscount = cartSubtotal + invoicesTotal + prepay;
+  const appliedDiscount = matchedCoupon
+    ? (matchedCoupon.percent ? (totalBeforeDiscount * matchedCoupon.percent / 100) : (matchedCoupon.amount || 0))
+    : 0;
+  const grandTotal = Math.max(0, totalBeforeDiscount - appliedDiscount);
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+
+    setIsApplyingCoupon(true);
+    setCouponError('');
+
+    try {
+      await refreshCoupons();
+      const freshItems = useCouponsStore.getState().items;
+      const match = freshItems.find((c: any) => c.code === code);
+
+      if (!match) {
+        setMatchedCoupon(null);
+        setCouponError('Invalid promo code');
+        return;
+      }
+
+      if (!match.active) {
+        setMatchedCoupon(null);
+        setCouponError('This coupon is currently disabled');
+        return;
+      }
+
+      setMatchedCoupon(match);
+      toast({ title: "Success!", description: `Coupon ${match.code} applied.` });
+    } catch (err) {
+      setCouponError('Could not validate coupon');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
 
   const handleRemove = (id: string) => removeItem(id);
 
@@ -164,6 +212,59 @@ const Checkout = () => {
                 <Button className="w-full" variant="outline" onClick={() => setPrepayAmount("")}>Clear</Button>
               </div>
             </div>
+          </Card>
+
+          {/* Promo Code */}
+          <Card className="p-6 bg-gradient-to-br from-zinc-900/40 to-black border-zinc-800 shadow-xl">
+            {!showCouponField ? (
+              <button
+                type="button"
+                onClick={() => setShowCouponField(true)}
+                className="text-sm text-primary hover:text-primary/80 font-bold transition-colors flex items-center gap-2 uppercase tracking-tight"
+              >
+                <Tag className="w-4 h-4" />
+                Apply Promotional Code
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-tight">Promotional Code</h3>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Enter code"
+                    className="h-11 bg-black border-zinc-800 text-white uppercase"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                  />
+                  <Button
+                    className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-bold uppercase"
+                    type="button"
+                    disabled={isApplyingCoupon}
+                    onClick={applyCoupon}
+                  >
+                    {isApplyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                  </Button>
+                </div>
+                {matchedCoupon && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span className="text-emerald-500 font-bold text-sm">
+                      {matchedCoupon.code} applied! Saving ${appliedDiscount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {couponError && (
+                  <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <span className="text-red-500 font-bold text-sm">{couponError}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           <Card className="p-6 bg-gradient-card border-border">

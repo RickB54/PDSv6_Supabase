@@ -459,40 +459,74 @@ const BookNow = () => {
 
   // Apply coupon against live coupons
   const applyCoupon = async () => {
-    try {
-      const code = couponCode.trim().toUpperCase();
-      if (!code) return;
-      setCouponError('');
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
 
-      // Force refresh to catch newly created coupons from admin
+    setCouponError('');
+    console.log(`[Coupon] Attempting to apply code: ${code}`);
+
+    try {
+      // 1. Force a refresh from Supabase to ensure we have any newly created coupons
       await refreshCoupons();
 
-      // Use reactive items if available, else fallback to store state
-      const itemsToSearch = allCoupons && allCoupons.length > 0 ? allCoupons : useCouponsStore.getState().items;
-      const match = itemsToSearch.find((c: any) => c.code === code);
+      // 2. IMPORTANT: Use the store state directly. 
+      // React state 'allCoupons' may still be stale in this execution frame.
+      const freshItems = useCouponsStore.getState().items;
+      console.log(`[Coupon] Store contains ${freshItems.length} coupons:`, freshItems.map(c => c.code));
+
+      const match = freshItems.find((c: any) => c.code === code);
 
       if (!match) {
         setMatchedCoupon(null);
         setCouponError('This coupon code is not valid');
+        console.warn(`[Coupon] No match found for code: ${code}`);
         return;
       }
 
-      // Detailed validation check
+      // 3. Detailed validation check
       const now = new Date();
-      const isActive = match.active && (match.usesLeft === undefined || match.usesLeft > 0);
-      const isDateValid = (!match.startDate || new Date(match.startDate) <= now) && (!match.endDate || new Date(match.endDate) >= now);
+      // usesLeft 99999 means unlimited
+      const hasUses = match.usesLeft === undefined || match.usesLeft > 0;
+      const isDateValid = (!match.startDate || new Date(match.startDate) <= now) &&
+        (!match.endDate || new Date(match.endDate) >= now);
 
-      if (!isActive || !isDateValid) {
+      console.log(`[Coupon] Match found:`, {
+        code: match.code,
+        active: match.active,
+        hasUses,
+        isDateValid,
+        percent: match.percent,
+        amount: match.amount
+      });
+
+      if (!match.active) {
         setMatchedCoupon(null);
-        setCouponError('This coupon is currently inactive or expired');
+        setCouponError('This coupon is currently disabled');
         return;
       }
 
+      if (!hasUses) {
+        setMatchedCoupon(null);
+        setCouponError('This coupon has reached its usage limit');
+        return;
+      }
+
+      if (!isDateValid) {
+        setMatchedCoupon(null);
+        setCouponError('This coupon has expired or is not yet active');
+        return;
+      }
+
+      // Success
       setMatchedCoupon(match);
       setCouponError('');
-      toast({ title: "Success!", description: `Coupon ${match.code} applied.` });
+      toast({
+        title: "Success!",
+        description: `Coupon ${match.code} applied.`
+      });
     } catch (err) {
       console.error('[BookNow] applyCoupon error', err);
+      setCouponError('Could not validate coupon. Please try again.');
     }
   };
 
@@ -518,7 +552,11 @@ const BookNow = () => {
       if (!formData.make.trim()) newErrors.make = "Vehicle make is required";
       if (!formData.model.trim()) newErrors.model = "Vehicle model is required";
       if (!formData.year.trim()) newErrors.year = "Year is required";
-      if (!date) newErrors.date = "Please select a preferred date";
+      if (!date) {
+        newErrors.date = "Please select a preferred date";
+      } else if (!selectedTime) {
+        newErrors.date = "Please select an available time slot";
+      }
     }
 
     setErrors(newErrors);
@@ -960,8 +998,27 @@ const BookNow = () => {
                       <AvailabilityPicker
                         selectedDate={date}
                         selectedTime={selectedTime}
-                        onDateChange={setDate}
-                        onTimeChange={setSelectedTime}
+                        onDateChange={(d) => {
+                          setDate(d);
+                          if (d && errors.date) {
+                            setErrors(prev => {
+                              const next = { ...prev };
+                              delete next.date;
+                              return next;
+                            });
+                          }
+                        }}
+                        onTimeChange={(t) => {
+                          setSelectedTime(t);
+                          // Also clear date error if time is selected
+                          if (t && errors.date) {
+                            setErrors(prev => {
+                              const next = { ...prev };
+                              delete next.date;
+                              return next;
+                            });
+                          }
+                        }}
                         existingBookings={mappedBookings}
                         serviceDuration={getServiceDuration(formData.package)}
                       />
@@ -992,29 +1049,33 @@ const BookNow = () => {
 
 
             {/* === IMPROVED COUPON PLACEMENT === */}
-            <div className="pt-4">
+            <div className="pt-6">
               {!showCouponField ? (
                 <button
                   type="button"
                   onClick={() => setShowCouponField(true)}
-                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
+                  className="text-[11px] text-blue-600 hover:text-blue-700 font-bold transition-all flex items-center gap-1.5 uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 shadow-sm"
                 >
                   <Tag className="w-3.5 h-3.5" />
-                  Have a promo code?
+                  Apply Promotional Code?
                 </button>
               ) : (
-                <div className="space-y-3 p-4 bg-zinc-900/30 border border-zinc-800 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-4 p-5 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Tag className="w-4 h-4 text-primary" />
+                    <h3 className="text-xs font-black text-white uppercase tracking-widest">Promotional Code</h3>
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       type="text"
-                      placeholder="Enter promo code"
-                      className="h-10 bg-black border-zinc-700 text-sm focus:border-primary uppercase"
+                      placeholder="Enter code"
+                      className="h-11 bg-black border-zinc-800 text-sm focus:border-primary uppercase text-white font-bold tracking-widest"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
                     />
                     <Button
-                      className="h-10 px-4 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase transition-all"
+                      className="h-11 px-6 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg"
                       type="button"
                       onClick={applyCoupon}
                     >
@@ -1022,9 +1083,13 @@ const BookNow = () => {
                     </Button>
                   </div>
                   {matchedCoupon && (
-                    <div className="text-green-400 font-bold text-xs flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      {matchedCoupon.code} applied! You saved ${appliedDiscount.toFixed(2)}
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+                      <div className="bg-emerald-500 rounded-full p-1 shadow-lg shadow-emerald-500/20">
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                      <span className="text-emerald-500 font-black text-[11px] uppercase tracking-widest">
+                        {matchedCoupon.code} Success! Disount Applied: -${appliedDiscount.toFixed(2)}
+                      </span>
                     </div>
                   )}
                   {couponError && (
