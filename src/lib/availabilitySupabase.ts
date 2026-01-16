@@ -293,15 +293,21 @@ export async function getAvailableSlots(
 
             if (isBlocked) return false;
 
-            // Check if slot is taken by existing booking
+            // Check if slot is taken by existing booking (accounts for duration)
             const isBooked = existingBookings.some(booking => {
                 const bookingDate = new Date(booking.scheduled_at);
                 const bookingDateStr = format(bookingDate, 'yyyy-MM-dd');
 
                 if (bookingDateStr !== date) return false;
 
-                const bookingTime = format(bookingDate, 'HH:mm');
-                return slot.start === bookingTime;
+                const startMins = bookingDate.getHours() * 60 + bookingDate.getMinutes();
+                const durationMins = (booking.estimated_duration || 1) * 60;
+                const endMins = startMins + durationMins;
+
+                const [slotH, slotM] = slot.start.split(':').map(Number);
+                const slotMins = slotH * 60 + slotM;
+
+                return slotMins >= startMins && slotMins < endMins;
             });
 
             return !isBooked;

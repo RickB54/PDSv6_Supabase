@@ -94,18 +94,19 @@ export default function NotificationBell() {
   }, [alerts, isEmployee]);
   const importantUnread = isFileManagerView ? 0 : importantUnreadActual;
   const displayUnreadCount = isFileManagerView ? 0 : (isEmployee ? empUnreadCount : (unreadCount || 0));
-  const bellColorClass = importantUnread > 0 ? "text-yellow-400" : (displayUnreadCount > 0 ? "text-white" : "text-red-500");
+  // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's screenshot requirement for 'nothing new')
+  const bellColorClass = (displayUnreadCount > 0 || importantUnread > 0) ? "text-yellow-400" : "text-red-600";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative">
-          <Bell className={`h-5 w-5 ${bellColorClass} ${ring ? 'animate-bounce' : ''}`} />
-          {/* Show badge for important alerts; otherwise show unread count subtly */}
-          {importantUnread > 0 ? (
-            <Badge className="absolute -top-1 -right-1 bg-yellow-500 text-black">{importantUnread}</Badge>
-          ) : (
-            <Badge className="absolute -top-1 -right-1 bg-zinc-700 text-white">{displayUnreadCount}</Badge>
+        <Button variant="ghost" className="relative group">
+          <Bell className={`h-6 w-6 transition-all duration-300 ${bellColorClass} ${ring ? 'animate-bounce scale-110' : 'group-hover:scale-110'}`} />
+          {/* Show badge for ANY unread count with high-contrast red for urgency */}
+          {(displayUnreadCount > 0 || importantUnread > 0) && (
+            <Badge className="absolute -top-1 -right-1 bg-red-600 text-white font-bold border-2 border-black animate-in zoom-in duration-300">
+              {displayUnreadCount}
+            </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>

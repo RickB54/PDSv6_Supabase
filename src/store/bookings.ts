@@ -4,6 +4,7 @@ import {
   upsertSupabaseBooking,
   deleteSupabaseBooking
 } from "@/lib/supa-data";
+import { isSupabaseEnabled } from "@/lib/auth";
 
 export type BookingStatus = "pending" | "confirmed" | "in_progress" | "done" | "tentative" | "blocked";
 
@@ -106,14 +107,21 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
     const items = [...get().items, record];
     set({ items, pendingCount: items.filter(i => i.status === "pending").length });
 
-    // Persist to Supabase
+    // 1. Perspective check: Is Supabase enabled?
+    if (isSupabaseEnabled()) {
+      try {
+        await upsertSupabaseBooking(record);
+      } catch (err) {
+        console.error("Supabase persistent sync failed (schema mismatch?), proceeding with local sync:", err);
+      }
+    }
+
+    // 2. ALWAYS trigger sync logic (PDF, Admin Alerts, File Manager)
     try {
-      await upsertSupabaseBooking(record);
-      // Sync PDF/Alerts
       const { onBookingCreated } = await import("@/lib/bookingsSync");
-      onBookingCreated(record);
-    } catch (err) {
-      console.error("Failed to save booking to DB", err);
+      await onBookingCreated(record);
+    } catch (syncErr) {
+      console.error("Local sync logic failed (PDF/Alerts):", syncErr);
     }
   },
 

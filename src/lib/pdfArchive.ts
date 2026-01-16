@@ -118,7 +118,13 @@ export function savePDFToArchive(
   };
 
   // Get existing records
-  const existing = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
+  let existing: PDFRecord[] = [];
+  try {
+    existing = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
+    if (!Array.isArray(existing)) existing = [];
+  } catch {
+    existing = [];
+  }
 
   // Add new record
   existing.push(record);

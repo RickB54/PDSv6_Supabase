@@ -584,137 +584,151 @@ const BookNow = () => {
 
     setIsSubmitting(true);
 
-    // Silent auto-create customer account
     try {
-      const autoPassword = `PDS${Math.random().toString(36).slice(2, 10)}`;
-      // console.log(`Customer account created: ${formData.email} / ${autoPassword}`);
-      // console.log(`Portal link: ${window.location.origin}/portal?token=auto-${Date.now()}`);
-    } catch { }
+      // Silent auto-create customer account
+      try {
+        const autoPassword = `PDS${Math.random().toString(36).slice(2, 10)}`;
+        // console.log(`Customer account created: ${formData.email} / ${autoPassword}`);
+        // console.log(`Portal link: ${window.location.origin}/portal?token=auto-${Date.now()}`);
+      } catch { }
 
-    // 1) Save booking to API and local store for instant calendar
-    let submissionDate = date ? new Date(date) : new Date();
+      // 1) Save booking to Supabase (creates customer/vehicle/booking in one flow)
+      let submissionDate = date ? new Date(date) : new Date();
 
-    if (selectedTime && date) {
-      const [h, m] = selectedTime.split(':').map(Number);
-      submissionDate.setHours(h, m, 0, 0);
-    }
-
-    const dateIso = submissionDate.toISOString();
-
-    const finalNotes = formData.message || "";
-
-    const bookingPayload = {
-      customer: { name: formData.name, email: formData.email, phone: formData.phone },
-      vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
-      service: selectedService ? selectedService.name : formData.package,
-      addOns: addOns.map(id => {
-        const a = addOnDefs.find(x => x.id === id);
-        return { id, name: a?.name || id, price: getAddOnPrice(id, vehicleType) };
-      }),
-      date: dateIso,
-      total: discountedTotal,
-      notes: finalNotes,
-    };
-    try {
-      await api('/api/bookings', { method: 'POST', body: JSON.stringify(bookingPayload) });
-    } catch { }
-    try {
-      if (isSupabaseEnabled()) {
-        await bookingsSvc.create({
-          customer_name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          vehicle_type: vehicleType,
-          year: formData.year,
-          make: formData.make,
-          model: formData.model,
-          package: bookingPayload.service || formData.package,
-          add_ons: addOns,
-          date: dateIso,
-          notes: finalNotes,
-          price_total: discountedTotal,
-          status: 'pending',
-          booked_by: (() => {
-            const u = getCurrentUser();
-            if (!u) return 'Customer Web';
-            return u.name || u.email || 'Unknown User';
-          })()
-        });
+      if (selectedTime && date) {
+        const [h, m] = selectedTime.split(':').map(Number);
+        submissionDate.setHours(h, m, 0, 0);
       }
-    } catch (createError) {
-      console.error("Booking Creation Failed in Supabase:", createError);
+
+      const dateIso = submissionDate.toISOString();
+      const finalNotes = formData.message || "";
+
+      const bookingPayload = {
+        customer: { name: formData.name, email: formData.email, phone: formData.phone },
+        vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
+        service: selectedService ? selectedService.name : formData.package,
+        addOns: addOns.map(id => {
+          const a = addOnDefs.find(x => x.id === id);
+          return { id, name: a?.name || id, price: getAddOnPrice(id, vehicleType) };
+        }),
+        date: dateIso,
+        total: discountedTotal,
+        notes: finalNotes,
+      };
+
+      let createdBooking: any = null;
+      try {
+        if (isSupabaseEnabled()) {
+          createdBooking = await bookingsSvc.create({
+            customer_name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            vehicle_type: vehicleType,
+            year: formData.year,
+            make: formData.make,
+            model: formData.model,
+            package: bookingPayload.service || formData.package,
+            add_ons: addOns,
+            date: dateIso,
+            notes: finalNotes,
+            price_total: discountedTotal,
+            status: 'tentative',
+            booked_by: 'Customer Web'
+          });
+        }
+      } catch (createError) {
+        console.error("Booking Creation Failed in Supabase:", createError);
+      }
+
+      const finalId = createdBooking?.id ? String(createdBooking.id) : `booking_${Date.now()}`;
+      const durationHours = getServiceDuration(bookingPayload.service || formData.package);
+      const endTimeDate = new Date(submissionDate.getTime() + durationHours * 60 * 60 * 1000);
+      const endTimeIso = endTimeDate.toISOString();
+
+      // Sync to local store for instant UI feedback (using primary ID from Supabase if available)
+      // This now handles Supabase persistence, PDF generation, and local Alert Archive automatically
+      await addBooking({
+        id: finalId,
+        title: bookingPayload.service || "Booking",
+        customer: formData.name,
+        date: dateIso,
+        endTime: endTimeIso,
+        status: "tentative",
+        bookedBy: 'Customer Web',
+        vehicle: vehicleType,
+        vehicleYear: formData.year,
+        vehicleMake: formData.make,
+        vehicleModel: formData.model,
+        price: discountedTotal,
+        notes: finalNotes
+      });
+
+      // Explicitly notify for the bell icon (ensures the red dot appears immediately)
+      notify('booking_created', `Web Booking: ${formData.name} — ${bookingPayload.service}`, 'system', { id: finalId });
+
+      // 2) Admin & Customer Email + SMS (awaits response before redirect to ensure success)
+      try {
+        // Re-generate PDF just for the email payload to avoid sharing state
+        const bookingRef = { id: finalId, title: bookingPayload.service || "Booking", customer: formData.name, date: dateIso, status: "tentative" } as any;
+        const pdfDataUrl = generateBookingPDF(bookingRef, {
+          vehicle: `${formData.year} ${formData.make} ${formData.model}`,
+          service: bookingPayload.service,
+          price: discountedTotal,
+          notes: formData.message,
+        });
+
+        await Promise.all([
+          api('/api/email/admin', { method: 'POST', body: JSON.stringify({ ...bookingPayload, pdfDataUrl }) }),
+          api('/api/email/customer', { method: 'POST', body: JSON.stringify({ to: formData.email, ...bookingPayload, pdfDataUrl }) })
+        ]);
+      } catch (e) {
+        console.error("Notification delivery failed (email)", e);
+      }
+
+      // 3) Admin toast + sound (local only)
+      try {
+        toast({ title: `NEW BOOKING! $${discountedTotal.toFixed(2)} — ${formData.name}`, description: `${new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, duration: 8000 });
+        const audio = new Audio('/sounds/cash-register.mp3');
+        audio.play().catch(() => { });
+        if (typeof Notification !== 'undefined') {
+          if (Notification.permission === 'granted') {
+            new Notification('New Booking', { body: `${formData.name} — $${discountedTotal.toFixed(2)}`, icon: '/favicon.ico' });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then((p) => { if (p === 'granted') new Notification('New Booking', { body: `${formData.name} — $${discountedTotal.toFixed(2)}`, icon: '/favicon.ico' }); });
+          }
+        }
+      } catch { }
+
+      // 4) Redirect to thank you
+      navigate(`/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=${encodeURIComponent(new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}&date=${encodeURIComponent(new Date(dateIso).toLocaleDateString())}`);
+
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        make: "",
+        model: "",
+        year: "",
+        datetime: "",
+        package: "",
+        message: "",
+        conditionInside: "",
+        conditionOutside: ""
+      });
+      setAddOns([]);
+      setErrors({});
+    } catch (error: any) {
+      console.error("Booking submission failed:", error);
       toast({
-        title: "Booking Error",
-        description: "Could not save to calendar. Check console for details.",
+        title: "Booking Failed",
+        description: error?.message || "An unexpected error occurred. Please try again or contact support.",
         variant: "destructive"
       });
-      // Don't return, allow PDF/Email to try? Or stop?
-      // For now, trace the error.
+    } finally {
+      setIsSubmitting(false);
     }
-    const localBookingId = `booking_${Date.now()}`;
-    addBooking({ id: localBookingId, title: bookingPayload.service || "Booking", customer: formData.name, date: dateIso, status: "pending" });
-
-    // 2) Generate + upload PDF to File Manager
-    const bookingForPdf = { id: localBookingId, title: bookingPayload.service || "Booking", customer: formData.name, date: dateIso, status: "pending" } as any;
-    const pdfDataUrl = generateBookingPDF(bookingForPdf, {
-      vehicle: `${formData.year} ${formData.make} ${formData.model}`,
-      service: bookingPayload.service,
-      price: discountedTotal,
-      notes: formData.message,
-    });
-    try {
-      const d = new Date(dateIso);
-      const year = d.getFullYear();
-      const monthName = d.toLocaleString(undefined, { month: "long" });
-      const path = `Bookings ${year}/${monthName}/`;
-      uploadToFileManager(pdfDataUrl, path, bookingForPdf, { service: bookingPayload.service, price: discountedTotal });
-    } catch { }
-
-    // 3) Hidden admin email
-    try {
-      await api('/api/email/admin', { method: 'POST', body: JSON.stringify({ ...bookingPayload, pdfDataUrl }) });
-    } catch { }
-
-    // 4) Customer email
-    try {
-      await api('/api/email/customer', { method: 'POST', body: JSON.stringify({ to: formData.email, ...bookingPayload, pdfDataUrl }) });
-    } catch { }
-
-    // 5) Admin toast + sound (local only)
-    try {
-      toast({ title: `NEW BOOKING! $${discountedTotal.toFixed(2)} — ${formData.name}`, description: `${new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, duration: 8000 });
-      const audio = new Audio('/sounds/cash-register.mp3');
-      audio.play().catch(() => { });
-      if (typeof Notification !== 'undefined') {
-        if (Notification.permission === 'granted') {
-          new Notification('New Booking', { body: `${formData.name} — $${total}`, icon: '/favicon.ico' });
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then((p) => { if (p === 'granted') new Notification('New Booking', { body: `${formData.name} — $${total}`, icon: '/favicon.ico' }); });
-        }
-      }
-    } catch { }
-
-    // 6) Redirect to thank you
-    window.location.href = `/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=${encodeURIComponent(new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}&date=${encodeURIComponent(new Date(dateIso).toLocaleDateString())}`;
-
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      make: "",
-      model: "",
-      year: "",
-      datetime: "",
-      package: "",
-      message: "",
-      conditionInside: "",
-      conditionOutside: ""
-    });
-    setAddOns([]);
-    setErrors({});
-    setIsSubmitting(false);
   };
 
   const toggleAddOn = (addonId: string) => {
@@ -742,12 +756,44 @@ const BookNow = () => {
       toast({ title: "Test Mode Activated", description: "Mock data prefilled." });
     } else {
       setFormData(prev => ({ ...prev, name: val }));
+      if (errors.name) setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
     }
   };
+
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 300);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
     <div className="min-h-screen bg-background pt-16">
       <Navbar />
+
+      {/* Floating Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-10 right-10 z-[60] bg-primary text-white p-4 rounded-full shadow-2xl transition-all duration-300 animate-in fade-in zoom-in hover:scale-110 active:scale-95 group overflow-hidden"
+          title="Back to Top"
+        >
+          <div className="absolute inset-0 bg-white/20 animate-ping opacity-20" />
+          <div className="absolute inset-0 bg-white/10 animate-pulse-glow-inner" />
+          <ArrowLeft className="w-6 h-6 rotate-90 relative z-10 font-black stroke-[3]" />
+          <style>{`
+            @keyframes pulse-glow-inner {
+              0%, 100% { transform: scale(1); opacity: 0.3; }
+              50% { transform: scale(1.15); opacity: 0.1; }
+            }
+            .animate-pulse-glow-inner {
+              animation: pulse-glow-inner 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+          `}</style>
+        </button>
+      )}
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         <Button variant="ghost" asChild className="mb-6">
@@ -867,7 +913,10 @@ const BookNow = () => {
                       type="email"
                       placeholder="john@example.com"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (errors.email) setErrors(prev => { const n = { ...prev }; delete n.email; return n; });
+                      }}
                       required
                       className={errors.email ? "border-destructive h-12" : "h-12"}
                     />
@@ -881,7 +930,10 @@ const BookNow = () => {
                       type="tel"
                       placeholder="(555) 000-0000"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, phone: e.target.value });
+                        if (errors.phone) setErrors(prev => { const n = { ...prev }; delete n.phone; return n; });
+                      }}
                       required
                       className={errors.phone ? "border-destructive h-12" : "h-12"}
                     />
@@ -894,7 +946,10 @@ const BookNow = () => {
                       id="address"
                       placeholder="Street, City, State, Zip"
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, address: e.target.value });
+                        if (errors.address) setErrors(prev => { const n = { ...prev }; delete n.address; return n; });
+                      }}
                       required
                       className={errors.address ? "border-destructive h-12" : "h-12"}
                     />
@@ -928,7 +983,10 @@ const BookNow = () => {
                       id="make"
                       placeholder="e.g., Toyota"
                       value={formData.make}
-                      onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, make: e.target.value });
+                        if (errors.make) setErrors(prev => { const n = { ...prev }; delete n.make; return n; });
+                      }}
                       required
                       className={errors.make ? "border-destructive h-11" : "h-11"}
                     />
@@ -941,7 +999,10 @@ const BookNow = () => {
                       id="model"
                       placeholder="e.g., Camry"
                       value={formData.model}
-                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, model: e.target.value });
+                        if (errors.model) setErrors(prev => { const n = { ...prev }; delete n.model; return n; });
+                      }}
                       required
                       className={errors.model ? "border-destructive h-11" : "h-11"}
                     />
@@ -954,7 +1015,10 @@ const BookNow = () => {
                       id="year"
                       placeholder="e.g., 2020"
                       value={formData.year}
-                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, year: e.target.value });
+                        if (errors.year) setErrors(prev => { const n = { ...prev }; delete n.year; return n; });
+                      }}
                       required
                       className={errors.year ? "border-destructive h-11" : "h-11"}
                     />

@@ -1315,6 +1315,36 @@ const api = async (endpoint, options = {}) => {
       }
     }
   }
+
+  // Local handler: Email notifications (simulate backend for static deployments)
+  if (endpoint.startsWith('/api/email/')) {
+    try {
+      const payload = JSON.parse(options.body || '{}');
+      console.log(`[LOCAL EMAIL SIMULATOR] Sending to ${endpoint}:`, payload);
+      // Persist to a local log so user can verify "emails" were triggered
+      const emailLog = (await localforage.getItem('email-log')) || [];
+      emailLog.push({ id: `email_${Date.now()}`, to: payload.to || 'Admin', type: endpoint, ts: new Date().toISOString() });
+      await localforage.setItem('email-log', emailLog.slice(-50));
+      return { ok: true, message: 'Email queued locally' };
+    } catch (e) {
+      return { ok: false, error: 'failed_to_log_email_local' };
+    }
+  }
+
+  // Local handler: SMS notifications
+  if (endpoint.startsWith('/api/sms/')) {
+    try {
+      const payload = JSON.parse(options.body || '{}');
+      console.log(`[LOCAL SMS SIMULATOR] Sending to ${payload.to}:`, payload.message);
+      // Log to SMS archive for verification
+      const smsLog = (await localforage.getItem('sms-log')) || [];
+      smsLog.push({ id: `sms_${Date.now()}`, to: payload.to, message: payload.message, ts: new Date().toISOString() });
+      await localforage.setItem('sms-log', smsLog.slice(-50));
+      return { ok: true, message: 'SMS queued locally' };
+    } catch (e) {
+      return { ok: false, error: 'failed_to_log_sms_local' };
+    }
+  }
   if (endpoint === '/api/inventory/materials' && (options.method || 'GET').toUpperCase() === 'POST') {
     try {
       const payload = JSON.parse(options.body || '{}');

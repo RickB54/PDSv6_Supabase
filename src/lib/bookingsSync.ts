@@ -44,7 +44,7 @@ export function generateBookingPDF(booking: Booking, details?: {
   return doc.output('dataurlstring');
 }
 
-export function uploadToFileManager(fileDataUrl: string, path: string, booking: Booking, details?: { service?: string; price?: number }) {
+export async function uploadToFileManager(fileDataUrl: string, path: string, booking: Booking, details?: { service?: string; price?: number }) {
   const fileName = formatFileName(booking.date, booking.customer || 'Customer', (details?.service || booking.title || 'Service'));
   savePDFToArchive("Bookings", booking.customer || "Customer", booking.id, fileDataUrl, { fileName, path });
   // Flag latest booking event for lightweight real-time UI cues
@@ -56,14 +56,14 @@ export function uploadToFileManager(fileDataUrl: string, path: string, booking: 
   });
 }
 
-export function onBookingCreated(booking: Booking) {
+export async function onBookingCreated(booking: Booking) {
   try {
     const pdf = generateBookingPDF(booking, { service: booking.title });
     const d = new Date(booking.date);
     const year = d.getFullYear();
     const monthName = d.toLocaleString(undefined, { month: 'long' });
     const path = `Bookings ${year}/${monthName}/`;
-    uploadToFileManager(pdf, path, booking, { service: booking.title });
+    await uploadToFileManager(pdf, path, booking, { service: booking.title });
     // Emit admin alert for new booking
     pushAdminAlert(
       'booking_created',

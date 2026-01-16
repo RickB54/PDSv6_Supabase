@@ -229,13 +229,20 @@ export async function getDayAvailability(
             return false;
         });
 
-        // 2. Check if booked by customer
+        // 2. Check if booked by customer (accounts for duration)
         const isBooked = existingBookings.some(booking => {
             const bookingDate = new Date(booking.scheduled_at);
             if (format(bookingDate, 'yyyy-MM-dd') !== date) return false;
 
-            const bookingTime = format(bookingDate, 'HH:mm');
-            return slot.start === bookingTime;
+            const startMins = bookingDate.getHours() * 60 + bookingDate.getMinutes();
+            const durationMins = (booking.estimated_duration || 1) * 60;
+            const endMins = startMins + durationMins;
+
+            const [slotH, slotM] = slot.start.split(':').map(Number);
+            const slotMins = slotH * 60 + slotM;
+
+            // Slot is blocked if it starts within the booking window
+            return slotMins >= startMins && slotMins < endMins;
         });
 
         if (isManuallyBlocked || isBooked) {

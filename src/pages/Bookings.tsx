@@ -39,11 +39,11 @@ export default function Bookings() {
   };
 
   const statusColor = (b: Booking) => {
-    if (b.status === "pending" && b.bookedBy === 'Customer Web') return "bg-cyan-200 text-cyan-900 border border-cyan-400";
-    return b.status === "pending" ? "bg-yellow-200 text-yellow-800" :
-      b.status === "confirmed" ? "bg-blue-200 text-blue-800" :
-        b.status === "in_progress" ? "bg-purple-200 text-purple-800" :
-          "bg-green-200 text-green-800";
+    if (b.status === "tentative") return "bg-yellow-400 text-black border-yellow-600 shadow-md font-bold";
+    if (b.status === "pending") return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    return b.status === "confirmed" ? "bg-blue-100 text-blue-800 border-blue-200" :
+      b.status === "in_progress" ? "bg-purple-100 text-purple-800 border-purple-200" :
+        "bg-green-100 text-green-800 border-green-200";
   };
 
   return (
@@ -61,6 +61,7 @@ export default function Bookings() {
             <Button variant="outline" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}>Next</Button>
             <select className="border border-border rounded p-2 text-sm bg-popover text-foreground" value={filter} onChange={e => setFilter(e.target.value as any)}>
               <option value="all">All</option>
+              <option value="tentative">Tentative (New)</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="in_progress">In Progress</option>
@@ -81,7 +82,8 @@ export default function Bookings() {
           <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
             {days.map(day => {
               const dayStr = formatDate(day);
-              const dayBookings = filtered.filter(b => b.date === dayStr);
+              // Handle full ISO timestamps by checking if the date starts with the YYYY-MM-DD string
+              const dayBookings = filtered.filter(b => b.date && String(b.date).startsWith(dayStr));
               return (
                 <div key={dayStr}
                   onDragOver={(e) => canEdit && e.preventDefault()}
@@ -97,7 +99,7 @@ export default function Bookings() {
                         className={`text-[10px] rounded px-1.5 py-0.5 shadow-sm font-medium ${canEdit ? 'cursor-move' : 'cursor-default'} ${statusColor(b)}`}>
                         <div className="flex justify-between items-center gap-1">
                           <span className="truncate">{b.customer || b.title}</span>
-                          {b.status === 'pending' && b.bookedBy === 'Customer Web' && canEdit && (
+                          {(b.status === 'pending' || b.status === 'tentative') && canEdit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); update(b.id, { status: 'confirmed' }); }}
                               className="bg-white/50 hover:bg-white px-1 rounded text-[10px] font-bold text-cyan-900"
@@ -124,7 +126,7 @@ export default function Bookings() {
               .map(b => (
                 <div key={b.id} className={`flex items-center justify-between border-b border-border p-3 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer ${b.bookedBy === 'Customer Web' && b.status === 'pending' ? 'bg-cyan-50/50 border-cyan-100' : ''}`} onClick={() => markViewed("booking", b.id)}>
                   <div className="flex items-center gap-4 flex-1">
-                    <div className={`w-2 h-2 rounded-full ${b.status === 'confirmed' ? 'bg-blue-500' : b.status === 'pending' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                    <div className={`w-2 h-2 rounded-full ${b.status === 'confirmed' ? 'bg-blue-500' : (b.status === 'pending' || b.status === 'tentative') ? 'bg-yellow-500' : 'bg-green-500'}`} />
                     <div className="flex flex-col">
                       <span className="text-sm font-bold">{b.customer || 'Unknown Customer'}</span>
                       <span className="text-xs text-muted-foreground">{b.title} {b.bookedBy === 'Customer Web' && <span className="text-cyan-600 font-bold ml-1 text-[10px] uppercase">[From Website]</span>}</span>
@@ -133,7 +135,7 @@ export default function Bookings() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-muted-foreground font-medium">{b.date}</div>
-                    {b.status === 'pending' && canEdit && (
+                    {(b.status === 'pending' || b.status === 'tentative') && canEdit && (
                       <Button
                         size="sm"
                         variant={b.bookedBy === 'Customer Web' ? "default" : "outline"}
