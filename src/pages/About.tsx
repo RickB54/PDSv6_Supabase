@@ -20,6 +20,9 @@ import interiorLux2 from "@/assets/about/interior_lux_2.png";
 import interiorDashboard from "@/assets/about/interior_dashboard.png";
 import exteriorGloss from "@/assets/about/exterior_gloss.png";
 import exteriorWheels from "@/assets/about/exterior_wheels.png";
+import primeBlackCar from "@/assets/prime_essential_full_2025.png";
+import aboutYellowCar from "@/assets/about_yellow_sports.png";
+import aboutEliteProducts from "@/assets/about_elite_products.png";
 import { contentService } from "@/lib/content";
 import { useEffect, useState } from "react";
 
@@ -123,20 +126,91 @@ const About = () => {
                   </>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-8 pt-4">
-                <div className="space-y-2">
-                  <h4 className="text-3xl font-black text-blue-900">100%</h4>
-                  <p className="text-sm font-bold uppercase tracking-widest text-zinc-400">Mobile Service</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-3xl font-black text-blue-900">Elite</h4>
-                  <p className="text-sm font-bold uppercase tracking-widest text-zinc-400">Products Only</p>
+            </div>
+            <div className="lg:w-1/2 relative">
+              <img src={primeBlackCar} alt="Prime Auto Detail - Elite Exterior" className="rounded-2xl shadow-2xl relative z-10 w-full h-auto object-cover" />
+              <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-blue-50 -z-0 rounded-full blur-3xl opacity-60" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: 100% MOBILE SERVICE ADVANTAGE */}
+      <section className="py-24 bg-zinc-50 overflow-hidden">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="lg:w-1/2 space-y-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-widest">
+                <Car className="w-4 h-4" />
+                We Come To You
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
+                100% Mobile Service.<br />
+                <span className="text-blue-500">Zero Inconvenience.</span>
+              </h2>
+              <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
+                <p>
+                  Time is your most valuable asset. Why waste it driving to a shop, arranging a ride, or waiting in a lobby? <strong>Prime Auto Detail brings the shop to you.</strong>
+                </p>
+                <p>
+                  Whether you are at home, at the office, or at the gym, our fully equipped mobile unit arrives with everything needed—including power and water—to transform your vehicle right where it parks.
+                </p>
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100">
+                    <h4 className="font-bold text-blue-900 mb-1">Office Friendly</h4>
+                    <p className="text-sm text-zinc-500">We work quietly while you close deals.</p>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100">
+                    <h4 className="font-bold text-blue-900 mb-1">Home Comfort</h4>
+                    <p className="text-sm text-zinc-500">Relax inside while we elevate your driveway.</p>
+                  </div>
                 </div>
               </div>
             </div>
             <div className="lg:w-1/2 relative">
-              <img src={interiorDashboard} alt="Dashboard Clean" className="rounded-2xl shadow-2xl relative z-10" />
-              <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-blue-50 -z-0 rounded-full blur-3xl opacity-60" />
+              {/* Visualizing Mobile Service - Using Exterior Shot as proxy for 'On Location' */}
+              <img src={exteriorGloss} alt="Mobile Service Execution" className="rounded-2xl shadow-2xl w-full h-auto object-cover grayscale-[20%]" />
+              <div className="absolute -z-10 top-12 -right-12 w-64 h-64 bg-blue-200/50 rounded-full blur-3xl"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: ELITE PRODUCT ARSENAL */}
+      <section className="py-24 bg-white">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="lg:w-1/2 order-2 lg:order-1 relative">
+              <img src={aboutEliteProducts} alt="Premium Detailing Supplies" className="rounded-2xl shadow-2xl w-full h-auto object-cover hover:scale-[1.01] transition-transform duration-700" />
+              <div className="absolute -z-10 bottom-12 -left-12 w-64 h-64 bg-yellow-100/50 rounded-full blur-3xl"></div>
+            </div>
+            <div className="lg:w-1/2 order-1 lg:order-2 space-y-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase tracking-widest">
+                <Sparkles className="w-4 h-4" />
+                Chemistry Matters
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
+                Elite Products Only.<br />
+                <span className="text-yellow-500">No Compromises.</span>
+              </h2>
+              <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
+                <p>
+                  Your vehicle's finish is delicate. Using the wrong chemicals can cause long-term fading, stripping, and oxidation. We strictly refuse to use "bulk" industrial cleaners.
+                </p>
+                <p>
+                  Instead, we curate our arsenal from the world's most respected detailing brands to ensure safety, gloss, and durability.
+                </p>
+                <div className="pt-4">
+                  <h4 className="font-bold text-blue-900 uppercase text-sm tracking-widest mb-4 border-b border-zinc-100 pb-2">Our Preferred Brands</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {['Chemical Guys', 'Koch-Chemie', "Meguiar's Pro", 'P&S Detail'].map(brand => (
+                      <div key={brand} className="px-3 py-2 bg-zinc-50 text-zinc-700 font-bold text-center rounded-lg border border-zinc-200 text-xs uppercase">
+                        {brand}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -183,14 +257,8 @@ const About = () => {
       {/* SECTION 3: Interior Refresh & Restoration */}
       <section className="py-24 bg-white overflow-hidden">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <div className="lg:w-1/2 relative lg:order-2">
-              <div className="grid grid-cols-2 gap-4">
-                <img src={interiorLux1} alt="Luxury Interior Detail" className="rounded-xl shadow-lg mt-8" />
-                <img src={interiorLux2} alt="Premium Interior Detail" className="rounded-xl shadow-lg" />
-              </div>
-            </div>
-            <div className="lg:w-1/2 lg:order-1 space-y-8 text-left">
+          <div className="space-y-12">
+            <div className="max-w-4xl space-y-8 text-left">
               <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
                 {aboutData.interiorRefreshTitle}
               </h2>
@@ -206,6 +274,13 @@ const About = () => {
                 ))}
               </ul>
             </div>
+
+            {/* Interior Images Grid (Moved Under Title) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <img src={interiorDashboard} alt="Interior Dashboard" className="rounded-xl shadow-lg w-full h-64 object-cover hover:scale-[1.02] transition-transform duration-500" />
+              <img src={interiorLux1} alt="Luxury Interior Detail" className="rounded-xl shadow-lg w-full h-64 object-cover hover:scale-[1.02] transition-transform duration-500" />
+              <img src={interiorLux2} alt="Premium Interior Detail" className="rounded-xl shadow-lg w-full h-64 object-cover hover:scale-[1.02] transition-transform duration-500" />
+            </div>
           </div>
         </div>
       </section>
@@ -213,21 +288,15 @@ const About = () => {
       {/* SECTION 4: Exterior Care & Protection */}
       <section className="py-24 bg-zinc-50 overflow-hidden">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <div className="lg:w-1/2">
-              <div className="grid grid-cols-2 gap-4">
-                <img src={exteriorWheels} alt="Wheel Detailing" className="rounded-xl shadow-lg" />
-                <img src={exteriorGloss} alt="Paint Correction" className="rounded-xl shadow-lg mt-8" />
-              </div>
-            </div>
-            <div className="lg:w-1/2 space-y-8">
+          <div className="space-y-12">
+            <div className="max-w-4xl space-y-8 text-left">
               <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
                 {aboutData.exteriorCareTitle}
               </h2>
               <p className="text-lg text-zinc-600 leading-relaxed">
                 {aboutData.exteriorCareText}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                 {[
                   { title: "Mirror Clarity", icon: <Car className="w-5 h-5" /> },
                   { title: "Iron Decon", icon: <Droplets className="w-5 h-5" /> },
@@ -240,6 +309,12 @@ const About = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Exterior Images Grid (Startling Yellow Sports Car + Wheel) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <img src={aboutYellowCar} alt="Stunning Yellow Sports Car" className="rounded-2xl shadow-2xl w-full h-80 object-cover hover:scale-[1.01] transition-transform duration-700" />
+              <img src={exteriorWheels} alt="Precision Wheel Detailing" className="rounded-2xl shadow-2xl w-full h-80 object-cover hover:scale-[1.01] transition-transform duration-700" />
             </div>
           </div>
         </div>

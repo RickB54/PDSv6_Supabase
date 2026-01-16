@@ -79,6 +79,7 @@ const CustomerPortal = () => {
   // This replacement is tricky due to size. I'll handle getDuration separately.
   const { toast } = useToast();
   const [vehicleType, setVehicleType] = useState<string>('compact');
+  const [vehicleDetails, setVehicleDetails] = useState<{ make: string, model: string }>({ make: "", model: "" });
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
     compact: "Compact/Sedan",
     midsize: "Mid-Size/SUV",
@@ -259,49 +260,27 @@ const CustomerPortal = () => {
   );
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
 
-  // EMERGENCY HARDCODED PACKAGES for Services Page
-  // Guarantees only the 3 new Prime packages are shown
-  const livePackages = [
-    {
-      id: "prime-2026-exterior",
-      name: "Prime Exterior Detail",
-      description: "Professional exterior detailing service",
-      pricing: { compact: 90, midsize: 110, truck: 130, luxury: 150 },
-      steps: [
-        { id: "foam-pre-soak", name: "Exterior foam pre-soak" },
-        { id: "hand-wash", name: "Two-bucket hand wash" },
-        { id: "wheel-rim-shine", name: "Wheel and rim cleaning" },
-        { id: "blow-dry", name: "Air blow-dry and microfiber drying" },
-        { id: "sealant", name: "Premium spray wax" }
-      ]
-    },
-    {
-      id: "prime-2026-interior",
-      name: "Prime Interior Detail",
-      description: "Deep interior cleaning and conditioning",
-      pricing: { compact: 180, midsize: 200, truck: 220, luxury: 250 },
-      steps: [
-        { id: "vac-interior", name: "Thorough interior vacuum" },
-        { id: "wipe-plastics", name: "Wipe-down of all surfaces" },
-        { id: "window-clean", name: "Interior window cleaning" },
-        { id: "mat-clean", name: "Floor mat cleaning" },
-        { id: "jamb-clean", name: "Door jamb cleaning" }
-      ]
-    },
-    {
-      id: "prime-2026-full",
-      name: "Prime Full Detail",
-      description: "Complete interior and exterior detailing",
-      pricing: { compact: 230, midsize: 260, truck: 290, luxury: 330 },
-      steps: [
-        { id: "ext-hand-wash", name: "Safe hand wash" },
-        { id: "wheel-faces", name: "Wheel and tire cleaning" },
-        { id: "interior-vac-full", name: "Full interior vacuum" },
-        { id: "dash-wipe", name: "Dashboard and console wipe-down" },
-        { id: "windows-in-out", name: "Interior & Exterior glass cleaned" }
-      ]
-    }
-  ];
+  // Combine all packages (Built-in + Custom) to ensure nothing is hidden by custom overrides logic
+  const allPotentialPackages = [...builtInPackages, ...customPackagesLive];
+
+  // Filter for Visibility and map prices
+  const livePackages = allPotentialPackages
+    .filter((p: any) => {
+      // Check metadata visibility (admin toggle)
+      const meta = packageMetaLive[p.id];
+      // Default Prime 2026 packages to HIDDEN if no explicit setting exists (fixes 9 packages issue)
+      if (!meta && p.id.includes('prime-2026')) return false;
+      return meta ? meta.visible !== false : true;
+    })
+    .filter((p: any) => !legacyIds.includes(p.id)) // Ensure legacy ones are hidden by default if not strictly managed
+    .map((p: any) => {
+      const pricing = { ...p.pricing };
+      Object.keys(pricing).forEach(vType => {
+        const key = `package:${p.id}:${vType}`;
+        if (savedPricesLive[key]) pricing[vType as any] = parseFloat(savedPricesLive[key]);
+      });
+      return { ...p, pricing };
+    });
 
   const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false);
   const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false);
@@ -809,6 +788,8 @@ const CustomerPortal = () => {
                     }
 
                     if (distance > 0) params.set('distance', String(distance));
+                    if (vehicleDetails.make) params.set('make', vehicleDetails.make);
+                    if (vehicleDetails.model) params.set('model', vehicleDetails.model);
 
                     window.location.href = `/book?${params.toString()}`;
                   }
@@ -831,7 +812,8 @@ const CustomerPortal = () => {
       <VehicleClassificationDialog
         open={showClassification}
         onOpenChange={setShowClassification}
-        onSelect={(cat) => {
+        onSelect={(cat, details) => {
+          if (details) setVehicleDetails(details);
           // Normalize the category back to the internal IDs if possible
           const lower = cat.toLowerCase();
           if (lower.includes("compact")) setVehicleType("compact");

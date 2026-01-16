@@ -17,6 +17,11 @@ import {
   Zap,
   Star
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 // Import local assets copied earlier
 import paintBefore from "@/assets/paint_before.png";
@@ -56,6 +61,22 @@ const Index = () => {
     perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.'
   });
 
+  const serviceDescriptions: Record<string, string> = {
+    "Decontamination of all surfaces": "We initiate every detail with a chemical and mechanical decontamination process. Iron removers dissolve embedded brake dust, while clay bar treatment pulls out microscopic contaminants that washing misses, leaving paint glass-smooth.",
+    "Paint correction to remove swirl marks": "Swirl marks, scratches, and oxidation dull your vehicle's shine. Our machine polishing process carefully levels the clear coat, permanently removing defects rather than hiding them, revealing true reflection and depth.",
+    "Ceramic coatings for long-term protection": "Wax is temporary; Ceramic is permanent. We apply a semi-permanent layer of liquid quartz that bonds to your paint, creating a sacrificial barrier against UV rays, bird droppings, and chemicals, while making washing effortless.",
+    "Deep interior restoration and conditioning": "We go beyond vacuuming. Using hot water extraction and steam, we sanitize surfaces, lift deep-set stains, and condition leather with pH-balanced formulas that restore the matte, factory finish without greasy residue."
+  };
+
+  const DEFAULT_TESTIMONIALS = [
+    { name: "LISA M.", quote: "The interior cleaning was amazing. They removed pet hair and odors I thought were permanent. My SUV smells and looks fantastic!", rating: 5 },
+    { name: "JAMES D.", quote: "I love their mobile service! They came to my office and detailed my truck while I worked. Convenient and exceptional results.", rating: 5 },
+    { name: "SARAH K.", quote: "Professional, friendly, and affordable. The ceramic coating has kept my BMW looking pristine for months. Best detailing service in Methuen!", rating: 5 },
+    { name: "MICHAEL R.", quote: "Prime Detail Solutions transformed my car! The attention to detail is incredible. My Tesla looks brand new again. Highly recommend!", rating: 5 }
+  ];
+
+  const displayTestimonials = testimonials.length > 0 ? testimonials : DEFAULT_TESTIMONIALS;
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -90,37 +111,87 @@ const Index = () => {
       <section className="py-24 bg-zinc-50 overflow-hidden" id="services">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-              <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
-                {homeData.whyMattersTitle}<br />
-                <span className="text-red-600">{homeData.whyMattersAccent}</span>
-              </h2>
-              <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
-                {homeData.whyMatters.split('\n\n').map((para, i) => (
-                  <p key={i}>
-                    {para.includes('quality over quantity') ? (
-                      <span dangerouslySetInnerHTML={{ __html: para.replace('quality over quantity', '<strong>quality over quantity</strong>') }} />
-                    ) : (
-                      para
-                    )}
-                  </p>
-                ))}
+            {/* Left Content - Typography & List */}
+            <div className="space-y-12">
+              <div className="space-y-4">
+                <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.85]">
+                  More Than Just <br />
+                  <span className="text-blue-700">Detailing Matters</span>
+                </h2>
+                <p className="text-xl text-zinc-600 font-medium max-w-xl leading-relaxed">
+                  Most people mistake a quick car wash for detailing. While automated washes often leave behind micro-scratches and strip protective layers, professional detailing is a restorative process.
+                </p>
               </div>
-              <ul className="space-y-4">
-                {homeData.whyMattersList?.map((item: string, i: number) => (
-                  <li key={i} className="flex items-center gap-3 text-zinc-900 font-bold uppercase tracking-tight italic">
-                    <CheckCircle2 className="w-5 h-5 text-red-600" /> {item}
-                  </li>
-                ))}
+
+              {/* Enhanced Interactive List */}
+              <ul className="space-y-6">
+                {homeData.whyMattersList?.map((item: string, i: number) => {
+                  const desc = serviceDescriptions[item] || "Experience our premium tiered service focusing on this specific aspect of vehicle care.";
+                  return (
+                    <li key={i} className="group">
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <div className="flex items-center gap-4 text-zinc-900 font-bold uppercase tracking-tight italic cursor-pointer transition-all duration-300 hover:translate-x-4 hover:text-blue-700">
+                            <div className="p-2 bg-zinc-100 rounded-full group-hover:bg-blue-100 transition-colors">
+                              <CheckCircle2 className="w-5 h-5 text-blue-700 group-hover:scale-110 transition-transform" />
+                            </div>
+                            <span className="underline decoration-dotted underline-offset-4 decoration-zinc-300 hover:decoration-blue-400 text-lg">{item}</span>
+                          </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-96 bg-zinc-900 text-white border-zinc-800 shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+                          <div className="space-y-3">
+                            <h4 className="font-black text-blue-500 uppercase text-sm tracking-widest border-b border-zinc-800 pb-2 flex items-center gap-2">
+                              <Sparkles className="w-4 h-4" />
+                              {item.split(' ')[0]} Focus
+                            </h4>
+                            <p className="text-zinc-300 text-sm leading-relaxed">
+                              {desc}
+                            </p>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <div className="relative">
               <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl skew-x-1 border-8 border-white">
                 <BeforeAfterSlider beforeImage={paintBefore} afterImage={paintAfter} />
               </div>
-              <div className="absolute -bottom-6 -right-6 bg-red-600 text-white p-8 rounded-xl shadow-xl hidden md:block">
-                <p className="text-4xl font-black italic tracking-tighter">100%</p>
-                <p className="text-xs uppercase font-black tracking-widest opacity-80">Restoration Guarantee</p>
+              <div className="absolute -bottom-6 -right-6 hidden md:block">
+                <HoverCard openDelay={0} closeDelay={200}>
+                  <HoverCardTrigger asChild>
+                    <div className="bg-blue-700 text-white p-8 rounded-xl shadow-xl cursor-pointer hover:bg-zinc-900 transition-colors duration-300 group z-20 relative">
+                      <p className="text-4xl font-black italic tracking-tighter group-hover:text-blue-500 transition-colors">100%</p>
+                      <p className="text-xs uppercase font-black tracking-widest opacity-80 group-hover:text-white transition-colors">Satisfaction</p>
+                    </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent side="left" className="w-[450px] bg-zinc-950 border-zinc-800 text-white p-8 shadow-2xl mr-4 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=left]:slide-in-from-right-2">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 border-b border-zinc-800 pb-4 mb-4">
+                        <div className="bg-blue-600/20 p-2 rounded-full text-blue-500">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-black uppercase italic tracking-tighter text-white">The Prime Standard</h4>
+                          <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Client-First Philosophy</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4 text-zinc-300 text-sm leading-relaxed">
+                        <p>
+                          We believe in perfection. That is why we rigorously follow a <strong>comprehensive multi-point quality checklist</strong> for every vehicle. Our process leaves nothing to chance.
+                        </p>
+                        <p>
+                          Our job isn't done when we put down the polisher; it's done when you are smiling. We perform a <span className="text-white font-bold">comprehensive final walkthrough</span> with every client.
+                        </p>
+                        <p>
+                          We invite you to inspect our work critically. If any aspect—from a rim reflection to a seat crease—doesn't meet your vision, we make it right immediately, on-site, with zero hesitation. Your whim is our command.
+                        </p>
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
               </div>
             </div>
           </div>
@@ -178,22 +249,23 @@ const Index = () => {
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-red-600/10 animate-pulse rounded-2xl" />
             </div>
             <div className="space-y-12 order-1 lg:order-2">
-              <div className="space-y-4 text-center lg:text-left">
-                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none italic">{homeData.precisionProcessTitle.split(' ').slice(0, 2).join(' ')}<br />{homeData.precisionProcessTitle.split(' ').slice(2).join(' ')}</h2>
-                <div className="w-24 h-2 bg-red-600 mx-auto lg:mx-0" />
-              </div>
-
-              <div className="space-y-8">
-                {homeData.precisionProcessSteps?.map((item: any, i: number) => (
-                  <div key={i} className="flex gap-6 group hover:translate-x-2 transition-transform duration-300">
-                    <span className="text-4xl font-black text-red-600 italic tracking-tighter opacity-50">{item.step}</span>
-                    <div className="space-y-1">
-                      <h4 className="text-xl font-black uppercase italic tracking-tight">{item.name}</h4>
-                      <p className="text-zinc-400 text-sm leading-relaxed max-w-md">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div className="w-16 h-1 bg-blue-700 mx-auto rounded-full" />
+              <h3 className="text-5xl md:text-7xl font-black italic text-white uppercase tracking-tighter">
+                Our Precision <br /> Process
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-left">
+              {[
+                { id: "01", title: "Booking", desc: "Easily schedule through our portal with transparent upfront pricing." },
+                { id: "02", title: "Evaluation", desc: "On-site condition assessment to tailor our plan to your vehicle." },
+                { id: "03", title: "The Detail", desc: "Clock-out service where we don't leave until the job is perfect." }
+              ].map((step) => (
+                <div key={step.id} className="space-y-2 group">
+                  <span className="text-4xl font-black text-zinc-700 group-hover:text-blue-700 transition-colors italic">{step.id}</span>
+                  <h4 className="text-2xl font-black uppercase italic tracking-tighter">{step.title}</h4>
+                  <p className="text-zinc-400 font-medium">{step.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -257,33 +329,38 @@ const Index = () => {
       </section>
 
       {/* SECTION 6: What Our Customers Say (Testimonials) */}
-      {testimonials.length > 0 && (
+      {true && (
         <section className="py-24 bg-white border-t border-zinc-100">
           <div className="container mx-auto px-4 max-w-7xl">
-            <div className="text-center mb-16 space-y-4">
-              <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">What Our Customers Say</h2>
-              <p className="text-zinc-500 text-lg italic">Real stories from local vehicle owners.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {testimonials.map((t, i) => (
-                <Card key={i} className="p-8 bg-zinc-50 border-none shadow-sm flex flex-col justify-between transition-all hover:shadow-lg">
-                  <div className="space-y-4">
-                    <div className="flex text-yellow-500 gap-1">
-                      {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current" />)}
+            <div className="text-center space-y-8">
+              <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-zinc-900">
+                Wait Until You See It
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+                {displayTestimonials.map((t, i) => (
+                  <Card key={i} className="bg-white border-zinc-100 p-8 hover:shadow-xl transition-shadow text-left">
+                    <div className="flex gap-1 mb-4">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                      ))}
                     </div>
-                    <p className="text-zinc-600 italic leading-relaxed">"{t.quote}"</p>
-                  </div>
-                  <div className="mt-8 flex items-center gap-4 border-t border-zinc-200 pt-6">
-                    <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
-                      {t.name.charAt(0)}
+                    <p className="text-zinc-600 italic font-serif text-lg leading-relaxed mb-6">
+                      "{t.quote}"
+                    </p>
+                    <div className="flex items-center gap-4 border-t pt-6 border-zinc-100">
+                      <div className="w-12 h-12 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xl">
+                        {t.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-black text-zinc-900 uppercase tracking-wide">{t.name}</h4>
+                        <div className="flex items-center gap-1 text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                          Verified Client
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-black text-zinc-900 uppercase tracking-tighter text-lg">{t.name}</h4>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-black">Verified Client</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -291,12 +368,23 @@ const Index = () => {
 
       {/* SECTION 6: Call to Action */}
       <section className="py-32 bg-white flex justify-center">
-        <div className="container mx-auto px-4 max-w-4xl text-center space-y-12">
-          <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">Experience Pure<br /><span className="text-red-600">Perfection</span></h2>
-          <p className="text-zinc-500 text-xl font-medium max-w-2xl mx-auto italic">Your vehicle is one of your largest investments. Treat it with the respect it deserves.</p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center pt-8">
-            <Button size="lg" onClick={() => navigate("/services")} className="bg-red-600 hover:bg-zinc-900 text-white px-12 h-20 text-xl font-black uppercase italic tracking-tighter rounded-sm">Book Service Now</Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/contact")} className="border-4 border-zinc-900 px-12 h-20 text-xl font-black uppercase italic tracking-tighter rounded-sm group hover:bg-zinc-900 hover:text-white transition-all">Get a Quote <ArrowRight className="ml-2 w-6 h-6 group-hover:translate-x-2 transition-transform" /></Button>
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter leading-none">
+              Experience Pure <br /> Perfection
+            </h2>
+            <p className="text-xl opacity-90 font-medium">
+              Your vehicle is one of your largest investments. <br className="hidden md:block" />
+              Treat it with the respect it deserves.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
+              <Button onClick={() => window.location.href = '/book'} className="h-14 px-10 bg-blue-700 hover:bg-blue-600 text-white uppercase font-black tracking-widest text-lg rounded-xl shadow-2xl shadow-blue-900/50 hover:shadow-blue-500/50 transition-all hover:scale-105">
+                Book Service Now
+              </Button>
+              <Button onClick={() => window.location.href = '/contact'} variant="outline" className="h-14 px-10 border-2 border-white bg-transparent hover:bg-white hover:text-blue-900 text-white uppercase font-black tracking-widest text-lg rounded-xl transition-all">
+                Get A Quote <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>

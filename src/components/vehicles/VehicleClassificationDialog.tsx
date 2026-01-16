@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 interface VehicleClassificationDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSelect: (category: string) => void;
+    onSelect: (category: string, details?: { make: string, model: string }) => void;
 }
 
 type VehicleDB = Record<string, Record<string, string>>;
@@ -110,7 +110,7 @@ export function VehicleClassificationDialog({ open, onOpenChange, onSelect }: Ve
         else if (lower.includes("luxury")) simpleKey = "luxury";
         else simpleKey = "midsize";
 
-        onSelect(simpleKey);
+        onSelect(simpleKey, { make: selectedMake, model: selectedModel });
         onOpenChange(false);
         toast({
             title: "Vehicle Set",

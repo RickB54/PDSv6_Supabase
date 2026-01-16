@@ -5,7 +5,7 @@ import { contentService } from "@/lib/content";
 
 export const HeroSection = () => {
   const [data, setData] = useState({
-    heroTitle: 'PRIME AUTO DETAIL',
+    heroTitle: 'PRIME AUTO<br />DETAIL',
     heroSubtitle: 'Premium auto detailing services that exceed expectations'
   });
 
@@ -66,7 +66,7 @@ export const HeroSection = () => {
       <div className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 text-center">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Main Title - Elegant, Thinner, and Half Size */}
-          <h1 className="hero-title flex flex-col font-medium text-white uppercase" style={{ fontSize: 'clamp(2.5rem, 8vw, 6rem)' }}>
+          <h1 className="hero-title flex flex-col font-medium text-white uppercase" style={{ fontSize: 'clamp(4rem, 10vw, 8rem)' }}>
             {data.heroTitle.includes('<br />') ? (
               data.heroTitle.split('<br />').map((line, i) => <span key={i}>{line}</span>)
             ) : (
@@ -83,14 +83,14 @@ export const HeroSection = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
             <Button
               onClick={() => window.location.href = '/services'}
-              className="h-14 px-10 text-lg font-semibold uppercase tracking-widest bg-black/40 border-2 border-red-600/80 text-white hover:bg-red-600/20 transition-all duration-300 rounded-lg min-w-[240px]"
+              className="h-12 px-8 text-lg font-semibold uppercase tracking-widest bg-black/40 border-2 border-red-600/80 text-white hover:bg-red-600/20 transition-all duration-300 rounded-lg min-w-[200px]"
             >
               VIEW SERVICES
             </Button>
 
             <Button
               onClick={() => window.location.href = '/contact'}
-              className="h-14 px-10 text-lg font-semibold uppercase tracking-widest bg-black/40 border-2 border-blue-600/80 text-white hover:bg-blue-600/20 transition-all duration-300 rounded-lg min-w-[240px]"
+              className="h-12 px-8 text-lg font-semibold uppercase tracking-widest bg-black/40 border-2 border-blue-600/80 text-white hover:bg-blue-600/20 transition-all duration-300 rounded-lg min-w-[200px]"
             >
               SCHEDULE A CONSULT
             </Button>
