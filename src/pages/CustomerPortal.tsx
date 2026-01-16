@@ -30,9 +30,9 @@ import packageFull from "@/assets/package-full.jpg";
 import packagePremium from "@/assets/package-premium.jpg";
 
 // 2026 Package Images (Using 2025 Collection for Essential)
-import primeEssentialExt from "@/assets/prime_essential_exterior_2025.png";
+import primeEssentialExt from "@/assets/prime_essential_exterior_v3.png";
 import primeEssentialInt from "@/assets/prime_essential_interior_2025.png";
-import primeEssentialFull from "@/assets/prime_essential_full_2025.png";
+import primeEssentialFull from "@/assets/prime_essential_full_v3.png";
 // Elite packages use placeholders or reuse until more generated
 import primeEliteExt from "@/assets/prime_essential_exterior.png";
 import primeEliteInt from "@/assets/prime_essential_interior.png";

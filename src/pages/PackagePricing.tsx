@@ -46,9 +46,9 @@ import packageExterior from "@/assets/package-exterior.jpg";
 import packageInterior from "@/assets/package-interior.jpg";
 import packageFull from "@/assets/package-full.jpg";
 import packagePremium from "@/assets/package-premium.jpg";
-import primeEssentialExt from "@/assets/prime_essential_exterior_2025.png";
+import primeEssentialExt from "@/assets/prime_essential_exterior_v3.png";
 import primeEssentialInt from "@/assets/prime_essential_interior_2025.png";
-import primeEssentialFull from "@/assets/prime_essential_full_2025.png";
+import primeEssentialFull from "@/assets/prime_essential_full_v3.png";
 import primeEliteExt from "@/assets/prime_essential_exterior.png";
 import primeEliteInt from "@/assets/prime_essential_interior.png";
 import primeEliteFull from "@/assets/prime_essential_full_detail.png";
@@ -1319,7 +1319,7 @@ export default function PackagePricing() {
                         const customUrl = getPackageMeta(pkg.id)?.imageDataUrl;
                         const isFullDetail = pkg.id.includes('full-detail') || pkg.id.includes('full-detail-2025') || pkg.id.includes('full');
 
-                        if (isFullDetail && !customUrl) {
+                        if (isFullDetail && !customUrl && !packageImages[pkg.id]) {
                           return (
                             <div className="w-full xl:w-[300px] xl:h-[200px] flex overflow-hidden rounded border border-zinc-700 shadow shrink-0">
                               <div className="w-1/2 h-full border-r border-white/10">

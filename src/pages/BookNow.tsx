@@ -854,10 +854,15 @@ const BookNow = () => {
 
 
               <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 mb-2">
-                <h3 className="text-lg font-bold text-foreground uppercase tracking-tight mb-4 flex items-center gap-2">
-                  <HelpCircle className="h-5 w-5 text-primary" />
-                  Vehicle Details
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-foreground uppercase tracking-tight flex items-center gap-2">
+                    <HelpCircle className="h-5 w-5 text-primary" />
+                    Vehicle Details
+                  </h3>
+                  <Button type="button" variant="link" size="sm" onClick={() => setShowClassification(true)} className="text-primary text-xs p-0 h-auto font-bold underline">
+                    Not sure about size?
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="make">Vehicle Make *</Label>
@@ -1138,6 +1143,23 @@ const BookNow = () => {
         <p className="text-center text-sm text-muted-foreground">
           By submitting this form, you agree to be contacted by Prime Auto Detail regarding your booking.
         </p>
+        <VehicleClassificationDialog
+          open={showClassification}
+          onOpenChange={setShowClassification}
+          onSelect={(category, details) => {
+            setVehicleType(category);
+            if (details) {
+              setFormData(prev => ({
+                ...prev,
+                make: details.make,
+                model: details.model
+              }));
+              // UX: Toast confirmation
+              toast({ title: "Vehicle Updated", description: `${details.make} ${details.model} classified as ${category.toUpperCase()}` });
+            }
+            setShowClassification(false);
+          }}
+        />
       </main>
     </div>
   );
