@@ -48,6 +48,8 @@ import { useBookingsStore } from '@/store/bookings';
 import * as bookingsSvc from '@/services/supabase/bookings';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { generateBookingPDF, uploadToFileManager } from '@/lib/bookingsSync';
+import api from '@/lib/api.js';
 
 /**
  * Admin Calendar Manager
@@ -525,7 +527,7 @@ export default function AvailabilityManager() {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const dateTime = `${dateStr}T${manualBooking.time}:00`;
 
-            await bookingsSvc.create({
+            const bookingId = await bookingsSvc.create({
                 customer_name: manualBooking.name,
                 phone: manualBooking.phone,
                 email: manualBooking.email,
@@ -542,7 +544,50 @@ export default function AvailabilityManager() {
                 notes: 'Manual Entry via Availability Manager'
             });
 
-            toast({ title: "Booking Created", description: `${manualBooking.name} on ${dateStr}` });
+            // Requirement: PDF + Email for Manual Entry
+            const dateIso = new Date(dateTime).toISOString();
+            const bookingForPdf = {
+                id: `manual_${Date.now()}`,
+                title: manualBooking.service,
+                customer: manualBooking.name,
+                date: dateIso,
+                status: "confirmed"
+            };
+
+            const pdfDataUrl = generateBookingPDF(bookingForPdf as any, {
+                vehicle: `${manualBooking.year} ${manualBooking.make} ${manualBooking.model}`,
+                service: manualBooking.service,
+                price: 0,
+                notes: 'Manual Entry via Admin',
+            });
+
+            try {
+                const d = new Date(dateIso);
+                const year = d.getFullYear();
+                const monthName = d.toLocaleString(undefined, { month: "long" });
+                const path = `Bookings ${year}/${monthName}/`;
+                uploadToFileManager(pdfDataUrl, path, bookingForPdf as any, { service: manualBooking.service, price: 0 });
+            } catch (err) { console.error("PDF Upload Failed:", err); }
+
+            const payload = {
+                customer: { name: manualBooking.name, email: manualBooking.email, phone: manualBooking.phone },
+                vehicle: { year: manualBooking.year, make: manualBooking.make, model: manualBooking.model, type: 'Manual' },
+                service: manualBooking.service,
+                addOns: [],
+                date: dateIso,
+                total: 0,
+                notes: 'Manual Entry',
+                pdfDataUrl
+            };
+
+            try {
+                await api('/api/email/admin', { method: 'POST', body: JSON.stringify(payload) });
+                if (manualBooking.email) {
+                    await api('/api/email/customer', { method: 'POST', body: JSON.stringify({ to: manualBooking.email, ...payload }) });
+                }
+            } catch (err) { console.error("Email Mock Failed:", err); }
+
+            toast({ title: "Booking Created", description: `${manualBooking.name} on ${dateStr} (PDF Saved)` });
             setShowManualBooking(false);
             setManualBooking({ name: '', phone: '', email: '', service: 'Prime Essential Interior', time: '09:00', make: '', model: '', year: '' });
             await refreshBookings();

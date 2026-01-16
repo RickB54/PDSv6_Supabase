@@ -409,10 +409,9 @@ const CustomerPortal = () => {
                   const customUrl = packageMetaLive[pkg.id]?.imageDataUrl;
                   const defaultImg = packageImages[pkg.id];
 
-                  // Split screen logic for Full Detail packages
                   const isFullDetail = pkg.id.includes('full-detail') || pkg.id.includes('full-detail-2025') || pkg.id.includes('full');
 
-                  if (isFullDetail && !customUrl) {
+                  if (isFullDetail && !customUrl && !packageImages[pkg.id]) {
                     // Show split screen if we have Essential assets, otherwise fallback
                     return (
                       <div className="relative h-48 overflow-hidden flex shadow-inner">

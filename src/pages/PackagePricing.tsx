@@ -788,9 +788,20 @@ export default function PackagePricing() {
     "prime-essential-exterior": primeEssentialExt,
     "prime-essential-interior": primeEssentialInt,
     "prime-essential-full": primeEssentialFull,
+
+    // 3-Pack (Prime 2026) Images - Matching Customer Portal
+    "prime-2026-exterior": primeEssentialExt,
+    "prime-2026-interior": primeEssentialInt,
+    "prime-2026-full": primeEssentialFull,
+
     "prime-elite-exterior": primeEliteExt,
     "prime-elite-interior": primeEliteInt,
     "prime-elite-full": primeEliteFull,
+    "prime-express-exterior": packageExpress,
+    "prime-express-interior": packageExpress,
+    "prime-express-full-detail": packageFull,
+
+    // Legacy / Other Mappings
     "basic-exterior": packageBasic,
     "express-wax": packageExpress,
     "full-exterior": packageExterior,
