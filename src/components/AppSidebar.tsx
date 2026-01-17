@@ -236,18 +236,49 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: "Prime Website", url: "/", icon: Globe },
   ];
 
-  // --- MENU CONFIG ---
   // Using shared config to ensure Sidebar and Section Landing pages match
   const MENU_GROUPS = useMemo(() => {
-    const tentativeCount = allBookings.filter(b => b.status === 'tentative').length;
+    // Count TODAY's bookings (not just tentative)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayBookings = allBookings.filter(b => {
+      const bookingDate = new Date(b.date);
+      bookingDate.setHours(0, 0, 0, 0);
+      return bookingDate.getTime() === today.getTime();
+    });
+
+    // Check if there are unread booking alerts
+    const bookingAlerts = getAdminAlerts().filter(a =>
+      a.type === 'booking_created' && !a.read
+    );
+
+    // Badge Logic: 
+    // 1. Unread Alerts > 0 -> RED Badge (Count = Unread)
+    // 2. Today's Bookings > 0 -> BLUE Badge (Count = Today's)
+    // 3. Otherwise -> BLUE Badge (Count = 0)
+
+    let badgeCount = 0;
+    let badgeColor: 'red' | 'blue' = 'blue';
+
+    if (bookingAlerts.length > 0) {
+      badgeCount = bookingAlerts.length;
+      badgeColor = 'red';
+    } else {
+      badgeCount = todayBookings.length;
+      badgeColor = 'blue';
+    }
+
+    console.log(`[AppSidebar] Badge Logic -> Color: ${badgeColor}, Count: ${badgeCount} (Unread: ${bookingAlerts.length}, Today: ${todayBookings.length})`);
+
     return getMenuGroups({
       todoCount,
       payrollDueCount,
       inventoryCount,
       fileCount,
-      tentativeBookingsCount: tentativeCount
+      tentativeBookingsCount: badgeCount,
+      bookingsBadgeColor: badgeColor
     });
-  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings, tick]);
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings, allBookings.length, tick]);
 
   // Helper: Are ANY groups open?
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
@@ -449,7 +480,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                       {open && <span>{item.title}</span>}
                                       {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                                       {open && item.badge !== undefined && !isChatAlert && (
-                                        <span className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white`}>
+                                        <span
+                                          className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white ${item.key === 'bookings' && item.badge > 0 ? 'animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.6)]' : ''
+                                            }`}
+                                        >
                                           {item.badge}
                                         </span>
                                       )}

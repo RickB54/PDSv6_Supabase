@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Bell } from "lucide-react";
-import { useAlertsStore } from "@/store/alerts";
+import { useAlertsStore, mapAlert } from "@/store/alerts";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,14 +33,19 @@ export default function NotificationBell() {
     }
     if (count > prevUnreadRef.current) {
       setRing(true);
+      // LOUD notification beep for new bookings
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = "sine"; o.frequency.value = 880;
-        g.gain.value = 0.02;
+        o.type = "square"; // More attention-grabbing
+        o.frequency.value = 1200; // Higher pitch
+        g.gain.setValueAtTime(0.3, ctx.currentTime); // LOUD volume (was 0.02)
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
         o.connect(g); g.connect(ctx.destination);
-        o.start(); setTimeout(() => { o.stop(); ctx.close(); }, 180);
+        o.start();
+        o.stop(ctx.currentTime + 0.3);
+        setTimeout(() => ctx.close(), 400);
       } catch { }
       setTimeout(() => setRing(false), 600);
     }
@@ -84,9 +89,21 @@ export default function NotificationBell() {
   }, [refresh, employeeKeys.join('|')]);
 
   const items = useMemo(() => {
-    if (isEmployee) return [...(empItems || [])].reverse().slice(0, 10);
-    return [...(latest || [])].reverse().slice(0, 10);
-  }, [latest, empItems, isEmployee]);
+    // Sort by newest first (reverse the array since alerts are stored oldest-first)
+    if (isEmployee) {
+      const sorted = [...(empItems || [])].reverse();
+      return sorted.slice(0, 10);
+    }
+    // For admin alerts, get raw alerts to access timestamps, then map to UI format
+    const sortedAlerts = [...(alerts || [])]
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+      .slice(0, 10)
+      .map(a => {
+        const mapped = mapAlert(a);
+        return { ...mapped, timestamp: a.timestamp, read: a.read };
+      });
+    return sortedAlerts;
+  }, [alerts, empItems, isEmployee]);
   // Compute important unread using full AdminAlert objects, not mapped UI items
   const importantUnreadActual = useMemo(() => {
     if (isEmployee) return 0; // employee notifications are all treated equally for now
@@ -117,7 +134,23 @@ export default function NotificationBell() {
         ) : (
           items.map(a => (
             <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-border/50 focus:bg-zinc-800 focus:text-white cursor-pointer group">
-              <div className="text-sm break-words w-full leading-relaxed group-hover:text-white">{a.title}</div>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-sm break-words flex-1 leading-relaxed group-hover:text-white">{a.title}</div>
+                {(a as any).timestamp && (
+                  <div className="text-[10px] text-muted-foreground ml-2 whitespace-nowrap">
+                    {(() => {
+                      const diff = Date.now() - new Date((a as any).timestamp).getTime();
+                      const mins = Math.floor(diff / 60000);
+                      const hrs = Math.floor(diff / 3600000);
+                      const days = Math.floor(diff / 86400000);
+                      if (mins < 1) return 'Just now';
+                      if (mins < 60) return `${mins}m ago`;
+                      if (hrs < 24) return `${hrs}h ago`;
+                      return `${days}d ago`;
+                    })()}
+                  </div>
+                )}
+              </div>
               <div className="flex items-center justify-end w-full gap-3 mt-1">
                 <a
                   href={a.href}

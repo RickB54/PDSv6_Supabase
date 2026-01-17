@@ -577,12 +577,40 @@ const SearchCustomer = () => {
                                 const tA = new Date(a.date).getTime();
                                 const tB = new Date(b.date).getTime();
                                 return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
-                              }).map(booking => (
-                                <div key={booking.id} className="p-3 bg-zinc-950 rounded border border-zinc-800 flex items-center justify-between">
-                                  <div><div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-zinc-500" /><span className="text-zinc-300 text-sm font-medium">{new Date(booking.date).toLocaleDateString()}</span></div><div className="text-xs text-zinc-500 mt-1">{booking.title}</div></div>
-                                  <span className={`text-xs px-2 py-0.5 rounded ${booking.status === 'done' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}`}>{booking.status}</span>
-                                </div>
-                              ))
+                              }).map(booking => {
+                                const bookingDate = new Date(booking.date);
+                                const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                                return (
+                                  <div key={booking.id} className="p-3 bg-zinc-950 rounded border border-zinc-800 hover:border-zinc-700 transition-all">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="h-3 w-3 text-zinc-500" />
+                                          <span className="text-zinc-300 text-sm font-medium">{dateStr}</span>
+                                          <span className="text-zinc-600 text-xs">@</span>
+                                          <span className="text-zinc-400 text-xs">{timeStr}</span>
+                                        </div>
+                                        <div className="mt-1.5 text-sm text-zinc-200 font-medium">{booking.title || 'Service'}</div>
+                                        {booking.price && (
+                                          <div className="mt-1 text-xs text-emerald-400 font-semibold">${booking.price.toFixed(2)}</div>
+                                        )}
+                                        {booking.createdAt && (
+                                          <div className="mt-1 text-[10px] text-zinc-600">
+                                            Booked: {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(booking.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${booking.status === 'done' ? 'bg-emerald-500/10 text-emerald-400' :
+                                          booking.status === 'tentative' ? 'bg-yellow-500/10 text-yellow-400' :
+                                            booking.status === 'confirmed' ? 'bg-blue-500/10 text-blue-400' :
+                                              'bg-zinc-800 text-zinc-400'
+                                        }`}>{booking.status}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })
                             ) : (<div className="text-center py-8 text-zinc-600 border border-dashed border-zinc-800 rounded">No booking history.</div>)}
                           </div>
                         </div>

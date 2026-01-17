@@ -3,20 +3,20 @@ import { getAdminAlerts, pushAdminAlert, AdminAlert, markAlertRead, markAllAlert
 
 type UIAlert = { id: string; title: string; href: string };
 
-  interface AlertsState {
-    alerts: AdminAlert[];
-    latest: UIAlert[];
-    unreadCount: number;
-    lastNotifiedId?: string;
-    add: (alert: AdminAlert) => void;
-    markAllRead: () => void;
-    markRead: (id: string) => void;
-    dismiss: (id: string) => void;
-    dismissAll: () => void;
-    refresh: () => void;
-  }
+interface AlertsState {
+  alerts: AdminAlert[];
+  latest: UIAlert[];
+  unreadCount: number;
+  lastNotifiedId?: string;
+  add: (alert: AdminAlert) => void;
+  markAllRead: () => void;
+  markRead: (id: string) => void;
+  dismiss: (id: string) => void;
+  dismissAll: () => void;
+  refresh: () => void;
+}
 
-function mapAlert(a: AdminAlert): UIAlert {
+export function mapAlert(a: AdminAlert): UIAlert {
   // Show percent-only for exam progress outcomes, keep destination appropriate
   const isExamOutcome = a.type === "exam_passed" || a.type === "exam_failed";
   const title = isExamOutcome
@@ -44,8 +44,8 @@ function mapAlert(a: AdminAlert): UIAlert {
       href = "/inventory-control";
       break;
     case "booking_created":
-      // Route to Customer Profiles instead of removed Bookings page
-      href = "/search-customer";
+      // Route to Bookings page with booking ID to open edit modal
+      href = a.payload?.id ? `/bookings?id=${a.payload.id}` : "/bookings";
       break;
     case "customer_added":
       href = "/search-customer";

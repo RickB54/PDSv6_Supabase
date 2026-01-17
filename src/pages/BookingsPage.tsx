@@ -463,18 +463,20 @@ export default function BookingsPage() {
     setSelectedBooking(booking);
     const matchingCust = customers.find(c => c.name === booking.customer);
     setSelectedCustomer(matchingCust || null);
+
+    // Populate formData from booking first, then fallback to customer
     setFormData({
-      customer: booking.customer,
-      customerId: booking.customerId,
-      email: customers.find(c => c.name === booking.customer)?.email || "",
-      phone: customers.find(c => c.name === booking.customer)?.phone || "",
-      service: booking.title,
+      customer: booking.customer || "",
+      customerId: booking.customerId || matchingCust?.id,
+      email: booking.email || matchingCust?.email || "",
+      phone: booking.phone || matchingCust?.phone || "",
+      service: booking.title || "",
       vehicle: booking.vehicle || "",
       vehicleYear: booking.vehicleYear || "",
       vehicleMake: booking.vehicleMake || "",
       vehicleModel: booking.vehicleModel || "",
       address: booking.address || "",
-      time: format(parseISO(booking.date), "HH:mm"),
+      time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "",
@@ -710,6 +712,44 @@ export default function BookingsPage() {
     toast.info("Booking duplicated. Please select a new time.");
   };
 
+  // 🗑️ Delete Test Bookings - Only deletes bookings with test notes
+  const handleDeleteTestBookings = async () => {
+    const testBookings = items.filter(b =>
+      b.notes?.includes('Test booking - can be deleted')
+    );
+
+    if (testBookings.length === 0) {
+      toast.info('No test bookings found to delete');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${testBookings.length} test booking(s)?\n\nThis will only delete bookings with notes: "Test booking - can be deleted"\n\nYour real bookings will NOT be affected.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Delete from Supabase
+      for (const booking of testBookings) {
+        if (booking.id) {
+          await supabase.from('bookings').delete().eq('id', booking.id);
+        }
+      }
+
+      // Refresh the bookings list
+      await refresh();
+
+      // Force calendar refresh
+      window.dispatchEvent(new Event('availability-changed'));
+
+      toast.success(`✅ Deleted ${testBookings.length} test booking(s)`);
+    } catch (error) {
+      console.error('Failed to delete test bookings:', error);
+      toast.error('Failed to delete test bookings');
+    }
+  };
+
   const handleSavePDF = () => {
     if (!formData.customer || !formData.service) {
       toast.error('Please fill in Customer and Service to generate PDF');
@@ -798,6 +838,18 @@ export default function BookingsPage() {
           </Button>
 
           <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
+
+          {/* 🗑️ DELETE TEST DATA BUTTON - Only on localhost */}
+          {window.location.hostname === 'localhost' && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteTestBookings}
+              className="h-8 bg-red-600 hover:bg-red-700"
+            >
+              🗑️ Delete Test Data
+            </Button>
+          )}
 
           <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
             <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>

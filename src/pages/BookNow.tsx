@@ -28,6 +28,7 @@ import api from "@/lib/api.js";
 import { upsertSupabaseEstimate } from "@/lib/supa-data";
 import { contentService } from "@/lib/content";
 import { getCurrentUser } from "@/lib/auth";
+import supabase from "@/lib/supabase";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // Calendar component import removed (replaced by AvailabilityPicker)
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
@@ -74,6 +75,34 @@ const BookNow = () => {
     refreshBookings();
     refreshCoupons();
   }, [refreshBookings, refreshCoupons]);
+
+  // 🧪 TEST DATA FILLER - Only on localhost
+  const fillTestData = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(15, 0, 0, 0); // 3:00 PM tomorrow
+
+    setFormData({
+      name: "Rick Berube",
+      email: "rick.primeautodetail@gmail.com",
+      phone: "(555) 123-4567",
+      address: "123 Test Street, Worcester, MA 01608",
+      make: "Toyota",
+      model: "Camry",
+      year: "2022",
+      datetime: "",
+      package: "prime-essential-interior",
+      message: "Test booking - can be deleted",
+      conditionInside: "Good",
+      conditionOutside: "Fair"
+    });
+    setVehicleType('midsize');
+    setAddOns(['premium-wax', 'interior-protection']);
+    setDate(tomorrow);
+    setSelectedTime('15:00:00');
+    setIsEditingDate(false);
+    toast({ title: "✅ Test Data Filled!", description: "All fields auto-populated for testing" });
+  };
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
   const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
@@ -645,6 +674,15 @@ const BookNow = () => {
       const endTimeDate = new Date(submissionDate.getTime() + durationHours * 60 * 60 * 1000);
       const endTimeIso = endTimeDate.toISOString();
 
+      console.log('✅ BOOKING CREATED:', {
+        id: finalId,
+        customer: formData.name,
+        service: bookingPayload.service,
+        date: dateIso,
+        status: 'tentative',
+        supabaseId: createdBooking?.id
+      });
+
       // Trigger notifications and PDF generation (booking already saved to Supabase above)
       const bookingRecord = {
         id: finalId,
@@ -662,54 +700,62 @@ const BookNow = () => {
         notes: finalNotes
       };
 
-      // Trigger bell notification immediately
-      notify('booking_created', `Web Booking: ${formData.name} — ${bookingPayload.service}`, 'system', { id: finalId });
-
-      // Generate and save PDF to File Manager
+      // Generate and save PDF to File Manager (this creates ONE alert)
       try {
         const { onBookingCreated } = await import("@/lib/bookingsSync");
         await onBookingCreated(bookingRecord);
+        console.log('✅ PDF GENERATED and saved to File Manager');
       } catch (syncErr) {
-        console.error("PDF/Alert generation failed:", syncErr);
+        console.error("❌ PDF/Alert generation failed:", syncErr);
       }
 
-      // Refresh the bookings store to show the new booking immediately
+      // FORCE REFRESH the bookings store to show the new booking immediately
+      console.log('🔄 Refreshing bookings store...');
       await refreshBookings();
 
-      // 2) Admin & Customer Email + SMS (awaits response before redirect to ensure success)
+      // Wait a moment and refresh again to be absolutely sure
+      setTimeout(async () => {
+        await refreshBookings();
+        console.log('✅ Bookings store refreshed AGAIN');
+      }, 1000);
+
+      // Send REAL Email to Admin (Rick.PrimeAutoDetail@gmail.com)
       try {
-        // Re-generate PDF just for the email payload to avoid sharing state
-        const bookingRef = { id: finalId, title: bookingPayload.service || "Booking", customer: formData.name, date: dateIso, status: "tentative" } as any;
-        const pdfDataUrl = generateBookingPDF(bookingRef, {
-          vehicle: `${formData.year} ${formData.make} ${formData.model}`,
-          service: bookingPayload.service,
-          price: discountedTotal,
-          notes: formData.message,
+        const bookingDate = new Date(dateIso);
+        const formattedDate = bookingDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        const formattedTime = bookingDate.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit'
         });
 
-        await Promise.all([
-          api('/api/email/admin', { method: 'POST', body: JSON.stringify({ ...bookingPayload, pdfDataUrl }) }),
-          api('/api/email/customer', { method: 'POST', body: JSON.stringify({ to: formData.email, ...bookingPayload, pdfDataUrl }) })
-        ]);
-      } catch (e) {
-        console.error("Notification delivery failed (email)", e);
+        console.log('📧 Attempting to send email via Edge Function...');
+        const { data, error } = await supabase.functions.invoke('send-booking-email', {
+          body: {
+            to: 'rick.primeautodetail@gmail.com', // Lowercase to match Resend requirement
+            subject: `🚗 New Booking: ${formData.name} - ${bookingPayload.service}`,
+            customerName: formData.name,
+            service: bookingPayload.service,
+            date: formattedDate,
+            time: formattedTime,
+            price: discountedTotal.toFixed(2)
+          }
+        });
+
+        if (error) {
+          console.error('❌ Email Edge Function Error:', error);
+        } else {
+          console.log('✅ Admin email sent successfully to rick.primeautodetail@gmail.com', data);
+        }
+      } catch (emailError) {
+        console.error("❌ Email sending FAILED:", emailError);
       }
 
-      // 3) Admin toast + sound (local only)
-      try {
-        toast({ title: `NEW BOOKING! $${discountedTotal.toFixed(2)} — ${formData.name}`, description: `${new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, duration: 8000 });
-        const audio = new Audio('/sounds/cash-register.mp3');
-        audio.play().catch(() => { });
-        if (typeof Notification !== 'undefined') {
-          if (Notification.permission === 'granted') {
-            new Notification('New Booking', { body: `${formData.name} — $${discountedTotal.toFixed(2)}`, icon: '/favicon.ico' });
-          } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission().then((p) => { if (p === 'granted') new Notification('New Booking', { body: `${formData.name} — $${discountedTotal.toFixed(2)}`, icon: '/favicon.ico' }); });
-          }
-        }
-      } catch { }
-
-      // 4) Redirect to thank you
+      // Redirect to thank you
       navigate(`/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=${encodeURIComponent(new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}&date=${encodeURIComponent(new Date(dateIso).toLocaleDateString())}`);
 
       // Reset form
@@ -806,12 +852,24 @@ const BookNow = () => {
       )}
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link to="/services">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Return to Services
-          </Link>
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" asChild>
+            <Link to="/services">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Return to Services
+            </Link>
+          </Button>
+
+          {/* 🧪 TEST DATA BUTTON - Only on localhost */}
+          {window.location.hostname === 'localhost' && (
+            <Button
+              onClick={fillTestData}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold shadow-lg"
+            >
+              🧪 Fill Test Data
+            </Button>
+          )}
+        </div>
 
         <div className="space-y-8 animate-fade-in">
           <div className="text-center space-y-4 mb-2">

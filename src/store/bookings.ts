@@ -64,7 +64,10 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
     set({ loading: true });
     try {
       // Fetch from Supabase
+      console.log('🔄 Fetching bookings from Supabase...');
       const remoteItems: Booking[] = await getSupabaseBookings();
+      console.log(`✅ Fetched ${remoteItems.length} bookings from Supabase`);
+      console.log('📊 Bookings:', remoteItems.map(b => ({ id: b.id, customer: b.customer, status: b.status, date: b.date })));
 
       // MIGRATION CHECK: 
       // If Remote is empty BUT Local has data, migrate all local to remote.
@@ -88,12 +91,15 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
         }
       }
 
+      const tentativeCount = remoteItems.filter(i => i.status === 'tentative').length;
+      console.log(`🟡 ${tentativeCount} TENTATIVE bookings (should glow in sidebar)`);
+
       set({
         items: remoteItems,
         pendingCount: remoteItems.filter((i: Booking) => i.status === "pending").length
       });
     } catch (e) {
-      console.error("Booking sync failed, falling back to local for view", e);
+      console.error("❌ Booking sync failed, falling back to local for view", e);
       // Fallback
       set({ items: loadLocal() });
     } finally {

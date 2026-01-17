@@ -67,6 +67,11 @@ export async function create(input: BookingInput) {
     }
 
     // 3. Create Booking
+    const bookedByInfo = input.booked_by || 'Customer Web';
+    const fullNotes = input.add_ons && input.add_ons.length > 0
+      ? (input.notes ? `${input.notes}\n\nAdd-Ons: ${input.add_ons.join(', ')}\nBooked by: ${bookedByInfo}` : `Add-Ons: ${input.add_ons.join(', ')}\nBooked by: ${bookedByInfo}`)
+      : (input.notes ? `${input.notes}\nBooked by: ${bookedByInfo}` : `Booked by: ${bookedByInfo}`);
+
     const { data, error } = await supabase.from('bookings').insert({
       customer_id: customerId,
       vehicle_id: vehicleId,
@@ -74,10 +79,8 @@ export async function create(input: BookingInput) {
       service_price: input.price_total,
       scheduled_at: input.date,
       status: input.status || 'pending',
-      booked_by: input.booked_by || 'Customer Web',
-      notes: input.add_ons && input.add_ons.length > 0
-        ? (input.notes ? `${input.notes}\n\nAdd-Ons: ${input.add_ons.join(', ')}` : `Add-Ons: ${input.add_ons.join(', ')}`)
-        : input.notes,
+      notes: fullNotes,
+      add_ons: input.add_ons  // Store add-ons in jsonb column if it exists
     }).select('*').single();
 
     if (error) throw error;

@@ -15,7 +15,8 @@ import {
     Users,
     FlaskConical,
     Video,
-    Phone
+    Phone,
+    Package // Added Package icon
 } from "lucide-react";
 
 export function GlobalRightSidebar() {
@@ -103,6 +104,12 @@ export function GlobalRightSidebar() {
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/notes')} title="Personal Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Book className="w-5 h-5 text-amber-200" />
                 {!collapsed && <span>Notes</span>}
+            </Button>
+
+            {/* Inventory Shortcut - Added */}
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Package className="w-5 h-5 text-cyan-500" />
+                {!collapsed && <span>Inventory</span>}
             </Button>
 
             {/* Chemicals Shortcut */}
