@@ -471,10 +471,10 @@ export default function BookingsPage() {
       email: booking.email || matchingCust?.email || "",
       phone: booking.phone || matchingCust?.phone || "",
       service: booking.title || "",
-      vehicle: booking.vehicle || "",
-      vehicleYear: booking.vehicleYear || "",
-      vehicleMake: booking.vehicleMake || "",
-      vehicleModel: booking.vehicleModel || "",
+      vehicle: booking.vehicle || matchingCust?.vehicleType || "",
+      vehicleYear: booking.vehicleYear || matchingCust?.year || "",
+      vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
+      vehicleModel: booking.vehicleModel || matchingCust?.model || "",
       address: booking.address || "",
       time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
@@ -1318,6 +1318,23 @@ export default function BookingsPage() {
 
             <div className="overflow-y-auto flex-1 px-4 sm:px-6">
               <div className="grid gap-4 py-4">
+                {/* SUMMARY HEADER (READ ONLY) */}
+                <div className="p-3 bg-zinc-950/50 rounded-lg border border-purple-500/20 mb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Service Summary</div>
+                      <div className="text-white font-medium text-lg">{formData.service || "No Service Selected"}</div>
+                      {formData.addons.length > 0 && <div className="text-zinc-400 text-sm">+ {formData.addons.join(", ")}</div>}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-emerald-400 font-bold text-lg">
+                        {selectedBooking?.price ? `$${selectedBooking.price.toFixed(2)}` : 'Est.'}
+                      </div>
+                      <div className="text-zinc-500 text-xs">{formData.date ? format(new Date(formData.date), "MMM d, yyyy") : "No Date"}</div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Time</label>
                   <div className="col-span-3 grid grid-cols-2 gap-2">

@@ -739,6 +739,7 @@ const BookNow = () => {
             to: 'rick.primeautodetail@gmail.com', // Lowercase to match Resend requirement
             subject: `🚗 New Booking: ${formData.name} - ${bookingPayload.service}`,
             customerName: formData.name,
+            customerEmail: formData.email, // Passed for Reply-To
             service: bookingPayload.service,
             date: formattedDate,
             time: formattedTime,

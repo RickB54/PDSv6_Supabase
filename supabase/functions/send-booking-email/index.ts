@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY environment variable not set');
     }
 
-    const { to, subject, html, customerName, service, date, time, price } = await req.json()
+    const { to, subject, html, customerName, customerEmail, service, date, time, price } = await req.json()
 
     console.log(`📧 Sending email to: ${to}, Subject: ${subject}`);
 
@@ -30,6 +30,7 @@ serve(async (req) => {
     const payload = {
       from: 'onboarding@resend.dev', // Plain email for testing mode
       to: [to],
+      reply_to: customerEmail || undefined, // Allow replying to the customer
       subject: subject,
       html: html || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">

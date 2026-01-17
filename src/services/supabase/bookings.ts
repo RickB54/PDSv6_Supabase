@@ -80,7 +80,14 @@ export async function create(input: BookingInput) {
       scheduled_at: input.date,
       status: input.status || 'pending',
       notes: fullNotes,
-      add_ons: input.add_ons  // Store add-ons in jsonb column if it exists
+      add_ons: input.add_ons,  // Store add-ons
+      // SNAPSHOT: Store vehicle details in booking_vehicle JSONB so they appear even if not joined
+      booking_vehicle: {
+        year: input.year || '',
+        make: input.make || '',
+        model: input.model || '',
+        type: input.vehicle_type || ''
+      }
     }).select('*').single();
 
     if (error) throw error;

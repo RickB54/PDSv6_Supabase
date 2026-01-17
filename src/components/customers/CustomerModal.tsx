@@ -14,8 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
-
-
+import { useBookingsStore } from "@/store/bookings";
 
 interface Props {
   open: boolean;
@@ -33,6 +32,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [showMap, setShowMap] = useState(false);
   const [linkedVehicles, setLinkedVehicles] = useState<any[]>([]);
   const [currentVehicleIdx, setCurrentVehicleIdx] = useState<number | null>(null);
+  const { items: allBookings } = useBookingsStore();
 
   const user = getCurrentUser();
   const isAdmin = user?.role === 'admin';
@@ -780,6 +780,39 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       />
                     </div>
                   </div>
+
+
+                  {/* REAL BOOKING HISTORY */}
+                  <div className="space-y-3 mt-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Verified Booking History</h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar border border-zinc-800 rounded p-2 bg-zinc-900/30">
+                      {allBookings.filter(b => (b.customer || '').toLowerCase() === (form.name || '').toLowerCase()).length === 0 && (
+                        <div className="text-sm text-zinc-500 text-center py-4">No bookings found for this customer name.</div>
+                      )}
+                      {allBookings
+                        .filter(b => (b.customer || '').toLowerCase() === (form.name || '').toLowerCase())
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map(booking => (
+                          <div key={booking.id} className="p-2 bg-zinc-950 rounded border border-zinc-800 flex justify-between items-center text-sm">
+                            <div>
+                              <div className="text-zinc-300 font-medium">
+                                {new Date(booking.date).toLocaleDateString()}
+                                <span className="text-zinc-600 mx-2">|</span>
+                                {booking.title}
+                              </div>
+                              {booking.addons && booking.addons.length > 0 && (
+                                <div className="text-xs text-zinc-500 mt-1">
+                                  + {booking.addons.join(", ")}
+                                </div>
+                              )}
+                            </div>
+                            {booking.price && (
+                              <div className="text-emerald-500 font-mono">${booking.price.toFixed(2)}</div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
                 </>
               )
             }
@@ -1003,7 +1036,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       <VehicleSelectorModal
         open={vehicleSelectorOpen}
