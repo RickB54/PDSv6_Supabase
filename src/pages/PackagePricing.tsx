@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -118,6 +119,11 @@ export default function PackagePricing() {
     pricing: { compact: "", midsize: "", truck: "", luxury: "" } as Record<string, string>,
   });
   const [viewAllOpen, setViewAllOpen] = useState(false);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [matrixOpen, setMatrixOpen] = useState(false);
+  const [comparisonVehicle, setComparisonVehicle] = useState('compact');
+  const [comparisonSelection, setComparisonSelection] = useState<Record<string, boolean>>({});
   const [liveSnapshot, setLiveSnapshot] = useState<any>(null);
   const builtInSizes: string[] = ["compact", "midsize", "truck", "luxury"];
   const [vehicleType, setVehicleType] = useState<string>("compact");
@@ -129,6 +135,13 @@ export default function PackagePricing() {
     luxury: "Luxury/High-End (Luxury and premium vehicles)",
   });
 
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("mode") === "scenario") {
+      setComparisonOpen(true);
+    }
+  }, [searchParams]);
+
   // Package mode toggle state
   const [packageMode, setPackageMode] = useState<"3-pack" | "6-pack">("6-pack");
 
@@ -138,6 +151,17 @@ export default function PackagePricing() {
     if (target === "packages") return key.startsWith("package:");
     if (target === "addons") return key.startsWith("addon:");
     return false;
+  };
+
+  const [scenarioProj, setScenarioProj] = useState({ pkg: 0, addon: 0 });
+  const [projInput, setProjInput] = useState(""); // Input for projection %
+
+  const getProjectedPrice = (type: 'package' | 'addon', id: string, size: string) => {
+    const key = getKey(type, id, size);
+    const base = parseFloat(currentPrices[key]) || 0;
+    const pct = type === 'package' ? scenarioProj.pkg : scenarioProj.addon;
+    if (pct === 0) return base;
+    return base * (1 + pct / 100);
   };
 
   async function getSavedPrices(): Promise<PriceMap> {
@@ -384,7 +408,7 @@ export default function PackagePricing() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPricesPDF = () => {
+  const printPrices = () => {
     const win = window.open('', '_blank');
     if (!win) return;
     const snapshot = liveSnapshot;
@@ -393,80 +417,523 @@ export default function PackagePricing() {
     const saved = snapshot?.savedPrices || {};
     const visiblePkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
     const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
-    const rowHtml = (name: string, pricing: any) => `
+
+    const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
+      const key = `${type}:${id}:${size}`;
+      return parseFloat(saved[key]) || 0;
+    };
+    const rowHtml = (name: string, type: 'package' | 'addon', id: string) => `
       <tr>
-        <td style=\"padding:8px;border:1px solid #ddd\">${name}</td>
-        <td style=\"padding:8px;border:1px solid #ddd;text-align:right\">$${pricing.compact}</td>
-        <td style=\"padding:8px;border:1px solid #ddd;text-align:right\">$${pricing.midsize}</td>
-        <td style=\"padding:8px;border:1px solid #ddd;text-align:right\">$${pricing.truck}</td>
-        <td style=\"padding:8px;border:1px solid #ddd;text-align:right\">$${pricing.luxury}</td>
+        <td style="padding:8px;border:1px solid #ddd">${name}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'compact').toFixed(2)}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'midsize').toFixed(2)}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'truck').toFixed(2)}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'luxury').toFixed(2)}</td>
       </tr>`;
-    const getPrice = (type: 'package' | 'addon', id: string) => ({
-      compact: parseFloat(saved[liveGetKey(type, id, 'compact')]) || 0,
-      midsize: parseFloat(saved[liveGetKey(type, id, 'midsize')]) || 0,
-      truck: parseFloat(saved[liveGetKey(type, id, 'truck')]) || 0,
-      luxury: parseFloat(saved[liveGetKey(type, id, 'luxury')]) || 0,
-    });
-    const pkgRows = visiblePkgs.map(p => rowHtml(p.name, getPrice('package', p.id))).join('');
-    const addonRows = visibleAddons.map(a => rowHtml(a.name, getPrice('addon', a.id))).join('');
+
+    const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id)).join('');
+    const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id)).join('');
     const today = new Date().toLocaleDateString();
-    const logoSrc = primeLogo;
+
     win.document.write(`
       <html>
         <head>
-          <title>Current Live Pricing — Prime Auto Detail</title>
+          <title>Current Live Pricing</title>
           <style>
             body{font-family:Arial, sans-serif; padding:24px;}
             h1{color:#dc2626;}
-            .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-            .table-title{margin-top:24px;color:#dc2626}
-            table{border-collapse:collapse;width:100%;}
-            thead th{background:#dc2626;color:#fff;padding:10px;border:1px solid #b91c1c}
+            table{border-collapse:collapse;width:100%;margin-bottom:20px;}
+            th{background:#dc2626;color:white;padding:10px;text-align:right;}
+            th:first-child{text-align:left;}
+            td{border:1px solid #ddd;padding:8px;text-align:right;}
+            td:first-child{text-align:left;}
             tr:nth-child(even){background:#f9f9f9}
           </style>
         </head>
         <body>
-          <div class=\"header\">
-            <img src=\"${logoSrc}\" alt=\"Prime Auto Detail\" style=\"height:48px\"/>
-            <div style=\"text-align:right;color:#444\">${today}</div>
-          </div>
-          <h1>Current Live Pricing — Prime Auto Detail</h1>
-          <h2 class=\"table-title\">Packages</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Compact</th>
-                <th>Midsize</th>
-                <th>Truck</th>
-                <th>Luxury</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${pkgRows}
-            </tbody>
-          </table>
-          <h2 class=\"table-title\">Add-Ons</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Compact</th>
-                <th>Midsize</th>
-                <th>Truck</th>
-                <th>Luxury</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${addonRows}
-            </tbody>
-          </table>
-          <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };</script>
+          <h1>Current Live Pricing</h1>
+          <p>${today}</p>
+          <h2>Packages</h2>
+          <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${pkgRows}</tbody></table>
+          <h2>Add-Ons</h2>
+          <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${addonRows}</tbody></table>
+          <script>window.onload = function(){ window.print(); }</script>
         </body>
       </html>
     `);
     win.document.close();
   };
+
+  const downloadPricesPDF = () => {
+    try {
+      const doc = new jsPDF();
+      doc.setTextColor(200, 0, 0);
+      doc.setFontSize(22);
+      doc.text("Current Live Pricing — Prime Auto Detail", 20, 20);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 30);
+
+      const snapshot = liveSnapshot;
+      const pkgMeta = snapshot?.packageMeta || {};
+      const addonMeta = snapshot?.addOnMeta || {};
+      const saved = snapshot?.savedPrices || {};
+      const visiblePkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+
+      const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
+        const key = `${type}:${id}:${size}`; // liveGetKey logic
+        return parseFloat(saved[key]) || 0;
+      };
+
+      let y = 45;
+      const xPos = [90, 120, 150, 180];
+
+      const checkPageBreak = (needed = 10) => {
+        if (y + needed > 280) {
+          doc.addPage();
+          y = 20;
+        }
+      };
+
+      const drawHeader = (title: string, yPos: number) => {
+        checkPageBreak(20);
+        doc.setFontSize(14);
+        doc.setTextColor(200, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, 20, y);
+        y += 8;
+
+        doc.setFillColor(240, 240, 240);
+        doc.rect(15, y - 6, 180, 8, "F");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Service", 20, y);
+        doc.text("Compact", xPos[0], y, { align: 'right' });
+        doc.text("Midsize", xPos[1], y, { align: 'right' });
+        doc.text("Truck", xPos[2], y, { align: 'right' });
+        doc.text("Luxury", xPos[3], y, { align: 'right' });
+        doc.setFont("helvetica", "normal");
+        y += 10;
+      };
+
+      // Packages
+      drawHeader("Packages", y);
+      visiblePkgs.forEach(p => {
+        checkPageBreak();
+        doc.text(p.name, 20, y);
+        vehicleOptions.forEach((v, i) => {
+          const price = getPrice('package', p.id, v);
+          doc.text(`$${price.toFixed(2)}`, xPos[i], y, { align: 'right' });
+        });
+        y += 8;
+      });
+
+      y += 10;
+
+      // Add-Ons
+      drawHeader("Add-Ons", y);
+      visibleAddons.forEach(a => {
+        checkPageBreak();
+        doc.text(a.name, 20, y);
+        vehicleOptions.forEach((v, i) => {
+          const price = getPrice('addon', a.id, v);
+          doc.text(`$${price.toFixed(2)}`, xPos[i], y, { align: 'right' });
+        });
+        y += 8;
+      });
+
+      const fileName = `prime_pricing_list_${new Date().toISOString().split('T')[0]}.pdf`;
+      const pdfData = doc.output('datauristring');
+      doc.save(fileName);
+      savePDFToArchive('Price Sheets' as any, 'Admin', 'live_pricing_list', pdfData, { fileName, path: 'pricing/' });
+      toast.success("Pricing PDF Downloaded");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate PDF");
+    }
+  };
+  const downloadScenarioPDF = () => {
+    try {
+      const doc = new jsPDF();
+      doc.setTextColor(200, 0, 0);
+      doc.setFontSize(22);
+      doc.text("Pricing Scenario", 20, 20);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(12);
+      doc.text(`Vehicle: ${vehicleLabels[comparisonVehicle] || comparisonVehicle}`, 20, 30);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 36);
+
+      if (scenarioProj.pkg !== 0 || scenarioProj.addon !== 0) {
+        doc.setTextColor(204, 102, 0); // Dark Orange
+        doc.setFontSize(10);
+        doc.text(`* Includes Hypothetical Projection: Packages ${scenarioProj.pkg > 0 ? '+' : ''}${scenarioProj.pkg}%, Add-Ons ${scenarioProj.addon > 0 ? '+' : ''}${scenarioProj.addon}%`, 20, 42);
+      }
+
+      let y = 50;
+      let total = 0;
+      const prices: number[] = [];
+      const pkgs = [...builtInPackages, ...getCustomPackages()];
+      const addons = [...builtInAddOns, ...getCustomAddOns()];
+
+      // Headers
+      doc.setFillColor(240, 240, 240);
+      doc.rect(20, y - 6, 170, 8, "F");
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text("Item", 25, y);
+      doc.text("Type", 120, y);
+      doc.text("Price", 170, y);
+      y += 10;
+
+      // Items
+      Object.keys(comparisonSelection).forEach(id => {
+        if (!comparisonSelection[id]) return;
+
+        let name = "";
+        let type = "";
+        let price = 0;
+
+        const p = pkgs.find(x => x.id === id);
+        if (p) {
+          name = p.name;
+          type = "Package";
+          price = getProjectedPrice('package', id, comparisonVehicle);
+        } else {
+          const a = addons.find(x => x.id === id);
+          if (a) {
+            name = a.name;
+            type = "Add-On";
+            price = getProjectedPrice('addon', id, comparisonVehicle);
+          }
+        }
+
+        if (name) {
+          total += price;
+          prices.push(price);
+          doc.text(name, 25, y);
+          doc.text(type, 120, y);
+          doc.text(`$${price.toFixed(2)}`, 170, y);
+          y += 8;
+        }
+      });
+
+      // Footer Logic
+      const isComparison = prices.length > 1;
+      const diff = isComparison ? Math.max(...prices) - Math.min(...prices) : 0;
+
+      y += 5;
+      doc.setDrawColor(200, 0, 0);
+      doc.line(20, y, 190, y);
+      y += 10;
+      doc.setFontSize(16);
+
+      if (isComparison) {
+        doc.setTextColor(220, 38, 38); // Red
+        doc.text(`Price Difference: $${diff.toFixed(2)}`, 120, y);
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text("(Max - Min)", 120, y + 5);
+      } else {
+        doc.setTextColor(0, 150, 0); // Green
+        doc.text(`Total Estimate: $${total.toFixed(2)}`, 120, y);
+      }
+
+      const fileName = `scenario_${new Date().toISOString().split('T')[0]}.pdf`;
+      const pdfData = doc.output('datauristring');
+      doc.save(fileName);
+      savePDFToArchive('Estimates' as any, 'Admin', 'scenario_estimate', pdfData, { fileName, path: 'estimates/' });
+      toast.success("Scenario PDF saved!");
+    } catch (e) {
+      toast.error("Failed to generate PDF");
+    }
+  };
+
+  const printScenario = () => {
+    const win = window.open('', '_blank');
+    if (!win) return;
+
+    let rows = "";
+    let total = 0;
+    const prices: number[] = [];
+    const pkgs = [...builtInPackages, ...getCustomPackages()];
+    const addons = [...builtInAddOns, ...getCustomAddOns()];
+
+    const projectionNote = (scenarioProj.pkg !== 0 || scenarioProj.addon !== 0)
+      ? `<div style="color: #d97706; font-size: 12px; margin-bottom: 20px;">* Includes Hypothetical Projection: Packages ${scenarioProj.pkg > 0 ? '+' : ''}${scenarioProj.pkg}%, Add-Ons ${scenarioProj.addon > 0 ? '+' : ''}${scenarioProj.addon}%</div>`
+      : '';
+
+    Object.keys(comparisonSelection).forEach(id => {
+      if (!comparisonSelection[id]) return;
+      let name = "";
+      let type = "";
+      let price = 0;
+
+      const p = pkgs.find(x => x.id === id);
+      if (p) {
+        name = p.name;
+        type = "Package";
+        price = getProjectedPrice('package', id, comparisonVehicle);
+      } else {
+        const a = addons.find(x => x.id === id);
+        if (a) {
+          name = a.name;
+          type = "Add-On";
+          price = getProjectedPrice('addon', id, comparisonVehicle);
+        }
+      }
+
+      if (name) {
+        total += price;
+        prices.push(price);
+        rows += `
+              <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 12px;">${name}</td>
+                <td style="padding: 12px; color: #666;">${type}</td>
+                <td style="padding: 12px; text-align: right; font-family: monospace;">$${price.toFixed(2)}</td>
+              </tr>
+            `;
+      }
+    });
+
+    const isComparison = prices.length > 1;
+    const diff = isComparison ? Math.max(...prices) - Math.min(...prices) : 0;
+
+    const footerHtml = isComparison
+      ? `<div style="text-align: right; font-size: 24px; font-weight: bold; color: #dc2626; border-top: 2px solid #dc2626; padding-top: 20px;">
+             Price Difference: $${diff.toFixed(2)}
+             <div style="font-size: 14px; color: #666; font-weight: normal; margin-top: 4px;">(Max - Min)</div>
+           </div>`
+      : `<div style="text-align: right; font-size: 24px; font-weight: bold; color: #059669; border-top: 2px solid #ddd; padding-top: 20px;">
+             Total Estimate: $${total.toFixed(2)}
+           </div>`;
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Pricing Scenario Quote</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+            h1 { color: #dc2626; margin-bottom: 5px; }
+            .meta { color: #666; margin-bottom: 30px; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th { text-align: left; padding: 12px; background: #f9f9f9; border-bottom: 2px solid #dc2626; }
+          </style>
+        </head>
+        <body>
+          <h1>Pricing Scenario Quote</h1>
+          <div class="meta">
+            Generated on ${new Date().toLocaleDateString()}<br>
+            Vehicle Type: <strong>${vehicleLabels[comparisonVehicle] || comparisonVehicle}</strong>
+          </div>
+          ${projectionNote}
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Type</th>
+                <th style="text-align: right;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || '<tr><td colspan="3" style="padding:20px;text-align:center;">No items selected</td></tr>'}
+            </tbody>
+          </table>
+          ${footerHtml}
+          <script>window.onload = function(){ window.print(); }</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  const downloadMatrixPDF = () => {
+    try {
+      const doc = new jsPDF();
+      doc.setTextColor(200, 0, 0);
+      doc.setFontSize(22);
+      doc.text("Vehicle Price Comparison", 20, 20);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(12);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 30);
+
+      let y = 45;
+      const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+      const pkg = [...builtInPackages, ...getCustomPackages()];
+      const add = [...builtInAddOns, ...getCustomAddOns()];
+      const vehicles = vehicleOptions; // ['compact', 'midsize', 'truck', 'luxury']
+      const xPos = [90, 120, 150, 180]; // Columns X positions
+
+      // Headers
+      doc.setFillColor(240, 240, 240);
+      doc.rect(15, y - 6, 180, 8, "F");
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Service Items", 20, y);
+      doc.text("Compact", xPos[0], y, { align: 'right' });
+      doc.text("Midsize", xPos[1], y, { align: 'right' });
+      doc.text("Truck", xPos[2], y, { align: 'right' });
+      doc.text("Luxury", xPos[3], y, { align: 'right' });
+
+      doc.setFont("helvetica", "normal");
+      y += 10;
+
+      ids.forEach(id => {
+        const p = pkg.find(x => x.id === id);
+        const item = p || add.find(x => x.id === id);
+        if (!item) return;
+        const typePrefix = p ? 'package' : 'addon';
+
+        doc.text(item.name, 20, y);
+        vehicles.forEach((v, i) => {
+          const price = parseFloat(currentPrices[getKey(typePrefix, id, v)]) || 0;
+          doc.text(`$${price.toFixed(2)}`, xPos[i], y, { align: 'right' });
+        });
+        y += 8;
+      });
+
+      y += 5;
+      doc.setDrawColor(200, 0, 0);
+      doc.line(20, y, 190, y);
+      y += 10;
+
+      // Footer
+      if (ids.length > 1) {
+        doc.setTextColor(200, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text("Difference (Max-Min):", 20, y);
+        vehicles.forEach((v, i) => {
+          const prices = ids.map(id => {
+            const p = pkg.find(x => x.id === id);
+            if (p) return parseFloat(currentPrices[getKey('package', id, v)]) || 0;
+            const a = add.find(x => x.id === id);
+            return parseFloat(currentPrices[getKey('addon', id, v)]) || 0;
+          });
+          const diff = Math.max(...prices) - Math.min(...prices);
+          doc.text(`$${diff.toFixed(2)}`, xPos[i], y, { align: 'right' });
+        });
+      } else {
+        doc.setTextColor(0, 150, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text("Total Sum:", 20, y);
+        vehicles.forEach((v, i) => {
+          let total = 0;
+          ids.forEach(id => {
+            const p = pkg.find(x => x.id === id);
+            if (p) total += parseFloat(currentPrices[getKey('package', id, v)]) || 0;
+            else {
+              const a = add.find(x => x.id === id);
+              if (a) total += parseFloat(currentPrices[getKey('addon', id, v)]) || 0;
+            }
+          });
+          doc.text(`$${total.toFixed(2)}`, xPos[i], y, { align: 'right' });
+        });
+      }
+
+      const fileName = `matrix_comparison_${new Date().toISOString().split('T')[0]}.pdf`;
+      const pdfData = doc.output('datauristring');
+      doc.save(fileName);
+      savePDFToArchive('Estimates' as any, 'Admin', 'pricing_matrix', pdfData, { fileName, path: 'estimates/' });
+      toast.success("Comparison Matrix saved!");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
+  const printMatrix = () => {
+    const win = window.open('', '_blank');
+    if (!win) return;
+
+    const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+    const pkg = [...builtInPackages, ...getCustomPackages()];
+    const add = [...builtInAddOns, ...getCustomAddOns()];
+
+    let rows = "";
+    ids.forEach(id => {
+      const p = pkg.find(x => x.id === id);
+      const item = p || add.find(x => x.id === id);
+      if (!item) return;
+      const typePrefix = p ? 'package' : 'addon';
+
+      let cells = "";
+      vehicleOptions.forEach(v => {
+        const price = parseFloat(currentPrices[getKey(typePrefix, id, v)]) || 0;
+        cells += `<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${price.toFixed(2)}</td>`;
+      });
+      rows += `<tr><td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>${cells}</tr>`;
+    });
+
+    let footer = "";
+    if (ids.length > 1) {
+      let cells = "";
+      vehicleOptions.forEach(v => {
+        const prices = ids.map(id => {
+          const p = pkg.find(x => x.id === id);
+          if (p) return parseFloat(currentPrices[getKey('package', id, v)]) || 0;
+          const a = add.find(x => x.id === id);
+          return parseFloat(currentPrices[getKey('addon', id, v)]) || 0;
+        });
+        const diff = Math.max(...prices) - Math.min(...prices);
+        cells += `<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: red; font-weight: bold;">$${diff.toFixed(2)}</td>`;
+      });
+      footer = `<tr style="background: #fee;"><td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: red;">Difference (Max-Min):</td>${cells}</tr>`;
+    } else {
+      let cells = "";
+      vehicleOptions.forEach(v => {
+        let total = 0;
+        ids.forEach(id => {
+          const p = pkg.find(x => x.id === id);
+          if (p) total += parseFloat(currentPrices[getKey('package', id, v)]) || 0;
+          else {
+            const a = add.find(x => x.id === id);
+            if (a) total += parseFloat(currentPrices[getKey('addon', id, v)]) || 0;
+          }
+        });
+        cells += `<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: green; font-weight: bold;">$${total.toFixed(2)}</td>`;
+      });
+      footer = `<tr><td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">Total Sum:</td>${cells}</tr>`;
+    }
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Pricing Matrix</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #f4f4f5; text-align: right; padding: 10px; border: 1px solid #ddd; }
+            th:first-child { text-align: left; }
+            h1 { color: #dc2626; }
+          </style>
+        </head>
+        <body>
+          <h1>Vehicle Price Comparison</h1>
+          <p>${new Date().toLocaleDateString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Service Items</th>
+                <th>Compact</th>
+                <th>Midsize</th>
+                <th>Truck</th>
+                <th>Luxury</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            <tfoot>${footer}</tfoot>
+          </table>
+          <script>window.onload = function(){ window.print(); }</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
 
   const handleModalPricingRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1233,6 +1700,14 @@ export default function PackagePricing() {
 
                   <Button
                     size="lg"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8"
+                    onClick={() => { setComparisonSelection({}); setComparisonVehicle(vehicleType); setComparisonOpen(true); }}
+                  >
+                    Current Price Comparisons
+                  </Button>
+
+                  <Button
+                    size="lg"
                     className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-6"
                     onClick={generateAddOnsListPDF}
                   >
@@ -1671,13 +2146,504 @@ export default function PackagePricing() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        {/* View All Prices Modal */}
+        {/* Current Price Comparison Modal */}
+        <Dialog open={comparisonOpen} onOpenChange={setComparisonOpen}>
+          <DialogContent className="sm:max-w-[95vw] lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+            <div className="p-6 border-b border-zinc-800 bg-zinc-950">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <DialogTitle className="text-2xl font-bold">Scenario Builder</DialogTitle>
+                  <p className="text-zinc-400 text-sm">Select items to calculate a total expense scenario.</p>
+                </div>
+                <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
+                  <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap px-2">Vehicle Size:</span>
+                  <Select value={comparisonVehicle} onValueChange={setComparisonVehicle}>
+                    <SelectTrigger className="w-[240px] bg-black border-zinc-700 h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {vehicleOptions.map(opt => <SelectItem key={opt} value={opt}>{vehicleLabels[opt] || opt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-black/50">
+              {/* Projection Toolbar */}
+              <div className="mb-2 p-4 bg-zinc-900/80 border border-zinc-800 rounded-lg shadow-sm">
+                <h3 className="text-zinc-400 text-xs uppercase font-bold mb-3 tracking-wider flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
+                  Hypothetical Price Projection (Does not save)
+                </h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-300">Adjustment %:</span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      className="w-20 h-8 bg-black border-zinc-700 text-white"
+                      value={projInput}
+                      onChange={(e) => setProjInput(e.target.value)}
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-300 hover:text-white" onClick={() => {
+                    const val = parseFloat(projInput) || 0;
+                    setScenarioProj(prev => ({ ...prev, pkg: val }));
+                  }}>Apply to Packages</Button>
+                  <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-300 hover:text-white" onClick={() => {
+                    const val = parseFloat(projInput) || 0;
+                    setScenarioProj(prev => ({ ...prev, addon: val }));
+                  }}>Apply to Add-Ons</Button>
+                  <Button size="sm" variant="outline" className="h-8 border-blue-900/50 text-blue-400 hover:bg-blue-900/30" onClick={() => {
+                    const val = parseFloat(projInput) || 0;
+                    setScenarioProj({ pkg: val, addon: val });
+                  }}>Apply to ALL</Button>
+                  {(scenarioProj.pkg !== 0 || scenarioProj.addon !== 0) && (
+                    <Button size="sm" variant="ghost" className="h-8 text-red-400 hover:text-red-300 hover:bg-red-950/20" onClick={() => {
+                      setScenarioProj({ pkg: 0, addon: 0 });
+                      setProjInput("");
+                    }}>Reset</Button>
+                  )}
+                </div>
+                {(scenarioProj.pkg !== 0 || scenarioProj.addon !== 0) && (
+                  <div className="mt-3 text-xs text-yellow-500 flex items-center gap-2 font-mono">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Prices shown include +{scenarioProj.pkg}% (Pkg) / +{scenarioProj.addon}% (Addon) projection.
+                  </div>
+                )}
+              </div>
+              {/* Packages Section */}
+              <div>
+                <h3 className="text-red-500 font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-8 h-px bg-red-500"></span> Packages
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[...builtInPackages, ...getCustomPackages()]
+                    .filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false)
+                    .map(p => {
+                      // Uses helper for projection
+                      const price = getProjectedPrice('package', p.id, comparisonVehicle);
+                      const isSelected = !!comparisonSelection[p.id];
+                      // Determine services/steps list
+                      const metaOverride = getPackageMeta(p.id)?.stepIds;
+                      const displaySteps = metaOverride && metaOverride.length > 0
+                        ? metaOverride.map(sid => {
+                          // Look up in built-ins
+                          const builtIn = builtInPackages.flatMap(pkg => pkg.steps).find(s => s.id === sid);
+                          if (builtIn) return builtIn.name;
+                          // Look up in custom
+                          const cus = getCustomServices().find(c => c.id === sid);
+                          return cus ? cus.name : null;
+                        }).filter(Boolean)
+                        : p.steps.map(s => s.name);
+
+                      return (
+                        <div
+                          key={p.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between gap-3 relative group/item
+                                    ${isSelected ? 'bg-red-950/30 border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1" onClick={() => setComparisonSelection(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-600 border-red-600 text-white' : 'border-zinc-600'}`}>
+                              {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                            </div>
+                            <span className={`font-medium ${isSelected ? 'text-white' : 'text-zinc-300'}`}>{p.name}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="font-mono font-bold text-emerald-400" onClick={() => setComparisonSelection(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
+                              ${price}
+                            </div>
+                            <div className="relative group/info">
+                              <button onClick={(e) => e.stopPropagation()} className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 flex items-center justify-center transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                              </button>
+                              <div className="absolute bottom-full right-0 mb-2 w-64 bg-zinc-950 border border-zinc-800 rounded-lg shadow-xl p-3 z-50 invisible opacity-0 translate-y-2 group-hover/info:visible group-hover/info:opacity-100 group-hover/info:translate-y-0 transition-all pointer-events-none group-hover/info:pointer-events-auto">
+                                <h4 className="text-sm font-bold text-white mb-2 border-b border-zinc-800 pb-1">Included Services</h4>
+                                <ul className="text-xs text-zinc-400 space-y-1 list-disc pl-4 max-h-48 overflow-y-auto custom-scrollbar">
+                                  {displaySteps.length > 0 ? displaySteps.map((s, i) => (
+                                    <li key={i}>{s}</li>
+                                  )) : <li>No specific services listed.</li>}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+
+              {/* Add-Ons Section */}
+              <div>
+                <h3 className="text-blue-500 font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-8 h-px bg-blue-500"></span> Add-Ons
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[...builtInAddOns, ...getCustomAddOns()]
+                    .filter(a => !getAddOnMeta(a.id)?.deleted && getAddOnMeta(a.id)?.visible !== false)
+                    .map(a => {
+                      // Uses helper for projection
+                      const price = getProjectedPrice('addon', a.id, comparisonVehicle);
+                      const isSelected = !!comparisonSelection[a.id];
+                      // Determine services/steps list
+                      const metaOverride = getAddOnMeta(a.id)?.stepIds;
+                      // Addons by default might not have 'steps' defined in standard object, check fallback
+                      const displaySteps = metaOverride && metaOverride.length > 0
+                        ? metaOverride.map(sid => {
+                          // Look up in built-ins
+                          const builtIn = builtInPackages.flatMap(pkg => pkg.steps).find(s => s.id === sid);
+                          if (builtIn) return builtIn.name;
+                          // Look up in custom
+                          const cus = getCustomServices().find(c => c.id === sid);
+                          return cus ? cus.name : null;
+                        }).filter(Boolean)
+                        : [(a as any).description].filter(Boolean); // Fallback to description for addons
+
+                      return (
+                        <div
+                          key={a.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between gap-3 relative group/item
+                                    ${isSelected ? 'bg-blue-950/30 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1" onClick={() => setComparisonSelection(prev => ({ ...prev, [a.id]: !prev[a.id] }))}>
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-zinc-600'}`}>
+                              {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                            </div>
+                            <span className={`font-medium ${isSelected ? 'text-white' : 'text-zinc-300'}`}>{a.name}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="font-mono font-bold text-emerald-400" onClick={() => setComparisonSelection(prev => ({ ...prev, [a.id]: !prev[a.id] }))}>
+                              ${price}
+                            </div>
+                            <div className="relative group/info">
+                              <button onClick={(e) => e.stopPropagation()} className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 flex items-center justify-center transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                              </button>
+                              <div className="absolute bottom-full right-0 mb-2 w-64 bg-zinc-950 border border-zinc-800 rounded-lg shadow-xl p-3 z-50 invisible opacity-0 translate-y-2 group-hover/info:visible group-hover/info:opacity-100 group-hover/info:translate-y-0 transition-all pointer-events-none group-hover/info:pointer-events-auto">
+                                <h4 className="text-sm font-bold text-white mb-2 border-b border-zinc-800 pb-1">Included Services</h4>
+                                <ul className="text-xs text-zinc-400 space-y-1 list-disc pl-4 max-h-48 overflow-y-auto custom-scrollbar">
+                                  {displaySteps.length > 0 ? displaySteps.map((s, i) => (
+                                    <li key={i}>{s}</li>
+                                  )) : <li>{(a as any).description || "No description."}</li>}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-2xl z-10">
+              <div className="flex items-center gap-2">
+                <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white border-red-800" onClick={() => setComparisonSelection({})}>
+                  Clear All
+                </Button>
+                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={printScenario}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                  Print
+                </Button>
+                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={() => setPreviewOpen(true)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  Preview
+                </Button>
+                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={() => setMatrixOpen(true)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                  Compare Vehicles
+                </Button>
+                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={downloadScenarioPDF}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 24 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Save PDF
+                </Button>
+              </div>
+              <div className="flex items-center gap-4 bg-zinc-900 px-6 py-3 rounded-xl border border-zinc-800">
+                <div className="text-right">
+                  <div className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
+                    {Object.keys(comparisonSelection).filter(k => comparisonSelection[k]).length > 1 ? 'Price Difference' : 'Estimated Total'}
+                  </div>
+                  <div className={`text-3xl font-bold font-mono tracking-tight leading-none ${Object.keys(comparisonSelection).filter(k => comparisonSelection[k]).length > 1 ? 'text-red-500' : 'text-emerald-400'}`}>
+                    ${(() => {
+                      const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+                      const pkgs = [...builtInPackages, ...getCustomPackages()];
+                      const addons = [...builtInAddOns, ...getCustomAddOns()];
+
+                      if (ids.length > 1) {
+                        // Comparison Mode: Difference (Max - Min)
+                        const prices = ids.map(id => {
+                          const p = pkgs.find(x => x.id === id);
+                          if (p) return getProjectedPrice('package', id, comparisonVehicle);
+                          const a = addons.find(x => x.id === id);
+                          return getProjectedPrice('addon', id, comparisonVehicle);
+                        });
+                        const min = Math.min(...prices);
+                        const max = Math.max(...prices);
+                        return (max - min).toFixed(2);
+                      } else {
+                        // Sum Mode
+                        let total = 0;
+                        ids.forEach(id => {
+                          const p = pkgs.find(x => x.id === id);
+                          if (p) total += getProjectedPrice('package', id, comparisonVehicle);
+                          else {
+                            const a = addons.find(x => x.id === id);
+                            if (a) total += getProjectedPrice('addon', id, comparisonVehicle);
+                          }
+                        });
+                        return total.toFixed(2);
+                      }
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Preview Quote Modal */}
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="sm:max-w-xl bg-white text-black p-0 overflow-hidden">
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6 border-b border-gray-200 pb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-red-600">Pricing Estimate</h2>
+                  <p className="text-gray-500 text-sm mt-1">Prime Auto Detail</p>
+                </div>
+                <div className="text-right text-sm text-gray-500">
+                  <div>{new Date().toLocaleDateString()}</div>
+                  <div className="font-semibold text-black mt-1 capitalize">{vehicleLabels[comparisonVehicle] || comparisonVehicle}</div>
+                </div>
+              </div>
+
+              <table className="w-full text-sm mb-6">
+                <thead>
+                  <tr className="border-b-2 border-red-600/20 text-left text-gray-500">
+                    <th className="py-2 font-semibold">Service</th>
+                    <th className="py-2 font-semibold">Type</th>
+                    <th className="py-2 text-right font-semibold">Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {(() => {
+                    let total = 0;
+                    const pkg = [...builtInPackages, ...getCustomPackages()];
+                    const add = [...builtInAddOns, ...getCustomAddOns()];
+                    const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+
+                    if (ids.length === 0) return <tr><td colSpan={3} className="py-4 text-center text-gray-400">No items selected</td></tr>;
+
+                    return ids.map(id => {
+                      const p = pkg.find(x => x.id === id);
+                      if (p) {
+                        const price = parseFloat(currentPrices[getKey('package', id, comparisonVehicle)]) || 0;
+                        total += price;
+                        return (
+                          <tr key={id}>
+                            <td className="py-3">{p.name}</td>
+                            <td className="py-3 text-gray-500">Package</td>
+                            <td className="py-3 text-right font-mono">${price.toFixed(2)}</td>
+                          </tr>
+                        );
+                      }
+                      const a = add.find(x => x.id === id);
+                      if (a) {
+                        const price = parseFloat(currentPrices[getKey('addon', id, comparisonVehicle)]) || 0;
+                        total += price;
+                        return (
+                          <tr key={id}>
+                            <td className="py-3">{a.name}</td>
+                            <td className="py-3 text-gray-500">Add-On</td>
+                            <td className="py-3 text-right font-mono">${price.toFixed(2)}</td>
+                          </tr>
+                        );
+                      }
+                      return null;
+                    });
+                  })()}
+                </tbody>
+              </table>
+
+              <div className="flex justify-end border-t border-gray-200 pt-4">
+                <div className="text-right">
+                  <div className="text-sm text-gray-500 uppercase font-bold tracking-wider">
+                    {Object.keys(comparisonSelection).filter(k => comparisonSelection[k]).length > 1 ? 'Price Difference' : 'Total Estimate'}
+                  </div>
+                  <div className={`text-3xl font-bold font-mono mt-1 ${Object.keys(comparisonSelection).filter(k => comparisonSelection[k]).length > 1 ? 'text-red-500' : 'text-emerald-600'}`}>
+                    ${(() => {
+                      const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+                      const pkg = [...builtInPackages, ...getCustomPackages()];
+                      const add = [...builtInAddOns, ...getCustomAddOns()];
+
+                      if (ids.length > 1) {
+                        const prices = ids.map(id => {
+                          const p = pkg.find(x => x.id === id);
+                          if (p) return parseFloat(currentPrices[getKey('package', id, comparisonVehicle)]) || 0;
+                          const a = add.find(x => x.id === id);
+                          return parseFloat(currentPrices[getKey('addon', id, comparisonVehicle)]) || 0;
+                        });
+                        const min = Math.min(...prices);
+                        const max = Math.max(...prices);
+                        return (max - min).toFixed(2);
+                      } else {
+                        let total = 0;
+                        ids.forEach(id => {
+                          const p = pkg.find(x => x.id === id);
+                          if (p) total += parseFloat(currentPrices[getKey('package', id, comparisonVehicle)]) || 0;
+                          else {
+                            const a = add.find(x => x.id === id);
+                            if (a) total += parseFloat(currentPrices[getKey('addon', id, comparisonVehicle)]) || 0;
+                          }
+                        });
+                        return total.toFixed(2);
+                      }
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 border-t border-gray-200 flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={printScenario}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                  Print
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadScenarioPDF}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 24 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Save PDF
+                </Button>
+              </div>
+              <Button onClick={() => setPreviewOpen(false)} variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100">Close Preview</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Matrix Comparison Modal */}
+        <Dialog open={matrixOpen} onOpenChange={setMatrixOpen}>
+          <DialogContent className="sm:max-w-4xl bg-white text-black p-6 overflow-hidden max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-red-600 mb-4">Vehicle Price Comparison</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse shadow-sm">
+                <thead>
+                  <tr className="bg-zinc-100 text-left border-b-2 border-red-600">
+                    <th className="p-3 font-bold border border-zinc-200">Service Items</th>
+                    <th className="p-3 font-bold border border-zinc-200 text-right bg-zinc-50">Compact</th>
+                    <th className="p-3 font-bold border border-zinc-200 text-right bg-zinc-50">Midsize</th>
+                    <th className="p-3 font-bold border border-zinc-200 text-right bg-zinc-50">Truck</th>
+                    <th className="p-3 font-bold border border-zinc-200 text-right bg-zinc-50">Luxury</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const pkg = [...builtInPackages, ...getCustomPackages()];
+                    const add = [...builtInAddOns, ...getCustomAddOns()];
+                    const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+
+                    if (ids.length === 0) return <tr><td colSpan={5} className="p-6 text-center text-zinc-400 italic">No items selected to compare. Select items in the Scenario Builder.</td></tr>;
+
+                    return ids.map(id => {
+                      const p = pkg.find(x => x.id === id);
+                      const item = p || add.find(x => x.id === id);
+                      if (!item) return null;
+                      const typePrefix = p ? 'package' : 'addon';
+
+                      return (
+                        <tr key={id} className="odd:bg-white even:bg-zinc-50 hover:bg-red-50 transition-colors">
+                          <td className="p-3 border border-zinc-200 font-medium text-zinc-800">
+                            {item.name} <span className="text-xs text-zinc-400 font-normal ml-1">({p ? 'Pkg' : 'Add-on'})</span>
+                          </td>
+                          {vehicleOptions.map(v => (
+                            <td key={v} className="p-3 border border-zinc-200 text-right font-mono text-zinc-700">
+                              ${(parseFloat(currentPrices[getKey(typePrefix, id, v)]) || 0).toFixed(2)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+                <tfoot className="bg-zinc-100 font-bold border-t-2 border-red-600">
+                  {(() => {
+                    const ids = Object.keys(comparisonSelection).filter(k => comparisonSelection[k]);
+                    const isComparison = ids.length > 1;
+
+                    if (isComparison) {
+                      return (
+                        <tr className="bg-red-50">
+                          <td className="p-3 border border-zinc-200 text-right uppercase tracking-wider text-xs text-red-500 font-bold">Difference (Max-Min):</td>
+                          {vehicleOptions.map(v => (
+                            <td key={v} className="p-3 border border-zinc-200 text-right text-red-600 text-lg font-mono">
+                              ${(() => {
+                                const pkg = [...builtInPackages, ...getCustomPackages()];
+                                const add = [...builtInAddOns, ...getCustomAddOns()];
+                                const prices = ids.map(id => {
+                                  const p = pkg.find(x => x.id === id);
+                                  if (p) return parseFloat(currentPrices[getKey('package', id, v)]) || 0;
+                                  const a = add.find(x => x.id === id);
+                                  return parseFloat(currentPrices[getKey('addon', id, v)]) || 0;
+                                });
+                                const min = Math.min(...prices);
+                                const max = Math.max(...prices);
+                                return (max - min).toFixed(2);
+                              })()}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    } else {
+                      // Total Sum (Only if 0 or 1 item selected)
+                      return (
+                        <tr>
+                          <td className="p-3 border border-zinc-200 text-right uppercase tracking-wider text-xs text-zinc-500 pt-4">Total Sum:</td>
+                          {vehicleOptions.map(v => (
+                            <td key={v} className="p-3 border border-zinc-200 text-right text-emerald-600 text-lg pt-4 leading-none">
+                              ${(() => {
+                                let t = 0;
+                                const pkg = [...builtInPackages, ...getCustomPackages()];
+                                const add = [...builtInAddOns, ...getCustomAddOns()];
+                                ids.forEach(id => {
+                                  const p = pkg.find(x => x.id === id);
+                                  if (p) t += parseFloat(currentPrices[getKey('package', id, v)]) || 0;
+                                  else {
+                                    const a = add.find(x => x.id === id);
+                                    if (a) t += parseFloat(currentPrices[getKey('addon', id, v)]) || 0;
+                                  }
+                                });
+                                return t.toFixed(2);
+                              })()}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    }
+                  })()}
+                </tfoot>
+              </table>
+            </div>
+            <div className="mt-6 flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="border-zinc-300" onClick={printMatrix}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                  Print
+                </Button>
+                <Button variant="outline" size="sm" className="border-zinc-300" onClick={downloadMatrixPDF}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 24 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Matrix PDF
+                </Button>
+              </div>
+              <Button onClick={() => setMatrixOpen(false)} variant="outline" className="border-zinc-300 text-zinc-700 hover:bg-zinc-100">Close Chart</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={viewAllOpen} onOpenChange={setViewAllOpen}>
           <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Current Live Pricing — Prime Detail Solutions</DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-end gap-3 mb-4">
+              <Button variant="outline" onClick={printPrices}>Print</Button>
               <Button variant="outline" onClick={downloadPricesPDF}>Download PDF</Button>
               <Button variant="outline" onClick={downloadPricesJSON}>Backup as JSON</Button>
               <label>

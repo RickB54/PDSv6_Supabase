@@ -16,7 +16,8 @@ import {
     FlaskConical,
     Video,
     Phone,
-    Package // Added Package icon
+    Package,
+    Calculator // Added Calculator icon
 } from "lucide-react";
 
 export function GlobalRightSidebar() {
@@ -116,6 +117,12 @@ export function GlobalRightSidebar() {
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <FlaskConical className="w-5 h-5 text-teal-400" />
                 {!collapsed && <span>Chemicals</span>}
+            </Button>
+
+            {/* Pricing Scenario Shortcut */}
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Calculator className="w-5 h-5 text-red-500" />
+                {!collapsed && <span>Scenario Builder</span>}
             </Button>
 
         </div>
