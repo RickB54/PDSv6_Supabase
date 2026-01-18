@@ -33,7 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 // Calendar component import removed (replaced by AvailabilityPicker)
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { getServiceDuration } from "@/lib/services";
 import { formatTimeAMPM } from "@/lib/availability";
 
@@ -77,31 +77,106 @@ const BookNow = () => {
   }, [refreshBookings, refreshCoupons]);
 
   // 🧪 TEST DATA FILLER - Only on localhost
+  // 🧪 TEST DATA FILLER - Only on localhost
+  const [mockIndex, setMockIndex] = useState(0);
   const fillTestData = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(15, 0, 0, 0); // 3:00 PM tomorrow
+    const mockProfiles = [
+      {
+        name: "James Wilson",
+        email: "james.w@example.com",
+        phone: "(555) 234-5678",
+        address: "742 Evergreen Terrace, Springfield",
+        make: "Tesla",
+        model: "Model 3",
+        year: "2023",
+        vType: "sedan",
+        package: "prime-essential-interior",
+        addons: ["premium-wax"],
+        time: "09:00:00"
+      },
+      {
+        name: "Sarah Miller",
+        email: "sarah.m@example.com",
+        phone: "(555) 987-6543",
+        address: "1001 Mountain View Rd, Boulder, CO",
+        make: "Ford",
+        model: "F-150",
+        year: "2021",
+        vType: "truck",
+        package: "prime-show-shine-full",
+        addons: ["clay-bar-treatment", "interior-protection"],
+        time: "13:30:00"
+      },
+      {
+        name: "Robert Chen",
+        email: "r.chen@tech.io",
+        phone: "(555) 456-7890",
+        address: "50 California St, San Francisco, CA",
+        make: "BMW",
+        model: "X5",
+        year: "2024",
+        vType: "midsize",
+        package: "prime-platinum-protection",
+        addons: ["engine-bay-cleaning"],
+        time: "10:00:00"
+      },
+      {
+        name: "Elena Rodriguez",
+        email: "elena.rod@lifestyle.com",
+        phone: "(555) 321-0987",
+        address: "12 Biscayne Blvd, Miami, FL",
+        make: "Porsche",
+        model: "Cayenne",
+        year: "2022",
+        vType: "midsize",
+        package: "prime-essential-interior",
+        addons: ["odor-elimination"],
+        time: "15:00:00"
+      },
+      {
+        name: "Marcus Thorne",
+        email: "m.thorne@heavy.net",
+        phone: "(555) 888-9999",
+        address: "99 Industrial Way, Detroit, MI",
+        make: "Chevrolet",
+        model: "Suburban",
+        year: "2020",
+        vType: "oversize",
+        package: "prime-show-shine-full",
+        addons: ["headlight-restoration", "clay-bar-treatment"],
+        time: "11:00:00"
+      }
+    ];
+
+    const profile = mockProfiles[mockIndex];
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + (mockIndex + 1)); // Spread across different days
 
     setFormData({
-      name: "Rick Berube",
-      email: "rick.primeautodetail@gmail.com",
-      phone: "(555) 123-4567",
-      address: "123 Test Street, Worcester, MA 01608",
-      make: "Toyota",
-      model: "Camry",
-      year: "2022",
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone,
+      address: profile.address,
+      make: profile.make,
+      model: profile.model,
+      year: profile.year,
       datetime: "",
-      package: "prime-essential-interior",
-      message: "Test booking - can be deleted",
+      package: profile.package,
+      message: `[MOCK_DATA] Test booking for ${profile.name} - can be deleted`,
       conditionInside: "Good",
       conditionOutside: "Fair"
     });
-    setVehicleType('midsize');
-    setAddOns(['premium-wax', 'interior-protection']);
-    setDate(tomorrow);
-    setSelectedTime('15:00:00');
+    setVehicleType(profile.vType);
+    setAddOns(profile.addons);
+    setDate(targetDate);
+    setSelectedTime(profile.time);
     setIsEditingDate(false);
-    toast({ title: "✅ Test Data Filled!", description: "All fields auto-populated for testing" });
+
+    setMockIndex((mockIndex + 1) % mockProfiles.length);
+    toast({
+      title: "🧪 Mock Data Filled!",
+      description: `Loaded profile: ${profile.name} (${profile.vType})`
+    });
   };
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
@@ -721,43 +796,53 @@ const BookNow = () => {
 
       // Send REAL Email to Admin (Rick.PrimeAutoDetail@gmail.com)
       try {
-        const bookingDate = new Date(dateIso);
-        const formattedDate = bookingDate.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        const formattedTime = bookingDate.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        const formattedDate = formatETDate(dateIso);
+        const formattedTime = formatETTime(dateIso);
 
-        console.log('📧 Attempting to send email via Edge Function...');
-        const { data, error } = await supabase.functions.invoke('send-booking-email', {
+        console.log('📧 Notifying Admin and Customer via Edge Function...');
+
+        // 1. Send to Admin
+        const adminEmail = supabase.functions.invoke('send-booking-email', {
           body: {
-            to: 'rick.primeautodetail@gmail.com', // Lowercase to match Resend requirement
-            subject: `🚗 New Booking: ${formData.name} - ${bookingPayload.service}`,
+            to: 'rick.primeautodetail@gmail.com',
+            subject: `🔔 NEW REQUEST: ${formData.name} - ${bookingPayload.service}`,
             customerName: formData.name,
-            customerEmail: formData.email, // Passed for Reply-To
+            customerEmail: formData.email,
             service: bookingPayload.service,
             date: formattedDate,
             time: formattedTime,
-            price: discountedTotal.toFixed(2)
+            price: discountedTotal.toFixed(2),
+            status: 'TENTATIVE'
           }
         });
 
-        if (error) {
-          console.error('❌ Email Edge Function Error:', error);
-        } else {
-          console.log('✅ Admin email sent successfully to rick.primeautodetail@gmail.com', data);
-        }
+        // 2. Send to Customer (Receipt)
+        const customerEmail = formData.email ? supabase.functions.invoke('send-booking-email', {
+          body: {
+            to: formData.email,
+            subject: `🚗 Request Received: ${bookingPayload.service}`,
+            customerName: formData.name,
+            customerEmail: formData.email,
+            service: bookingPayload.service,
+            date: formattedDate,
+            time: formattedTime,
+            price: discountedTotal.toFixed(2),
+            status: 'TENTATIVE'
+          }
+        }) : Promise.resolve({ error: null });
+
+        const [adminRes, customerRes] = await Promise.all([adminEmail, customerEmail]);
+
+        if (adminRes.error) console.error('❌ Admin Email Error:', adminRes.error);
+        if (customerRes.error) console.error('❌ Customer Email Error:', customerRes.error);
+
+        console.log('✅ Notification emails dispatched');
       } catch (emailError) {
         console.error("❌ Email sending FAILED:", emailError);
       }
 
       // Redirect to thank you
-      navigate(`/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=${encodeURIComponent(new Date(dateIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}&date=${encodeURIComponent(new Date(dateIso).toLocaleDateString())}`);
+      navigate(`/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=${encodeURIComponent(formatETTime(dateIso))}&date=${encodeURIComponent(formatETDate(dateIso))}`);
 
       // Reset form
       setFormData({

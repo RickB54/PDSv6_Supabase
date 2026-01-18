@@ -157,7 +157,15 @@ const App = () => {
     window.addEventListener('auth-changed', updateUser);
     window.addEventListener('storage', updateUser);
     try { initTaskWorkflowListeners(); } catch { }
-    import("@/store/bookings").then(m => m.useBookingsStore.getState().refresh());
+
+    // START BOOKINGS REALTIME SUBSCRIPTION
+    let unsubscribeBookings: (() => void) | undefined;
+    import("@/store/bookings").then(m => {
+      const store = m.useBookingsStore.getState();
+      store.refresh();
+      unsubscribeBookings = store.subscribeRealtime();
+    });
+
     const onOpenCallAssistant = () => setCallAssistantOpen(true);
     window.addEventListener('open-call-assistant', onOpenCallAssistant);
 
@@ -167,6 +175,7 @@ const App = () => {
       window.removeEventListener('auth-changed', updateUser);
       window.removeEventListener('storage', updateUser);
       window.removeEventListener('open-call-assistant', onOpenCallAssistant);
+      if (unsubscribeBookings) unsubscribeBookings();
     };
   }, []);
 

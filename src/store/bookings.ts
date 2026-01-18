@@ -5,6 +5,9 @@ import {
   deleteSupabaseBooking
 } from "@/lib/supa-data";
 import { isSupabaseEnabled } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+
+const b_import = { supabase };
 
 export type BookingStatus = "pending" | "confirmed" | "in_progress" | "done" | "tentative" | "blocked";
 
@@ -12,6 +15,8 @@ export interface Booking {
   id: string;
   title: string;
   customer: string;
+  customerEmail?: string;
+  customerPhone?: string;
   customerId?: string; // Link to customer record
   date: string; // ISO date
   endTime?: string; // ISO date for end time
@@ -53,6 +58,7 @@ interface BookingsState {
   move: (id: string, dateISO: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
+  subscribeRealtime: () => () => void;
 }
 
 export const useBookingsStore = create<BookingsState>((set, get) => ({
@@ -107,6 +113,29 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
     }
   },
 
+  subscribeRealtime: () => {
+    const { supabase } = b_import; // We'll need to handle imports carefully
+    const channel = supabase
+      .channel('bookings-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', table: 'bookings', schema: 'public' },
+        async (payload) => {
+          console.log('🔥 Realtime Booking Change:', payload.eventType, payload.new);
+
+          const refresh = get().refresh;
+          // For now, simpler to just re-fetch to ensure all joins (customer, vehicle) are correct
+          // But we could also manually patch if we wanted to be even faster.
+          await refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  },
+
   add: async (b) => {
     // Optimistic Update
     const record = { ...b, createdAt: new Date().toISOString() };
@@ -146,7 +175,7 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
         // Sync Status
         if (current && typeof patch.status === 'string' && current.status !== patch.status) {
           const { onBookingStatusChanged } = await import("@/lib/bookingsSync");
-          onBookingStatusChanged(updatedRecord, current.status, patch.status);
+          await onBookingStatusChanged(updatedRecord, current.status, patch.status);
         }
       } catch (err) {
         console.error("Failed to update booking in DB", err);

@@ -22,9 +22,15 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY environment variable not set');
     }
 
-    const { to, subject, html, customerName, customerEmail, service, date, time, price } = await req.json()
+    const { to, subject, html, customerName, customerEmail, service, date, time, price, status = 'TENTATIVE' } = await req.json()
 
     console.log(`📧 Sending email to: ${to}, Subject: ${subject}`);
+
+    const isConfirmed = status.toUpperCase() === 'CONFIRMED' || status.toUpperCase() === 'DONE';
+    const headerTitle = isConfirmed ? 'Booking Confirmed!' : 'Booking Request Received';
+    const statusLabel = status.toUpperCase();
+    const statusBg = isConfirmed ? '#10b981' : '#fef3c7';
+    const statusText = isConfirmed ? '#ffffff' : '#92400e';
 
     // Send email using Resend
     const payload = {
@@ -35,7 +41,7 @@ serve(async (req) => {
       html: html || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
           <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">🚗 New Booking Confirmed!</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">🚗 ${headerTitle}</h1>
           </div>
           
           <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -51,12 +57,18 @@ serve(async (req) => {
             </div>
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
-              Status: <span style="background-color: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 4px; font-weight: bold;">TENTATIVE</span>
+              Status: <span style="background-color: ${statusBg}; color: ${statusText}; padding: 4px 12px; border-radius: 4px; font-weight: bold;">${statusLabel}</span>
             </p>
             
-            <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-              Log in to your admin dashboard to confirm or manage this booking.
+            ${!isConfirmed ? `
+            <p style="color: #4b5563; font-size: 14px; margin-top: 15px; background: #e0f2fe; padding: 12px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+              <strong>Note:</strong> We have received your request. A representative will review the details and contact you within 24 hours to confirm your appointment.
             </p>
+            ` : `
+            <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
+              Your booking is now officially scheduled. We look forward to seeing you!
+            </p>
+            `}
           </div>
           
           <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">

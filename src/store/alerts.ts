@@ -76,6 +76,8 @@ export function mapAlert(a: AdminAlert): UIAlert {
       href = "/payroll";
       break;
     case "admin_email_sent":
+      href = "/file-manager?category=" + encodeURIComponent("Email Logs");
+      break;
     case "admin_message":
       href = "/admin-dashboard";
       break;

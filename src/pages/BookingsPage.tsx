@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2 } from "lucide-react"; // Added Copy, RotateCcw, Trash2
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package } from "lucide-react"; // Added Copy, RotateCcw, Trash2, Printer, Package
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { useBookingsStore, type Booking } from "@/store/bookings";
 import type { BookingStatus } from "@/store/bookings";
-import { cn } from "@/lib/utils";
+import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { getSupabaseEmployees, getSupabaseBookings } from "@/lib/supa-data";
@@ -62,6 +62,7 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
 
 
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
@@ -106,6 +107,7 @@ export default function BookingsPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const lastLoadTimeRef = useRef<number>(0);
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
@@ -194,6 +196,8 @@ export default function BookingsPage() {
 
   // Load unified events (bookings + manual blocks + Google Calendar)
   const loadUnifiedEvents = useCallback(async () => {
+    const timestamp = Date.now();
+    lastLoadTimeRef.current = timestamp;
     setEventsLoading(true);
     try {
       let startDate: Date, endDate: Date;
@@ -208,31 +212,32 @@ export default function BookingsPage() {
         startDate = startOfMonth(currentDate);
         endDate = endOfMonth(currentDate);
       } else {
-        // Year view - get full year
         startDate = startOfYear(currentDate);
         endDate = endOfYear(currentDate);
       }
 
       const events = await getUnifiedCalendarEvents(startDate, endDate, items);
-      setUnifiedEvents(events);
+
+      // Only update if this is the latest requested load
+      if (lastLoadTimeRef.current === timestamp) {
+        setUnifiedEvents(events);
+      }
     } catch (error) {
       console.error('Failed to load unified events:', error);
     } finally {
-      setEventsLoading(false);
+      if (lastLoadTimeRef.current === timestamp) {
+        setEventsLoading(false);
+      }
     }
-  }, [viewMode, currentDate, items, refresh]);
+  }, [viewMode, currentDate, items]); // Removed refresh from deps
 
   useEffect(() => {
     // 1. Fetch Customers
     fetchCustomers();
 
-    // 2. Realtime Subscription (using store refresh)
+    // 2. Realtime Subscription for Availability (Bookings handled by Store)
     const channel = supabase
-      .channel('bookings-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-        refresh();
-        toast.info("Calendar updated from remote change");
-      })
+      .channel('availability-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'availability_blocks' }, () => {
         loadUnifiedEvents();
       })
@@ -246,7 +251,12 @@ export default function BookingsPage() {
       supabase.removeChannel(channel);
       window.removeEventListener('availability-changed', handleLocalChange);
     };
-  }, [refresh, fetchCustomers, loadUnifiedEvents]);
+  }, [fetchCustomers, loadUnifiedEvents]);
+
+  // NEW EFFECT: Ensure events reload when dependencies change
+  useEffect(() => {
+    loadUnifiedEvents();
+  }, [loadUnifiedEvents]);
 
   // Handle URL query parameters for pre-filling booking form
   const location = useLocation();
@@ -468,8 +478,8 @@ export default function BookingsPage() {
     setFormData({
       customer: booking.customer || "",
       customerId: booking.customerId || matchingCust?.id,
-      email: booking.email || matchingCust?.email || "",
-      phone: booking.phone || matchingCust?.phone || "",
+      email: booking.customerEmail || matchingCust?.email || "",
+      phone: booking.customerPhone || matchingCust?.phone || "",
       service: booking.title || "",
       vehicle: booking.vehicle || matchingCust?.vehicleType || "",
       vehicleYear: booking.vehicleYear || matchingCust?.year || "",
@@ -596,7 +606,9 @@ export default function BookingsPage() {
         hasReminder: formData.hasReminder,
         reminderFrequency: parseInt(formData.reminderFrequency) || 0,
         vehicleId: formData.vehicleId,
-        customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId
+        customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
+        customerEmail: formData.email,
+        customerPhone: formData.phone
       };
       update(selectedBooking.id, updates);
       resultingBooking = { ...selectedBooking, ...updates };
@@ -632,6 +644,8 @@ export default function BookingsPage() {
         hasReminder: formData.hasReminder,
         reminderFrequency: parseInt(formData.reminderFrequency) || 0,
         vehicleId: formData.vehicleId, // Store the specific vehicle ID
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
         createdAt: new Date().toISOString()
       };
       add(newBooking as any);
@@ -715,7 +729,9 @@ export default function BookingsPage() {
   // 🗑️ Delete Test Bookings - Only deletes bookings with test notes
   const handleDeleteTestBookings = async () => {
     const testBookings = items.filter(b =>
-      b.notes?.includes('Test booking - can be deleted')
+      b.notes?.includes('Test booking - can be deleted') ||
+      b.notes?.includes('[MOCK_DATA]') ||
+      b.customer === 'Test Admin'
     );
 
     if (testBookings.length === 0) {
@@ -821,6 +837,123 @@ export default function BookingsPage() {
     toast.success('PDF saved to File Manager (Bookings)');
   };
 
+  const handlePrintFullSchedule = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let y = 20;
+
+    // Header
+    doc.setFillColor(30, 58, 138); // Dark Blue
+    doc.rect(0, 0, pageWidth, 40, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text("Prime Auto Detail", 20, 25);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'normal');
+    doc.text("Booking Schedule Report", 20, 33);
+
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 70, 33);
+
+    y = 55;
+
+    // Summary
+    const activeBookings = items.filter(b => !b.isArchived);
+    const totalEstValue = activeBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Active Bookings: ${activeBookings.length}`, 20, y);
+    doc.text(`Estimated Total Value: $${totalEstValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, pageWidth - 90, y);
+
+    y += 15;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, y - 5, pageWidth - 20, y - 5);
+
+    // Sort by date
+    const sortedBookings = [...activeBookings].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    sortedBookings.forEach((b, index) => {
+      // Check if we need a new page
+      if (y > pageHeight - 60) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Booking Container
+      doc.setDrawColor(240, 240, 240);
+      doc.setFillColor(252, 252, 252);
+      doc.rect(20, y, pageWidth - 40, 65, 'FD');
+
+      // Status Indicator
+      let statusColor = [100, 100, 100]; // Default
+      if (b.status === 'confirmed') statusColor = [16, 185, 129]; // Emerald
+      if (b.status === 'tentative') statusColor = [245, 158, 11]; // Amber
+
+      doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+      doc.rect(20, y, 4, 65, 'F');
+
+      y += 10;
+      doc.setTextColor(30, 58, 138);
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text(b.title || "Standard Package", 30, y);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(10);
+      doc.text(formatETDate(b.date) + " @ " + formatETTime(b.date), pageWidth - 90, y);
+
+      y += 10;
+      doc.setTextColor(60, 60, 60);
+      doc.setFont(undefined, 'bold');
+      doc.text("Customer:", 30, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(`${b.customer || 'Unknown'} - ${b.customerEmail || b.customerPhone || 'N/A'}`, 60, y);
+
+      const priceText = b.price ? `$${b.price.toFixed(2)}` : 'Est.';
+      doc.setTextColor(16, 185, 129);
+      doc.setFont(undefined, 'bold');
+      doc.text(priceText, pageWidth - 45, y);
+
+      y += 8;
+      doc.setTextColor(60, 60, 60);
+      doc.setFont(undefined, 'bold');
+      doc.text("Vehicle:", 30, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(`${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''} (${b.vehicle || 'Unknown Type'})`, 60, y);
+
+      y += 8;
+      doc.setFont(undefined, 'bold');
+      doc.text("Add-ons:", 30, y);
+      doc.setFont(undefined, 'normal');
+      doc.text((b.addons && b.addons.length > 0) ? b.addons.join(", ") : "None", 60, y);
+
+      y += 8;
+      doc.setFont(undefined, 'bold');
+      doc.text("Notes:", 30, y);
+      doc.setFont(undefined, 'normal');
+      const notesLines = doc.splitTextToSize(b.notes || "No notes provided.", pageWidth - 100);
+      doc.text(notesLines, 60, y);
+
+      y += (notesLines.length * 5) + 5;
+
+      // Separator
+      y += 5;
+    });
+
+    // Footer on the last page
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Prime Auto Detail - Schedule Report - Official Business Record", pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+    doc.save(`Prime_Auto_Detail_Schedule_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    toast.success("Schedule report generated!");
+  };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw] overflow-x-hidden">
@@ -835,6 +968,10 @@ export default function BookingsPage() {
 
           <Button variant="outline" size="icon" onClick={refresh} className="h-8 w-8" title="Refresh">
             <RotateCcw className="h-3 w-3" />
+          </Button>
+
+          <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} className="h-8 w-8" title="Print All Bookings">
+            <Printer className="h-3 w-3" />
           </Button>
 
           <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
@@ -882,6 +1019,9 @@ export default function BookingsPage() {
             <div className="flex gap-2">
               <Button variant="outline" size="icon" onClick={refresh} title="Refresh">
                 <RotateCcw className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} title="Print All Bookings">
+                <Printer className="h-4 w-4" />
               </Button>
               <Button className="bg-primary hover:bg-primary/90" size="sm" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
                 <Plus className="h-4 w-4" />
@@ -1330,7 +1470,10 @@ export default function BookingsPage() {
                       <div className="text-emerald-400 font-bold text-lg">
                         {selectedBooking?.price ? `$${selectedBooking.price.toFixed(2)}` : 'Est.'}
                       </div>
-                      <div className="text-zinc-500 text-xs">{formData.date ? format(new Date(formData.date), "MMM d, yyyy") : "No Date"}</div>
+                      <div className="text-zinc-500 text-xs">
+                        {selectedDate ? formatETDate(selectedDate) : "No Date"}
+                        {formData.time && ` @ ${formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`)}`}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1766,21 +1909,25 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            <DialogFooter className="flex justify-between sm:justify-between gap-2">
-              <div className="flex gap-2">
+            <DialogFooter className="flex justify-between sm:justify-between gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 min-w-max">
                 {selectedBooking && (
-                  <Button variant="destructive" size="icon" onClick={handleDelete} className="bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-900">
+                  <Button variant="destructive" size="icon" onClick={handleDelete} className="bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-900 shrink-0">
                     <X className="h-4 w-4" />
                   </Button>
                 )}
-                <Button variant="secondary" onClick={handleStartJob} className="gap-2">
-                  <Wrench className="h-4 w-4" /> Start Job
+                <Button variant="outline" size="sm" onClick={() => setShowEmailPreview(true)} className="gap-1 border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                  <Mail className="h-3.5 w-3.5" /> Preview Email
                 </Button>
-                <Button variant="secondary" onClick={() => handleDuplicate(selectedBooking)} className="gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700">
-                  <Copy className="h-4 w-4" /> Duplicate
+                <Button variant="secondary" size="sm" onClick={handleStartJob} className="gap-1">
+                  <Wrench className="h-3.5 w-3.5" /> Start Job
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => handleDuplicate(selectedBooking)} className="gap-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700">
+                  <Copy className="h-3.5 w-3.5" /> Duplicate
                 </Button>
                 {selectedBooking?.status === 'tentative' && (
                   <Button
+                    size="sm"
                     onClick={() => {
                       if (selectedBooking) {
                         update(selectedBooking.id, { status: 'confirmed' });
@@ -1788,15 +1935,15 @@ export default function BookingsPage() {
                         setIsAddModalOpen(false);
                       }
                     }}
-                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="gap-1 bg-green-600 hover:bg-green-700 text-white"
                   >
-                    ✓ Confirm Booking
+                    ✓ Confirm
                   </Button>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">Save Booking</Button>
+              <div className="flex gap-2 min-w-max">
+                <Button variant="outline" size="sm" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleSave} className="bg-primary hover:bg-primary/90">Save</Button>
               </div>
             </DialogFooter>
           </DialogContent>
@@ -1831,289 +1978,508 @@ export default function BookingsPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Email Preview Dialog */}
+        <Dialog open={showEmailPreview} onOpenChange={setShowEmailPreview}>
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white border-zinc-200 p-0 text-black">
+            <DialogHeader className="p-4 bg-zinc-100 border-b border-zinc-200 sticky top-0 z-10">
+              <DialogTitle className="text-zinc-900 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                  Customer Email Preview
+                </div>
+                <Badge variant="outline" className={cn("ml-2 capitalize", formData.status === 'confirmed' ? "border-green-500 text-green-700" : "border-amber-500 text-amber-700")}>
+                  {formData.status === 'confirmed' ? 'Confirmed Layout' : 'Request Layout'}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="p-6 bg-zinc-50 min-h-[400px]">
+              <div className="max-w-[600px] mx-auto bg-white shadow-xl rounded-xl border border-zinc-200 overflow-hidden text-left">
+                {/* Email Header */}
+                <div className="bg-gradient-to-r from-blue-800 to-blue-600 p-8 text-center text-white">
+                  <div className="text-4xl mb-3">🚗</div>
+                  <h1 className="m-0 text-2xl font-extrabold uppercase tracking-tight">
+                    {formData.status === 'confirmed' || formData.status === 'done' ? 'Booking Confirmed!' : 'Booking Request Received'}
+                  </h1>
+                  <p className="m-0 mt-2 text-sm opacity-90 italic">
+                    {formData.status === 'confirmed' || formData.status === 'done'
+                      ? "We've officially set your appointment."
+                      : "We've received your request and will contact you shortly."}
+                  </p>
+                </div>
 
+                {/* Email Body */}
+                <div className="p-8">
+                  <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                  <p className="text-zinc-600 leading-relaxed">
+                    {formData.status === 'confirmed' || formData.status === 'done'
+                      ? `Great news! Your booking for ${formData.service || 'Service Package'} has been confirmed. Our team is excited to service your vehicle and provide a premium experience.`
+                      : `We have received your request for ${formData.service || 'Service Package'}. Our team is reviewing the schedule to ensure we can provide you with the best experience.`}
+                  </p>
 
-        {/* Booking History Section */}
-        <Card className="mt-6 p-6 bg-zinc-950/50 border-zinc-800">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl font-bold">Booking History</h2>
-              <p className="text-sm text-muted-foreground">
-                View all customers with bookings and their complete information
-              </p>
-            </div>
-            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
-                  <Filter className="h-4 w-4" />
-                  Filter History
-                  {(showArchived || dateFilter.start) && (
-                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
-                      !
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Show Archived</span>
-                    <Switch checked={showArchived} onCheckedChange={setShowArchived} />
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Date Range</span>
-                    <div className="grid gap-2">
-                      <Calendar
-                        mode="range"
-                        selected={{ from: dateFilter.start, to: dateFilter.end }}
-                        onSelect={(range) => setDateFilter({ start: range?.from, end: range?.to })}
-                        initialFocus
-                        className="rounded-md border border-zinc-800 bg-zinc-900"
-                      />
+                  {/* Info Box */}
+                  <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-6 my-6">
+                    <h3 className="mt-0 mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Appointment Details</h3>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-zinc-400 w-5 text-center">📅</span>
+                        <span className="text-zinc-800 font-semibold">
+                          {selectedDate ? formatETDate(selectedDate) : "TBD"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-zinc-400 w-5 text-center">⏰</span>
+                        <span className="text-zinc-800 font-semibold">
+                          {formData.time ? formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`) : "TBD"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-zinc-400 w-5 text-center">🔧</span>
+                        <span className="text-zinc-800 font-semibold">{formData.service || "Unnamed Package"}</span>
+                      </div>
+
+                      {(formData.vehicleYear || formData.vehicleMake) && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-400 w-5 text-center">🚙</span>
+                          <span className="text-zinc-800 font-semibold">
+                            {formData.vehicleYear} {formData.vehicleMake} {formData.vehicleModel}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="pt-4 border-t border-dashed border-zinc-200 mt-4 flex justify-between items-center">
+                        <span className="text-zinc-500 font-medium">Total Estimate:</span>
+                        <span className="text-emerald-600 text-2xl font-black">
+                          ${selectedBooking?.price ? selectedBooking.price.toLocaleString() : '0.00'}
+                        </span>
+                      </div>
                     </div>
-                    {(dateFilter.start || dateFilter.end) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs text-muted-foreground hover:text-white"
-                        onClick={() => setDateFilter({ start: undefined, end: undefined })}
-                      >
-                        Clear Dates
-                      </Button>
-                    )}
+                  </div>
+
+                  {/* Status Dependent Note */}
+                  {formData.status !== 'confirmed' && formData.status !== 'done' ? (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
+                      <p className="m-0 text-sm text-blue-800 leading-relaxed">
+                        <strong>Note:</strong> We have received your request. A representative will review the details and contact you within <strong>24 hours</strong> to confirm your appointment.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mb-6">
+                      <p className="m-0 text-sm text-amber-800 leading-relaxed">
+                        <strong>Important:</strong> If you need to change or cancel, please let us know at least 24 hours in advance.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-zinc-600 mb-8">We look forward to seeing you soon!</p>
+
+                  <div className="text-center pt-8 border-t border-zinc-100">
+                    <p className="m-0 font-bold text-zinc-900">Prime Auto Detail</p>
+                    <p className="m-0 mt-1 text-zinc-500 text-sm">Professional Detailing Solutions</p>
                   </div>
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
 
-          <div className="space-y-2">
-            {(() => {
-              // Get unique customers from all bookings
-              const uniqueCustomers = Array.from(
-                new Set(items.map(b => b.customer))
-              ).map(customerName => {
-                // Find all bookings for this customer
-                // Apply filters here
-                let customerBookings = items.filter(b => b.customer === customerName);
+                {/* Email Footer */}
+                <div className="bg-zinc-50 p-6 text-center border-t border-zinc-200">
+                  <p className="m-0 text-zinc-400 text-xs">&copy; {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="p-4 bg-zinc-50 border-t border-zinc-200">
+              <Button onClick={() => setShowEmailPreview(false)} className="bg-zinc-900 text-white">Close Preview</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-                // Removed !showArchived check so they always appear in history list
 
-                if (dateFilter.start && dateFilter.end) {
-                  customerBookings = customerBookings.filter(b => {
-                    const d = parseISO(b.date);
-                    return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
-                  });
-                } else if (dateFilter.start) {
-                  // Single day selection or partial range? Calendar range usually sets both if range
-                  // If only start is set, maybe just match start?
-                  // But range calendar might return undefined end while selecting
-                  // Let's assume strict range only if both set, or just allow strict filtering if single day
-                  // Actually standard behavior is to show nothing or just start? 
-                  // Let's safe guard:
-                  if (!dateFilter.end) {
-                    customerBookings = customerBookings.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
-                  }
-                }
 
-                if (customerBookings.length === 0) return null;
+        <Card className="mt-8 p-0 bg-zinc-950/50 border-zinc-800 overflow-hidden">
+          <div className="p-6 pb-2">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
+                  <Package className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">Booking History</h2>
+                  <p className="text-sm text-zinc-500 font-medium">
+                    Complete customer records and booking logs
+                  </p>
+                </div>
+              </div>
 
-                // Get the most recent booking to extract customer details
-                // Get the most recent booking to extract customer details
-                const recentBooking = customerBookings.sort((a, b) =>
-                  new Date(b.date).getTime() - new Date(a.date).getTime()
-                )[0];
-
-                // Find full customer data from customers list
-                const fullCustomer = customers.find(c => c.name === customerName);
-
-                return {
-                  name: customerName,
-                  bookingCount: customerBookings.length,
-                  lastBooking: recentBooking.date,
-                  vehicle: recentBooking.vehicleYear && recentBooking.vehicleMake
-                    ? `${recentBooking.vehicleYear} ${recentBooking.vehicleMake} ${recentBooking.vehicleModel}`
-                    : recentBooking.vehicle || 'N/A',
-                  address: recentBooking.address || fullCustomer?.address || 'N/A',
-                  phone: fullCustomer?.phone || 'N/A',
-                  email: fullCustomer?.email || 'N/A',
-                  bookings: customerBookings
-                };
-              }).filter(Boolean) as any[];
-
-              if (uniqueCustomers.length === 0) {
-                return (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No booking history yet. Create your first booking above!
-                  </div>
-                );
-              }
-
-              return uniqueCustomers.map((customer) => (
-                <Collapsible
-                  key={customer.name}
-                  open={selectedHistoryCustomer === customer.name}
-                  onOpenChange={(open) => setSelectedHistoryCustomer(open ? customer.name : null)}
+              <div className="flex flex-wrap items-center gap-2 p-2 bg-zinc-900/80 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md">
+                <div className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mr-2 ml-3">Quick Filter:</div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (!dateFilter.start && !dateFilter.end) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : "text-zinc-400")}
                 >
-                  <div className="border border-zinc-800 rounded-lg overflow-hidden">
-                    <CollapsibleTrigger className="w-full">
-                      <div className="flex items-center justify-between p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                            <User className="h-5 w-5 text-primary" />
-                          </div>
-                          <div className="text-left">
-                            <div className="font-semibold">{customer.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {customer.bookingCount} booking{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
-                            </div>
-                          </div>
+                  ALL
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDateFilter({ start: new Date(), end: undefined })}
+                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (dateFilter.start && isToday(dateFilter.start) && !dateFilter.end) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : "text-zinc-400")}
+                >
+                  TODAY
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfWeek(new Date()))) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : "text-zinc-400")}
+                >
+                  WEEK
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
+                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (dateFilter.start && isSameMonth(dateFilter.start, new Date()) && !dateFilter.end && !isToday(dateFilter.start)) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfMonth(new Date()))) ? "bg-red-600 text-white" : "text-zinc-400")}
+                >
+                  MONTH
+                </Button>
+
+                <div className="w-px h-6 bg-zinc-800 mx-2" />
+
+                <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (dateFilter.start || dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}>
+                      <Filter className="h-3.5 w-3.5" />
+                      Filter History
+                      {(showArchived) && (
+                        <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 ml-1 h-4 px-1 border-none text-[8px]">
+                          +Archived
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-0 overflow-hidden shadow-2xl" align="end">
+                    <div className="p-4 bg-red-600 flex items-center justify-between shadow-lg">
+                      <span className="text-xs font-black uppercase tracking-widest text-white antialiased">Filter History</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20 rounded-full" onClick={() => setIsFilterOpen(false)}>
+                        <X className="h-3 w-3 text-white" />
+                      </Button>
+                    </div>
+
+                    <div className="p-4 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">Show Archived</span>
+                          <span className="text-[10px] text-zinc-500 uppercase font-black">Include secondary records</span>
                         </div>
-                        <ChevronDown
-                          className={cn(
-                            "h-5 w-5 text-muted-foreground transition-transform",
-                            selectedHistoryCustomer === customer.name && "transform rotate-180"
-                          )}
+                        <Switch
+                          checked={showArchived}
+                          onCheckedChange={setShowArchived}
+                          className="data-[state=checked]:bg-red-600"
                         />
                       </div>
-                    </CollapsibleTrigger>
 
-                    <CollapsibleContent>
-                      <div className="border-t border-zinc-800 p-4 bg-zinc-900/30">
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {/* Customer Details */}
-                          <div className="space-y-3">
-                            <h3 className="font-semibold text-sm text-muted-foreground uppercase">Contact Information</h3>
-
-                            <div className="flex items-start gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <div className="text-xs text-muted-foreground">Email</div>
-                                <div className="text-sm">{customer.email}</div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-start gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <div className="text-xs text-muted-foreground">Phone</div>
-                                <div className="text-sm">{customer.phone}</div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-start gap-2">
-                              <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <div className="text-xs text-muted-foreground">Address</div>
-                                <div className="text-sm">{customer.address}</div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-start gap-2">
-                              <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <div className="text-xs text-muted-foreground">Vehicle</div>
-                                <div className="text-sm">{customer.vehicle}</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Booking History for this customer */}
-                          <div className="space-y-3">
-                            <h3 className="font-semibold text-sm text-muted-foreground uppercase">Booking History</h3>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {customer.bookings.map((booking: Booking) => (
-                                <div
-                                  key={booking.id}
-                                  className={cn(
-                                    "p-2 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer",
-                                    booking.isArchived && "bg-green-900/40 border-green-700 hover:bg-green-900/50"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleBookingClick(e as any, booking as any);
-                                  }}
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <div className="font-medium text-sm">{booking.title}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {format(parseISO(booking.date), "MMM d, yyyy 'at' h:mm a")}
-                                      </div>
-                                    </div>
-                                    <Badge
-                                      variant="outline"
-                                      className={cn("text-xs", getStatusColor(booking.status as any))}
-                                    >
-                                      {booking.status}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex justify-end mt-2">
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      className="h-6 text-xs gap-1"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const params = new URLSearchParams();
-                                        if (customer.name) params.set('customerName', customer.name);
-                                        if (booking.title) {
-                                          const svc = allServices.find(s => s.name === booking.title);
-                                          if (svc) params.set('package', svc.id);
-                                        }
-                                        if (booking.vehicle) params.set('vehicleType', booking.vehicle);
-                                        if (booking.addons && booking.addons.length) {
-                                          const aids = booking.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
-                                          params.set('addons', aids.join(','));
-                                        }
-                                        navigate(`/service-checklist?${params.toString()}`);
-                                      }}
-                                    >
-                                      <Wrench className="h-3 w-3" /> Start Job
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className={cn("h-6 text-xs gap-1 ml-2", booking.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleArchiveToggle(booking);
-                                      }}
-                                    >
-                                      <Archive className="h-3 w-3" /> {booking.isArchived ? "Restore" : "Archive"}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 text-xs gap-1 ml-2 text-zinc-500 hover:text-zinc-300"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDuplicate(booking);
-                                      }}
-                                    >
-                                      <Copy className="h-3 w-3" /> Duplicate
-                                    </Button>
-                                  </div>
-                                  {
-                                    booking.assignedEmployee && (
-                                      <div className="text-xs text-muted-foreground mt-1">
-                                        👤 {booking.assignedEmployee}
-                                      </div>
-                                    )
-                                  }
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                      <div className="space-y-3">
+                        <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Quick Presets</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (!dateFilter.start && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                          >
+                            VIEW ALL
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && isToday(dateFilter.start) && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            onClick={() => setDateFilter({ start: new Date(), end: undefined })}
+                          >
+                            TODAY
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfWeek(new Date()))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                          >
+                            THIS WEEK
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && isSameMonth(dateFilter.start, new Date()) && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
+                          >
+                            THIS MONTH
+                          </Button>
                         </div>
                       </div>
-                    </CollapsibleContent>
-                  </div>
-                </Collapsible>
-              ));
-            })()}
+
+                      <div className="space-y-3 pt-2 border-t border-zinc-800/50">
+                        <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Custom Range</span>
+                        <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/40">
+                          <Calendar
+                            mode="range"
+                            selected={{ from: dateFilter.start, to: dateFilter.end }}
+                            onSelect={(range) => setDateFilter({ start: range?.from, end: range?.to })}
+                            initialFocus
+                            className="bg-transparent text-white"
+                          />
+                        </div>
+                        {(dateFilter.start || dateFilter.end) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-[10px] font-black uppercase text-zinc-500 hover:text-red-500 transition-colors"
+                            onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                          >
+                            <RotateCcw className="h-3 w-3 mr-2" />
+                            Clear Date Filter
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-4">
+
+                <div className="space-y-2">
+                  {(() => {
+                    // Get unique customers from all bookings
+                    const uniqueCustomers = Array.from(
+                      new Set(items.map(b => b.customer))
+                    ).map(customerName => {
+                      // Find all bookings for this customer
+                      // Apply filters here
+                      let customerBookings = items.filter(b => b.customer === customerName);
+
+                      // Removed !showArchived check so they always appear in history list
+
+                      if (dateFilter.start && dateFilter.end) {
+                        customerBookings = customerBookings.filter(b => {
+                          const d = parseISO(b.date);
+                          return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+                        });
+                      } else if (dateFilter.start) {
+                        // Single day selection or partial range? Calendar range usually sets both if range
+                        // If only start is set, maybe just match start?
+                        // But range calendar might return undefined end while selecting
+                        // Let's assume strict range only if both set, or just allow strict filtering if single day
+                        // Actually standard behavior is to show nothing or just start? 
+                        // Let's safe guard:
+                        if (!dateFilter.end) {
+                          customerBookings = customerBookings.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
+                        }
+                      }
+
+                      if (customerBookings.length === 0) return null;
+
+                      // Get the most recent booking to extract customer details
+                      // Get the most recent booking to extract customer details
+                      const recentBooking = customerBookings.sort((a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                      )[0];
+
+                      // Find full customer data from customers list
+                      const fullCustomer = customers.find(c => c.name === customerName);
+
+                      return {
+                        name: customerName,
+                        bookingCount: customerBookings.length,
+                        lastBooking: recentBooking.date,
+                        vehicle: recentBooking.vehicleYear && recentBooking.vehicleMake
+                          ? `${recentBooking.vehicleYear} ${recentBooking.vehicleMake} ${recentBooking.vehicleModel}`
+                          : recentBooking.vehicle || 'N/A',
+                        address: recentBooking.address || fullCustomer?.address || 'N/A',
+                        phone: fullCustomer?.phone || 'N/A',
+                        email: fullCustomer?.email || 'N/A',
+                        bookings: customerBookings
+                      };
+                    }).filter(Boolean) as any[];
+
+                    if (uniqueCustomers.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No booking history yet. Create your first booking above!
+                        </div>
+                      );
+                    }
+
+                    return uniqueCustomers.map((customer) => (
+                      <Collapsible
+                        key={customer.name}
+                        open={selectedHistoryCustomer === customer.name}
+                        onOpenChange={(open) => setSelectedHistoryCustomer(open ? customer.name : null)}
+                      >
+                        <div className="border border-zinc-800 rounded-lg overflow-hidden">
+                          <CollapsibleTrigger className="w-full">
+                            <div className="flex items-center justify-between p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="text-left">
+                                  <div className="font-semibold">{customer.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {customer.bookingCount} booking{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
+                                  </div>
+                                </div>
+                              </div>
+                              <ChevronDown
+                                className={cn(
+                                  "h-5 w-5 text-muted-foreground transition-transform",
+                                  selectedHistoryCustomer === customer.name && "transform rotate-180"
+                                )}
+                              />
+                            </div>
+                          </CollapsibleTrigger>
+
+                          <CollapsibleContent>
+                            <div className="border-t border-zinc-800 p-4 bg-zinc-900/30">
+                              <div className="grid md:grid-cols-2 gap-4">
+                                {/* Customer Details */}
+                                <div className="space-y-3">
+                                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Contact Information</h3>
+
+                                  <div className="flex items-start gap-2">
+                                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                      <div className="text-xs text-muted-foreground">Email</div>
+                                      <div className="text-sm">{customer.email}</div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-start gap-2">
+                                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                      <div className="text-xs text-muted-foreground">Phone</div>
+                                      <div className="text-sm">{customer.phone}</div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-start gap-2">
+                                    <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                      <div className="text-xs text-muted-foreground">Address</div>
+                                      <div className="text-sm">{customer.address}</div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-start gap-2">
+                                    <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                      <div className="text-xs text-muted-foreground">Vehicle</div>
+                                      <div className="text-sm">{customer.vehicle}</div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Booking History for this customer */}
+                                <div className="space-y-3">
+                                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Booking History</h3>
+                                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {customer.bookings.map((booking: Booking) => (
+                                      <div
+                                        key={booking.id}
+                                        className={cn(
+                                          "p-2 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer",
+                                          booking.isArchived && "bg-green-900/40 border-green-700 hover:bg-green-900/50"
+                                        )}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleBookingClick(e as any, booking as any);
+                                        }}
+                                      >
+                                        <div className="flex justify-between items-start">
+                                          <div>
+                                            <div className="font-medium text-sm">{booking.title}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                              {format(parseISO(booking.date), "MMM d, yyyy 'at' h:mm a")}
+                                            </div>
+                                          </div>
+                                          <Badge
+                                            variant="outline"
+                                            className={cn("text-xs", getStatusColor(booking.status as any))}
+                                          >
+                                            {booking.status}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex justify-end mt-2">
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-6 text-xs gap-1"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const params = new URLSearchParams();
+                                              if (customer.name) params.set('customerName', customer.name);
+                                              if (booking.title) {
+                                                const svc = allServices.find(s => s.name === booking.title);
+                                                if (svc) params.set('package', svc.id);
+                                              }
+                                              if (booking.vehicle) params.set('vehicleType', booking.vehicle);
+                                              if (booking.addons && booking.addons.length) {
+                                                const aids = booking.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+                                                params.set('addons', aids.join(','));
+                                              }
+                                              navigate(`/service-checklist?${params.toString()}`);
+                                            }}
+                                          >
+                                            <Wrench className="h-3 w-3" /> Start Job
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className={cn("h-6 text-xs gap-1 ml-2", booking.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleArchiveToggle(booking);
+                                            }}
+                                          >
+                                            <Archive className="h-3 w-3" /> {booking.isArchived ? "Restore" : "Archive"}
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 text-xs gap-1 ml-2 text-zinc-500 hover:text-zinc-300"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDuplicate(booking);
+                                            }}
+                                          >
+                                            <Copy className="h-3 w-3" /> Duplicate
+                                          </Button>
+                                        </div>
+                                        {
+                                          booking.assignedEmployee && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                              👤 {booking.assignedEmployee}
+                                            </div>
+                                          )
+                                        }
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    ))
+                  })()}
+                </div>
+              </div>
+            </div>
           </div>
-        </Card >
+        </Card>
       </div>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -2145,6 +2511,6 @@ export default function BookingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div >
+    </div>
   );
 }

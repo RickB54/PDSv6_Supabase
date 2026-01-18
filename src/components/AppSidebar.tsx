@@ -244,7 +244,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     const todayBookings = allBookings.filter(b => {
       const bookingDate = new Date(b.date);
       bookingDate.setHours(0, 0, 0, 0);
-      return bookingDate.getTime() === today.getTime();
+      return bookingDate.getTime() === today.getTime() &&
+        b.status !== 'confirmed' &&
+        b.status !== 'done';
     });
 
     // Check if there are unread booking alerts

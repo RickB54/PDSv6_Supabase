@@ -1472,7 +1472,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
     try {
         let query = supabase
             .from('bookings')
-            .select('*');
+            .select('*, customers(full_name, email, phone), vehicles(make, model, year, type)');
 
         if (filterByCurrentUser) {
             const { data: { user } } = await supabase.auth.getUser();
@@ -1508,21 +1508,23 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 id: b.id,
                 title: b.title || b.service_package || meta.title || b.service || 'Service',
                 customer: b.customer_name || (b.customers ? b.customers.full_name : null) || meta.customer_name || 'Unknown',
+                customerEmail: b.customers?.email || meta.email,
+                customerPhone: b.customers?.phone || meta.phone,
                 customerId: b.customer_id,
                 date: dateStr,
                 endTime: b.end_time || meta.end_time,
                 status: b.status || 'confirmed',
                 notes: b.notes || meta.notes,
-                vehicle: b.vehicle_type || meta.type || '', // Use meta for vehicle type 
-                vehicleMake: b.make || meta.make || '',
-                vehicleModel: b.model || meta.model || '',
-                vehicleYear: b.year || meta.year || '',
+                vehicle: b.vehicle_type || meta.type || b.vehicles?.type || '',
+                vehicleMake: b.make || meta.make || b.vehicles?.make || '',
+                vehicleModel: b.model || meta.model || b.vehicles?.model || '',
+                vehicleYear: b.year || meta.year || b.vehicles?.year || '',
                 addons: Array.isArray(b.add_ons) ? b.add_ons : [],
                 price: b.price || b.service_price || meta.price,
                 assignedEmployee: b.assigned_employee || meta.assigned_employee,
                 bookedBy: b.booked_by || meta.booked_by,
                 createdAt: b.created_at || meta.created_at,
-                vehicleId: b.vehicle_id || meta.vehicle_id, // Map vehicleId
+                vehicleId: b.vehicle_id || meta.vehicle_id,
                 reminderFrequency: meta.reminder_frequency,
                 hasReminder: meta.has_reminder,
                 isArchived: meta.is_archived
