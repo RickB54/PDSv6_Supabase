@@ -1524,7 +1524,7 @@ export default function PackagePricing() {
     setNewAddonForm({ name: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
   };
 
-  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
+  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail', 'prime-2026-exterior', 'prime-2026-interior', 'prime-2026-full'];
 
   const totalPkgs = Array.from(new Map([...builtInPackages, ...getCustomPackages()].map(p => [p.id, p])).values())
     .filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false).length;
@@ -1582,7 +1582,8 @@ export default function PackagePricing() {
               </SelectContent>
             </Select>
 
-            {/* Package Mode Toggle */}
+            {/* Package Mode Toggle - Disabling for now to avoid confusion as logic is only partially implemented */}
+            {/* 
             <div className="ml-auto flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-lg border border-zinc-700">
               <Label className="text-white font-semibold">Public Site Shows:</Label>
               <Button
@@ -1626,6 +1627,7 @@ export default function PackagePricing() {
                 6 Packages
               </Button>
             </div>
+            */}
           </div>
 
           <Accordion type="multiple" className="space-y-4">

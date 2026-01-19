@@ -27,6 +27,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
+import { servicePackages, addOns as sharedAddOns } from "@/lib/services";
+
 // --- Types ---
 interface PackageItem {
     id: string;
@@ -38,108 +40,12 @@ interface PackageItem {
 
 // --- Initial Data ---
 
-const INITIAL_ACTUAL_PACKAGES: PackageItem[] = [
-    {
-        id: "actual-1",
-        name: "Basic Exterior Wash",
-        description: "Essential exterior cleaning",
-        includes: [
-            "Pre-rinse & foam",
-            "Two-bucket wash",
-            "Hand dry",
-            "Final inspection"
-        ]
-    },
-    {
-        id: "actual-2",
-        name: "Express Wash & Wax",
-        description: "Quick wash with protective wax",
-        includes: [
-            "Quick wash",
-            "Spray wax",
-            "Tire shine",
-            "Final inspection"
-        ]
-    },
-    {
-        id: "actual-3",
-        name: "Full Exterior Detail",
-        description: "Complete exterior restoration",
-        includes: [
-            "Pre-rinse vehicle",
-            "Apply foam cannon",
-            "Two-bucket wash",
-            "Clay bar treatment",
-            "Iron remover application",
-            "Dry vehicle",
-            "Apply sealant/wax",
-            "Tire dressing",
-            "Clean windows",
-            "Final inspection"
-        ]
-    },
-    {
-        id: "actual-4",
-        name: "Interior Cleaning",
-        description: "Deep interior detailing",
-        includes: [
-            "Vacuum all surfaces",
-            "Clean dashboard",
-            "Clean door panels",
-            "Clean seats",
-            "Clean carpets/mats",
-            "Apply UV protectant",
-            "Clean windows",
-            "Final inspection"
-        ]
-    },
-    {
-        id: "actual-5",
-        name: "Full Detail",
-        description: "Complete interior and exterior",
-        includes: [
-            "Pre-rinse vehicle",
-            "Apply foam cannon",
-            "Two-bucket wash",
-            "Clay bar treatment",
-            "Iron remover application",
-            "Dry vehicle",
-            "Apply sealant",
-            "Tire dressing",
-            "Vacuum all surfaces",
-            "Clean dashboard",
-            "Clean door panels",
-            "Clean seats",
-            "Clean carpets/mats",
-            "Apply UV protectant",
-            "Clean windows",
-            "Final inspection"
-        ]
-    },
-    {
-        id: "actual-6",
-        name: "Premium Detail",
-        description: "Ultimate detailing experience",
-        includes: [
-            "Pre-rinse vehicle",
-            "Apply foam cannon",
-            "Two-bucket wash",
-            "Clay bar treatment",
-            "Iron remover application",
-            "Dry vehicle",
-            "Apply ceramic coating",
-            "Tire dressing",
-            "Vacuum all surfaces",
-            "Clean dashboard",
-            "Clean door panels",
-            "Clean seats",
-            "Clean carpets/mats",
-            "Apply UV protectant",
-            "Clean windows",
-            "Final inspection"
-        ]
-    }
-];
+const INITIAL_ACTUAL_PACKAGES: PackageItem[] = servicePackages.map(pkg => ({
+    id: pkg.id,
+    name: pkg.name,
+    description: pkg.description,
+    includes: pkg.steps.map(s => s.name)
+}));
 
 const INITIAL_OTHER_PACKAGES: PackageItem[] = [
     {
@@ -291,7 +197,17 @@ export default function PackageSelection() {
             const savedOther = await localforage.getItem<PackageItem[]>("pkg_select_other");
             const savedSelection = await localforage.getItem<string[]>("pkg_select_selection");
 
-            setActualPackages(savedActual || INITIAL_ACTUAL_PACKAGES);
+            // Sync Actual packages with INITIAL_ACTUAL_PACKAGES to ensure 'includes' are always up-to-date
+            const syncedActual = INITIAL_ACTUAL_PACKAGES.map(builtIn => {
+                const saved = savedActual?.find(s => s.id === builtIn.id);
+                if (saved) {
+                    // Always use the latest includes from services.ts for consistency
+                    return { ...saved, includes: builtIn.includes };
+                }
+                return builtIn;
+            });
+
+            setActualPackages(syncedActual);
             setOtherPackages(savedOther || INITIAL_OTHER_PACKAGES);
             if (savedSelection) {
                 setSelectedIds(new Set(savedSelection));

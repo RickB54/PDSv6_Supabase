@@ -34,7 +34,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { format } from "date-fns";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
-import { getServiceDuration } from "@/lib/services";
+const getServiceDuration = (id: string = '') => {
+  if (id.includes('prime-elite-full')) return 5.5;
+  if (id.includes('prime-elite-interior')) return 4.5;
+  if (id.includes('prime-elite-exterior')) return 1.5;
+  if (id.includes('prime-essential-full')) return 2.5;
+  if (id.includes('prime-essential-interior')) return 1.5;
+  if (id.includes('prime-essential-exterior')) return 1;
+  return 3;
+};
 import { formatTimeAMPM } from "@/lib/availability";
 
 const BookNow = () => {

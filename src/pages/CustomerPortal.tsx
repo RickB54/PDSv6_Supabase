@@ -48,28 +48,16 @@ const packageImages: Record<string, string> = {
   "prime-elite-exterior": primeEliteExt,
   "prime-elite-interior": primeEliteInt,
   "prime-elite-full": primeEliteFull,
-
-  // 3-Pack (Prime 2026) Images
-  "prime-2026-exterior": primeEssentialExt,
-  "prime-2026-interior": primeEssentialInt,
-  "prime-2026-full": primeEssentialFull,
-  // Keep legacy for backward compatibility if any are actually made visible
-  "basic-exterior": packageBasic,
-  "express-wax": packageExpress,
-  "full-exterior": packageExterior,
-  "interior-cleaning": packageInterior,
-  "full-detail": packageFull,
-  "premium-detail": packagePremium,
 };
 
 // Helper for estimated duration
 const getServiceDuration = (id: string = '') => {
-  if (id.includes('prime-elite-full')) return 6;
-  if (id.includes('prime-elite-interior')) return 4;
-  if (id.includes('prime-elite-exterior')) return 3;
-  if (id.includes('prime-essential-full')) return 4;
-  if (id.includes('prime-essential-interior')) return 2.5;
-  if (id.includes('prime-essential-exterior')) return 2;
+  if (id.includes('prime-elite-full')) return 5.5;
+  if (id.includes('prime-elite-interior')) return 4.5;
+  if (id.includes('prime-elite-exterior')) return 1.5;
+  if (id.includes('prime-essential-full')) return 2.5;
+  if (id.includes('prime-essential-interior')) return 1.5;
+  if (id.includes('prime-essential-exterior')) return 1;
   return 3;
 };
 
@@ -256,8 +244,6 @@ const CustomerPortal = () => {
   }, []);
 
   // Build live packages and add-ons arrays
-  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
-
   const allBuiltInSteps: Record<string, { id: string; name: string }> = Object.fromEntries(
     builtInPackages.flatMap(p => p.steps.map(s => [typeof s === 'string' ? s : s.id, typeof s === 'string' ? s : s.name]))
       .map(([id, name]) => [id as string, { id: id as string, name: name as string }])
@@ -272,11 +258,9 @@ const CustomerPortal = () => {
     .filter((p: any) => {
       // Check metadata visibility (admin toggle)
       const meta = packageMetaLive[p.id];
-      // Default Prime 2026 packages to HIDDEN if no explicit setting exists (fixes 9 packages issue)
-      if (!meta && p.id.includes('prime-2026')) return false;
       return meta ? meta.visible !== false : true;
     })
-    .filter((p: any) => !legacyIds.includes(p.id)) // Ensure legacy ones are hidden by default if not strictly managed
+    .filter((p: any) => p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')) // Strictly Prime tiers
     .map((p: any) => {
       const pricing = { ...p.pricing };
       Object.keys(pricing).forEach(vType => {
@@ -779,10 +763,28 @@ const CustomerPortal = () => {
       <Dialog open={!!learnMorePackage} onOpenChange={(open) => { if (!open) { setLearnMorePackage(null); setModalAddOns([]); setAvailDate(undefined); setAvailTime(''); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">{learnMorePackage?.name.replace(' (BEST VALUE)', '')}</DialogTitle>
-            <DialogDescription>
-              ${learnMorePackage ? learnMorePackage.pricing[vehicleType] : 0}
-            </DialogDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-2xl">{learnMorePackage?.name.replace(' (BEST VALUE)', '')}</DialogTitle>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xl font-bold text-blue-700">
+                    ${learnMorePackage ? learnMorePackage.pricing[vehicleType] : 0}
+                  </span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                  <div className="flex items-center gap-1.5 text-zinc-500 font-medium">
+                    <Clock className="w-4 h-4" />
+                    <span>Avg. Time: {(() => {
+                      const hrs = getServiceDuration(learnMorePackage?.id);
+                      if (hrs === 5.5) return "5 - 6 Hours";
+                      if (hrs === 4.5) return "4 - 5 Hours";
+                      if (hrs === 1.5) return "1 hr 30 min";
+                      if (hrs === 2.5) return "2 hr 30 min";
+                      return `${hrs} hr${hrs !== 1 ? 's' : ''}`;
+                    })()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
           <div className="space-y-6">
             <div>

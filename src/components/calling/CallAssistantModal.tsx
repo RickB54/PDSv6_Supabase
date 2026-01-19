@@ -70,49 +70,55 @@ interface Vehicle {
     selectedScenarioId: string | null;
 }
 
-// Mapping Marketing Names to actual Package IDs
+// Mapping Marketing Names to actual Package IDs and sync with services.ts
 const BRANDED_PACKAGES = [
     {
         id: "prime-essential-interior",
         name: "Prime Essential Interior",
         actualId: "prime-essential-interior",
-        description: "Interior Refresh (1.5 – 3 hours)",
-        script: "Our Prime Essential Interior is designed for a fast, high-quality refresh. It's perfect for vehicles that aren't heavily soiled but need a professional tidy-up with a deep vacuum and complete surface wipe-down."
+        description: "Standard Interior Refresh",
+        includes: servicePackages.find(p => p.id === "prime-essential-interior")?.steps.map(s => s.name) || [],
+        script: "Our Prime Essential Interior is perfect for a professional refresh. We perform a thorough vacuuming and a detailed wipe-down of all surfaces to bring back that clean, tidy feel."
     },
     {
         id: "prime-essential-exterior",
         name: "Prime Essential Exterior",
         actualId: "prime-essential-exterior",
-        description: "Exterior Foam Wash (45 – 90 mins)",
-        script: "The Essential Exterior is our safest maintenance wash. We use a foam pre-soak, two-bucket hand wash, and apply a premium sealant to enhance shine and protect the paint from the elements."
+        description: "Hand Wash & Protection",
+        includes: servicePackages.find(p => p.id === "prime-essential-exterior")?.steps.map(s => s.name) || [],
+        script: "The Prime Essential Exterior focuses on a safe, high-quality wash. We use a foam bath and two-bucket hand wash, finishing with a premium spray wax for shine and protection."
     },
     {
         id: "prime-essential-full",
         name: "Prime Essential Full",
         actualId: "prime-essential-full",
-        description: "Full Maintenance Detail (2.5 – 4 hours)",
-        script: "The Essential Full Detail is our most popular maintenance-level package. It's perfect for vehicles that are in relatively good condition but need that professional deep-clean feel, both inside and out."
+        description: "Complete Maintenance Detail",
+        includes: servicePackages.find(p => p.id === "prime-essential-full")?.steps.map(s => s.name) || [],
+        script: "Our Prime Essential Full Detail is the best of both worlds—it combines our Essential Interior and Exterior services for a complete, professional refresh of your entire vehicle."
     },
     {
         id: "prime-elite-interior",
         name: "Prime Elite Interior",
         actualId: "prime-elite-interior",
-        description: "Interior Restoration (3.5 – 5 hours)",
-        script: "Our Prime Elite Interior is built for restoration. If the interior hasn't been deep-cleaned in a while, we use steam cleaning and full extraction to lift deep-seated dirt from carpets and seats, bringing it back to a showroom finish."
+        description: "Deep Interior Restoration",
+        includes: servicePackages.find(p => p.id === "prime-elite-interior")?.steps.map(s => s.name) || [],
+        script: "The Prime Elite Interior is our deep-clean restoration. We use steam cleaning and extraction on carpets and seats to remove deep stains and odors, finishing with leather conditioning."
     },
     {
         id: "prime-elite-exterior",
         name: "Prime Elite Exterior",
         actualId: "prime-elite-exterior",
-        description: "Decon & Protection (2.5 – 4 hours)",
-        script: "The Elite Exterior is where we focus on paint decontamination and deep protection. We use a clay bar to remove embedded grit and apply a ceramic-based sealant for a mirrored gloss and months of durable protection."
+        description: "Advanced Paint Protection",
+        includes: servicePackages.find(p => p.id === "prime-elite-exterior")?.steps.map(s => s.name) || [],
+        script: "Our Prime Elite Exterior is designed for ultimate protection. We include clay bar decontamination to smooth the paint and apply a premium sealant for long-lasting gloss and UV protection."
     },
     {
         id: "prime-elite-full",
         name: "Prime Elite Full",
         actualId: "prime-elite-full",
-        description: "The Ultimate Experience (4.5 – 6 hours)",
-        script: "The Prime Elite Full is our flagship showroom package. It's the ultimate combination of deep interior restoration and high-level exterior protection. We detail every inch to ensure the vehicle is returned in the best possible condition."
+        description: "The Ultimate Restoration",
+        includes: servicePackages.find(p => p.id === "prime-elite-full")?.steps.map(s => s.name) || [],
+        script: "The Prime Elite Full Detail is our flagship showroom package. It combines our deepest interior restoration with our most advanced exterior protection for the ultimate results."
     },
 ];
 
@@ -586,20 +592,39 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                                     </div>
 
                                                     {/* Talking Points / Script for selected package */}
-                                                    {scenario.packageId && (
-                                                        <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-xl relative overflow-hidden group">
-                                                            <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
-                                                                    <FileText className="w-3.5 h-3.5" />
+                                                    {(() => {
+                                                        const pkgInfo = BRANDED_PACKAGES.find(p => p.id === scenario.packageId);
+                                                        if (!pkgInfo) return null;
+
+                                                        return (
+                                                            <div className="mt-6 space-y-4">
+                                                                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl relative overflow-hidden group">
+                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
+                                                                            <FileText className="w-3.5 h-3.5" />
+                                                                        </div>
+                                                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">Active Pitch Script</span>
+                                                                    </div>
+                                                                    <p className="text-xs sm:text-sm text-foreground leading-relaxed italic">
+                                                                        "{pkgInfo.script}"
+                                                                    </p>
                                                                 </div>
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">Active Pitch Script</span>
+
+                                                                <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+                                                                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3 block">What's Included:</div>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                                                                        {pkgInfo.includes.map((item, idx) => (
+                                                                            <div key={idx} className="flex items-center gap-2 text-[11px] text-zinc-300">
+                                                                                <div className="w-1 h-1 rounded-full bg-primary shrink-0" />
+                                                                                <span className="truncate">{item}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <p className="text-xs sm:text-sm text-foreground leading-relaxed italic">
-                                                                "{BRANDED_PACKAGES.find(p => p.id === scenario.packageId)?.script}"
-                                                            </p>
-                                                        </div>
-                                                    )}
+                                                        );
+                                                    })()}
                                                 </div>
                                             );
                                         })}

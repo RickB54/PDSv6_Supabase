@@ -72,42 +72,50 @@ function getPriceForService(packageId: string, vehicleType?: VehicleType): { pri
 
 export const EVALUATION_SERVICES: EvaluationService[] = [
     {
-        id: "full-interior",
-        name: "Full Interior Detail",
-        packageId: "interior-cleaning",
-        getPrice: (vt) => getPriceForService("interior-cleaning", vt),
-        description: "Complete interior restoration",
+        id: "essential-interior",
+        name: "Prime Essential Interior",
+        packageId: "prime-essential-interior",
+        getPrice: (vt) => getPriceForService("prime-essential-interior", vt),
+        description: "Standard interior refresh and vacuum",
         category: "Interior"
     },
     {
-        id: "full-detail",
-        name: "Full Detail Package",
-        packageId: "full-detail",
-        getPrice: (vt) => getPriceForService("full-detail", vt),
-        description: "Complete interior and exterior detail",
+        id: "essential-full",
+        name: "Prime Essential Full Detail",
+        packageId: "prime-essential-full",
+        getPrice: (vt) => getPriceForService("prime-essential-full", vt),
+        description: "Complete maintenance interior and exterior",
         category: "Package"
     },
     {
-        id: "leather-conditioning",
-        name: "Leather Conditioning",
-        packageId: "leather-conditioning",
-        getPrice: (vt) => getPriceForService("leather-conditioning", vt),
-        description: "Restore and protect leather surfaces",
+        id: "elite-interior",
+        name: "Prime Elite Interior",
+        packageId: "prime-elite-interior",
+        getPrice: (vt) => getPriceForService("prime-elite-interior", vt),
+        description: "Deep steam cleaning and extraction",
         category: "Interior"
+    },
+    {
+        id: "elite-full",
+        name: "Prime Elite Full Detail",
+        packageId: "prime-elite-full",
+        getPrice: (vt) => getPriceForService("prime-elite-full", vt),
+        description: "The ultimate showroom restoration",
+        category: "Package"
     },
     {
         id: "pet-hair-removal",
         name: "Pet Hair Removal",
-        packageId: "pet-hair-removal",
-        getPrice: (vt) => getPriceForService("pet-hair-removal", vt),
+        packageId: "pet-hair",
+        getPrice: (vt) => getPriceForService("pet-hair", vt),
         description: "Specialized pet hair extraction",
         category: "Interior"
     },
     {
-        id: "odor-eliminator",
-        name: "Odor Eliminator",
-        packageId: "odor-eliminator",
-        getPrice: (vt) => getPriceForService("odor-eliminator", vt),
+        id: "odor-treatment",
+        name: "Odor Elimination",
+        packageId: "odor-treatment",
+        getPrice: (vt) => getPriceForService("odor-treatment", vt),
         description: "Professional odor neutralization",
         category: "Interior"
     },
@@ -120,43 +128,35 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         category: "Exterior"
     },
     {
-        id: "clay-bar",
-        name: "Clay Bar Decontamination",
-        packageId: "clay-bar-decon",
-        getPrice: (vt) => getPriceForService("clay-bar-decon", vt),
-        description: "Remove bonded contaminants from paint",
-        category: "Exterior"
-    },
-    {
-        id: "paint-sealant",
-        name: "Paint Sealant",
-        packageId: "paint-sealant",
-        getPrice: (vt) => getPriceForService("paint-sealant", vt),
-        description: "Durable synthetic paint protection",
-        category: "Exterior"
-    },
-    {
         id: "engine-bay",
         name: "Engine Bay Cleaning",
-        packageId: "engine-bay",
-        getPrice: (vt) => getPriceForService("engine-bay", vt),
+        packageId: "engine-detail",
+        getPrice: (vt) => getPriceForService("engine-detail", vt),
         description: "Degrease and dress engine compartment",
         category: "Engine"
     },
     {
-        id: "ceramic-trim",
-        name: "Ceramic Trim Coat",
-        packageId: "ceramic-trim-coat",
-        getPrice: (vt) => getPriceForService("ceramic-trim-coat", vt),
-        description: "Restore faded exterior plastics",
+        id: "essential-exterior",
+        name: "Prime Essential Exterior",
+        packageId: "prime-essential-exterior",
+        getPrice: (vt) => getPriceForService("prime-essential-exterior", vt),
+        description: "Professional foam bath and hand dry",
         category: "Exterior"
     },
     {
-        id: "wheel-detailing",
-        name: "Wheel & Rim Detailing",
-        packageId: "wheel-rim-detailing",
-        getPrice: (vt) => getPriceForService("wheel-rim-detailing", vt),
-        description: "Detailed wheel cleaning and polishing",
+        id: "elite-exterior",
+        name: "Prime Elite Exterior",
+        packageId: "prime-elite-exterior",
+        getPrice: (vt) => getPriceForService("prime-elite-exterior", vt),
+        description: "Clay bar decontamination and advanced protection",
+        category: "Exterior"
+    },
+    {
+        id: "paint-correction",
+        name: "Paint Correction",
+        packageId: "paint-correction",
+        getPrice: (vt) => getPriceForService("paint-correction", vt),
+        description: "Remove swirls and restore clarity",
         category: "Exterior"
     }
 ];
@@ -178,26 +178,24 @@ export function generateEvaluationRecommendations(
             case "Seat Stains":
             case "Sticky Spills":
             case "Mud / Dirt buildup":
-                recommendations.add("full-interior");
+                recommendations.add("essential-interior");
                 break;
             case "Bad Odor":
             case "Smoke Smell":
             case "Mold / Mildew":
-                recommendations.add("odor-eliminator");
-                recommendations.add("full-interior");
+                recommendations.add("odor-treatment");
+                recommendations.add("essential-interior");
                 break;
             case "Scratches":
             case "Dull or Faded Paint":
-                recommendations.add("paint-sealant");
-                recommendations.add("clay-bar");
+                recommendations.add("elite-exterior");
                 break;
             case "Pet Hair":
                 recommendations.add("pet-hair-removal");
-                recommendations.add("full-interior");
+                recommendations.add("essential-interior");
                 break;
             case "Water Spots":
-                recommendations.add("clay-bar");
-                recommendations.add("paint-sealant");
+                recommendations.add("elite-exterior");
                 break;
         }
     });
@@ -207,30 +205,28 @@ export function generateEvaluationRecommendations(
         switch (goal) {
             case "Fast Turnaround":
             case "Budget Friendly":
-                recommendations.add("full-interior");
+                recommendations.add("essential-full");
                 break;
             case "Deep Interior Cleaning":
-                recommendations.add("full-interior");
-                recommendations.add("odor-eliminator");
+                recommendations.add("elite-interior");
+                recommendations.add("odor-treatment");
                 break;
             case "Maximum Shine":
             case "Long-Term Protection":
-                recommendations.add("paint-sealant");
-                recommendations.add("clay-bar");
+                recommendations.add("elite-exterior");
                 break;
             case "Odor Removal":
-                recommendations.add("odor-eliminator");
-                recommendations.add("full-interior");
+                recommendations.add("odor-treatment");
+                recommendations.add("elite-interior");
                 break;
             case "Pet Hair Removal":
                 recommendations.add("pet-hair-removal");
-                recommendations.add("full-interior");
+                recommendations.add("essential-interior");
                 break;
             case "Restoration-Level Detail":
             case "Best Possible Outcome":
             case "Premium Detail / High-End Finish":
-                recommendations.add("full-detail");
-                recommendations.add("leather-conditioning");
+                recommendations.add("elite-full");
                 recommendations.add("engine-bay");
                 break;
         }
@@ -239,14 +235,14 @@ export function generateEvaluationRecommendations(
     // Custom text analysis
     const customText = `${customComplaint || ""} ${customGoal || ""}`.toLowerCase();
     if (customText.includes("scratch") || customText.includes("swirl")) {
-        recommendations.add("clay-bar");
-        recommendations.add("paint-sealant");
+        recommendations.add("paint-correction");
+        recommendations.add("elite-exterior");
     }
     if (customText.includes("smell") || customText.includes("odor")) {
-        recommendations.add("odor-eliminator");
+        recommendations.add("odor-treatment");
     }
     if (customText.includes("stain")) {
-        recommendations.add("full-interior");
+        recommendations.add("elite-interior");
     }
     if (customText.includes("pet") || customText.includes("hair")) {
         recommendations.add("pet-hair-removal");

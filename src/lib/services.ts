@@ -52,140 +52,121 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-exterior',
     name: 'Prime Essential Exterior',
-    description: 'A high-quality exterior refresh designed to safely remove surface dirt and road grime while enhancing shine and protection. Ideal for regularly maintained vehicles.',
+    description: 'A professional exterior cleaning restoration.',
     basePrice: 90,
     pricing: { compact: 90, midsize: 110, truck: 120, luxury: 130 },
     steps: [
-      { id: 'foam-pre-soak', name: 'Exterior foam pre-soak', category: 'exterior' },
-      { id: 'hand-wash', name: 'Two-bucket hand wash with grit guards', category: 'exterior' },
-      { id: 'wheel-rim-shine', name: 'Wheel and rim cleaning with tire shine', category: 'exterior' },
-      { id: 'gas-cap-clean', name: 'Gas cap area cleaning', category: 'exterior' },
-      { id: 'blow-dry', name: 'Air blow-dry followed by microfiber hand drying', category: 'exterior' },
-      { id: 'sealant', name: 'Premium spray wax / paint sealant', category: 'final' }
+      { id: 'foam-bath', name: 'Exterior Foam Bath', category: 'exterior' },
+      { id: 'btn-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior' },
+      { id: 'tire-shine', name: 'Tire Scrub & Shine', category: 'exterior' },
+      { id: 'rim-clean', name: 'Rims Cleaned & Shined', category: 'exterior' },
+      { id: 'gas-cap', name: 'Clean Gas Cap Area', category: 'exterior' },
+      { id: 'blow-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior' },
+      { id: 'spray-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'final' }
     ]
   },
   {
     id: 'prime-essential-interior',
     name: 'Prime Essential Interior',
-    description: 'A maintenance-level interior service designed to refresh vehicles in decent condition. Focuses on cleaning and tidying without deep extraction.',
+    description: 'Quickly freshen up your car’s interior.',
     basePrice: 180,
     pricing: { compact: 180, midsize: 200, truck: 210, luxury: 240 },
     steps: [
-      { id: 'vac-interior', name: 'Thorough interior vacuum', category: 'interior' },
-      { id: 'wipe-plastics', name: 'Wipe-down of all plastics, vinyl, and leather', category: 'interior' },
-      { id: 'window-clean', name: 'Interior window cleaning', category: 'interior' },
-      { id: 'mat-clean', name: 'Floor mat cleaning', category: 'interior' },
-      { id: 'jamb-clean', name: 'Door jamb cleaning', category: 'final' }
+      { id: 'vac-interior', name: 'Thorough vacuuming of all interior surfaces', category: 'interior' },
+      { id: 'wipe-interior', name: 'Detailed wipe-down of all plastics, leather, and vinyl', category: 'interior' },
+      { id: 'window-clean', name: 'Window cleaning', category: 'final' }
     ]
   },
   {
     id: 'prime-essential-full',
     name: 'Prime Essential Full Detail',
-    description: 'A comprehensive refresh for both exterior and interior, ensuring your vehicle is clean, fresh, and well-maintained.',
+    description: 'Includes everything in the Essential Interior & Essential Exterior combined.',
     basePrice: 230,
     pricing: { compact: 230, midsize: 270, truck: 290, luxury: 320 },
     steps: [
-      { id: 'ext-hand-wash', name: 'Safe hand wash to remove surface dirt', category: 'exterior' },
-      { id: 'wheel-faces', name: 'Wheel and tire cleaning (faces only)', category: 'exterior' },
-      { id: 'bug-removal', name: 'Bug splatter and light road residue removal', category: 'exterior' },
-      { id: 'interior-vac-full', name: 'Full interior vacuum (seats, carpets, trunk)', category: 'interior' },
-      { id: 'dash-wipe', name: 'Wipe-down of dashboard, console, and door panels', category: 'interior' },
-      { id: 'spot-clean', name: 'Spot cleaning of minor spills (non-set stains)', category: 'interior' },
-      { id: 'windows-in-out', name: 'Interior & Exterior glass cleaned', category: 'final' }
+      { id: 'ext-foam', name: 'Exterior Foam Bath', category: 'exterior' },
+      { id: 'ext-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior' },
+      { id: 'ext-tire', name: 'Tire Scrub & Shine', category: 'exterior' },
+      { id: 'ext-rim', name: 'Rims Cleaned & Shined', category: 'exterior' },
+      { id: 'ext-gas', name: 'Clean Gas Cap Area', category: 'exterior' },
+      { id: 'ext-dry', name: 'Blow Dry + Microfiber Hand Dry', category: 'exterior' },
+      { id: 'ext-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'exterior' },
+      { id: 'int-win', name: 'Windows Cleaned Streak Free', category: 'interior' },
+      { id: 'int-jamb', name: 'Clean Door & Trunk Jambs', category: 'interior' },
+      { id: 'int-mat', name: 'Clean Floor Mats', category: 'interior' },
+      { id: 'int-vac', name: 'Thorough Vacuum of Interior', category: 'interior' },
+      { id: 'int-wipe', name: 'Thorough Wipe Down of All Interior Surfaces (cracks and crevices)', category: 'final' }
     ]
   },
   // --- PRIME ELITE ---
   {
     id: 'prime-elite-exterior',
     name: 'Prime Elite Exterior',
-    description: 'Designed to restore and protect paint by removing bonded contaminants and enhancing gloss with ceramic-infused protection.',
+    description: 'Advanced exterior restoration and protection.',
     basePrice: 160,
     pricing: { compact: 160, midsize: 180, truck: 190, luxury: 210 },
     steps: [
-      { id: 'foam-wash-elite', name: 'Foam bath and two-bucket wash', category: 'exterior' },
-      { id: 'wheel-detail-elite', name: 'Wheel, rim, and tire detailing', category: 'exterior' },
-      { id: 'well-clean', name: 'Wheel well cleaning', category: 'exterior' },
-      { id: 'clay-decon', name: 'Clay bar decontamination', category: 'exterior' },
-      { id: 'trim-uv', name: 'Trim restoration with UV protection', category: 'exterior' },
-      { id: 'ceramic-sealant', name: 'Premium ceramic-based sealant', category: 'final' }
+      { id: 'elite-foam', name: 'Exterior Foam Bath', category: 'exterior' },
+      { id: 'elite-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior' },
+      { id: 'elite-tire', name: 'Tire Scrub & Shine', category: 'exterior' },
+      { id: 'elite-rim', name: 'Rims Cleaned & Shined', category: 'exterior' },
+      { id: 'elite-gas', name: 'Clean Gas Cap Area', category: 'exterior' },
+      { id: 'elite-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior' },
+      { id: 'elite-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'exterior' },
+      { id: 'elite-well', name: 'Wheel Wells Cleaned', category: 'exterior' },
+      { id: 'elite-clay', name: 'Clay & Paint Decontamination (as needed)', category: 'exterior' },
+      { id: 'elite-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
+      { id: 'elite-win', name: 'Windows Cleaned Streak Free', category: 'final' },
+      { id: 'elite-jamb', name: 'Clean Door & Trunk Jambs', category: 'final' }
     ]
   },
   {
     id: 'prime-elite-interior',
     name: 'Prime Elite Interior',
-    description: 'A deep-clean service built for heavily used or neglected interiors. Includes steam cleaning and full extraction.',
+    description: 'A deep interior cleaning restoration.',
     basePrice: 390,
     pricing: { compact: 390, midsize: 475, truck: 495, luxury: 590 },
     steps: [
-      { id: 'deep-vac', name: 'Deep vacuum of all interior areas and trunk', category: 'interior' },
-      { id: 'steam-clean', name: 'Steam cleaning of panels, vents, and surfaces', category: 'interior' },
-      { id: 'upholstery-extract', name: 'Carpet and upholstery steam extraction', category: 'interior' },
-      { id: 'seat-extract', name: 'Seat and fabric extraction', category: 'interior' },
-      { id: 'leather-cond', name: 'Leather conditioning and protection', category: 'interior' },
-      { id: 'elite-final', name: 'Windows, door jambs, and floor mats cleaned', category: 'final' }
+      { id: 'elite-int-win', name: 'Windows Cleaned Streak Free', category: 'interior' },
+      { id: 'elite-int-jamb', name: 'Clean Door & Trunk Jambs', category: 'interior' },
+      { id: 'elite-int-mat', name: 'Clean Floor Mats', category: 'interior' },
+      { id: 'elite-int-vac', name: 'Thorough Vacuum of Interior', category: 'interior' },
+      { id: 'elite-int-wipe', name: 'Thorough Wipe Down of All Interior Surfaces (cracks and crevices)', category: 'interior' },
+      { id: 'elite-int-trunk', name: 'Vacuum Trunk Space', category: 'interior' },
+      { id: 'elite-int-vent', name: 'Steam Clean All Panels & Vents', category: 'interior' },
+      { id: 'elite-int-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior' },
+      { id: 'elite-int-seat', name: 'Steam Clean & Extraction on Seats & Upholstery', category: 'interior' },
+      { id: 'elite-int-cond', name: 'Condition & Protect Leather Seats', category: 'final' }
     ]
   },
   {
     id: 'prime-elite-full',
     name: 'Prime Elite Full Detail',
-    description: 'The ultimate restoration and protection package. Showroom-ready results for every inch of your vehicle.',
+    description: 'The ultimate restoration and protection package.',
     basePrice: 495,
     pricing: { compact: 495, midsize: 595, truck: 695, luxury: 850 },
     steps: [
-      { id: 'paint-safe-wash', name: 'Premium paint-safe hand wash', category: 'exterior' },
-      { id: 'deep-wheel', name: 'Deep wheel cleaning (barrels & lug areas)', category: 'exterior' },
-      { id: 'full-decon', name: 'Full exterior decontamination (clay & iron)', category: 'exterior' },
-      { id: 'gloss-enhance', name: 'Paint enhancement step (gloss improvement)', category: 'exterior' },
-      { id: 'elite-sealant', name: 'High-quality protective sealant application', category: 'exterior' },
-      { id: 'restorative-vac', name: 'Complete restorative interior vacuum', category: 'interior' },
-      { id: 'surface-detail', name: 'Deep cleaning of all interior surfaces & vents', category: 'interior' },
-      { id: 'shampoo-extract', name: 'Shampooing of carpets and floor mats', category: 'interior' },
-      { id: 'leather-elite', name: 'Seat cleaning and conditioning (Premium)', category: 'interior' },
-      { id: 'odor-neutral', name: 'Light odor neutralization & final detail', category: 'final' }
-    ]
-  },
-
-  // --- 2026 SIMPLE 3-PACK (Alternative offering) ---
-  {
-    id: 'prime-2026-exterior',
-    name: 'Prime Exterior Detail',
-    description: 'Professional exterior detailing service',
-    basePrice: 90,
-    pricing: { compact: 90, midsize: 110, truck: 130, luxury: 150 },
-    steps: [
-      { id: 'foam-pre-soak', name: 'Exterior foam pre-soak', category: 'exterior' },
-      { id: 'hand-wash', name: 'Two-bucket hand wash', category: 'exterior' },
-      { id: 'wheel-rim-shine', name: 'Wheel and rim cleaning', category: 'exterior' },
-      { id: 'blow-dry', name: 'Air blow-dry and microfiber drying', category: 'exterior' },
-      { id: 'sealant', name: 'Premium spray wax', category: 'final' }
-    ]
-  },
-  {
-    id: 'prime-2026-interior',
-    name: 'Prime Interior Detail',
-    description: 'Deep interior cleaning and conditioning',
-    basePrice: 180,
-    pricing: { compact: 180, midsize: 200, truck: 220, luxury: 250 },
-    steps: [
-      { id: 'vac-interior', name: 'Thorough interior vacuum', category: 'interior' },
-      { id: 'wipe-plastics', name: 'Wipe-down of all surfaces', category: 'interior' },
-      { id: 'window-clean', name: 'Interior window cleaning', category: 'interior' },
-      { id: 'mat-clean', name: 'Floor mat cleaning', category: 'interior' },
-      { id: 'jamb-clean', name: 'Door jamb cleaning', category: 'final' }
-    ]
-  },
-  {
-    id: 'prime-2026-full',
-    name: 'Prime Full Detail',
-    description: 'Complete interior and exterior detailing',
-    basePrice: 230,
-    pricing: { compact: 230, midsize: 260, truck: 290, luxury: 330 },
-    steps: [
-      { id: 'ext-hand-wash', name: 'Safe hand wash', category: 'exterior' },
-      { id: 'wheel-faces', name: 'Wheel and tire cleaning', category: 'exterior' },
-      { id: 'interior-vac-full', name: 'Full interior vacuum', category: 'interior' },
-      { id: 'dash-wipe', name: 'Dashboard and console wipe-down', category: 'interior' },
-      { id: 'windows-in-out', name: 'Interior & Exterior glass cleaned', category: 'final' }
+      { id: 'full-foam', name: 'Exterior Foam Bath', category: 'exterior' },
+      { id: 'full-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior' },
+      { id: 'full-tire', name: 'Tire Scrub & Shine', category: 'exterior' },
+      { id: 'full-rim', name: 'Rims Cleaned & Shined', category: 'exterior' },
+      { id: 'full-gas', name: 'Clean Gas Cap Area', category: 'exterior' },
+      { id: 'full-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior' },
+      { id: 'full-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'exterior' },
+      { id: 'full-well', name: 'Wheel Wells Cleaned', category: 'exterior' },
+      { id: 'full-clay', name: 'Clay & Paint Decontamination (as needed)', category: 'exterior' },
+      { id: 'full-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
+      { id: 'full-ceramic', name: 'Premium Ceramic Sealant Protection', category: 'exterior' },
+      { id: 'full-win', name: 'Windows Cleaned Streak Free', category: 'final' },
+      { id: 'full-jamb', name: 'Clean Door & Trunk Jambs', category: 'final' },
+      { id: 'full-mat', name: 'Clean Floor Mats', category: 'final' },
+      { id: 'full-vac', name: 'Thorough Vacuum of Interior', category: 'interior' },
+      { id: 'full-wipe', name: 'Thorough Wipe Down of All Interior Surfaces (cracks and crevices)', category: 'interior' },
+      { id: 'full-trunk', name: 'Vacuum Trunk Space', category: 'interior' },
+      { id: 'full-vent', name: 'Steam Clean All Panels & Vents', category: 'interior' },
+      { id: 'full-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior' },
+      { id: 'full-seats', name: 'Steam Clean & Extraction on Seats & Upholstery', category: 'interior' },
+      { id: 'full-leather', name: 'Condition & Protection Leather Seats', category: 'final' }
     ]
   },
 ];

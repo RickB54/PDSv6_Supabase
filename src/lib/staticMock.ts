@@ -564,11 +564,26 @@ export async function removeStaticMockBasic(reporter?: (msg: string) => void) {
   report('Starting comprehensive mock data removal...');
 
   const mockEmailPrefix = 'static+';
-  const mockNames = ['Alex Green', 'Casey Brown', 'Drew White', 'Evan Blue', 'Finn Gray', 'Taylor Frost', 'Jordan Lee', 'Morgan Park', 'Sam Rivera', 'Jamie Chen', 'Riley Brooks', 'Harper Quinn', 'Jesse Lane', 'Kai Morgan', 'Logan Reese', 'Milan Avery'];
+  const mockNames = [
+    'Alex Green', 'Casey Brown', 'Drew White', 'Evan Blue', 'Finn Gray',
+    'Taylor Frost', 'Jordan Lee', 'Morgan Park', 'Sam Rivera', 'Jamie Chen',
+    'Riley Brooks', 'Harper Quinn', 'Jesse Lane', 'Kai Morgan', 'Logan Reese',
+    'Milan Avery',
+    // BookNow Test Data Profiles
+    'James Wilson', 'Sarah Miller', 'Robert Chen', 'Elena Rodriguez',
+    'Marcus Thorne', 'Sophia Lee', 'David Miller', 'Linda Thompson'
+  ];
+  const mockEmails = [
+    'james.w@example.com', 'sarah.m@example.com', 'r.chen@tech.io',
+    'elena.rod@lifestyle.com', 'm.thorne@heavy.net', 'sophia.lee@design.com',
+    'david.m@builder.org', 'linda.t@traveler.com'
+  ];
+
   const mockIncomeCategories = ['Detail Package Sales', 'Add-on Services', 'Gift Cards'];
   const mockExpenseCategories = ['Marketing', 'Equipment Purchases', 'Payroll', 'Office Supplies'];
+
   const isMockName = (name: string) => mockNames.some(m => m.toLowerCase() === (name || '').toLowerCase());
-  const isMockEmail = (email: string) => (email || '').startsWith(mockEmailPrefix);
+  const isMockEmail = (email: string) => (email || '').startsWith(mockEmailPrefix) || mockEmails.includes(email || '');
 
   // 1. Users
   report('Cleaning Users...');
@@ -664,7 +679,33 @@ export async function removeStaticMockBasic(reporter?: (msg: string) => void) {
   const nextEstimates = estimates.filter(e => !e.isStaticMock && !isMockName(e.customerName || ''));
   await localforage.setItem('estimates', nextEstimates);
 
-  // 11. Custom Categories (LocalStorage/LocalForage)
+  // 11. Bookings (Supabase + Local)
+  report('Cleaning Bookings...');
+  try {
+    // Local storage bookings
+    const localBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+    const nextLocalBookings = localBookings.filter((b: any) => !isMockName(b.customer) && !isMockEmail(b.customerEmail));
+    localStorage.setItem('bookings', JSON.stringify(nextLocalBookings));
+
+    // Supabase bookings with mock names/emails
+    try {
+      const { deleteSupabaseBooking } = await import('@/lib/supa-data');
+      const { getSupabaseBookings } = await import('@/lib/supa-data');
+      const allSupaSessions = await getSupabaseBookings();
+      const mockSupa = allSupaSessions.filter(b => isMockName(b.customer) || isMockEmail(b.customerEmail));
+
+      report(`Found ${mockSupa.length} mock bookings in Supabase...`);
+      for (const b of mockSupa) {
+        await deleteSupabaseBooking(b.id);
+      }
+    } catch (supaErr) {
+      console.warn('Supabase booking cleanup skipped:', supaErr);
+    }
+  } catch (err) {
+    console.warn('Booking cleanup error:', err);
+  }
+
+  // 12. Custom Categories (LocalStorage/LocalForage)
   report('Cleaning Custom Categories...');
   const customCats = (await localforage.getItem<string[]>('customCategories')) || [];
   // Use caution
