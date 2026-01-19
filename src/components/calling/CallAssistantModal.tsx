@@ -38,12 +38,14 @@ import {
     X,
     User,
     FileText,
+    Info,
 } from "lucide-react";
 import { servicePackages, addOns, type VehicleType } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 
 interface Scenario {
     id: string;
@@ -135,6 +137,8 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const [callerName, setCallerName] = useState("");
     const [callerPhone, setCallerPhone] = useState("");
     const [callerEmail, setCallerEmail] = useState("");
+
+    const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
 
     function createEmptyVehicle(): Vehicle {
         const vid = Date.now().toString();
@@ -266,7 +270,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-background border-border shadow-2xl rounded-2xl">
+            <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[98vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-background border-border shadow-2xl rounded-2xl">
                 <div className="p-3 sm:p-4 bg-primary/10 border-b border-primary/20 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
                         <Phone className="w-5 h-5 text-primary animate-pulse shrink-0" />
@@ -679,14 +683,14 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     </Accordion>
                 </div>
 
-                <div className="p-4 border-t border-border bg-muted/30 flex items-center justify-between shrink-0">
-                    <div className="hidden sm:flex gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <div className="p-4 border-t border-border bg-muted/30 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+                    <div className="hidden lg:flex gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${callerName ? 'text-primary' : 'text-zinc-700'}`} /> Identity</div>
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.make ? 'text-primary' : 'text-zinc-700'}`} /> Vehicle</div>
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.selectedScenarioId ? 'text-primary' : 'text-zinc-700'}`} /> Selection</div>
                     </div>
 
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
                         <Select value={activeVehicle.selectedScenarioId || ""} onValueChange={(s) => updateVehicle(activeVehicleId, { selectedScenarioId: s })}>
                             <SelectTrigger className="flex-1 sm:w-48 h-10 sm:h-12 bg-zinc-950 font-black uppercase text-[10px] tracking-widest border-zinc-800">
                                 <SelectValue placeholder="CONFIRM SELECTION" />
@@ -701,19 +705,27 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                         <Button
                             variant="destructive"
                             onClick={() => onOpenChange(false)}
-                            className="h-10 sm:h-12 font-black uppercase tracking-widest text-[10px] sm:px-4"
+                            className="flex-1 sm:flex-none h-10 sm:h-12 font-black uppercase tracking-widest text-[10px] px-2 sm:px-4"
                         >
-                            Do Not Record
+                            Cancel
+                        </Button>
+
+                        <Button
+                            onClick={() => setServiceComparisonOpen(true)}
+                            variant="outline"
+                            className="h-10 sm:h-12 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px] hidden sm:flex"
+                        >
+                            <Info className="w-4 h-4 mr-2" /> Show Services
                         </Button>
 
                         <Button
                             onClick={handleHandoff}
                             disabled={!activeVehicle.selectedScenarioId}
-                            className={`flex-1 sm:min-w-[150px] h-10 sm:h-12 font-black uppercase tracking-widest text-[11px] transition-all
+                            className={`flex-1 sm:flex-none sm:min-w-[150px] h-10 sm:h-12 font-black uppercase tracking-widest text-[11px] transition-all
                                 ${activeVehicle.selectedScenarioId ? 'bg-gradient-hero hover:shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-muted opacity-50'}
                             `}
                         >
-                            Confirm & Eval <ArrowRight className="ml-2 w-4 h-4" />
+                            Confirm Selection <ArrowRight className="ml-2 w-4 h-4" />
                         </Button>
                     </div>
                 </div>
@@ -729,6 +741,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     });
                 }}
             />
+            <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
         </Dialog>
     );
 }

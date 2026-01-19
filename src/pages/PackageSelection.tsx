@@ -20,14 +20,15 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Save, FileText, Download, CheckCircle2, ArrowRight, Package, ArrowLeft, BarChart3, ListFilter } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, FileText, Download, CheckCircle2, ArrowRight, Package, ArrowLeft, BarChart3, ListFilter, Info } from "lucide-react";
 import localforage from "localforage";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
-import { servicePackages, addOns as sharedAddOns } from "@/lib/services";
+import { servicePackages, addOns as sharedAddOns, getServiceInstructions } from "@/lib/services";
+import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 
 // --- Types ---
 interface PackageItem {
@@ -35,6 +36,7 @@ interface PackageItem {
     name: string;
     description: string;
     includes: string[];
+    instructions?: string[];
     isCustom?: boolean;
 }
 
@@ -44,7 +46,8 @@ const INITIAL_ACTUAL_PACKAGES: PackageItem[] = servicePackages.map(pkg => ({
     id: pkg.id,
     name: pkg.name,
     description: pkg.description,
-    includes: pkg.steps.map(s => s.name)
+    includes: pkg.steps.map(s => s.name),
+    instructions: pkg.steps.map(s => s.instructions || getServiceInstructions(s.name, s.id))
 }));
 
 const INITIAL_OTHER_PACKAGES: PackageItem[] = [
@@ -509,22 +512,32 @@ export default function PackageSelection() {
         </div>
     );
 
+    const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
+
     return (
         <div className="min-h-screen bg-background pb-20">
-            <PageHeader title="Package Comparison" />
+            <PageHeader title="Package Comparison">
+                <Button
+                    onClick={() => setServiceComparisonOpen(true)}
+                    variant="outline"
+                    className="h-10 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px]"
+                >
+                    <Info className="w-4 h-4 mr-2" /> Show Services
+                </Button>
+            </PageHeader>
             <div className="p-4 max-w-7xl mx-auto space-y-6">
 
                 {/* Step 1: Select Packages */}
                 {step === 1 && (
-                    <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
-                        <div className="flex items-center justify-between mb-8">
+                    <Card className="p-4 sm:p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/20">
-                                    <ListFilter className="w-8 h-8 text-red-500" />
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/20 shrink-0">
+                                    <ListFilter className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-white">Select Packages to Compare</h2>
-                                    <p className="text-zinc-400 text-sm">Step 1 of 2: Choose items from your menu</p>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-white">Select Packages to Compare</h2>
+                                    <p className="text-zinc-400 text-xs sm:text-sm">Step 1 of 2: Choose items from your menu</p>
                                 </div>
                             </div>
                             <Button
@@ -647,13 +660,23 @@ export default function PackageSelection() {
                                     </div>
                                     <div className="p-6 flex-1 bg-zinc-900/50">
                                         <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4">Complete Breakdown</h4>
-                                        <ul className="space-y-3">
-                                            {pkg.includes.map((item, idx) => (
-                                                <li key={idx} className="flex items-start gap-3 text-sm text-zinc-300">
-                                                    <div className="mt-1 min-w-[16px]"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div></div>
-                                                    <span>{item}</span>
-                                                </li>
-                                            ))}
+                                        <ul className="space-y-4">
+                                            {pkg.includes.map((item, idx) => {
+                                                const instruction = pkg.instructions?.[idx];
+                                                return (
+                                                    <li key={idx} className="flex flex-col gap-1">
+                                                        <div className="flex items-start gap-3 text-sm text-zinc-100 font-bold uppercase tracking-tight">
+                                                            <div className="mt-1 min-w-[12px]"><div className="w-1.5 h-1.5 rounded-full bg-red-600"></div></div>
+                                                            <span>{item}</span>
+                                                        </div>
+                                                        {instruction && (
+                                                            <div className="ml-6 text-[11px] text-zinc-500 italic leading-relaxed">
+                                                                {instruction}
+                                                            </div>
+                                                        )}
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     </div>
                                 </Card>
@@ -704,6 +727,7 @@ export default function PackageSelection() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+            <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
+        </div >
     );
 }

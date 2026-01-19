@@ -23,7 +23,7 @@ import { pushAdminAlert } from "@/lib/adminAlerts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { Customer as CustomerType } from "@/lib/supa-data";
-import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as VehKey } from "@/lib/services";
+import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as VehKey, getServiceInstructions } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns, getPackageMeta, getAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { Progress } from "@/components/ui/progress";
 import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
@@ -1508,27 +1508,7 @@ const ServiceChecklist = () => {
                     {!collapsedSections[section] && (
                       <div className="space-y-2">
                         {checklistSteps.filter(s => s.category === section).map((step) => {
-                          // Define instructions based on step content
-                          const getInstructions = (s: typeof step) => {
-                            const n = s.name.toLowerCase();
-                            if (s.id === 'prep-inspect') return "Walk around the vehicle and note existing damage (dents, scratches) on the diagram. Confirm vehicle condition with customer if present.";
-                            if (s.id === 'prep-tools') return "Ensure pressure washer, foam cannon, buckets, mitts, and brushes are ready. Check water tank and generator fuel levels.";
-                            if (s.id === 'prep-walkaround') return "Review the service package with the client. Confirm any special requests or areas of concern.";
-
-                            if (n.includes('rinse')) return "Thoroughly rinse the vehicle from top to bottom to remove loose dirt and debris. Don't forget wheel wells.";
-                            if (n.includes('foam')) return "Apply a thick layer of foam. Let it dwell for 3-5 minutes to loosen grime. Do not let it dry on paint.";
-                            if (n.includes('wash')) return "Use the two-bucket method. Wash from top to bottom. Use a separate mitt for lower panels/wheels if possible.";
-                            if (n.includes('dry')) return "Use a clean microfiber drying towel or air blower. Ensure no standing water remains in mirrors, door jambs, or grilles.";
-                            if (n.includes('clay')) return "Spray clay lubricant liberally. Glently glide clay bar over paint until smooth. Fold clay often to expose clean surface.";
-                            if (n.includes('wax') || n.includes('sealant')) return "Apply thin, even layer using a soft foam applicator. Allow to haze (if required) then buff off with a clean plush towel.";
-                            if (n.includes('vacuum')) return "Remove floor mats first. Vacuum all carpets, seats, and crevices. Use stiff brush to agitate embedded debris.";
-                            if (n.includes('interior')) return "Wipe down dashboard, console, and door panels with APC and a microfiber towel. Use a brush for vents.";
-                            if (n.includes('glass')) return "Use distinct glass towel. Spray cleaner on towel, not glass (to avoid overspray). Wipe in box pattern.";
-                            if (n.includes('tire')) return "Apply tire dressing evenly with an applicator pad. Wipe off excess to prevent sling.";
-                            if (n.includes('wheel')) return "Clean face and barrel of wheels. Use iron remover if brake dust is heavy. Rinse thoroughly.";
-
-                            return "Perform this step with care. Ensure quality standards are met before proceeding.";
-                          };
+                          const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
 
                           return (
                             <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
@@ -1582,7 +1562,7 @@ const ServiceChecklist = () => {
                                   <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
                                     <div className="flex items-start gap-2">
                                       <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                      <p className="leading-relaxed">{getInstructions(step)}</p>
+                                      <p className="leading-relaxed">{instructionText}</p>
                                     </div>
                                   </div>
                                 </div>

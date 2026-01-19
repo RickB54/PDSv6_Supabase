@@ -91,5 +91,11 @@ export const UPSELL_SERVICES: UpsellService[] = [
         name: "Engine Bay Detailing",
         price: 110,
         description: "Professional cleaning and dressing of engine compartment"
+    },
+    {
+        id: "clay_bar",
+        name: "Clay Bar & Iron Decontamination",
+        price: 80,
+        description: "Deep removal of embedded surface contaminants and iron particles"
     }
 ];

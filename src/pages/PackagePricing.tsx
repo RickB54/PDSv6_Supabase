@@ -72,7 +72,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Trash2 } from "lucide-react";
+import { Trash2, Info } from "lucide-react";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
@@ -84,6 +84,7 @@ import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import browserImageCompression from "browser-image-compression";
 import { supabase } from "@/lib/supa-data";
+import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 
 type Pricing = { compact: number; midsize: number; truck: number; luxury: number };
 type PriceMap = Record<string, string>;
@@ -134,6 +135,8 @@ export default function PackagePricing() {
     truck: "Truck/Van/Large SUV (Trucks, vans, large SUVs)",
     luxury: "Luxury/High-End (Luxury and premium vehicles)",
   });
+
+  const [comparisonMatrixOpen, setComparisonMatrixOpen] = useState(false);
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -1533,7 +1536,16 @@ export default function PackagePricing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader title="Package Pricing" />
+      <PageHeader title="Package Pricing">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setComparisonMatrixOpen(true)}
+          className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px]"
+        >
+          <Info className="w-4 h-4 mr-2" /> Show Services
+        </Button>
+      </PageHeader>
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
 
@@ -2157,14 +2169,23 @@ export default function PackagePricing() {
                   <DialogTitle className="text-2xl font-bold">Scenario Builder</DialogTitle>
                   <p className="text-zinc-400 text-sm">Select items to calculate a total expense scenario.</p>
                 </div>
-                <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
-                  <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap px-2">Vehicle Size:</span>
-                  <Select value={comparisonVehicle} onValueChange={setComparisonVehicle}>
-                    <SelectTrigger className="w-[240px] bg-black border-zinc-700 h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {vehicleOptions.map(opt => <SelectItem key={opt} value={opt}>{vehicleLabels[opt] || opt}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Button
+                    onClick={() => setComparisonMatrixOpen(true)}
+                    variant="ghost"
+                    className="h-9 border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 font-bold uppercase tracking-widest text-[10px]"
+                  >
+                    <Info className="w-4 h-4 mr-2" /> Show Services
+                  </Button>
+                  <div className="flex items-center gap-3 bg-zinc-900 p-1.5 px-3 rounded-lg border border-zinc-800">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Vehicle Size:</span>
+                    <Select value={comparisonVehicle} onValueChange={setComparisonVehicle}>
+                      <SelectTrigger className="w-[180px] bg-black border-zinc-700 h-8 text-xs font-bold"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {vehicleOptions.map(opt => <SelectItem key={opt} value={opt} className="text-xs font-bold uppercase">{vehicleLabels[opt] || opt}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2749,6 +2770,7 @@ export default function PackagePricing() {
             </div>
           </DialogContent>
         </Dialog>
+        <ServiceComparisonModal open={comparisonMatrixOpen} onOpenChange={setComparisonMatrixOpen} />
       </main>
     </div>
   );
