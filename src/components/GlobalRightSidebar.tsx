@@ -120,7 +120,7 @@ export function GlobalRightSidebar() {
             </Button>
 
             {/* Pricing Scenario Shortcut */}
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Calculator className="w-5 h-5 text-red-500" />
                 {!collapsed && <span>Scenario Builder</span>}
             </Button>

@@ -1433,8 +1433,42 @@ export default function BookingsPage() {
           <DialogContent className="w-[95vw] max-w-[500px] max-h-[85vh] flex flex-col bg-zinc-950 border-zinc-800 p-0">
             <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
               <div className="flex items-center justify-between">
-                <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  {selectedBooking ? 'Edit Booking' : 'New Booking'}
+                <DialogTitle className="text-xl font-bold flex items-center justify-between gap-2 w-full">
+                  <div className="flex items-center gap-2">
+                    {selectedBooking ? 'Edit Booking' : 'New Booking'}
+                    {window.location.hostname === 'localhost' && !selectedBooking && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-[10px] h-4 p-0 text-yellow-500 font-black uppercase tracking-tighter"
+                        onClick={() => {
+                          const profiles = [
+                            { name: "James Wilson", email: "james.w@example.com", phone: "5552345678", make: "Tesla", model: "Model 3", year: "2023", vType: "Compact/Sedan (Small cars and sedans)", service: "Prime Essential Exterior" },
+                            { name: "Sarah Miller", email: "sarah.m@example.com", phone: "5559876543", make: "Ford", model: "F-150", year: "2021", vType: "Truck/Van/Large SUV (Trucks, vans, large SUVs)", service: "Prime Essential Full Detail" },
+                            { name: "Robert Chen", email: "r.chen@tech.io", phone: "5554567890", make: "BMW", model: "X5", year: "2024", vType: "Mid-Size/SUV (Mid-size cars and SUVs)", service: "Prime Essential Interior" },
+                            { name: "Elena Rodriguez", email: "elena.rod@lifestyle.com", phone: "5553210987", make: "Porsche", model: "Cayenne", year: "2022", vType: "Mid-Size/SUV (Mid-size cars and SUVs)", service: "Prime Essential Full Detail" },
+                            { name: "Marcus Thorne", email: "m.thorne@heavy.net", phone: "5558889999", make: "Chevrolet", model: "Suburban", year: "2020", vType: "Truck/Van/Large SUV (Trucks, vans, large SUVs)", service: "Prime Essential Full Detail" }
+                          ];
+                          const p = profiles[Math.floor(Math.random() * profiles.length)];
+                          setFormData(prev => ({
+                            ...prev,
+                            customer: p.name,
+                            email: p.email,
+                            phone: p.phone,
+                            vehicleMake: p.make,
+                            vehicleModel: p.model,
+                            vehicleYear: p.year,
+                            vehicle: p.vType,
+                            service: p.service,
+                            notes: "[MOCK_DATA] Test booking - can be deleted"
+                          }));
+                          toast.info("Mock profile loaded (Date preserved)");
+                        }}
+                      >
+                        [Fill Mock]
+                      </Button>
+                    )}
+                  </div>
                 </DialogTitle>
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-muted-foreground">Date:</label>

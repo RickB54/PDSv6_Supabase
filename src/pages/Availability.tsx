@@ -9,14 +9,11 @@ import { format, addDays, startOfWeek, eachDayOfInterval, startOfMonth } from "d
 import { Calendar } from "@/components/ui/calendar";
 import { WeeklyScheduleView } from "@/components/WeeklyScheduleView";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Clock, Lock, Package, ChevronRight, AlertCircle, Mail, Phone } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Lock, ChevronRight, AlertCircle, Mail, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimeAMPM } from "@/lib/availability";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import * as supaPkgs from "@/services/supabase/packages";
-import { servicePackages as builtInPackages, getServiceDuration } from "@/lib/services";
+import { getServiceDuration } from "@/lib/services";
 import { contentService, type SupaContact } from "@/lib/content";
 
 const IndicatorStyles = () => (
@@ -91,12 +88,6 @@ const Availability = () => {
     const [loading, setLoading] = useState(false);
     const [contact, setContact] = useState<SupaContact | null>(null);
 
-    // Selection state
-    const [packages, setPackages] = useState<any[]>([]);
-    const [selectedPackageId, setSelectedPackageId] = useState<string>("");
-    const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
-    const [selectedVehicleType, setSelectedVehicleType] = useState<string>("compact");
-
     const { items: allBookings, refresh: refreshBookings } = useBookingsStore();
 
     useEffect(() => {
@@ -109,47 +100,11 @@ const Availability = () => {
 
     const loadInitialData = async () => {
         try {
-            const [pkgs, vts, contactInfo] = await Promise.all([
-                supaPkgs.getAll(),
-                contentService.getVehicleTypes(),
+            const [contactInfo] = await Promise.all([
                 contentService.getContact()
             ]);
 
             setContact(contactInfo);
-
-            const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
-            const activeBuiltIns = builtInPackages.filter(p =>
-                !p.id.includes('2025') &&
-                !p.name.includes('2025') &&
-                !legacyIds.includes(p.id)
-            );
-            const builtInIds = activeBuiltIns.map(b => b.id);
-            const mergedPkgs = [...activeBuiltIns];
-
-            pkgs.forEach((p: any) => {
-                if (!builtInIds.includes(p.id) && !p.id.includes('2025') && !p.name.includes('2025') && !legacyIds.includes(p.id)) {
-                    mergedPkgs.push({
-                        id: p.id,
-                        name: p.name,
-                        description: p.description || "",
-                        basePrice: p.compact_price || 0,
-                        pricing: {
-                            compact: p.compact_price || 0,
-                            midsize: p.midsize_price || 0,
-                            truck: p.truck_price || 0,
-                            luxury: p.luxury_price || 0
-                        },
-                        steps: []
-                    });
-                }
-            });
-
-            setPackages(mergedPkgs);
-            if (mergedPkgs.length > 0) setSelectedPackageId(mergedPkgs[0].id);
-
-            const activeVts = vts.filter(v => v.is_active);
-            setVehicleTypes(activeVts);
-            if (activeVts.length > 0) setSelectedVehicleType(activeVts[0].id);
 
         } catch (e) {
             console.error("Failed to load initial metadata", e);
@@ -205,10 +160,9 @@ const Availability = () => {
 
             Object.entries(datesMap).forEach(([dStr, info]) => {
                 const dateObj = new Date(dStr + 'T12:00:00');
-                if (info.workFull) {
+                // If both morning and afternoon are true, treat as full
+                if (info.workFull || (info.workMorning && info.workAfternoon)) {
                     full.push(dateObj);
-                } else if (info.workMorning && info.workAfternoon) {
-                    multiple.push(dateObj);
                 } else if (info.workMorning) {
                     morning.push(dateObj);
                 } else if (info.workAfternoon) {
@@ -250,9 +204,7 @@ const Availability = () => {
         workMultiple: "work-multiple-indicator",
     };
 
-    const selectedPkg = packages.find(p => p.id === selectedPackageId);
-    const price = selectedPkg ? (selectedPkg.pricing[selectedVehicleType] || selectedPkg.basePrice) : 0;
-    const bookingUrl = `/book?date=${format(selectedDate, 'yyyy-MM-dd')}&package=${selectedPackageId}&vehicle=${selectedVehicleType}&price=${price}`;
+    const bookingUrl = () => '/services';
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -278,54 +230,6 @@ const Availability = () => {
                         </div>
 
                         <TabsContent value="monthly" className="animate-in fade-in zoom-in duration-500 space-y-8">
-                            {/* Step 1: Selection */}
-                            <div className="flex justify-center">
-                                <Card className="w-full max-w-4xl p-6 bg-white border border-slate-200 shadow-xl rounded-2xl ring-1 ring-primary/5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                <Package className="w-5 h-5 text-primary" />
-                                                <h3 className="text-lg font-black uppercase tracking-widest text-slate-800">Step 1: Choose Service</h3>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Service Package</Label>
-                                                    <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
-                                                        <SelectTrigger className="bg-slate-50 border-slate-200 h-12">
-                                                            <SelectValue placeholder="Select a package" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-white border-slate-200">
-                                                            {packages.map(p => (
-                                                                <SelectItem key={p.id} value={p.id} className="text-slate-700 focus:bg-primary focus:text-white uppercase font-bold text-xs">{p.name}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vehicle Type</Label>
-                                                    <Select value={selectedVehicleType} onValueChange={setSelectedVehicleType}>
-                                                        <SelectTrigger className="bg-slate-50 border-slate-200 h-12">
-                                                            <SelectValue placeholder="Select vehicle type" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-white border-slate-200">
-                                                            {vehicleTypes.map(v => (
-                                                                <SelectItem key={v.id} value={v.id} className="text-slate-700 focus:bg-primary focus:text-white uppercase font-bold text-xs">{v.name}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {selectedPkg && (
-                                            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 flex flex-col justify-center min-h-[110px]">
-                                                <p className="text-[10px] font-black uppercase text-primary tracking-widest italic">Estimated Service Cost</p>
-                                                <p className="text-4xl font-black text-slate-900 tracking-tighter">${price}</p>
-                                                <p className="text-xs text-slate-500 italic line-clamp-1 mt-1">{selectedPkg.description}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </Card>
-                            </div>
 
                             <div className="flex flex-col gap-8">
                                 <div className="flex justify-center">
@@ -377,7 +281,7 @@ const Availability = () => {
                                                         {dailySlots.map((slot, idx) => (
                                                             <a
                                                                 key={idx}
-                                                                href={`${bookingUrl}&time=${formatTimeAMPM(slot.start)}`}
+                                                                href="/services"
                                                                 className="flex flex-col gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-primary hover:border-primary transition-all group cursor-pointer"
                                                             >
                                                                 <div className="flex items-center gap-2">
@@ -405,7 +309,7 @@ const Availability = () => {
                                                 )}
                                                 <div className="pt-4 flex justify-center">
                                                     <Button asChild className="w-full max-w-md bg-primary hover:bg-primary/90 py-8 text-xl font-black uppercase tracking-widest shadow-2xl hover:scale-[1.02] transition-all rounded-xl">
-                                                        <a href={bookingUrl}>Quick Book: {format(selectedDate, 'MMM d')}</a>
+                                                        <a href="/services">Book A Service</a>
                                                     </Button>
                                                 </div>
                                             </div>

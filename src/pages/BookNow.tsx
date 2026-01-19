@@ -81,76 +81,18 @@ const BookNow = () => {
   const [mockIndex, setMockIndex] = useState(0);
   const fillTestData = () => {
     const mockProfiles = [
-      {
-        name: "James Wilson",
-        email: "james.w@example.com",
-        phone: "(555) 234-5678",
-        address: "742 Evergreen Terrace, Springfield",
-        make: "Tesla",
-        model: "Model 3",
-        year: "2023",
-        vType: "sedan",
-        package: "prime-essential-interior",
-        addons: ["premium-wax"],
-        time: "09:00:00"
-      },
-      {
-        name: "Sarah Miller",
-        email: "sarah.m@example.com",
-        phone: "(555) 987-6543",
-        address: "1001 Mountain View Rd, Boulder, CO",
-        make: "Ford",
-        model: "F-150",
-        year: "2021",
-        vType: "truck",
-        package: "prime-show-shine-full",
-        addons: ["clay-bar-treatment", "interior-protection"],
-        time: "13:30:00"
-      },
-      {
-        name: "Robert Chen",
-        email: "r.chen@tech.io",
-        phone: "(555) 456-7890",
-        address: "50 California St, San Francisco, CA",
-        make: "BMW",
-        model: "X5",
-        year: "2024",
-        vType: "midsize",
-        package: "prime-platinum-protection",
-        addons: ["engine-bay-cleaning"],
-        time: "10:00:00"
-      },
-      {
-        name: "Elena Rodriguez",
-        email: "elena.rod@lifestyle.com",
-        phone: "(555) 321-0987",
-        address: "12 Biscayne Blvd, Miami, FL",
-        make: "Porsche",
-        model: "Cayenne",
-        year: "2022",
-        vType: "midsize",
-        package: "prime-essential-interior",
-        addons: ["odor-elimination"],
-        time: "15:00:00"
-      },
-      {
-        name: "Marcus Thorne",
-        email: "m.thorne@heavy.net",
-        phone: "(555) 888-9999",
-        address: "99 Industrial Way, Detroit, MI",
-        make: "Chevrolet",
-        model: "Suburban",
-        year: "2020",
-        vType: "oversize",
-        package: "prime-show-shine-full",
-        addons: ["headlight-restoration", "clay-bar-treatment"],
-        time: "11:00:00"
-      }
+      { name: "James Wilson", email: "james.w@example.com", phone: "(555) 234-5678", address: "742 Evergreen Terrace, Springfield", make: "Tesla", model: "Model 3", year: "2023", vType: "sedan", package: "prime-essential-exterior", addons: ["premium-wax"], time: "09:00:00" },
+      { name: "Sarah Miller", email: "sarah.m@example.com", phone: "(555) 987-6543", address: "1001 Mountain View Rd, Boulder, CO", make: "Ford", model: "F-150", year: "2021", vType: "truck", package: "prime-essential-full", addons: ["clay-bar-treatment"], time: "13:30:00" },
+      { name: "Robert Chen", email: "r.chen@tech.io", phone: "(555) 456-7890", address: "50 California St, San Francisco, CA", make: "BMW", model: "X5", year: "2024", vType: "midsize", package: "prime-essential-interior", addons: ["engine-bay-cleaning"], time: "10:00:00" },
+      { name: "Elena Rodriguez", email: "elena.rod@lifestyle.com", phone: "(555) 321-0987", address: "12 Biscayne Blvd, Miami, FL", make: "Porsche", model: "Cayenne", year: "2022", vType: "midsize", package: "prime-elite-exterior", addons: ["odor-elimination"], time: "15:00:00" },
+      { name: "Marcus Thorne", email: "m.thorne@heavy.net", phone: "(555) 888-9999", address: "99 Industrial Way, Detroit, MI", make: "Chevrolet", model: "Suburban", year: "2020", vType: "truck", package: "prime-elite-full", addons: ["headlight-restoration"], time: "11:00:00" },
+      { name: "Sophia Lee", email: "sophia.lee@design.com", phone: "(555) 111-2222", address: "888 Art District, Austin, TX", make: "Rivian", model: "R1S", year: "2024", vType: "midsize", package: "prime-elite-interior", addons: ["ceramic-coating"], time: "08:30:00" },
+      { name: "David Miller", email: "david.m@builder.org", phone: "(555) 333-4444", address: "456 Construction Way, Seattle, WA", make: "Ram", model: "1500", year: "2019", vType: "truck", package: "prime-essential-exterior", addons: ["undercarriage-wash"], time: "14:00:00" },
+      { name: "Linda Thompson", email: "linda.t@traveler.com", phone: "(555) 555-6666", address: "123 Coastal Hwy, Malibu, CA", make: "Mercedes", model: "GLE", year: "2021", vType: "luxury", package: "prime-essential-full", addons: ["leather-treatment"], time: "12:00:00" }
     ];
 
-    const profile = mockProfiles[mockIndex];
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + (mockIndex + 1)); // Spread across different days
+    const randomIndex = Math.floor(Math.random() * mockProfiles.length);
+    const profile = mockProfiles[randomIndex];
 
     setFormData({
       name: profile.name,
@@ -168,14 +110,19 @@ const BookNow = () => {
     });
     setVehicleType(profile.vType);
     setAddOns(profile.addons);
-    setDate(targetDate);
-    setSelectedTime(profile.time);
-    setIsEditingDate(false);
 
-    setMockIndex((mockIndex + 1) % mockProfiles.length);
+    // ONLY prefill date if NOT already set
+    if (!date && !selectedTime) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + (randomIndex + 1));
+      setDate(targetDate);
+      setSelectedTime(profile.time);
+      setIsEditingDate(false);
+    }
+
     toast({
       title: "🧪 Mock Data Filled!",
-      description: `Loaded profile: ${profile.name} (${profile.vType})`
+      description: `Loaded profile: ${profile.name} (${profile.vType}). ${(!date && !selectedTime) ? "Date/Time defaulted." : "Date/Time preserved."}`
     });
   };
   // Coupon states
@@ -458,52 +405,10 @@ const BookNow = () => {
       .catch(() => setPackageMode('6-pack'));
   }, []);
 
-  // EMERGENCY HARDCODED PACKAGES
-  // This guarantees exactly these 3 packages appear.
-  const filteredPackages = [
-    {
-      id: "prime-2026-exterior",
-      name: "Prime Exterior Detail",
-      description: "Professional exterior detailing service",
-      basePrice: 90,
-      pricing: { compact: 90, midsize: 110, truck: 130, luxury: 150 },
-      steps: [
-        { id: "foam-pre-soak", name: "Exterior foam pre-soak" },
-        { id: "hand-wash", name: "Two-bucket hand wash" },
-        { id: "wheel-rim-shine", name: "Wheel and rim cleaning" },
-        { id: "blow-dry", name: "Air blow-dry and microfiber drying" },
-        { id: "sealant", name: "Premium spray wax" }
-      ]
-    },
-    {
-      id: "prime-2026-interior",
-      name: "Prime Interior Detail",
-      description: "Deep interior cleaning and conditioning",
-      basePrice: 180,
-      pricing: { compact: 180, midsize: 200, truck: 220, luxury: 250 },
-      steps: [
-        { id: "vac-interior", name: "Thorough interior vacuum" },
-        { id: "wipe-plastics", name: "Wipe-down of all surfaces" },
-        { id: "window-clean", name: "Interior window cleaning" },
-        { id: "mat-clean", name: "Floor mat cleaning" },
-        { id: "jamb-clean", name: "Door jamb cleaning" }
-      ]
-    },
-    {
-      id: "prime-2026-full",
-      name: "Prime Full Detail",
-      description: "Complete interior and exterior detailing",
-      basePrice: 230,
-      pricing: { compact: 230, midsize: 260, truck: 290, luxury: 330 },
-      steps: [
-        { id: "ext-hand-wash", name: "Safe hand wash" },
-        { id: "wheel-faces", name: "Wheel and tire cleaning" },
-        { id: "interior-vac-full", name: "Full interior vacuum" },
-        { id: "dash-wipe", name: "Dashboard and console wipe-down" },
-        { id: "windows-in-out", name: "Interior & Exterior glass cleaned" }
-      ]
-    }
-  ];
+  // Filter packages: only include Essential and Elite Prime Packages
+  const filteredPackages = livePackages.filter(p =>
+    p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')
+  );
 
   const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
   const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);

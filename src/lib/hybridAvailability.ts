@@ -221,13 +221,16 @@ export async function getRangeBlockedDates(
         const dateObj = new Date(b.scheduled_at);
         const hStart = dateObj.getHours();
         const mStart = dateObj.getMinutes();
-        const hEnd = Math.min(23, hStart + (b.estimated_duration || 1));
+        const durationHours = b.estimated_duration || 1;
+        const totalMinutes = Math.round((hStart * 60) + mStart + (durationHours * 60));
+        const actualHEnd = Math.min(23, Math.floor(totalMinutes / 60));
+        const actualMEnd = totalMinutes % 60;
 
         return {
             date: format(dateObj, 'yyyy-MM-dd'),
             source: 'booking' as const,
             startTime: `${String(hStart).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
-            endTime: `${String(hEnd).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`
+            endTime: `${String(actualHEnd).padStart(2, '0')}:${String(actualMEnd).padStart(2, '0')}`
         };
     });
 
@@ -347,13 +350,16 @@ export async function getWeeklyBlocks(
         const dateObj = new Date(b.scheduled_at);
         const hStart = dateObj.getHours();
         const mStart = dateObj.getMinutes();
-        const hEnd = Math.min(23, hStart + (b.estimated_duration || 1));
+        const durationHours = b.estimated_duration || 1;
+        const totalMinutes = Math.round((hStart * 60) + mStart + (durationHours * 60));
+        const actualHEnd = Math.min(23, Math.floor(totalMinutes / 60));
+        const actualMEnd = totalMinutes % 60;
 
         return {
             id: `b-${idx}-${b.scheduled_at}`,
             date: format(dateObj, 'yyyy-MM-dd'),
             startTime: `${String(hStart).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
-            endTime: `${String(hEnd).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
+            endTime: `${String(actualHEnd).padStart(2, '0')}:${String(actualMEnd).padStart(2, '0')}`,
             source: 'booking' as const,
             reason: 'Confirmed Booking'
         };

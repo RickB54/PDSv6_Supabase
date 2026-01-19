@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone } from "lucide-react";
+import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -615,15 +615,28 @@ export default function AdminDashboard() {
       <div className="p-2 sm:p-4 space-y-6 max-w-screen-xl mx-auto overflow-x-hidden">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full h-8 w-8 text-muted-foreground hover:text-primary hover:bg-muted"
-            onClick={() => setHelpOpen(true)}
-            title="Help"
-          >
-            <HelpCircle className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500 hover:text-white gap-2 h-9 px-4 hidden sm:flex transition-all"
+            >
+              <Link to="/book">
+                <Globe className="h-4 w-4" />
+                Book Online Mock
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-9 w-9 text-muted-foreground hover:text-primary hover:bg-muted"
+              onClick={() => setHelpOpen(true)}
+              title="Help"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         {/* Removed top-right Website Administration button; now a dashboard box below */}
         {/* Real-time Alerts banner with deep purple background */}

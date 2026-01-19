@@ -144,7 +144,8 @@ export function WeeklyScheduleView({
                                                     }
                                                 }
                                             });
-                                            const isFull = isFullWorkday || blockedHours.size >= 8;
+                                            // A day is "Full" if manually blocked, if morning+afternoon are both hit, or if 6+ hours are filled
+                                            const isFull = isFullWorkday || (morning && afternoon) || blockedHours.size >= 6;
 
                                             let indClass = '';
                                             if (isFull) indClass = 'bg-blue-600';
