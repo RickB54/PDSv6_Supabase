@@ -342,6 +342,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                       <Link to={item.url}
                         className={isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors'}
                         onClick={() => {
+                          handleNavClick();
                           if (item.url.includes('#')) {
                             const id = item.url.split('#')[1];
                             setTimeout(() => {

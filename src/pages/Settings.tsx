@@ -1594,7 +1594,7 @@ const Settings = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 p-6">
+          <div className="flex-1 overflow-y-auto p-6 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             {nukeLoading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-4">
                 <RefreshCw className="h-10 w-10 text-red-500 animate-spin" />
@@ -1654,7 +1654,7 @@ const Settings = () => {
                 </div>
               </div>
             )}
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="p-6 border-t border-zinc-800 bg-black/40 gap-3">
             <Button variant="outline" onClick={() => setGranularNukeOpen(false)} className="border-zinc-700 text-zinc-400 hover:text-white">

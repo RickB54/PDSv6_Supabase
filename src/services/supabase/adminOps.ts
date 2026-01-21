@@ -102,11 +102,11 @@ export async function deleteCustomersOlderThan(days: string): Promise<void> {
     if (appUsersUpdatedDel.error) { dbg('deleteCustomersOlderThan:app_users(updated_at):error', appUsersUpdatedDel.error); throw appUsersUpdatedDel.error; }
     dbg('deleteCustomersOlderThan:app_users(updated_at):count', appUsersUpdatedDel.count);
   } else {
-    const bookingsDel = await supabase.from('bookings').delete().neq('id', null);
+    const bookingsDel = await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (bookingsDel.error) { dbg('deleteCustomersOlderThan:bookings:error', bookingsDel.error); throw bookingsDel.error; }
     dbg('deleteCustomersOlderThan:bookings:count(all)', bookingsDel.count);
 
-    const custDel = await supabase.from('customers').delete().neq('id', null);
+    const custDel = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (custDel.error) { dbg('deleteCustomersOlderThan:customers:error', custDel.error); throw custDel.error; }
     dbg('deleteCustomersOlderThan:customers:count(all)', custDel.count);
 
@@ -147,7 +147,7 @@ export async function deleteInvoicesOlderThan(days: string): Promise<void> {
   dbg('deleteInvoicesOlderThan:start', { cutoff });
   const res = cutoff
     ? await supabase.from('invoices').delete().lt('created_at', cutoff)
-    : await supabase.from('invoices').delete().neq('id', null);
+    : await supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (res.error) { dbg('deleteInvoicesOlderThan:error', res.error); throw res.error; }
   dbg('deleteInvoicesOlderThan:count', res.count);
   const audit = await logDelete({ type: 'invoices', cutoff });
@@ -160,12 +160,12 @@ export async function deleteExpensesOlderThan(days: string): Promise<void> {
   dbg('deleteExpensesOlderThan:start', { cutoff });
   const exp = cutoff
     ? await supabase.from('expenses').delete().lt('date', cutoff)
-    : await supabase.from('expenses').delete().neq('id', null);
+    : await supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (exp.error) { dbg('deleteExpensesOlderThan:expenses:error', exp.error); throw exp.error; }
   dbg('deleteExpensesOlderThan:expenses:count', exp.count);
   const acc = cutoff
     ? await supabase.from('accounting').delete().lt('created_at', cutoff)
-    : await supabase.from('accounting').delete().neq('id', null);
+    : await supabase.from('accounting').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (acc.error) { dbg('deleteExpensesOlderThan:accounting:error', acc.error); throw acc.error; }
   dbg('deleteExpensesOlderThan:accounting:count', acc.count);
   const audit = await logDelete({ type: 'expenses', cutoff });
@@ -178,12 +178,12 @@ export async function deleteInventoryUsageOlderThan(days: string): Promise<void>
   dbg('deleteInventoryUsageOlderThan:start', { cutoff });
   const usageDel = cutoff
     ? await supabase.from('usage').delete().lt('date', cutoff)
-    : await supabase.from('usage').delete().neq('id', null);
+    : await supabase.from('usage').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (usageDel.error) { dbg('deleteInventoryUsageOlderThan:usage:error', usageDel.error); throw usageDel.error; }
   dbg('deleteInventoryUsageOlderThan:usage:count', usageDel.count);
   const invDel = cutoff
     ? await supabase.from('inventory_records').delete().lt('created_at', cutoff)
-    : await supabase.from('inventory_records').delete().neq('id', null);
+    : await supabase.from('inventory_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (invDel.error) { dbg('deleteInventoryUsageOlderThan:inventory_records:error', invDel.error); throw invDel.error; }
   dbg('deleteInventoryUsageOlderThan:inventory_records:count', invDel.count);
   const audit = await logDelete({ type: 'inventory', cutoff });
@@ -217,15 +217,15 @@ export async function deleteEverything(): Promise<void> {
   // Supabase deletions — ONLY the allowed data
   dbg('deleteEverything:start');
   const ops = [
-    ['bookings', { col: 'id', op: 'neq', val: null }],
-    ['availability_blocks', { col: 'id', op: 'neq', val: null }],
-    ['invoices', { col: 'id', op: 'neq', val: null }],
-    ['expenses', { col: 'id', op: 'neq', val: null }],
-    ['usage', { col: 'id', op: 'neq', val: null }],
-    ['inventory_records', { col: 'id', op: 'neq', val: null }],
-    ['vehicles', { col: 'id', op: 'neq', val: null }],
+    ['bookings', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['availability_blocks', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['invoices', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['expenses', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['usage', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['inventory_records', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['vehicles', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
     // Customers and app_users last
-    ['customers', { col: 'id', op: 'neq', val: null }],
+    ['customers', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
   ] as const;
   for (const [table, cond] of ops) {
     let q: any = supabase.from(table as any).delete();
@@ -250,13 +250,13 @@ export async function deleteEverythingExceptInventory(): Promise<void> {
   await requireAdminOrEmployee();
   dbg('deleteEverythingExceptInventory:start');
   const ops = [
-    ['bookings', { col: 'id', op: 'neq', val: null }],
-    ['availability_blocks', { col: 'id', op: 'neq', val: null }],
-    ['invoices', { col: 'id', op: 'neq', val: null }],
-    ['expenses', { col: 'id', op: 'neq', val: null }],
-    ['vehicles', { col: 'id', op: 'neq', val: null }],
+    ['bookings', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['availability_blocks', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['invoices', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['expenses', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
+    ['vehicles', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
     // Customers last
-    ['customers', { col: 'id', op: 'neq', val: null }],
+    ['customers', { col: 'id', op: 'neq', val: '00000000-0000-0000-0000-000000000000' }],
   ] as const;
   for (const [table, cond] of ops) {
     let q: any = supabase.from(table as any).delete();

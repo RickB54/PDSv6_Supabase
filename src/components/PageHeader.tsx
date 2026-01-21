@@ -32,7 +32,9 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   };
 
   // Show back button if we are not at root or dashboard root
-  const showBackButton = location.pathname !== '/' && location.pathname !== '/dashboard/employee' && location.pathname !== '/admin-dashboard';
+  // Show back button if we are not at a dashboard root or landing page
+  // Show back button if we are not at root or the primary employee dashboard
+  const showBackButton = location.pathname !== '/' && location.pathname !== '/dashboard/employee';
 
   return (
     <>
@@ -40,7 +42,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
         <div className="relative flex items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-2 sm:gap-4 flex-nowrap min-w-0">
-            {user && (user.role === 'admin' || user.role === 'employee') && (
+            {user && (
               <SidebarTrigger className="text-foreground" />
             )}
 

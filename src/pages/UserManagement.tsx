@@ -516,7 +516,10 @@ export default function UserManagement() {
 
         {/* Search & Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+          <Card
+            className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl cursor-pointer hover:border-amber-500/50 transition-all hover:scale-[1.02]"
+            onClick={() => document.getElementById('admins-section')?.scrollIntoView({ behavior: 'smooth' })}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-amber-500/10 rounded-full">
                 <Shield className="w-6 h-6 text-amber-400" />
@@ -528,7 +531,10 @@ export default function UserManagement() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+          <Card
+            className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl cursor-pointer hover:border-blue-500/50 transition-all hover:scale-[1.02]"
+            onClick={() => document.getElementById('employees-section')?.scrollIntoView({ behavior: 'smooth' })}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-blue-500/10 rounded-full">
                 <UserCog className="w-6 h-6 text-blue-400" />
@@ -540,7 +546,10 @@ export default function UserManagement() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+          <Card
+            className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl cursor-pointer hover:border-purple-500/50 transition-all hover:scale-[1.02]"
+            onClick={() => document.getElementById('customers-section')?.scrollIntoView({ behavior: 'smooth' })}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-purple-500/10 rounded-full">
                 <Users className="w-6 h-6 text-purple-400" />
@@ -552,7 +561,10 @@ export default function UserManagement() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
+          <Card
+            className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl cursor-pointer hover:border-orange-500/50 transition-all hover:scale-[1.02]"
+            onClick={() => document.getElementById('prospects-section')?.scrollIntoView({ behavior: 'smooth' })}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-orange-500/10 rounded-full">
                 <Users className="w-6 h-6 text-orange-400" />
@@ -578,7 +590,7 @@ export default function UserManagement() {
         </div>
 
         {/* Admins List */}
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
+        <Card id="admins-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
           <CardHeader className="border-b border-zinc-800/50 pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -709,7 +721,7 @@ export default function UserManagement() {
         </Card>
 
         {/* Employee List */}
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
+        <Card id="employees-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
           <CardHeader className="border-b border-zinc-800/50 pb-4">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-emerald-500" />
@@ -889,7 +901,7 @@ export default function UserManagement() {
         </Card>
 
         {/* Customers Section */}
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
+        <Card id="customers-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
           <CardHeader className="border-b border-zinc-800/50 pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1031,7 +1043,7 @@ export default function UserManagement() {
         </Card>
 
         {/* Prospects Section */}
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
+        <Card id="prospects-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
           <CardHeader className="border-b border-zinc-800/50 pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

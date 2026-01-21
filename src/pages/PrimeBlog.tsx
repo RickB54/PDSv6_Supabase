@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
+import { PageHeader } from "@/components/PageHeader";
 import { Footer } from "@/components/Footer";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -381,7 +382,7 @@ export default function PrimeBlog() {
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
-            <Navbar />
+            {isAuth ? <PageHeader title="Prime Blog" /> : <Navbar />}
             <main className="flex-1">
                 {/* Glossy Header */}
                 <div className="relative overflow-hidden bg-zinc-950 pt-24 pb-16 border-b border-zinc-800/50">
@@ -392,16 +393,7 @@ export default function PrimeBlog() {
                     <div className="container mx-auto px-4 relative z-10">
                         <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
                             <div className="space-y-4 max-w-2xl text-left">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => navigate(-1)}
-                                    className="text-zinc-500 hover:text-white -ml-2 mb-2"
-                                >
-                                    <ArrowLeft className="h-4 w-4 mr-2" /> Back
-                                </Button>
                                 <div className="flex items-center gap-4">
-                                    {isAuth && <SidebarTrigger className="bg-zinc-900 border-zinc-800 text-white" />}
                                     <Badge variant="outline" className="text-indigo-400 border-indigo-400/30 animate-pulse-subtle bg-indigo-500/5 px-3 py-1 uppercase tracking-widest text-[10px] font-black">
                                         Showcase & Tips
                                     </Badge>

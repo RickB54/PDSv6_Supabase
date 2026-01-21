@@ -11,7 +11,7 @@ import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, C
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -325,11 +325,18 @@ const SearchCustomer = () => {
   };
 
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
-  const toggleCustomer = (id: string) => { setExpandedCustomers(prev => (prev.includes(id) ? [] : [id])); setAllExpanded(false); };
+  const toggleCustomer = (id: string) => {
+    setExpandedCustomers(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    setAllExpanded(false);
+  };
   const toggleAll = () => {
-    if (allExpanded) setExpandedCustomers([]);
-    else setExpandedCustomers(filteredCustomers.map(c => c.id!));
-    setAllExpanded(!allExpanded);
+    if (expandedCustomers.length === filteredCustomers.length) {
+      setExpandedCustomers([]);
+      setAllExpanded(false);
+    } else {
+      setExpandedCustomers(filteredCustomers.map(c => c.id!));
+      setAllExpanded(true);
+    }
   };
 
   const totalCustomers = filteredCustomers.length;
@@ -342,7 +349,7 @@ const SearchCustomer = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Customer Info" />
+      <PageHeader title="Customer Database" />
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
         <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -384,7 +391,7 @@ const SearchCustomer = () => {
             })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
-              if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
+              // REMOVED: if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
                 <div key={customer.id} className={cn(
