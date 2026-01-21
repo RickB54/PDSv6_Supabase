@@ -43,6 +43,14 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
                 fileSizeLimit: 10485760, // 10MB
                 allowedMimeTypes: ['image/*']
             }
+        },
+        {
+            name: 'app-backups',
+            config: {
+                public: false, // Private!
+                fileSizeLimit: 52428800, // 50MB
+                allowedMimeTypes: ['application/json']
+            }
         }
     ];
 
@@ -73,6 +81,26 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
     } catch (err) {
         console.warn('Storage bucket initialization failed:', err);
     }
+};
+
+/**
+ * Uploads a file to a specific Supabase Storage bucket.
+ * Returns the public URL of the uploaded file.
+ */
+export const uploadFile = async (bucket: string, file: File, path?: string): Promise<string> => {
+    const fileName = path || `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true
+    });
+
+    if (error) {
+        console.error(`Upload to bucket "${bucket}" failed:`, error);
+        throw error;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return publicUrl;
 };
 
 // Auto-run on import - but don't block the main thread

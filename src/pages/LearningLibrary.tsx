@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, supabase } from "@/lib/supa-data";
+import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, renameLibraryCategory, deleteLibraryCategory, LibraryItem, supabase } from "@/lib/supa-data";
+import { SelectSeparator } from "@/components/ui/select";
 import { compressImage } from "@/lib/imageUtils";
 
 export default function LearningLibrary() {
@@ -23,19 +24,36 @@ export default function LearningLibrary() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [items, setItems] = useState<LibraryItem[]>([]);
+    const [activeCategory, setActiveCategory] = useState<string>("All");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<{ step: string; message: string }>({ step: 'idle', message: '' });
+
+    // Video player state
+    const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+    const [playingItem, setPlayingItem] = useState<LibraryItem | null>(null);
 
     const [formData, setFormData] = useState<Partial<LibraryItem>>({
         type: 'video',
         category: 'General'
     });
 
-    // Video player state
-    const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-    const [playingItem, setPlayingItem] = useState<LibraryItem | null>(null);
+    // Category Management State
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [categoryModalType, setCategoryModalType] = useState<'create' | 'rename' | 'delete'>('create');
+    const [targetCategory, setTargetCategory] = useState<string>("");
+    const [newCategoryName, setNewCategoryName] = useState<string>("");
+
+    const categories = useMemo(() => {
+        const unique = Array.from(new Set(items.map(i => i.category || 'General')));
+        return ["All", ...unique.sort()];
+    }, [items]);
+
+    const filteredItems = useMemo(() => {
+        if (activeCategory === "All") return items;
+        return items.filter(i => (i.category || 'General') === activeCategory);
+    }, [items, activeCategory]);
 
     useEffect(() => {
         loadItems();
@@ -189,28 +207,50 @@ export default function LearningLibrary() {
             created_at: editingItem?.created_at || new Date().toISOString()
         };
 
-        // Optimistic update - show immediately
-        if (editingItem) {
-            setItems(items.map(i => i.id === editingItem.id ? newItem : i));
-        } else {
-            setItems([...items, newItem]);
-        }
-        setIsModalOpen(false);
-        setEditingItem(null);
-        setFormData({ type: 'video', category: 'General' });
-
-        // Save to Supabase in background
+        setSaving(true);
+        // Save to Supabase
         const result = await upsertLibraryItem(newItem);
-        if (result) {
+        if (result.success) {
             toast({ title: editingItem ? "Resource Updated" : "Resource Added", description: "Library updated successfully." });
-            // Reload to ensure sync
+            setIsModalOpen(false);
+            setEditingItem(null);
+            setFormData({ type: 'video', category: 'General' });
             await loadItems();
         } else {
-            toast({ title: "Save Failed", description: "Changes may not persist.", variant: "destructive" });
-            // Reload to revert optimistic update
-            await loadItems();
+            toast({ title: "Save Failed", description: result.error?.message || "Changes may not persist.", variant: "destructive" });
         }
+        setSaving(false);
     };
+
+    const handleCategoryAction = async () => {
+        if (categoryModalType === 'create') {
+            if (!newCategoryName.trim()) return;
+            // Creation is implicit when adding an item with a new category, 
+            // but we can just set the form data category here if we were in the Add modal.
+            // For a standalone "Create", we just need to refresh or add to list.
+            toast({ title: "Category Placeholder Created", description: "Add a resource to this category to make it permanent." });
+            setActiveCategory(newCategoryName);
+        } else if (categoryModalType === 'rename') {
+            if (!newCategoryName.trim()) return;
+            const res = await renameLibraryCategory(targetCategory, newCategoryName);
+            if (res.success) {
+                toast({ title: "Category Renamed", description: `Updated ${res.count} resources.` });
+                if (activeCategory === targetCategory) setActiveCategory(newCategoryName);
+                await loadItems();
+            }
+        } else if (categoryModalType === 'delete') {
+            const res = await deleteLibraryCategory(targetCategory);
+            if (res.success) {
+                toast({ title: "Category Deleted", description: `Unassigned ${res.count} resources back to General.` });
+                if (activeCategory === targetCategory) setActiveCategory("All");
+                await loadItems();
+            }
+        }
+        setIsCategoryModalOpen(false);
+        setNewCategoryName("");
+    };
+
+    const [saving, setSaving] = useState(false);
 
     const getIcon = (type: string) => {
         switch (type) {
@@ -294,63 +334,126 @@ export default function LearningLibrary() {
                     )}
                 </div>
 
-                {/* Grid of library items */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {items.map(item => {
-                        const Icon = getIcon(item.type);
-                        return (
-                            <Card
-                                key={item.id}
-                                className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all group cursor-pointer relative"
-                                onClick={() => handleViewResource(item)}
-                            >
+                {/* Content Layout */}
+                <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Sidebar / Categories */}
+                    <aside className="w-full lg:w-64 shrink-0">
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg sticky top-24">
+                            <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/30">
+                                <h3 className="font-bold text-zinc-200">Categories</h3>
                                 {isAdmin && (
-                                    <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button
-                                            size="icon"
-                                            variant="secondary"
-                                            className="h-8 w-8 bg-zinc-800 hover:bg-zinc-700"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleEdit(item);
-                                            }}
-                                        >
-                                            <Edit2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
+                                    <Button
+                                        size="icon" variant="ghost" className="h-7 w-7 text-blue-400 hover:bg-blue-900/20"
+                                        onClick={() => { setCategoryModalType('create'); setIsCategoryModalOpen(true); }}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
                                 )}
-                                <div className="aspect-video bg-zinc-950 relative flex items-center justify-center overflow-hidden rounded-t-xl">
-                                    {((item.type === 'video' || item.type === 'image') && item.resource_url && (item.type === 'image' || getYouTubeThumbnail(item.resource_url))) ? (
-                                        <img
-                                            src={item.type === 'image' ? item.resource_url : getYouTubeThumbnail(item.resource_url)!}
-                                            alt={item.title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <Icon className="w-12 h-12 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
-                                    )}
-                                    {item.type === 'video' && (
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Play className="w-12 h-12 text-white fill-white" />
-                                        </div>
-                                    )}
-                                </div>
-                                <CardHeader>
-                                    <CardTitle className="text-white text-lg">{item.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-zinc-400 text-sm">{item.description}</p>
-                                    <div className="mt-4 flex gap-2 flex-wrap">
-                                        {item.duration && (
-                                            <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded">{item.duration}</span>
+                            </div>
+                            <div className="p-2 flex flex-col gap-1 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                {categories.map(cat => (
+                                    <div key={cat} className="group flex items-center gap-1">
+                                        <button
+                                            onClick={() => setActiveCategory(cat)}
+                                            className={`flex-1 text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${activeCategory === cat
+                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20'
+                                                : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
+                                                }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                        {isAdmin && cat !== 'All' && cat !== 'General' && (
+                                            <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                                <Button
+                                                    size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-blue-400"
+                                                    onClick={() => { setTargetCategory(cat); setNewCategoryName(cat); setCategoryModalType('rename'); setIsCategoryModalOpen(true); }}
+                                                >
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-red-400"
+                                                    onClick={() => { setTargetCategory(cat); setCategoryModalType('delete'); setIsCategoryModalOpen(true); }}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
                                         )}
-                                        <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded">{item.category}</span>
-                                        <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded capitalize">{item.type}</span>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                                ))}
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Grid of library items */}
+                    <div className="flex-1">
+                        {filteredItems.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 bg-zinc-900/30 border border-zinc-800 border-dashed rounded-xl">
+                                <Video className="h-12 w-12 text-zinc-700 mb-4" />
+                                <h3 className="text-zinc-400 font-medium">No resources found in this category</h3>
+                                <p className="text-zinc-600 text-sm mt-1">Try switching categories or add a new resource.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {filteredItems.map(item => {
+                                    const Icon = getIcon(item.type);
+                                    return (
+                                        <Card
+                                            key={item.id}
+                                            className="bg-zinc-900 border-zinc-800 hover:border-zinc-500 transition-all hover:translate-y-[-4px] group cursor-pointer relative shadow-lg"
+                                            onClick={() => handleViewResource(item)}
+                                        >
+                                            {isAdmin && (
+                                                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button
+                                                        size="icon"
+                                                        variant="secondary"
+                                                        className="h-8 w-8 bg-zinc-950/80 border border-zinc-800 hover:bg-zinc-800 backdrop-blur"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEdit(item);
+                                                        }}
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            <div className="aspect-video bg-zinc-950 relative flex items-center justify-center overflow-hidden rounded-t-xl">
+                                                {((item.type === 'video' || item.type === 'image') && item.resource_url && (item.type === 'image' || getYouTubeThumbnail(item.resource_url))) ? (
+                                                    <img
+                                                        src={item.type === 'image' ? item.resource_url : getYouTubeThumbnail(item.resource_url)!}
+                                                        alt={item.title}
+                                                        className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500"
+                                                    />
+                                                ) : (
+                                                    <Icon className="w-12 h-12 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
+                                                )}
+                                                {item.type === 'video' && (
+                                                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                        <div className="h-14 w-14 rounded-full bg-blue-600/90 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                                                            <Play className="w-6 h-6 text-white fill-white ml-1" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <CardHeader className="pb-2">
+                                                <CardTitle className="text-white text-lg line-clamp-1">{item.title}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <p className="text-zinc-400 text-sm line-clamp-2 h-10 mb-4">{item.description}</p>
+                                                <div className="flex gap-2 flex-wrap">
+                                                    {item.duration && (
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider bg-zinc-800 text-zinc-400 px-2 py-1 rounded border border-zinc-700/50">{item.duration}</span>
+                                                    )}
+                                                    <span className="text-[10px] uppercase font-bold tracking-wider bg-blue-900/30 text-blue-400 px-2 py-1 rounded border border-blue-900/50">{item.category}</span>
+                                                    <span className="text-[10px] uppercase font-bold tracking-wider bg-zinc-800 text-zinc-400 px-2 py-1 rounded border border-zinc-700/50">{item.type}</span>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </main >
 
@@ -365,10 +468,10 @@ export default function LearningLibrary() {
                             <div className="space-y-2">
                                 <Label>Resource Type</Label>
                                 <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val as any })}>
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-700">
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-700 text-white">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                         <SelectItem value="video">Video</SelectItem>
                                         <SelectItem value="image">Image</SelectItem>
                                         <SelectItem value="pdf">PDF Document</SelectItem>
@@ -378,12 +481,28 @@ export default function LearningLibrary() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Category</Label>
-                                <Input
-                                    value={formData.category || ''}
-                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    placeholder="e.g., Advanced, Maintenance"
-                                    className="bg-zinc-950 border-zinc-700"
-                                />
+                                <Select
+                                    value={formData.category}
+                                    onValueChange={(val) => {
+                                        if (val === 'new') {
+                                            const newCat = prompt("Enter new category name:");
+                                            if (newCat) setFormData({ ...formData, category: newCat });
+                                        } else {
+                                            setFormData({ ...formData, category: val });
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-700 text-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                        {categories.filter(c => c !== "All").map(c => (
+                                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                                        ))}
+                                        <SelectSeparator />
+                                        <SelectItem value="new" className="text-blue-400 font-bold">+ Create New Category</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
@@ -467,13 +586,51 @@ export default function LearningLibrary() {
                         )}
                         <div className="flex gap-2 ml-auto">
                             <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                            <Button onClick={handleSave} disabled={isUploading} className="bg-blue-600 hover:bg-blue-700">
-                                {isUploading ? 'Uploading...' : (editingItem ? 'Update' : 'Add') + ' Resource'}
+                            <Button onClick={handleSave} disabled={isUploading || saving} className="bg-blue-600 hover:bg-blue-700 min-w-[100px]">
+                                {saving ? <Loader2 className="animate-spin h-4 w-4" /> : (editingItem ? 'Update' : 'Add') + ' Resource'}
                             </Button>
                         </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog >
+
+            {/* Category Management Modal */}
+            <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="capitalize">{categoryModalType} Category</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        {categoryModalType === 'delete' ? (
+                            <p className="text-zinc-400 text-sm">
+                                Are you sure you want to delete <strong className="text-white">"{targetCategory}"</strong>?
+                                Resources will be moved to "General".
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label>Category Name</Label>
+                                <Input
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                    placeholder="e.g. Chemicals"
+                                    className="bg-zinc-900 border-zinc-800"
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsCategoryModalOpen(false)}>Cancel</Button>
+                        <Button
+                            variant={categoryModalType === 'delete' ? 'destructive' : 'default'}
+                            onClick={handleCategoryAction}
+                            className={categoryModalType !== 'delete' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                        >
+                            {categoryModalType === 'delete' ? 'Delete Permanently' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Video Player Modal */}
             < Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen} >

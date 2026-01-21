@@ -67,6 +67,12 @@ export default function WebsiteAdministration() {
     approachTitle: 'Our Approach',
     approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.'
   });
+  const [footerData, setFooterData] = useState<any>({
+    brandName: 'Prime Auto Detail',
+    marqueeText: 'Precision. Protection. Perfection.',
+    copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`
+  });
+  const [headerLinks, setHeaderLinks] = useState<any[]>([]);
   const [learnMoreEdit, setLearnMoreEdit] = useState<Record<string, { description: string; stepIds: string[] }>>({});
   const [allStepOptions, setAllStepOptions] = useState<{ id: string; name: string }[]>([]);
   const [editTestimonial, setEditTestimonial] = useState<any | null>(null);
@@ -222,14 +228,26 @@ export default function WebsiteAdministration() {
       if (a && a.meta) {
         setAboutData((prev: any) => ({ ...prev, ...a.meta }));
       }
-      else {
-        // Local fallback
-        const s = await api('/api/services', { method: 'GET' });
-        const txt = String((s as any).disclaimer || '');
-        if (txt) {
-          setServicesDisclaimer(txt);
-          await contentService.upsertServiceMeta({ key: 'disclaimer', description: txt });
-        }
+
+      // Footer Data
+      const f = allMeta.find(m => m.key === 'footer_content');
+      if (f && f.meta) {
+        setFooterData((prev: any) => ({ ...prev, ...f.meta }));
+      }
+
+      // Header Data
+      const hl = allMeta.find(m => m.key === 'header_links');
+      if (hl && hl.meta && Array.isArray(hl.meta.links)) {
+        setHeaderLinks(hl.meta.links);
+      } else {
+        setHeaderLinks([
+          { to: "/", label: "Home" },
+          { to: "/services", label: "Services" },
+          { to: "/about", label: "About" },
+          { to: "/availability", label: "Availability" },
+          { to: "/faq", label: "FAQ" },
+          { to: "/contact", label: "Contact" },
+        ]);
       }
 
       // 7. BUILD LEARN MORE (Merge Global Meta + Local/Cloud)
@@ -237,16 +255,11 @@ export default function WebsiteAdministration() {
       const allPkgs: any[] = [...builtInPackages, ...customPkgs];
       const initial: Record<string, { description: string; stepIds: string[] }> = {};
 
-      // We need to fetch meta from supa for each ID or use the bulk fetch above?
-      // Since `allMeta` contains ALL rows, we can map key=pkgId
       const metaMap: Record<string, any> = {};
-      allMeta.forEach(m => metaMap[m.key] = m.meta || {}); // store json meta in metaMap
+      allMeta.forEach(m => metaMap[m.key] = m.meta || {});
 
       allPkgs.forEach((p: any) => {
-        // Check Cloud Meta first
         const cloudMeta = allMeta.find(m => m.key === p.id);
-
-        // If cloud exists, use it. If not, use local libs meta
         const defaultStepIds = (p.steps || []).map((s: any) => (typeof s === 'string' ? s : s.id));
 
         if (cloudMeta) {
@@ -255,8 +268,6 @@ export default function WebsiteAdministration() {
             stepIds: cloudMeta.meta?.stepIds || defaultStepIds
           };
         } else {
-          // Use local definitions
-          // Also maybe migrate?
           initial[p.id] = {
             description: p.description || '',
             stepIds: defaultStepIds
@@ -272,8 +283,9 @@ export default function WebsiteAdministration() {
       [...builtSteps, ...customServices].forEach(s => { if (!unionMap[s.id]) unionMap[s.id] = s.name; });
       setAllStepOptions(Object.entries(unionMap).map(([id, name]) => ({ id, name })));
 
-    } catch { }
-
+    } catch (e) {
+      console.error('Load WA Error:', e);
+    }
   };
 
   useEffect(() => {
@@ -698,6 +710,85 @@ export default function WebsiteAdministration() {
                       </Card>
                     ))}
                   </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Footer Control */}
+            <AccordionItem value="footer" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">Footer Content Control</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-lg border border-zinc-800">
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Brand Name</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.brandName} onChange={(e) => setFooterData({ ...footerData, brandName: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Marquee / Slogan</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.marqueeText} onChange={(e) => setFooterData({ ...footerData, marqueeText: e.target.value })} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Copyright Statement</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.copyrightText} onChange={(e) => setFooterData({ ...footerData, copyrightText: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button className="bg-amber-600 hover:bg-amber-700 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    await contentService.upsertServiceMeta({ key: 'footer_content', meta: footerData, description: 'Website Footer Content' });
+                    notifyChange('footer');
+                    toast({ title: 'Footer Updated', description: 'Changes reflect live on the website.' });
+                  }}>Save Footer</Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Header / Main Menu Control */}
+            <AccordionItem value="header" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-emerald-400 [&[data-state=open]]:text-emerald-500 font-bold uppercase tracking-tight">Main Menu / Header Control</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Navigation Links</h4>
+                  {headerLinks.map((link, i) => (
+                    <div key={i} className="flex gap-4 items-end bg-zinc-950/50 p-3 rounded border border-zinc-900">
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-[10px] text-zinc-600 uppercase font-bold">Label</Label>
+                        <Input className="bg-zinc-900 border-zinc-800" value={link.label} onChange={(e) => {
+                          const n = [...headerLinks]; n[i].label = e.target.value; setHeaderLinks(n);
+                        }} />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-[10px] text-zinc-600 uppercase font-bold">URL Path</Label>
+                        <Input className="bg-zinc-900 border-zinc-800" value={link.to} onChange={(e) => {
+                          const n = [...headerLinks]; n[i].to = e.target.value; setHeaderLinks(n);
+                        }} />
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-red-500" onClick={() => {
+                        const n = [...headerLinks]; n.splice(i, 1); setHeaderLinks(n);
+                      }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" className="w-full border-dashed border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700" onClick={() => {
+                    setHeaderLinks([...headerLinks, { to: "/", label: "New Link" }]);
+                  }}>
+                    Add Navigation Item
+                  </Button>
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
+                  <Button variant="ghost" className="text-zinc-500" onClick={() => setHeaderLinks([
+                    { to: "/", label: "Home" },
+                    { to: "/services", label: "Services" },
+                    { to: "/about", label: "About" },
+                    { to: "/availability", label: "Availability" },
+                    { to: "/faq", label: "FAQ" },
+                    { to: "/contact", label: "Contact" },
+                  ])}>Reset to Defaults</Button>
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    await contentService.upsertServiceMeta({ key: 'header_links', meta: { links: headerLinks }, description: 'Main Navigation Menu' });
+                    notifyChange('header');
+                    toast({ title: 'Menu Saved', description: 'Navigation links updated live.' });
+                  }}>Save Main Menu</Button>
                 </div>
               </AccordionContent>
             </AccordionItem>

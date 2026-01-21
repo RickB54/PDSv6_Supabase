@@ -13,7 +13,7 @@ import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
 import { saveBackupToSupabase, listSupabaseBackups, loadBackupFromSupabase, deleteSupabaseBackup, BackupMetadata } from '@/lib/supabase-backup';
-import { deleteCustomersOlderThan, deleteInvoicesOlderThan, deleteExpensesOlderThan, deleteInventoryUsageOlderThan, deleteBookingsOlderThan, deleteEmployeesOlderThan, deleteEverything as deleteAllSupabase, previewDeleteCustomers, previewDeleteInvoices, previewDeleteExpenses, previewDeleteInventory, previewDeleteAll } from '@/services/supabase/adminOps';
+import { deleteCustomersOlderThan, deleteInvoicesOlderThan, deleteExpensesOlderThan, deleteInventoryUsageOlderThan, deleteBookingsOlderThan, deleteEmployeesOlderThan, deleteEverything as deleteAllSupabase, deleteEverythingExceptInventory, previewDeleteCustomers, previewDeleteInvoices, previewDeleteExpenses, previewDeleteInventory, previewDeleteAll, previewDeleteAllExceptInventory } from '@/services/supabase/adminOps';
 import localforage from "localforage";
 import EnvironmentHealthModal from '@/components/admin/EnvironmentHealthModal';
 import { restoreDefaults, restorePackages, restoreAddons } from '@/lib/restoreDefaults';
@@ -27,6 +27,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useFullScreen } from "@/hooks/useFullScreen";
 import { InventoryImportModal } from "@/components/inventory/InventoryImportModal";
 import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -51,6 +53,11 @@ const Settings = () => {
   const [supabaseBackupsOpen, setSupabaseBackupsOpen] = useState(false);
   const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
   const [inventoryCleanupOpen, setInventoryCleanupOpen] = useState(false);
+  const [granularNukeOpen, setGranularNukeOpen] = useState(false);
+  const [nukeItems, setNukeItems] = useState<{ id: string; name: string; count: number; selected: boolean }[]>([]);
+  const [nukeLoading, setNukeLoading] = useState(false);
+  const [nukeStatus, setNukeStatus] = useState("");
+  const [nukeError, setNukeError] = useState<string | null>(null);
 
   // Supabase diagnostics block state
   const [diag, setDiag] = useState<{ authMode: string; urlPresent: boolean; keyPresent: boolean; configured: boolean; uid: string | null; appUserReadable: boolean | null; lastChecked: string }>({
@@ -135,17 +142,31 @@ const Settings = () => {
     }
   };
 
+  const formatRestoreDetails = (details: Record<string, number>) => {
+    if (!details || Object.keys(details).length === 0) return "Configuration updated.";
+    return Object.entries(details)
+      .map(([table, count]) => `${count} ${table.replace('_', ' ')}`)
+      .join(", ");
+  };
+
   const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
-      await restoreFromJSON(text);
-      toast({ title: "Restore Complete", description: "Supabase + local data restored." });
-      setTimeout(() => window.location.reload(), 1000);
+      const result = await restoreFromJSON(text);
+      if (result.success) {
+        toast({
+          title: "Restore Complete",
+          description: `Successfully restored: ${formatRestoreDetails(result.details)}`,
+        });
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        throw new Error(result.error || "Failed to process backup file.");
+      }
     } catch (error: any) {
       console.error("Restore error:", error);
-      toast({ title: "Restore Failed", description: "Error: " + (error?.message || String(error)), variant: "destructive" });
+      toast({ title: "Restore Failed", description: error?.message || String(error), variant: "destructive" });
     }
   };
 
@@ -182,9 +203,16 @@ const Settings = () => {
       }
       const file = await pickDriveFileAndDownload();
       if (file?.content) {
-        await restoreFromJSON(file.content);
-        toast({ title: 'Restore Complete', description: `Restored from Drive file: ${file.name}` });
-        setTimeout(() => window.location.reload(), 1000);
+        const result = await restoreFromJSON(file.content);
+        if (result.success) {
+          toast({
+            title: 'Restore Complete',
+            description: `Restored from Drve: ${formatRestoreDetails(result.details)}`
+          });
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          throw new Error(result.error);
+        }
       } else {
         toast({ title: 'No JSON Found', description: 'Pick a JSON backup in Drive.' });
       }
@@ -216,15 +244,23 @@ const Settings = () => {
 
   const handleBackupToSupabase = async () => {
     try {
+      // Force session refresh check
+      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (!userData.user) {
+        toast({ title: "Auth Required", description: "Please log out and log back in to refresh your cloud authorization.", variant: "destructive" });
+        return;
+      }
+
       const { json } = await exportAllData();
-      const path = await saveBackupToSupabase(json);
-      if (path) {
+      const { path, error } = await saveBackupToSupabase(json);
+      if (path && !error) {
         toast({ title: "Backup Saved to Supabase", description: "Backup uploaded successfully to cloud storage." });
-        // Refresh backup list
         const backups = await listSupabaseBackups();
         setSupabaseBackups(backups);
       } else {
-        toast({ title: "Backup Failed", description: "Could not upload to Supabase.", variant: "destructive" });
+        toast({ title: "Backup Failed", description: error || "Could not upload to Supabase.", variant: "destructive" });
       }
     } catch (error: any) {
       console.error("Supabase backup error:", error);
@@ -236,9 +272,16 @@ const Settings = () => {
     try {
       const json = await loadBackupFromSupabase(filename);
       if (json) {
-        await restoreFromJSON(json);
-        toast({ title: "Restore Complete", description: `Restored from Supabase backup: ${filename}` });
-        setTimeout(() => window.location.reload(), 1000);
+        const result = await restoreFromJSON(json);
+        if (result.success) {
+          toast({
+            title: "Restore Complete",
+            description: `Restored from Supabase: ${formatRestoreDetails(result.details)}`
+          });
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          throw new Error(result.error);
+        }
       } else {
         toast({ title: "Restore Failed", description: "Could not load backup from Supabase.", variant: "destructive" });
       }
@@ -278,203 +321,6 @@ const Settings = () => {
   };
 
 
-  const deleteData = async (type: string) => {
-    try {
-      const now = new Date();
-      const days = Number(String(timeRange || '').trim());
-      const hasRange = Number.isFinite(days) && days > 0;
-      const cutoffDate = new Date(now.getTime() - Math.max(0, days) * 24 * 60 * 60 * 1000);
-
-      // Temporary detailed logs per request: role, filters, responses, audit-log
-      const { data: auth } = await (await import('@/lib/supabase')).default.auth.getUser();
-      const role = getCurrentUser()?.role;
-      console.group(`[Settings] Delete request`);
-
-      if (type === "customers") {
-        // Local cache
-        const customers: any[] = await localforage.getItem("customers") || [];
-        const filtered = hasRange
-          ? customers.filter((c: any) => {
-            const dateStr = c.createdAt || c.updatedAt || '';
-            const date = dateStr ? new Date(dateStr) : null;
-            return date && !Number.isNaN(date.getTime()) && date > cutoffDate;
-          })
-          : [];
-        await localforage.setItem("customers", filtered);
-        // Supabase — customers + app_users (role=customer)
-        try {
-          await deleteBookingsOlderThan(hasRange ? String(days) : 'all');
-          await deleteCustomersOlderThan(hasRange ? String(days) : 'all');
-        } catch (e) {
-          console.error('[Settings] customers delete error', e);
-          throw e;
-        }
-      } else if (type === "invoices") {
-        const invoices: any[] = await localforage.getItem("invoices") || [];
-        const filtered = hasRange
-          ? invoices.filter((inv: any) => {
-            const dateStr = inv.createdAt || inv.date || inv.updatedAt || '';
-            const date = dateStr ? new Date(dateStr) : null;
-            return date && !Number.isNaN(date.getTime()) && date > cutoffDate;
-          })
-          : [];
-        await localforage.setItem("invoices", filtered);
-        try {
-          await deleteInvoicesOlderThan(hasRange ? String(days) : 'all');
-        } catch (e) {
-          console.error('[Settings] invoices delete error', e);
-          throw e;
-        }
-      } else if (type === "accounting") {
-        const expenses: any[] = await localforage.getItem("expenses") || [];
-        const filtered = hasRange
-          ? expenses.filter((exp: any) => {
-            const dateStr = exp.date || exp.createdAt || '';
-            const date = dateStr ? new Date(dateStr) : null;
-            return date && !Number.isNaN(date.getTime()) && date > cutoffDate;
-          })
-          : [];
-        await localforage.setItem("expenses", filtered);
-        try {
-          await deleteExpensesOlderThan(hasRange ? String(days) : 'all');
-        } catch (e) {
-          console.error('[Settings] expenses delete error', e);
-          throw e;
-        }
-      } else if (type === "inventory") {
-        if (hasRange) {
-          const usage: any[] = (await localforage.getItem("chemicalUsage")) || [];
-          const filtered = usage.filter((u: any) => {
-            const dateStr = u.date || '';
-            const date = dateStr ? new Date(dateStr) : null;
-            return date && !Number.isNaN(date.getTime()) && date > cutoffDate;
-          });
-          await localforage.setItem("chemicalUsage", filtered);
-        } else {
-          // Delete all local inventory lists when days are blank
-          try { await localforage.removeItem("chemicals"); } catch { }
-          try { await localforage.removeItem("materials"); } catch { }
-          try { await localforage.removeItem("tools"); } catch { }
-          try { await localforage.removeItem("inventory-estimates"); } catch { }
-          try { await localforage.removeItem("chemicalUsage"); } catch { }
-          try { await localforage.removeItem("chemical-usage"); } catch { }
-        }
-        try {
-          await deleteInventoryUsageOlderThan(hasRange ? String(days) : 'all');
-        } catch (e) {
-          console.error('[Settings] inventory delete error', e);
-          throw e;
-        }
-      } else if (type === "all") {
-        // Supabase: Try to delete, but don't fail if Supabase is not configured
-        try {
-          await deleteAllSupabase();
-        } catch (e) {
-          console.warn('[Settings] Supabase delete skipped (not configured or failed):', e);
-        }
-
-        // Local: selectively remove volatile data, preserve training/exam/admin/employee/pricing/website
-        const volatileLfKeys = [
-          'customers', 'invoices', 'expenses', 'estimates',
-          'chemicals', 'materials', 'tools', 'chemicalUsage', 'chemical-usage', 'tool-usage', 'inventory-estimates',
-          'completed-jobs', 'payroll-history', 'pdfArchive',
-          // Category data (user-generated, should be deleted with transactions)
-          'customCategories',
-          'customExpenseCategories',
-          'customIncomeCategories',
-          'category-colors-map',
-          'staff_schedule_shifts'
-        ];
-        for (const key of volatileLfKeys) {
-          try { await localforage.removeItem(key); } catch { }
-        }
-        // Preserve all system/default data in localStorage
-        const preserveLsKeys = new Set([
-          // Training & Education
-          'training_exam_custom', 'training_exam_progress', 'training_exam_schedule',
-          'handbook_progress', 'handbook_start_at', 'employee_training_progress', 'employee_training_certified',
-          // Authentication & User
-          'currentUser', 'auth_token', 'user_session',
-          // Pricing & Services (CRITICAL - never delete)
-          'packageMeta', 'addOnMeta', 'customServicePackages', 'customAddOns', 'customServices', 'savedPrices',
-          'servicePackages', 'addOns', 'pricing_config', 'savedPrices_backup', 'savedPrices_restore_point',
-          // Website Content (CRITICAL - never delete)
-          'faqs', 'contactInfo', 'aboutSections', 'aboutFeatures', 'testimonials',
-          'hero_content', 'website_pages', 'website_config', 'seo_settings',
-          // Admin Settings
-          'hiddenMenuItems', 'admin_preferences', 'app_settings',
-          // Company Data
-          'company-employees', 'employee_roles',
-          // Vehicle Database
-          'vehicle_classification_history', 'vehicle_db'
-        ]);
-        // Remove localStorage items except preserved ones
-        try {
-          const lsKeys = Object.keys(localStorage);
-          for (const k of lsKeys) {
-            if (!preserveLsKeys.has(k)) localStorage.removeItem(k);
-          }
-        } catch { }
-        setSummaryData({
-          preserved: Array.from(preserveLsKeys),
-          deleted: volatileLfKeys,
-          note: 'Preserved: Admin/employee accounts, exam content, training manual, pricing packages, website content, and all system configurations.'
-        });
-        setSummaryOpen(true);
-        // Revalidate live content endpoints on port 6066 (dev server port)
-        try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-        try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-        try { setTimeout(() => window.location.reload(), 300); } catch { }
-      }
-
-      const rangeText = type === 'all' ? '' : hasRange ? ` older than ${days} day(s)` : ' (all)';
-      toast({ title: "Data Deleted", description: `${type} data${rangeText} removed.` });
-      console.groupEnd();
-      setDeleteDialog(null);
-      setTimeRange("");
-    } catch (error) {
-      try {
-        const err = error as any;
-        console.error('[Settings] Delete Failed', err);
-      } catch { }
-      toast({ title: "Delete Failed", description: "Could not delete data.", variant: "destructive" });
-      console.groupEnd();
-    }
-  };
-
-  const handleRestoreDefaults = () => {
-    setRestoreDefaultsOpen(true);
-  };
-
-  const executeRestore = async (mode: 'packages' | 'addons' | 'both') => {
-    try {
-      setRestoreDefaultsOpen(false);
-      toast({ title: 'Restoring...', description: `Restoring ${mode === 'both' ? 'packages and add-ons' : mode}...` });
-
-      if (mode === 'packages') await restorePackages();
-      else if (mode === 'addons') await restoreAddons();
-      else await restoreDefaults();
-
-      // Notify listeners of content changes
-      try {
-        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } }));
-        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } }));
-        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } }));
-        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } }));
-        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'about' } }));
-      } catch { }
-
-      // Revalidate live content endpoints on port 6066 if available
-      try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-      try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-
-      toast({ title: 'Restored', description: `${mode === 'both' ? 'Defaults' : mode} restored successfully. Live site updated.` });
-    } catch (err: any) {
-      toast({ title: 'Restore Failed', description: err?.message || String(err), variant: 'destructive' });
-    }
-  };
-
-  // generateMockDataPDF logic
   const generateMockDataPDF = async (action: 'inserted' | 'removed', trackerData?: any) => {
     try {
       const doc = new jsPDF();
@@ -549,6 +395,291 @@ const Settings = () => {
     }
   };
 
+  const generateDeletionFailsafePDF = async (type: string, days?: any) => {
+    try {
+      const doc = new jsPDF();
+      let y = 20;
+      const addLine = (text: string, indent = 0) => {
+        doc.text(text, 20 + indent, y);
+        y += 6;
+        if (y > 270) { doc.addPage(); y = 20; }
+      };
+
+      doc.setFontSize(16);
+      doc.setTextColor(220, 38, 38);
+      doc.text('DELETION PRE-BACKUP (FAILSAFE)', 105, 18, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      const now = new Date();
+      addLine(`Target: ${type.toUpperCase()} Operations`);
+      if (days) addLine(`Scope: Older than ${days} days`);
+      addLine(`Date: ${now.toLocaleString()}`);
+      y += 5;
+
+      // 1. Snapshot Customers & Contacts
+      if (type === 'all' || type === 'all_except_inventory' || type === 'customers') {
+        const { data: custs } = await supabase.from('customers').select('name, email, phone, type');
+        if (custs?.length) {
+          doc.setFontSize(12); doc.setTextColor(0); addLine('CUSTOMERS SNAPSHOT:');
+          doc.setFontSize(8); doc.setTextColor(80);
+          custs.forEach(c => addLine(`• ${c.name} | ${c.phone || 'No Phone'} | ${c.email || 'No Email'}`, 5));
+          y += 5;
+        }
+      }
+
+      // 2. Snapshot Bookings
+      if (type === 'all' || type === 'all_except_inventory' || type === 'bookings') {
+        const { data: bks } = await supabase.from('bookings').select('date, start_time, package_name, customer_id, customers(name)').limit(100);
+        if (bks?.length) {
+          doc.setFontSize(12); doc.setTextColor(0); addLine('BOOKINGS SNAPSHOT (Last 100):');
+          doc.setFontSize(8); doc.setTextColor(80);
+          bks.forEach((b: any) => addLine(`• ${b.date} ${b.start_time || ''} | ${b.package_name} | Client: ${b.customers?.name || 'Unknown'}`, 5));
+          y += 5;
+        }
+      }
+
+      // 3. Snapshot Invoices
+      if (type === 'all' || type === 'all_except_inventory' || type === 'invoices') {
+        const { data: invs } = await supabase.from('invoices').select('invoice_number, total_amount, created_at, customer_id, customers(name)').limit(100);
+        if (invs?.length) {
+          doc.setFontSize(12); doc.setTextColor(0); addLine('INVOICES SNAPSHOT (Last 100):');
+          doc.setFontSize(8); doc.setTextColor(80);
+          invs.forEach((v: any) => addLine(`• #${v.invoice_number} | $${v.total_amount} | ${new Date(v.created_at).toLocaleDateString()} | Client: ${v.customers?.name || 'Unknown'}`, 5));
+          y += 5;
+        }
+      }
+
+      const dataUrl = doc.output('dataurlstring');
+      const fileName = `Failsafe_Pre_${type}_${Date.now()}.pdf`;
+      savePDFToArchive('Failsafe' as any, 'System', `failsafe-${Date.now()}`, dataUrl, { fileName, path: 'Failsafe Backups/' });
+
+      pushAdminAlert('pdf_saved', `Failsafe Deletion Backup (${type}) created`, 'system', { fileName });
+      toast({ title: 'Failsafe Created', description: 'Pre-deletion PDF saved to File Manager.' });
+    } catch (e) {
+      console.error('Failsafe PDF Error:', e);
+    }
+  };
+
+  const handleOpenGranularNuke = async () => {
+    setNukeLoading(true);
+    setNukeError(null);
+    setGranularNukeOpen(true);
+    const tables = [
+      ['bookings', 'date'],
+      ['availability_blocks', 'date'],
+      ['customers', 'created_at'],
+      ['invoices', 'created_at'],
+      ['expenses', 'date'],
+      ['usage', 'date'],
+      ['inventory_records', 'created_at'],
+      ['vehicles', 'created_at'],
+      ['packages', 'created_at'],
+      ['add_ons', 'created_at'],
+      ['team_messages', 'id'],
+    ] as const;
+
+    const items: typeof nukeItems = [];
+    try {
+      setNukeStatus("Authenticating...");
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Cloud session expired. Please log out and back in to refresh your cloud token.");
+      }
+
+      for (const [name, col] of tables) {
+        setNukeStatus(`Scanning ${name.replace(/_/g, ' ').toUpperCase()}...`);
+        try {
+          // Robust count: head: true returns just the count without downloading rows
+          const { count: c, error: scanErr } = await (supabase as any)
+            .from(name)
+            .select('*', { count: 'exact', head: true });
+
+          if (scanErr) throw scanErr;
+
+          items.push({
+            id: name,
+            name: name.replace(/_/g, ' ').toUpperCase(),
+            count: c || 0,
+            selected: false
+          });
+        } catch (err: any) {
+          console.error(`Scan error for ${name}:`, err);
+          items.push({ id: name, name: name.replace(/_/g, ' ').toUpperCase() + " (Scan Error)", count: 0, selected: false });
+        }
+      }
+
+      setNukeStatus("Checking local archives...");
+      const localSchedules: any[] = await localforage.getItem('staff_schedule_shifts') || [];
+      items.push({ id: 'staff_schedule', name: 'STAFF SCHEDULE (LOCAL)', count: localSchedules.length, selected: false });
+
+      setNukeItems(items);
+      setNukeStatus("Scan Complete");
+    } catch (e: any) {
+      console.error(e);
+      setNukeError(e.message || "Database scan failed. Potential cloud sync issue.");
+    } finally {
+      setNukeLoading(false);
+    }
+  };
+
+  const executeGranularNuke = async () => {
+    const selected = nukeItems.filter(i => i.selected);
+    if (selected.length === 0) return;
+
+    if (!confirm(`Are you absolutely sure you want to delete ${selected.length} categories of data?`)) return;
+
+    toast({ title: "Nuking selected data...", description: "Please wait while we purge the records." });
+
+    try {
+      for (const item of selected) {
+        if (item.id === 'customers') await deleteCustomersOlderThan('all');
+        else if (item.id === 'bookings') await deleteBookingsOlderThan('all');
+        else if (item.id === 'availability_blocks') await deleteBookingsOlderThan('all'); // Handles blocks
+        else if (item.id === 'invoices') await deleteInvoicesOlderThan('all');
+        else if (item.id === 'expenses') await deleteExpensesOlderThan('all');
+        else if (item.id === 'usage' || item.id === 'inventory_records') await deleteInventoryUsageOlderThan('all');
+        else if (item.id === 'staff_schedule') await localforage.removeItem('staff_schedule_shifts');
+        else if (item.id === 'team_messages') await (await import('@/services/supabase/adminOps')).deleteAllTeamMessages();
+        else {
+          // Generic delete if not handled
+          await (supabase as any).from(item.id).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        }
+      }
+      toast({ title: "Purge Complete", description: "Successfully deleted selected records." });
+      setGranularNukeOpen(false);
+      setTimeout(() => window.location.reload(), 500);
+    } catch (e: any) {
+      toast({ title: "Purge Failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const deleteData = async (type: string) => {
+    try {
+      const now = new Date();
+      const days = Number(String(timeRange || '').trim());
+      const hasRange = Number.isFinite(days) && days > 0;
+      const cutoffDate = new Date(now.getTime() - Math.max(0, days) * 24 * 60 * 60 * 1000);
+
+      console.group(`[Settings] Delete request: ${type}`);
+
+      // FAILSAFE: snapshots critical data
+      if (type === 'all' || type === 'all_except_inventory' || type === 'customers' || type === 'bookings' || type === 'invoices') {
+        await generateDeletionFailsafePDF(type, days);
+      }
+
+      if (type === "customers") {
+        // Local cache
+        const customers: any[] = await localforage.getItem("customers") || [];
+        const filtered = hasRange
+          ? customers.filter((c: any) => {
+            const dateStr = c.createdAt || c.updatedAt || '';
+            const date = dateStr ? new Date(dateStr) : null;
+            return date && !Number.isNaN(date.getTime()) && date > cutoffDate;
+          })
+          : [];
+        await localforage.setItem("customers", filtered);
+        // Supabase
+        await deleteBookingsOlderThan(hasRange ? String(days) : 'all');
+        await deleteCustomersOlderThan(hasRange ? String(days) : 'all');
+      } else if (type === "invoices") {
+        const invoices: any[] = await localforage.getItem("invoices") || [];
+        const filtered = hasRange ? invoices.filter((inv: any) => {
+          const d = new Date(inv.createdAt || inv.date || '');
+          return d > cutoffDate;
+        }) : [];
+        await localforage.setItem("invoices", filtered);
+        await deleteInvoicesOlderThan(hasRange ? String(days) : 'all');
+      } else if (type === "accounting") {
+        const expenses: any[] = await localforage.getItem("expenses") || [];
+        const filtered = hasRange ? expenses.filter((e: any) => new Date(e.date || e.createdAt) > cutoffDate) : [];
+        await localforage.setItem("expenses", filtered);
+        await deleteExpensesOlderThan(hasRange ? String(days) : 'all');
+      } else if (type === "inventory") {
+        if (!hasRange) {
+          await localforage.removeItem("chemicals");
+          await localforage.removeItem("materials");
+          await localforage.removeItem("tools");
+        }
+        await deleteInventoryUsageOlderThan(hasRange ? String(days) : 'all');
+      } else if (type === "all" || type === "all_except_inventory") {
+        // Supabase master delete
+        if (type === "all_except_inventory") await deleteEverythingExceptInventory();
+        else await deleteAllSupabase();
+
+        // Local wipe
+        const volatileLfKeys = [
+          'customers', 'invoices', 'expenses', 'estimates',
+          'completed-jobs', 'payroll-history', 'pdfArchive',
+          'customCategories', 'customExpenseCategories', 'customIncomeCategories',
+          'category-colors-map', 'staff_schedule_shifts'
+        ];
+        if (type === "all") volatileLfKeys.push('chemicals', 'materials', 'tools', 'chemicalUsage', 'inventory-estimates');
+
+        for (const k of volatileLfKeys) { try { await localforage.removeItem(k); } catch { } }
+
+        // LocalStorage preservation
+        const preserve = new Set([
+          'training_exam_custom', 'training_exam_progress', 'training_exam_schedule',
+          'handbook_progress', 'handbook_start_at', 'employee_training_progress', 'employee_training_certified',
+          'currentUser', 'auth_token', 'user_session',
+          'packageMeta', 'addOnMeta', 'customServicePackages', 'customAddOns', 'customServices', 'savedPrices',
+          'servicePackages', 'addOns', 'pricing_config', 'savedPrices_backup', 'savedPrices_restore_point',
+          'faqs', 'contactInfo', 'aboutSections', 'aboutFeatures', 'testimonials',
+          'hero_content', 'website_pages', 'website_config', 'seo_settings', 'footer_content', 'header_links',
+          'hiddenMenuItems', 'admin_preferences', 'app_settings',
+          'company-employees', 'employee_roles', 'vehicle_classification_history', 'vehicle_db'
+        ]);
+        Object.keys(localStorage).forEach(k => { if (!preserve.has(k)) localStorage.removeItem(k); });
+
+        setSummaryData({ preserved: Array.from(preserve), deleted: volatileLfKeys, note: 'Preserved: Admin accounts, pricing, chemical cards, and website content.' });
+        setSummaryOpen(true);
+        setTimeout(() => window.location.reload(), 300);
+      }
+
+      toast({ title: "Data Deleted", description: `${type} removed.` });
+      setDeleteDialog(null);
+      setTimeRange("");
+      console.groupEnd();
+    } catch (error) {
+      console.error('[Settings] Delete Failed', error);
+      toast({ title: "Delete Failed", description: "Operation failed.", variant: "destructive" });
+      console.groupEnd();
+    }
+  };
+  const handleRestoreDefaults = () => {
+    setRestoreDefaultsOpen(true);
+  };
+
+  const executeRestore = async (mode: 'packages' | 'addons' | 'both') => {
+    try {
+      setRestoreDefaultsOpen(false);
+      toast({ title: 'Restoring...', description: `Restoring ${mode === 'both' ? 'packages and add-ons' : mode}...` });
+
+      if (mode === 'packages') await restorePackages();
+      else if (mode === 'addons') await restoreAddons();
+      else await restoreDefaults();
+
+      // Notify listeners of content changes
+      try {
+        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } }));
+        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } }));
+        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } }));
+        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } }));
+        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'about' } }));
+      } catch { }
+
+      // Revalidate live content endpoints on port 6066 if available
+      try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+
+      toast({ title: 'Restored', description: `${mode === 'both' ? 'Defaults' : mode} restored successfully. Live site updated.` });
+    } catch (err: any) {
+      toast({ title: 'Restore Failed', description: err?.message || String(err), variant: 'destructive' });
+    }
+  };
+
   // Load dry-run preview when dialog opens or timeRange changes
   useEffect(() => {
     const load = async () => {
@@ -559,8 +690,8 @@ const Settings = () => {
         else if (deleteDialog === 'invoices') setPreview(await previewDeleteInvoices(d));
         else if (deleteDialog === 'accounting') setPreview(await previewDeleteExpenses(d));
         else if (deleteDialog === 'inventory') setPreview(await previewDeleteInventory(d));
-        else if (deleteDialog === 'all') {
-          const previewData = await previewDeleteAll(d);
+        else if (deleteDialog === 'all' || deleteDialog === 'all_except_inventory') {
+          const previewData = deleteDialog === 'all' ? await previewDeleteAll(d) : await previewDeleteAllExceptInventory();
           // Add local staff schedule check
           try {
             const localShifts: any[] = await localforage.getItem('staff_schedule_shifts') || [];
@@ -842,29 +973,70 @@ const Settings = () => {
                           </ul>
                         </div>
                         <div>
-                          <strong className="text-emerald-500 block mb-2 text-sm uppercase tracking-wider border-b border-emerald-900/30 pb-1">WILL NOT DELETE (Supabase):</strong>
+                          <strong className="text-emerald-500 block mb-2 text-sm uppercase tracking-wider border-b border-emerald-900/30 pb-1">WILL NOT DELETE (Supabase/Cloud):</strong>
                           <ul className="list-disc list-inside text-zinc-400 space-y-1">
                             <li>Real Administrators (Cloud)</li>
-                            <li>Real Employees (Cloud)</li>
-                            <li>Real Customers (Cloud)</li>
-                            <li>Real Bookings (Cloud Synced)</li>
-                            <li>Real Invoices/Estimates (Cloud Synced)</li>
-                            <li>Service Packages & Pricing</li>
-                            <li>Website Content Management</li>
+                            <li><strong className="text-emerald-400">Chemical Cards (Inventory Catalog)</strong></li>
+                            <li><strong className="text-emerald-400">Service Packages & Pricing</strong></li>
+                            <li><strong className="text-emerald-400">Phone Assistant Data & Config</strong></li>
+                            <li><strong className="text-emerald-400">Package Comparisons & Scenarios</strong></li>
+                            <li>Real Employees & Customer Accounts</li>
+                            <li>Website Content & CMS Data</li>
                             <li>Training Manuals & Exams</li>
                           </ul>
                         </div>
                       </div>
-                      <p className="text-xs text-zinc-500 mt-2 italic">* To delete real Supabase users/items, navigate to their respective management pages (e.g. Users & Roles)</p>
+                      <p className="text-xs text-amber-500 mt-2 italic font-bold">FAILSAVE: A PDF snapshot of your data will be auto-generated before any deletion starts.</p>
+                      <p className="text-xs text-zinc-500 mt-1 italic">* Chemical cards and equipment are protected. Only stock usage/history is cleared during a global reset.</p>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-4">
+                      <Button
+                        variant="destructive"
+                        className="bg-red-700 hover:bg-red-600 text-white font-bold h-12 px-6 w-full md:w-auto shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all"
+                        onClick={(e) => { e.stopPropagation(); setDeleteDialog('all'); setPreview(null); }}
+                      >
+                        <Trash2 className="h-5 w-5 mr-2" /> Master Local Reset
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className="border-red-500 text-red-500 hover:bg-red-950 font-bold h-12 px-6 w-full md:w-auto transition-all"
+                        onClick={(e) => { e.stopPropagation(); handleOpenGranularNuke(); }}
+                      >
+                        <AlertTriangle className="h-5 w-5 mr-2" /> Detailed Deletion Checklist
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* NEW: RESET ALL EXCEPT INVENTORY */}
+                <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-6 shadow-inner">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-red-500 flex items-center gap-2 text-xl">
+                        <Database className="h-6 w-6" />
+                        Reset All EXCEPT Inventory
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-2 max-w-xl">
+                        A clean slate for your business operations. Wipes customers, vehicles, bookings, and invoices, but <strong className="text-emerald-400 underline italic">preserves your inventory catalog</strong> (chemicals, tools, materials).
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2 text-[10px] uppercase font-bold tracking-tighter">
+                        <span className="bg-red-900/30 text-red-400 px-2 py-0.5 rounded border border-red-900/50">Wipes CRM</span>
+                        <span className="bg-red-900/30 text-red-400 px-2 py-0.5 rounded border border-red-900/50">Wipes Billing</span>
+                        <span className="bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/50">Keeps Chemicals</span>
+                        <span className="bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/50">Keeps Tools</span>
+                      </div>
                     </div>
 
                     <Button
                       variant="destructive"
-                      className="bg-red-700 hover:bg-red-600 text-white font-bold h-12 px-6 w-full md:w-auto self-center shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_25px_rgba(220,38,38,0.5)] transition-shadow"
-                      onClick={() => { setPinInput(""); setDeleteDialog("all"); }}
+                      className="bg-zinc-900 hover:bg-red-900 text-red-500 border border-red-900/50 font-bold h-12 px-6 w-full md:w-auto self-center transition-all hover:scale-105"
+                      onClick={() => { setPinInput(""); setDeleteDialog("all_except_inventory"); }}
                     >
-                      <AlertTriangle className="h-5 w-5 mr-2" />
-                      DELETE LOCAL DATA
+                      <Trash2 className="h-5 w-5 mr-2" />
+                      RESET OPERATIONS
                     </Button>
                   </div>
                 </div>
@@ -959,31 +1131,31 @@ const Settings = () => {
                             // Delete all notes
                             const { error: notesError, count: notesCount } = await supabase
                               .from('personal_notes')
-                              .delete()
+                              .delete({ count: 'exact' })
                               .eq('user_id', user.id);
 
                             // Delete all sections
                             const { error: sectionsError, count: sectionsCount } = await supabase
                               .from('personal_sections')
-                              .delete()
+                              .delete({ count: 'exact' })
                               .eq('user_id', user.id);
 
                             // Delete all notebooks
                             const { error: notebooksError, count: notebooksCount } = await supabase
                               .from('personal_notebooks')
-                              .delete()
+                              .delete({ count: 'exact' })
                               .eq('user_id', user.id);
 
                             if (notesError || sectionsError || notebooksError) {
                               toast({
                                 title: "Error",
-                                description: "Failed to delete some items",
+                                description: "Failed to delete some items. Check permissions.",
                                 variant: "destructive"
                               });
                             } else {
                               toast({
                                 title: "Notes Deleted",
-                                description: `Deleted ${notesCount || 0} notes, ${sectionsCount || 0} sections, and ${notebooksCount || 0} notebooks.`
+                                description: `Deleted ${notesCount || 0} notes, ${sectionsCount || 0} sections, and ${notebooksCount || 0} notebooks. Please refresh the Notes page to see changes.`
                               });
                             }
                           } catch (e: any) {
@@ -1409,6 +1581,95 @@ const Settings = () => {
         open={inventoryCleanupOpen}
         onOpenChange={setInventoryCleanupOpen}
       />
+
+      {/* Granular Deletion Checklist Modal */}
+      <Dialog open={granularNukeOpen} onOpenChange={setGranularNukeOpen}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 border-b border-zinc-800">
+            <DialogTitle className="text-red-500 flex items-center gap-2 text-xl italic font-black uppercase tracking-tighter">
+              <ShieldAlert className="h-6 w-6" /> Purge Selection Checklist
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Select specific categories to permanently remove from the database. Use extreme caution.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 p-6">
+            {nukeLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <RefreshCw className="h-10 w-10 text-red-500 animate-spin" />
+                <p className="text-zinc-500 font-mono text-sm uppercase tracking-widest">{nukeStatus || "PURGE SCAN INITIALIZING..."}</p>
+                <div className="w-48 h-1 bg-zinc-900 rounded-full overflow-hidden relative">
+                  <div className="absolute inset-0 bg-red-600 animate-loading-bar"></div>
+                </div>
+              </div>
+            ) : nukeError ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-6 text-center">
+                <div className="h-16 w-16 rounded-full bg-red-950/30 flex items-center justify-center border border-red-900 animate-pulse">
+                  <ShieldAlert className="h-8 w-8 text-red-500" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-white font-bold text-lg">Scan Interrupted</h3>
+                  <p className="text-zinc-500 text-sm max-w-xs">{nukeError}</p>
+                </div>
+                <Button onClick={handleOpenGranularNuke} variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                  Retry Authorization
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-red-950/20 border border-red-900/30 p-4 rounded-lg mb-6">
+                  <p className="text-xs text-red-200">
+                    <strong>WARNING:</strong> This tool performs direct deletions on both local and cloud tables. Selected items WILL be permanently lost.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {nukeItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${item.selected ? 'bg-red-950/30 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.1)]' : 'bg-black border-zinc-800 hover:border-zinc-700'}`}
+                      onClick={() => {
+                        setNukeItems(prev => prev.map(i => i.id === item.id ? { ...i, selected: !i.selected } : i));
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={item.selected}
+                          className="border-zinc-700 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-black tracking-tight text-white">{item.name}</span>
+                          <span className="text-[10px] text-zinc-500 font-mono uppercase">Identifier: {item.id}</span>
+                        </div>
+                      </div>
+                      <div className={`px-2 py-1 rounded text-xs font-mono font-bold ${item.count > 0 ? 'text-red-400 bg-red-950/20' : 'text-zinc-600 bg-zinc-900'}`}>
+                        {item.count} RECORDS
+                      </div>
+                    </div>
+                  ))}
+                  {nukeItems.length === 0 && !nukeLoading && !nukeError && (
+                    <p className="text-center py-10 text-zinc-600 text-sm">No deletable records found.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t border-zinc-800 bg-black/40 gap-3">
+            <Button variant="outline" onClick={() => setGranularNukeOpen(false)} className="border-zinc-700 text-zinc-400 hover:text-white">
+              Abort Purge
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white font-bold"
+              disabled={nukeItems.every(i => !i.selected) || nukeLoading}
+              onClick={executeGranularNuke}
+            >
+              Nuke Selected ({nukeItems.filter(i => i.selected).length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

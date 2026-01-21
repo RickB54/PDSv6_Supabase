@@ -123,7 +123,9 @@ const Prospects = () => {
         afterPhotos: data.afterPhotos,
         videoUrl: data.videoUrl,
         learningCenterUrl: data.learningCenterUrl,
-        videoNote: data.videoNote
+        videoNote: data.videoNote,
+        howFound: data.howFound,
+        howFoundOther: data.howFoundOther
       });
       await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();

@@ -17,19 +17,52 @@ import { LayoutDashboard, LogOut, Phone } from "lucide-react";
 
 // Helper for admin unlock removed
 
+import { contentService } from "@/lib/content";
 
 export const Navbar = () => {
-  const { toggleSidebar } = useSidebar(); // Consume context
+  const { toggleSidebar } = useSidebar();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const [user, setUser] = useState(getCurrentUser());
   const cartCount = useCartStore((s) => s.count());
 
+  const defaultNavLinks = [
+    { to: "/", label: "Home" },
+    { to: "/services", label: "Services" },
+    { to: "/about", label: "About" },
+    { to: "/availability", label: "Availability" },
+    { to: "/faq", label: "FAQ" },
+    { to: "/contact", label: "Contact" },
+    { to: "/blog", label: "Blog" },
+  ];
+
+  const [navLinks, setNavLinks] = useState(defaultNavLinks);
+
+  const loadLinks = async () => {
+    try {
+      const meta = await contentService.getServiceMeta('header_links');
+      if (meta && meta.meta && Array.isArray(meta.meta.links)) {
+        setNavLinks(meta.meta.links);
+      } else {
+        setNavLinks(defaultNavLinks);
+      }
+    } catch { }
+  };
+
   useEffect(() => {
+    loadLinks();
+    const handleContentChange = (e: any) => {
+      if (e.detail?.kind === 'header') {
+        loadLinks();
+      }
+    };
+    window.addEventListener('content-changed', handleContentChange as any);
+
     const update = () => setUser(getCurrentUser());
     window.addEventListener('auth-changed', update as EventListener);
     window.addEventListener('storage', update);
     return () => {
+      window.removeEventListener('content-changed', handleContentChange as any);
       window.removeEventListener('auth-changed', update as EventListener);
       window.removeEventListener('storage', update);
     };
@@ -40,15 +73,6 @@ export const Navbar = () => {
     logout();
     window.location.href = "/";
   };
-
-  const navLinks = [
-    { to: "/", label: "Home" },
-    { to: "/services", label: "Services" },
-    { to: "/about", label: "About" },
-    { to: "/availability", label: "Availability" },
-    { to: "/faq", label: "FAQ" },
-    { to: "/contact", label: "Contact" },
-  ];
 
   const isActive = (path: string) => location.pathname === path;
 

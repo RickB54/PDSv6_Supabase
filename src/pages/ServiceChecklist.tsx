@@ -223,7 +223,7 @@ const ServiceChecklist = () => {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
-  type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'final'; checked: boolean };
+  type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'final'; checked: boolean; instructions?: string };
   const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -1121,7 +1121,9 @@ const ServiceChecklist = () => {
               make: customer.vehicle?.split(' ')[1] || '',
               model: customer.model,
               year: customer.year
-            }
+            },
+            howFound: customer.howFound,
+            howFoundOther: customer.howFoundOther
           });
         } catch (err) {
           console.error("Customer Sync Warning:", err);

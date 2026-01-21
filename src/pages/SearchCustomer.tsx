@@ -108,7 +108,9 @@ const SearchCustomer = () => {
         afterPhotos: data.afterPhotos,
         videoUrl: data.videoUrl,
         learningCenterUrl: data.learningCenterUrl,
-        videoNote: data.videoNote
+        videoNote: data.videoNote,
+        howFound: data.howFound,
+        howFoundOther: data.howFoundOther
       });
       await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();
@@ -177,11 +179,12 @@ const SearchCustomer = () => {
   const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(customer => {
     if (customer.type === 'prospect') return false;
 
-    // Archive Filter
+    // Archive Filter - treat NULL/undefined as "not archived"
+    const isArchived = customer.is_archived === true;
     if (showArchived) {
-      if (!customer.is_archived) return false;
+      if (!isArchived) return false;
     } else {
-      if (customer.is_archived) return false;
+      if (isArchived) return false;
     }
 
     const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,7 +202,15 @@ const SearchCustomer = () => {
       // This prevents the PostgreSQL 'invalid input syntax for type uuid' error
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (uuidRegex.test(deleteCustomerId)) {
-        await deleteSupabaseCustomer(deleteCustomerId);
+        const result: any = await deleteSupabaseCustomer(deleteCustomerId);
+        if (result?.crmCount === 0) {
+          toast({
+            title: "Deletion Failed",
+            description: "Permission denied or record missing. Please run the 'nuclear_rls_fix.sql' script in Supabase to reset permissions.",
+            variant: "destructive"
+          });
+          return;
+        }
       } else {
         console.warn(`Skipping Supabase delete for local/non-UUID id: ${deleteCustomerId}`);
       }
@@ -603,9 +614,9 @@ const SearchCustomer = () => {
                                         )}
                                       </div>
                                       <span className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${booking.status === 'done' ? 'bg-emerald-500/10 text-emerald-400' :
-                                          booking.status === 'tentative' ? 'bg-yellow-500/10 text-yellow-400' :
-                                            booking.status === 'confirmed' ? 'bg-blue-500/10 text-blue-400' :
-                                              'bg-zinc-800 text-zinc-400'
+                                        booking.status === 'tentative' ? 'bg-yellow-500/10 text-yellow-400' :
+                                          booking.status === 'confirmed' ? 'bg-blue-500/10 text-blue-400' :
+                                            'bg-zinc-800 text-zinc-400'
                                         }`}>{booking.status}</span>
                                     </div>
                                   </div>

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays } from "lucide-react";
+import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 
 const CustomerDashboard = () => {
@@ -80,6 +80,14 @@ const CustomerDashboard = () => {
               to="/user-settings"
               color="text-zinc-500"
               gradient="bg-gradient-to-br from-zinc-500 to-slate-500"
+            />
+            <DashboardCard
+              title="Prime Blog"
+              description="View transformations and auto tips."
+              icon={Newspaper}
+              to="/blog"
+              color="text-indigo-500"
+              gradient="bg-gradient-to-br from-indigo-500 to-purple-500"
             />
           </div>
         </div>

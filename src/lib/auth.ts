@@ -255,8 +255,34 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
 
     try { localStorage.setItem('session_user_id', u.id); } catch { }
     setCurrentUser(mapped);
-    // Non-blocking background fetch
-    getSupabaseCustomerProfile(u.id).catch(() => { });
+
+    // Background Consistency Sync for Customers/Prospects
+    // If they don't have a CRM record yet, create them as a 'prospect'
+    if (finalRole === 'customer') {
+      (async () => {
+        try {
+          const customer = await getSupabaseCustomerProfile(u.id);
+          if (!customer) {
+            // New user signed in - create a Prospect record in CRM
+            console.log(`[Auth] Creating prospect record for new user: ${email}`);
+            await supabase.from('customers').upsert({
+              id: u.id,
+              full_name: finalName,
+              email: email,
+              type: 'prospect',
+              how_found: 'Online Blog',
+              notes: 'Auto-created from blog/portal sign-in'
+            }, { onConflict: 'id' });
+
+            // Re-fetch to populate local storage
+            await getSupabaseCustomerProfile(u.id);
+          }
+        } catch (e) { console.warn("Background customer sync failed", e); }
+      })();
+    } else {
+      // Non-blocking background fetch
+      getSupabaseCustomerProfile(u.id).catch(() => { });
+    }
 
     return mapped;
   } catch (e) {

@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X } from "lucide-react";
-import { getSupabaseInvoices, upsertSupabaseInvoice, deleteSupabaseInvoice, getSupabaseCustomers, Customer } from "@/lib/supa-data";
+import {
+  getSupabaseInvoices,
+  upsertSupabaseInvoice,
+  deleteSupabaseInvoice,
+  getSupabaseCustomers,
+  upsertSupabaseCustomer,
+  Customer
+} from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";

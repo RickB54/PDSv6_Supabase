@@ -149,6 +149,10 @@ All colors MUST be HSL.
   .animate-pulse-grow {
     animation: pulse-grow 2s ease-in-out infinite;
   }
+
+  .animate-loading-bar {
+    animation: loading-bar 1.5s ease-in-out infinite;
+  }
 }
 
 @keyframes marquee {
@@ -200,5 +204,17 @@ All colors MUST be HSL.
     transform: scale(1.02);
     opacity: 0.9;
     text-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
+  }
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }

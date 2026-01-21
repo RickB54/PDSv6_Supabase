@@ -207,7 +207,8 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             .select(`
                 *,
                 vehicles (
-                    id, make, model, year, type, color, vin
+                    id, make, model, year, type, color, vin,
+                    general_photos, before_photos, after_photos, video_urls
                 )
             `)
             .order('created_at', { ascending: false });
@@ -217,6 +218,13 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             console.error('Error details:', { message: crmError.message, code: crmError.code, hint: crmError.hint });
             // Don't throw - try to continue with auth data
         }
+
+        console.log('🔍 CRM Data from customers table:', {
+            count: crmData?.length || 0,
+            hasError: !!crmError,
+            errorCode: crmError?.code,
+            sampleData: crmData?.slice(0, 3).map(c => ({ id: c.id, name: c.full_name, type: c.type }))
+        });
 
         // 2. Fetch Auth Users (App Users) with role = customer
         const { data: authData, error: authError } = await supabase
@@ -281,12 +289,16 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 created_at: c.created_at,
                 type: c.type || 'customer',
                 is_archived: c.is_archived || false,
-                generalPhotos: c.general_photos || [],
-                beforePhotos: c.before_photos || [],
-                afterPhotos: c.after_photos || [],
-                videoUrl: c.video_url || '',
+                generalPhotos: c.general_photos && c.general_photos.length > 0 ? c.general_photos : (v.generalPhotos || []),
+                beforePhotos: c.before_photos && c.before_photos.length > 0 ? c.before_photos : (v.beforePhotos || []),
+                afterPhotos: c.after_photos && c.after_photos.length > 0 ? c.after_photos : (v.afterPhotos || []),
+                videoUrl: c.video_url || v.videoUrls?.[0] || '',
                 learningCenterUrl: c.learning_center_url || '',
-                videoNote: c.video_note || ''
+                videoNote: c.video_note || '',
+                howFound: c.how_found || '',
+                howFoundOther: c.how_found_other || '',
+                conditionInside: c.condition_inside || '',
+                conditionOutside: c.condition_outside || ''
             } as Customer;
         };
 
@@ -364,6 +376,52 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 }
 
 /**
+ * Fetch ALL vehicles directly from Supabase (for the gallery)
+ */
+export const getSupabaseAllVehicles = async (): Promise<Vehicle[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('vehicles')
+            .select(`
+                *,
+                customers (
+                    id, full_name, type
+                )
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('getSupabaseAllVehicles error:', error);
+            return [];
+        }
+
+        return (data || []).map(v => ({
+            id: v.id,
+            make: v.make || '',
+            model: v.model || '',
+            year: v.year ? String(v.year) : '',
+            type: v.type || '',
+            color: v.color || '',
+            vin: v.vin || '',
+            customer_id: v.customer_id,
+            generalPhotos: v.general_photos || [],
+            beforePhotos: v.before_photos || [],
+            afterPhotos: v.after_photos || [],
+            videoUrls: v.video_urls || [],
+            customer_info: v.customers ? {
+                id: v.customers.id,
+                name: v.customers.full_name,
+                type: v.customers.type
+            } : undefined
+        } as any));
+    } catch (err) {
+        console.error('getSupabaseAllVehicles exception:', err);
+        return [];
+    }
+}
+
+
+/**
  * Save a classified vehicle to the Supabase vehicles table
  * Makes it searchable for future bookings/customers
  */
@@ -423,6 +481,8 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     // 1. Prepare payload for CUSTOMERS table
     const safeEmail = customer.email?.trim() || undefined;
     const safePhone = customer.phone?.trim() || undefined;
+
+    // BUILD PAYLOAD CAREFULLY - TO AVOID CRASHING IF COLUMNS ARE MISSING
     const payload: any = {
         full_name: customer.name,
         email: safeEmail,
@@ -437,66 +497,50 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         learning_center_url: customer.learningCenterUrl
     };
 
-    let customerId = customer.id;
+    // ONLY ADD THESE IF THEY WERE PASSED - AND WE'LL CATCH DB ERROR IF MISSING
+    if (customer.howFound) payload.how_found = customer.howFound;
+    if (customer.howFoundOther) payload.how_found_other = customer.howFoundOther;
+    if (customer.conditionInside) payload.condition_inside = customer.conditionInside;
+    if (customer.conditionOutside) payload.condition_outside = customer.conditionOutside;
 
-    if (customerId) {
-        // Update first
-        const { data, error } = await supabase
-            .from('customers')
-            .update(payload)
-            .eq('id', customerId)
-            .select()
-            .single();
+    const customerId = customer.id;
 
-        if (error) {
-            // If error is basic "PGRST116" (JSON object requested, multiple (or no) rows returned), it might mean not found in .single() context? 
-            // Actually .single() throws if 0 rows.
-            // If code is "PGRST116" -> The result contains 0 rows
-            if (error.code === 'PGRST116') {
-                // Row not found. Insert new one with this ID to sync Auth/CRM.
-                const { data: insData, error: insError } = await supabase
-                    .from('customers')
-                    .insert([{ ...payload, id: customerId }])
-                    .select()
-                    .single();
+    // Use native upsert for atomic operation
+    const upsertData: any = { ...payload };
+    if (customerId) upsertData.id = customerId;
 
-                if (insError) throw insError;
-                // Success insert
-            } else {
-                throw error;
-            }
-        }
-    } else {
-        // Insert new (auto ID)
-        // Check duplication by email first to be safe
-        if (payload.email) {
-            const { data: existing } = await supabase.from('customers').select('id').eq('email', payload.email).single();
-            if (existing) {
-                // Update existing instead of simple insert
-                const { data, error } = await supabase.from('customers').update(payload).eq('id', existing.id).select().single();
-                if (error) throw error;
-                customerId = existing.id;
-            } else {
-                const { data, error } = await supabase.from('customers').insert([payload]).select().single();
-                if (error) throw error;
-                customerId = data.id;
-            }
-        } else {
-            const { data, error } = await supabase.from('customers').insert([payload]).select().single();
-            if (error) throw error;
-            customerId = data.id;
-        }
+    // If no ID but email exists, try to find existing by email first to avoid duplicates
+    let finalId = customerId;
+    if (!finalId && payload.email) {
+        const { data: existing } = await supabase.from('customers').select('id').eq('email', payload.email).maybeSingle();
+        if (existing) finalId = existing.id;
     }
 
+    if (finalId) upsertData.id = finalId;
+
+    const { data: upserted, error: upsertError } = await supabase
+        .from('customers')
+        .upsert(upsertData, { onConflict: 'id' })
+        .select()
+        .single();
+
+    if (upsertError) {
+        console.error('[upsertSupabaseCustomer] Upsert error:', upsertError);
+        throw upsertError;
+    }
+
+    const finalCustomer = upserted;
+    finalId = upserted.id;
+
     // 2. Upsert VEHICLES if info provided
-    if (customerId) {
+    if (finalId) {
         // A. Handle 'vehicles' array (preferred)
         if (customer.vehicles && Array.isArray(customer.vehicles)) {
             for (const v of customer.vehicles) {
                 if (v.make || v.model || v.year) {
                     await upsertSupabaseVehicle({
                         ...v,
-                        customer_id: customerId
+                        customer_id: finalId
                     });
                 }
             }
@@ -511,48 +555,101 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                     year: v.year,
                     type: v.type || v.vehicleType || 'Compact/Sedan',
                     color: v.color,
-                    customer_id: customerId
+                    customer_id: finalId
                 });
             }
         }
     }
 
-    return { id: customerId, ...payload };
+    return { id: finalId, ...payload };
 };
 
+/**
+ * Deletes a customer and all their associated data (Vehicles, Bookings, Invoices, Storage Files)
+ * This is a highly robust deletion that cleans up database rows AND physical storage files.
+ */
 export const deleteSupabaseCustomer = async (id: string) => {
     try {
-        // Validation: If ID is not a valid UUID (e.g. local temp ID), don't send to Supabase
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(id)) {
-            console.warn(`Skipping Supabase delete for non-UUID id: ${id}`);
-            return; // It's a local-only record, nothing to delete on backend
+            console.warn(`[DeleteCustomer] Invalid UUID: ${id}`);
+            return { success: false, error: 'invalid_id' };
         }
 
-        // 1. Delete linked Vehicles (Manual Cascade)
-        // Try Delete First
-        const { error: vehError } = await supabase.from('vehicles').delete().eq('customer_id', id);
-        if (vehError) console.warn('Error deleting vehicles:', vehError);
-        // Fallback: Unlink (Set customer_id = null) in case Delete failed (e.g. RLS)
-        await supabase.from('vehicles').update({ customer_id: null }).eq('customer_id', id);
+        console.log(`[DeleteCustomer] Starting total cleanup for ID: ${id}`);
 
-        // 1b. Delete linked Bookings (Manual Cascade)
-        // Try Delete First
-        const { error: bookError } = await supabase.from('bookings').delete().eq('customer_id', id);
-        if (bookError) console.warn('Error deleting bookings:', bookError);
-        // Fallback: Unlink
-        await supabase.from('bookings').update({ customer_id: null }).eq('customer_id', id);
+        // 1. COLLECT MEDIA URLS (Storage Cleanup Preparation)
+        // We need to fetch the customer and their vehicles to get all photo URLs before deleting rows.
+        const { data: customer, error: fetchError } = await supabase
+            .from('customers')
+            .select('*, vehicles(*)')
+            .eq('id', id)
+            .maybeSingle();
 
-        // 2. Delete from CRM 'customers'
-        const { error: crmError } = await supabase.from('customers').delete().eq('id', id);
+        if (fetchError) console.warn('[DeleteCustomer] Error fetching for media cleanup:', fetchError);
 
-        // 3. Delete from Auth 'app_users' (if it exists there)
-        const { error: authError } = await supabase.from('app_users').delete().eq('id', id);
+        if (customer) {
+            const mediaUrls: string[] = [
+                ...(customer.general_photos || []),
+                ...(customer.before_photos || []),
+                ...(customer.after_photos || []),
+                ...(customer.short_videos || []),
+                ...(customer.vehicles?.flatMap((v: any) => [
+                    ...(v.general_photos || []),
+                    ...(v.before_photos || []),
+                    ...(v.after_photos || []),
+                    ...(v.video_urls || [])
+                ]) || [])
+            ].filter(Boolean);
 
-        if (crmError) throw crmError;
-        if (authError) console.warn('Auth delete failed:', authError);
-    } catch (err) {
-        console.error('deleteSupabaseCustomer error:', err);
+            if (mediaUrls.length > 0) {
+                console.log(`[DeleteCustomer] Found ${mediaUrls.length} media items to purge from storage.`);
+
+                // Extract unique paths from bucket URLs
+                const bucketName = 'customer-photos';
+                const storagePaths = mediaUrls
+                    .filter(url => url.includes(`/${bucketName}/`))
+                    .map(url => url.split(`/${bucketName}/`).pop())
+                    .filter(Boolean) as string[];
+
+                if (storagePaths.length > 0) {
+                    const { error: storageError } = await supabase.storage
+                        .from(bucketName)
+                        .remove(storagePaths);
+
+                    if (storageError) console.warn('[DeleteCustomer] Storage cleanup warning:', storageError);
+                    else console.log(`[DeleteCustomer] Successfully purged ${storagePaths.length} files from ${bucketName}`);
+                }
+            }
+        }
+
+        // 2. DATABASE DELETION (CRM)
+        // ON DELETE CASCADE at DB level handles vehicles, bookings, invoices, estimates.
+        const { error: crmError, count: crmCount } = await supabase
+            .from('customers')
+            .delete({ count: 'exact' })
+            .eq('id', id);
+
+        if (crmError) {
+            console.error('[DeleteCustomer] Database deletion failed:', crmError);
+            throw crmError;
+        }
+
+        // 3. AUTH PROFILE CLEANUP (Optional app_users sync)
+        const { error: authError, count: authCount } = await supabase
+            .from('app_users')
+            .delete({ count: 'exact' })
+            .eq('id', id);
+
+        console.log(`[DeleteCustomer] Completed. CRM count: ${crmCount}, Auth count: ${authCount}`);
+
+        return {
+            success: true,
+            crmCount: crmCount || 0,
+            authCount: authCount || 0
+        };
+    } catch (err: any) {
+        console.error('[DeleteCustomer] Processing error:', err);
         throw err;
     }
 };
@@ -1131,6 +1228,8 @@ export interface LibraryItem {
     created_at?: string;
     updated_at?: string;
     created_by?: string; // Email of the user who created it
+    is_published?: boolean;
+    is_verified?: boolean;
 }
 
 /**
@@ -1178,6 +1277,7 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
 export interface LibraryComment {
     id: string;
     post_id: string;
+    parent_id?: string; // Support for nested replies
     author: string;
     avatar_url?: string;
     text: string;
@@ -1306,6 +1406,8 @@ export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: b
             category: item.category,
             thumbnail_url: item.thumbnail_url,
             resource_url: item.resource_url,
+            is_published: item.is_published ?? false,
+            is_verified: item.is_verified ?? false,
             updated_at: new Date().toISOString()
         };
 
@@ -1341,6 +1443,26 @@ export async function deleteLibraryItem(id: string): Promise<boolean> {
     } catch (err) {
         console.error('Error deleting library item:', err);
         return false;
+    }
+}
+
+/**
+ * Copies a library item (e.g. from Blog to Learning Library or vice-versa)
+ * by creating a new record with a new ID.
+ */
+export async function copyLibraryItem(item: LibraryItem, targetCategory?: string): Promise<{ success: boolean; data?: LibraryItem; error?: any }> {
+    try {
+        const newItem = {
+            ...item,
+            id: crypto.randomUUID(),
+            category: targetCategory || item.category,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        return await upsertLibraryItem(newItem);
+    } catch (err) {
+        console.error('Error copying library item:', err);
+        return { success: false, error: err };
     }
 }
 
@@ -1439,13 +1561,10 @@ export async function uploadLibraryFile(file: File): Promise<{ url: string | nul
             }
         }
 
-        return { url: null, error: `Upload failed: ${uploadError.message}` };
-
         return {
             url: null,
             error: `Upload failed: ${uploadError?.message} (Target Bucket: ${targetBucket})`
         };
-
     } catch (error: any) {
         console.error('Error uploading file:', error);
         return { url: null, error: error?.message || "Unknown exception during upload" };

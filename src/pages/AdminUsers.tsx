@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import localforage from "localforage";
 import { UserCheck, ShieldAlert, User, WifiOff, Plus } from "lucide-react";
-import CustomerModal, { Customer as ModalCustomer } from "@/components/customers/CustomerModal";
-import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import CustomerModal from "@/components/customers/CustomerModal";
+import { upsertSupabaseCustomer, deleteSupabaseCustomer, Customer } from "@/lib/supa-data";
 import { upsertCustomer } from "@/lib/db";
 
 type Role = "admin" | "employee" | "customer";
@@ -227,30 +227,24 @@ export default function AdminUsers() {
   };
 
   const deleteUser = async (id: string, role: Role) => {
-    if (!confirm("Delete this user?")) return;
+    if (!confirm("Permanently delete this user/customer?")) return;
     try {
       if (id.startsWith('local_')) {
-        // Delete from local
         const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
         const updated = localEmployees.filter(e => e.id !== id);
         await localforage.setItem('company-employees', updated);
-      } else if (id.startsWith('crm_')) {
-        // Delete from Customers Table
-        const realId = id.replace('crm_', '');
-        const { error } = await supabase.from("customers").delete().eq("id", realId);
-        if (error) throw error;
       } else {
-        // Delete from Supabase App Users
-        const { error } = await supabase.from("app_users").delete().eq("id", id);
-        if (error) throw error;
-        if (role === "customer") {
-          try { await supabase.from("customers").delete().eq("id", id); } catch { }
-        }
+        // Clean up normalized ID
+        const realId = id.replace('crm_', '').replace('pending_', '');
+
+        // Use unified deletion logic
+        await deleteSupabaseCustomer(realId);
       }
 
       await fetchUsers();
       toast({ title: "User deleted" });
     } catch (e: any) {
+      console.error("Delete failed:", e);
       toast({ title: "Delete failed", description: String(e?.message || e), variant: "destructive" });
     }
   };
@@ -563,7 +557,9 @@ export default function AdminUsers() {
                 year: data.year,
                 type: data.vehicleType,
                 color: data.color
-              }
+              },
+              howFound: data.howFound,
+              howFoundOther: data.howFoundOther
             });
             toast({ title: "Customer Added", description: `${data.name} has been added.` });
             setCustomerModalOpen(false);

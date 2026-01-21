@@ -13,27 +13,44 @@ export interface BackupMetadata {
 /**
  * Save backup JSON to Supabase storage
  */
-export async function saveBackupToSupabase(json: string, filename?: string): Promise<string | null> {
+export async function saveBackupToSupabase(json: string, filename?: string): Promise<{ path?: string, error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
+        // 1. Get Authentication Context
+        const { data: { session } } = await supabase.auth.getSession();
+        let user = session?.user;
 
-        const name = filename || `pds-backup-${new Date().toISOString().split('T')[0]}.json`;
-        const path = `backups/${user.id}/${name}`;
+        if (!user) {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            user = authUser || undefined;
+        }
 
-        // Upload to Supabase Storage
-        const { data, error } = await supabase.storage
+        if (!user) {
+            console.error('Save Backup: No authenticated user found.');
+            return { error: 'Not authenticated. Please log out and log back in to refresh your session.' };
+        }
+
+        const now = new Date();
+        const timestamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].split('Z')[0]; // HH-MM-SS-mmm
+        const dateStr = now.toISOString().split('T')[0];
+        const name = filename || `pds-backup-${dateStr}-${timestamp}.json`;
+        const path = `${user.id}/${name}`;
+
+        // 2. Upload to Supabase Storage
+        const { data, error: storageError } = await supabase.storage
             .from('app-backups')
             .upload(path, json, {
                 contentType: 'application/json',
                 upsert: true
             });
 
-        if (error) throw error;
+        if (storageError) {
+            console.error('Storage upload error:', storageError);
+            return { error: `Storage Error: ${storageError.message}` };
+        }
 
-        // Save metadata to database
+        // 3. Save metadata to database
         const payload = JSON.parse(json);
-        await supabase.from('backup_metadata').insert({
+        const { error: dbError } = await supabase.from('backup_metadata').insert({
             user_id: user.id,
             filename: name,
             size_bytes: new Blob([json]).size,
@@ -41,10 +58,15 @@ export async function saveBackupToSupabase(json: string, filename?: string): Pro
             storage_path: path
         });
 
-        return data.path;
-    } catch (error) {
+        if (dbError) {
+            console.error('Database metadata error:', dbError);
+            return { error: `Database Error: ${dbError.message} (File uploaded but metadata failed)` };
+        }
+
+        return { path: data.path };
+    } catch (error: any) {
         console.error('Error saving backup to Supabase:', error);
-        return null;
+        return { error: error.message || 'Unknown backup error' };
     }
 }
 
@@ -53,7 +75,8 @@ export async function saveBackupToSupabase(json: string, filename?: string): Pro
  */
 export async function listSupabaseBackups(): Promise<BackupMetadata[]> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (!user) return [];
 
         const { data, error } = await supabase
@@ -75,10 +98,11 @@ export async function listSupabaseBackups(): Promise<BackupMetadata[]> {
  */
 export async function loadBackupFromSupabase(filename: string): Promise<string | null> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (!user) throw new Error('Not authenticated');
 
-        const path = `backups/${user.id}/${filename}`;
+        const path = `${user.id}/${filename}`;
 
         const { data, error } = await supabase.storage
             .from('app-backups')
@@ -99,10 +123,11 @@ export async function loadBackupFromSupabase(filename: string): Promise<string |
  */
 export async function deleteSupabaseBackup(filename: string): Promise<boolean> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (!user) return false;
 
-        const path = `backups/${user.id}/${filename}`;
+        const path = `${user.id}/${filename}`;
 
         // Delete from storage
         const { error: storageError } = await supabase.storage

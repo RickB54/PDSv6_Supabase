@@ -19,26 +19,41 @@ function toIsoCutoff(daysStr: string | null | undefined): string | null {
 }
 
 async function requireAdminOrEmployee() {
-  // Ensure the operation is not under anon or customer
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth?.user) throw new Error('Not authenticated');
+  // 1. Check for active Supabase session
+  const { data: { session } } = await supabase.auth.getSession();
+  let user = session?.user;
+
+  // 2. Fallback to verification if session is ambiguous
+  if (!user) {
+    const { data: auth } = await supabase.auth.getUser();
+    user = auth?.user || undefined;
+  }
+
+  if (!user) {
+    throw new Error('Not authenticated. Please log out and back in to refresh your server session.');
+  }
+
   const u = getCurrentUser();
   const role = u?.role || 'customer';
+
+  // 3. Admin/Employee Role Check
+  if (!['admin', 'employee', 'owner'].includes(role)) {
+    throw new Error('Insufficient permissions: only admins or employees can perform this action.');
+  }
+
   // Sync role to Supabase app_users to satisfy RLS checks
   try {
     await supabase.from('app_users').upsert({
-      id: auth.user.id,
-      email: auth.user.email || u?.email || '',
+      id: user.id,
+      email: user.email || u?.email || '',
       role: role,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
   } catch (e) {
     dbg('requireAdminOrEmployee:role_sync_error', e);
   }
-  if (!['admin', 'employee'].includes(role)) {
-    throw new Error('Insufficient role');
-  }
-  dbg('requireAdminOrEmployee', { sessionUserId: auth.user.id, role });
+
+  dbg('requireAdminOrEmployee', { sessionUserId: user.id, role });
 }
 
 async function count(table: string, filter: (q: any) => any) {
@@ -179,9 +194,20 @@ export async function deleteBookingsOlderThan(days: string): Promise<void> {
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   dbg('deleteBookingsOlderThan:start', { cutoff });
-  const res = await supabase.from('bookings').delete().lt('date', cutoff);
+
+  const res = cutoff
+    ? await supabase.from('bookings').delete().lt('date', cutoff)
+    : await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
   if (res.error) { dbg('deleteBookingsOlderThan:error', res.error); throw res.error; }
   dbg('deleteBookingsOlderThan:count', res.count);
+
+  const abRes = cutoff
+    ? await supabase.from('availability_blocks').delete().lt('date', cutoff)
+    : await supabase.from('availability_blocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  if (abRes.error) { dbg('deleteBookingsOlderThan:availability:error', abRes.error); }
+
   const audit = await logDelete({ type: 'bookings', cutoff });
   dbg('deleteBookingsOlderThan:audit', audit);
 }
@@ -192,10 +218,12 @@ export async function deleteEverything(): Promise<void> {
   dbg('deleteEverything:start');
   const ops = [
     ['bookings', { col: 'id', op: 'neq', val: null }],
+    ['availability_blocks', { col: 'id', op: 'neq', val: null }],
     ['invoices', { col: 'id', op: 'neq', val: null }],
     ['expenses', { col: 'id', op: 'neq', val: null }],
     ['usage', { col: 'id', op: 'neq', val: null }],
     ['inventory_records', { col: 'id', op: 'neq', val: null }],
+    ['vehicles', { col: 'id', op: 'neq', val: null }],
     // Customers and app_users last
     ['customers', { col: 'id', op: 'neq', val: null }],
   ] as const;
@@ -216,6 +244,39 @@ export async function deleteEverything(): Promise<void> {
   dbg('deleteEverything:employees:count', emp.count);
   const audit = await logDelete({ type: 'all' });
   dbg('deleteEverything:audit', audit);
+}
+
+export async function deleteEverythingExceptInventory(): Promise<void> {
+  await requireAdminOrEmployee();
+  dbg('deleteEverythingExceptInventory:start');
+  const ops = [
+    ['bookings', { col: 'id', op: 'neq', val: null }],
+    ['availability_blocks', { col: 'id', op: 'neq', val: null }],
+    ['invoices', { col: 'id', op: 'neq', val: null }],
+    ['expenses', { col: 'id', op: 'neq', val: null }],
+    ['vehicles', { col: 'id', op: 'neq', val: null }],
+    // Customers last
+    ['customers', { col: 'id', op: 'neq', val: null }],
+  ] as const;
+  for (const [table, cond] of ops) {
+    let q: any = supabase.from(table as any).delete();
+    if (cond.op === 'neq') q = q.neq(cond.col, cond.val);
+    const res = await q;
+    if (res.error) { dbg(`deleteEverythingExceptInventory:${table}:error`, res.error); throw res.error; }
+    dbg(`deleteEverythingExceptInventory:${table}:count`, res.count);
+  }
+  // Delete customer app_users
+  const au = await supabase.from('app_users').delete().eq('role', 'customer');
+  if (au.error) { dbg('deleteEverythingExceptInventory:app_users:error', au.error); throw au.error; }
+  dbg('deleteEverythingExceptInventory:app_users:count', au.count);
+
+  // Delete employees but preserve admins
+  const emp = await supabase.from('app_users').delete().eq('role', 'employee');
+  if (emp.error) { dbg('deleteEverythingExceptInventory:employees:error', emp.error); throw emp.error; }
+  dbg('deleteEverythingExceptInventory:employees:count', emp.count);
+
+  const audit = await logDelete({ type: 'all_except_inventory' });
+  dbg('deleteEverythingExceptInventory:audit', audit);
 }
 
 export async function previewDeleteInvoices(days: string) {
@@ -252,16 +313,38 @@ export async function previewDeleteAll(days?: string) {
   const entries = [] as { name: string; count: number }[];
   const tables = [
     ['bookings', 'date'],
+    ['availability_blocks', 'date'],
     ['customers', 'created_at'],
     ['invoices', 'created_at'],
     ['expenses', 'date'],
     ['usage', 'date'],
     ['inventory_records', 'created_at'],
+    ['vehicles', 'created_at'],
     ['packages', 'created_at'],
     ['add_ons', 'created_at'],
   ] as const;
   for (const [name, col] of tables) {
     const c = await count(name, (q: any) => cutoff ? q.lt(col, cutoff) : q.neq('id', null));
+    entries.push({ name, count: c });
+  }
+  return { tables: entries };
+}
+
+export async function previewDeleteAllExceptInventory() {
+  await requireAdminOrEmployee();
+  const entries = [] as { name: string; count: number }[];
+  const tables = [
+    ['bookings', 'date'],
+    ['availability_blocks', 'date'],
+    ['customers', 'created_at'],
+    ['invoices', 'created_at'],
+    ['expenses', 'date'],
+    ['vehicles', 'created_at'],
+    ['packages', 'created_at'],
+    ['add_ons', 'created_at'],
+  ] as const;
+  for (const [name, col] of tables) {
+    const c = await count(name, (q: any) => q.neq('id', null));
     entries.push({ name, count: c });
   }
   return { tables: entries };

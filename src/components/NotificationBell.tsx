@@ -114,8 +114,10 @@ export default function NotificationBell() {
   // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's screenshot requirement for 'nothing new')
   const bellColorClass = (displayUnreadCount > 0 || importantUnread > 0) ? "text-yellow-400" : "text-red-600";
 
+  const [open, setOpen] = useState(false);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative group">
           <Bell className={`h-6 w-6 transition-all duration-300 ${bellColorClass} ${ring ? 'animate-bounce scale-110' : 'group-hover:scale-110'}`} />
@@ -195,10 +197,11 @@ export default function NotificationBell() {
                 const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
                 setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
                 setEmpUnreadCount(filtered.filter(n => !n.read).length);
-              } catch { }
+              } catch (e) { }
+              setOpen(false);
             }} className="w-full">Mark all read</Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={dismissAll} className="w-full">Dismiss all</Button>
+            <Button variant="outline" size="sm" onClick={() => { dismissAll(); setOpen(false); }} className="w-full">Dismiss all</Button>
           )}
         </div>
       </DropdownMenuContent>

@@ -126,7 +126,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Company Blog", icon: Newspaper,
             items: [
-                { title: "Prime Blog", url: "/f150-setup", key: "blog", icon: Newspaper },
+                { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper },
             ]
         },
         {

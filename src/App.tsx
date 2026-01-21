@@ -76,7 +76,7 @@ import AppManual from "./pages/AppManual";
 import UserSettings from "./pages/UserSettings";
 import SectionLanding from "./pages/SectionLanding";
 import LearningLibrary from "./pages/LearningLibrary";
-import F150Setup from "./pages/F150Setup";
+import PrimeBlog from "./pages/PrimeBlog";
 import ChemicalsLibrary from "./pages/ChemicalsLibrary";
 import AdminChemicals from "@/pages/AdminChemicals";
 import VehicleGallery from "./pages/VehicleGallery";
@@ -259,7 +259,8 @@ const App = () => {
                       <Route path="/user-settings" element={<ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}><UserSettings /></ProtectedRoute>} />
                       <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
                       <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
-                      <Route path="/f150-setup" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><F150Setup /></ProtectedRoute>} />
+                      <Route path="/blog" element={<PrimeBlog />} />
+                      <Route path="/f150-setup" element={<PrimeBlog />} />
 
                       {/* Customer-Facing (when logged in) */}
                       <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
@@ -301,6 +302,7 @@ const App = () => {
                     <Route path="/book" element={<BookNow />} />
                     <Route path="/availability" element={<Availability />} />
                     <Route path="/services" element={<CustomerPortal />} />
+                    <Route path="/blog" element={<PrimeBlog />} />
                     <Route path="/thank-you" element={<ThankYou />} />
                     <Route path="*" element={<Navigate to="/login" replace />} />
                   </Routes>

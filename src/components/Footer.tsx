@@ -4,16 +4,37 @@ import { contentService, type SupaContact } from "@/lib/content";
 
 export const Footer = () => {
     const [contact, setContact] = useState<SupaContact | null>(null);
+    const [footerData, setFooterData] = useState<any>({
+        brandName: 'Prime Auto Detail',
+        marqueeText: 'Precision. Protection. Perfection.',
+        copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`
+    });
+
+    const loadData = async () => {
+        try {
+            const info = await contentService.getContact();
+            setContact(info);
+
+            const meta = await contentService.getServiceMeta('footer_content');
+            if (meta && meta.meta) {
+                setFooterData(meta.meta);
+            }
+        } catch { }
+    };
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                const info = await contentService.getContact();
-                setContact(info);
-            } catch { }
+        loadData();
+        const handleContentChange = (e: any) => {
+            if (e.detail?.kind === 'footer' || e.detail?.kind === 'contact') {
+                loadData();
+            }
         };
-        load();
+        window.addEventListener('content-changed', handleContentChange as any);
+        return () => window.removeEventListener('content-changed', handleContentChange as any);
     }, []);
+
+    // Create marquee items array
+    const marqueeItems = footerData.marqueeText.split('.').filter(Boolean).map(s => s.trim() + '.');
 
     return (
         <footer className="bg-zinc-950 text-white border-t border-zinc-900 select-none overflow-hidden">
@@ -27,15 +48,17 @@ export const Footer = () => {
                     .animate-footer-marquee {
                         display: flex;
                         width: max-content;
-                        animation: footer-marquee 20s linear infinite;
+                        animation: footer-marquee 25s linear infinite;
                     }
                 `}</style>
                 <div className="animate-footer-marquee">
-                    {[...Array(15)].map((_, i) => (
-                        <div key={i} className="flex items-center gap-4 px-2 text-2xl md:text-3xl font-black uppercase italic tracking-tighter">
-                            <span className="text-[#ff3b30]">Precision.</span>
-                            <span className="text-white">Protection.</span>
-                            <span className="text-[#007aff]">Perfection.</span>
+                    {[...Array(12)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-4 px-4 text-2xl md:text-3xl font-black uppercase italic tracking-tighter">
+                            {marqueeItems.map((item, idx) => (
+                                <span key={idx} className={idx % 3 === 0 ? "text-[#ff3b30]" : idx % 3 === 1 ? "text-white" : "text-[#007aff]"}>
+                                    {item}
+                                </span>
+                            ))}
                         </div>
                     ))}
                 </div>
@@ -47,14 +70,15 @@ export const Footer = () => {
                     {/* Branding */}
                     <div className="flex flex-col items-center md:items-start gap-3">
                         <h2 className="text-3xl font-black uppercase italic tracking-tighter text-white">
-                            Prime Auto Detail
+                            {footerData.brandName}
                         </h2>
                         <div className="flex flex-wrap justify-center md:justify-start gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-                            <span>Precision</span>
-                            <span className="text-red-600">•</span>
-                            <span>Protection</span>
-                            <span className="text-blue-600">•</span>
-                            <span>Perfection</span>
+                            {marqueeItems.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-4">
+                                    <span>{item.replace('.', '')}</span>
+                                    {idx < marqueeItems.length - 1 && <span className={idx === 0 ? "text-red-600" : "text-blue-600"}>•</span>}
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -69,7 +93,7 @@ export const Footer = () => {
                     {/* Copyright & Info */}
                     <div className="flex flex-col items-center md:items-end gap-2 text-center md:text-right">
                         <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">
-                            © {new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.
+                            {footerData.copyrightText}
                         </p>
                         {contact?.email && <p className="text-[9px] text-zinc-700 font-bold">{contact.email}</p>}
                     </div>

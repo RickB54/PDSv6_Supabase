@@ -232,6 +232,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: "Payments & Cart", url: "/payments-cart", icon: ShoppingCart },
     { title: "My Invoices", url: "/my-invoices", icon: FileText },
     { title: "Personal Notes", url: "/notes", icon: BookOpen },
+    { title: "Prime Blog", url: "/blog", icon: Newspaper },
     { title: "User Settings", url: "/user-settings", icon: Settings },
     { title: "Prime Website", url: "/", icon: Globe },
   ];
