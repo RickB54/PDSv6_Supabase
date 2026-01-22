@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper } from "lucide-react";
+import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper, HelpCircle } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 
 const CustomerDashboard = () => {
@@ -19,6 +19,15 @@ const CustomerDashboard = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name || 'Customer'}!</h1>
             <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full h-9 w-9 text-muted-foreground hover:text-primary hover:bg-muted"
+                onClick={() => window.dispatchEvent(new Event('open-help'))}
+                title="Help"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </Button>
               <Link to="/customer-profile" className="inline-flex items-center rounded-md border px-3 py-2 text-sm">Profile</Link>
               <Button variant="outline" onClick={() => { try { useCartStore.getState().clear(); logout(); } finally { navigate('/login', { replace: true }); } }}>Logout</Button>
             </div>
@@ -29,7 +38,7 @@ const CustomerDashboard = () => {
               title="Book A Job"
               description="Schedule your next detailing appointment."
               icon={CalendarDays}
-              to="/book"
+              to="/services"
               color="text-primary"
               gradient="bg-gradient-to-br from-primary to-blue-600"
             />

@@ -89,6 +89,7 @@ import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
 import ScrollToTop from "./components/ScrollToTop";
 import AvailabilityManager from "./pages/AvailabilityManager";
 import Availability from "./pages/Availability";
+import HelpModal from "@/components/help/HelpModal";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,7 @@ const DefaultRedirect = ({ user }: { user: any }) => {
 const App = () => {
   const [user, setUser] = useState(getCurrentUser());
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
@@ -169,12 +171,16 @@ const App = () => {
     const onOpenCallAssistant = () => setCallAssistantOpen(true);
     window.addEventListener('open-call-assistant', onOpenCallAssistant);
 
+    const onOpenHelp = () => setHelpOpen(true);
+    window.addEventListener('open-help', onOpenHelp);
+
     return () => {
       mounted = false;
       clearTimeout(safetyTimer);
       window.removeEventListener('auth-changed', updateUser);
       window.removeEventListener('storage', updateUser);
       window.removeEventListener('open-call-assistant', onOpenCallAssistant);
+      window.removeEventListener('open-help', onOpenHelp);
       if (unsubscribeBookings) unsubscribeBookings();
     };
   }, []);
@@ -310,6 +316,7 @@ const App = () => {
               )}
             </ErrorBoundary>
             <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
+            {user && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={user.role as 'admin' | 'employee' | 'customer'} />}
           </BrowserRouter>
         </SidebarProvider>
       </TooltipProvider>

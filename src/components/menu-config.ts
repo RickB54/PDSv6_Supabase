@@ -21,7 +21,8 @@ import {
     Settings,
     UserCircle,
     Book,
-    Phone
+    Phone,
+    HelpCircle
 } from "lucide-react";
 
 export type MenuItem = {
@@ -127,6 +128,13 @@ export const getMenuGroups = (counts: {
             title: "Company Blog", icon: Newspaper,
             items: [
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper },
+            ]
+        },
+        {
+            title: "Help", icon: HelpCircle,
+            items: [
+                { title: "Help Guide", url: "#help", role: "admin", key: "help", icon: HelpCircle, iconColor: "text-sky-500" },
+                { title: "Help Guide", url: "#help", role: "employee", key: "help", icon: HelpCircle, iconColor: "text-emerald-500" },
             ]
         },
         {

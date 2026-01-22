@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe } from "lucide-react";
+import { AlertTriangle, Beaker, CalendarDays, UserPlus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe, Video } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -768,7 +768,8 @@ export default function AdminDashboard() {
                   <RedBox accent="orange" title="Book Now via website" href="/book-now" Icon={ClipboardCheck} />
                 )}
                 <RedBox accent="orange" title="Bookings" href="/bookings?add=true" Icon={CalendarDays} />
-                <RedBox accent="orange" title="Analytics" href="/bookings?view=analytics" Icon={FileBarChart} />
+                <RedBox accent="orange" title="Analytics" href="/bookings-analytics" Icon={FileBarChart} />
+                <RedBox accent="cyan" title="Media Library" href="/vehicle-gallery" Icon={Video} />
                 <button
                   onClick={() => setSubContractorsOpen(true)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit"

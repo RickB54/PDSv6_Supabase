@@ -570,7 +570,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   className="h-8 text-xs border-emerald-600/30 text-emerald-500 hover:bg-emerald-600/10"
                 >
                   <Plus className="w-3 h-3 mr-1" />
-                  Add Another Vehicle
+                  Add A Vehicle
                 </Button>
               </div>
 

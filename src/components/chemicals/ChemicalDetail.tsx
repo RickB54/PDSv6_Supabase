@@ -128,72 +128,234 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     };
 
     const handleDownloadPdf = async () => {
-        const element = document.getElementById('chemical-detail-content');
-        if (!element) return;
-
-        // Clone explicitly for capture to avoid layout issues with ScrollArea/Dialog
-        const clone = element.cloneNode(true) as HTMLElement;
-
-        // Force desktop-like width and unconstrained height
-        clone.style.position = 'absolute';
-        clone.style.left = '-9999px'; // Render off-screen but visible to DOM
-        clone.style.top = '0';
-        clone.style.width = '1000px';
-        clone.style.height = 'auto';
-        clone.style.minHeight = '100vh';
-        clone.style.maxHeight = 'none';
-        clone.style.overflow = 'visible';
-        clone.style.borderRadius = '0';
-        clone.style.transform = 'none';
-        clone.style.margin = '0';
-        clone.style.backgroundColor = '#09090b';
-        clone.id = 'chemical-card-clone';
-
-        // Fix internal ScrollArea for capture
-        const scrollAreas = clone.querySelectorAll('[data-radix-scroll-area-viewport]');
-        scrollAreas.forEach((sa: any) => {
-            sa.style.overflow = 'visible';
-            sa.style.height = 'auto';
-            sa.style.display = 'block';
-        });
-
-        // Hide non-printable elements in clone
-        const toHide = clone.querySelectorAll('.print\\:hidden');
-        toHide.forEach((el: any) => el.style.display = 'none');
-
-        document.body.appendChild(clone);
+        if (!chemical) return;
 
         try {
-            // Wait a tick for styles to apply
-            await new Promise(r => setTimeout(r, 100));
-
-            const canvas = await html2canvas(clone, {
-                scale: 2, // Retina quality
-                useCORS: true,
-                backgroundColor: "#09090b",
-                logging: false,
-                width: 1000,
-                windowWidth: 1000
-            });
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 15;
+            const lineHeight = 7;
+            let y = margin;
 
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = pageWidth / imgWidth;
-            const finalHeight = imgHeight * ratio;
+            // Helper to add text with word wrap
+            const addLine = (text: string, x: number, fontSize: number = 10, bold: boolean = false, color: number[] = [255, 255, 255]) => {
+                pdf.setFontSize(fontSize);
+                pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+                pdf.setTextColor(color[0], color[1], color[2]);
+                const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin - x);
+                pdf.text(lines, x, y);
+                y += lines.length * lineHeight * (fontSize / 10);
+            };
 
-            pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, finalHeight);
-            pdf.save(`${chemical?.name?.replace(/[^a-z0-9]/gi, '_') || 'Chemical'}_Card.pdf`);
+            const addSection = (title: string, color: number[] = [100, 200, 255]) => {
+                y += 3;
+                pdf.setFillColor(30, 30, 40);
+                pdf.rect(margin, y - 5, pageWidth - 2 * margin, 8, 'F');
+                pdf.setTextColor(color[0], color[1], color[2]);
+                pdf.setFontSize(12);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(title.toUpperCase(), margin + 2, y);
+                y += 8;
+                pdf.setTextColor(255, 255, 255);
+            };
+
+            const checkNewPage = (neededSpace: number = 40) => {
+                if (y + neededSpace > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+            };
+
+            // BACKGROUND
+            pdf.setFillColor(9, 9, 11);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+            // HEADER with theme color bar
+            if (chemical.theme_color) {
+                const rgb = parseInt(chemical.theme_color.slice(1), 16);
+                pdf.setFillColor((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255);
+                pdf.rect(0, 0, pageWidth, 8, 'F');
+            }
+
+            y = 18;
+
+            // TITLE
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(20);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(chemical.name || 'Chemical Card', margin, y);
+            y += 10;
+
+            // Category & Brand
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(160, 160, 180);
+            pdf.text(`${chemical.category || ''}  ${chemical.brand ? '• ' + chemical.brand : ''}`, margin, y);
+            y += 10;
+
+            // HIGH RISK WARNING
+            if (chemical.warnings?.damage_risk === 'High') {
+                pdf.setFillColor(80, 20, 20);
+                pdf.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
+                pdf.setTextColor(255, 100, 100);
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('⚠ HIGH RISK CHEMICAL', margin + 2, y);
+                y += 10;
+            }
+
+            //=== USED FOR ===
+            addSection('USED FOR', [100, 200, 255]);
+            chemical.used_for?.forEach((use: string) => {
+                addLine(`• ${use}`, margin + 3, 9);
+            });
+
+            //=== WHAT IT IS ===
+            checkNewPage();
+            addSection('WHAT IT IS', [100, 200, 255]);
+            addLine(chemical.description || 'No description provided.', margin + 2, 9);
+
+            //=== WHEN TO USE ===
+            checkNewPage();
+            addSection('WHEN TO USE', [100, 255, 150]);
+            addLine(chemical.when_to_use || 'Not specified.', margin + 2, 9);
+
+            //=== WHY USE IT ===
+            checkNewPage();
+            addSection('WHY USE IT', [200, 150, 255]);
+            addLine(chemical.why_to_use || 'Not specified.', margin + 2, 9);
+
+            //=== DILUTION RATIOS ===
+            if (chemical.dilution_ratios && chemical.dilution_ratios.length > 0) {
+                checkNewPage();
+                addSection('DILUTION RATIOS', [255, 200, 100]);
+                chemical.dilution_ratios.forEach((d: any) => {
+                    pdf.setTextColor(200, 200, 220);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(`${d.method} - ${d.soil_level}`, margin + 2, y);
+                    y += 6;
+                    pdf.setTextColor(150, 255, 150);
+                    pdf.setFontSize(11);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(`     ${d.ratio}`, margin + 2, y);
+                    y += 6;
+                    if (d.notes) {
+                        pdf.setTextColor(180, 180, 180);
+                        pdf.setFontSize(8);
+                        pdf.setFont('helvetica', 'italic');
+                        const noteLines = pdf.splitTextToSize(`     ${d.notes}`, pageWidth - 2 * margin - 10);
+                        pdf.text(noteLines, margin + 2, y);
+                        y += noteLines.length * 4;
+                    }
+                    y += 3;
+                });
+            }
+
+            //=== WARNINGS & RISKS ===
+            if (chemical.warnings) {
+                checkNewPage();
+                addSection('CRITICAL WARNINGS & RISKS', [255, 100, 100]);
+
+                if (chemical.warnings.risks && chemical.warnings.risks.length > 0) {
+                    pdf.setTextColor(255, 150, 150);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('Potential Damage:', margin + 2, y);
+                    y += 6;
+                    chemical.warnings.risks.forEach((risk: string) => {
+                        addLine(`  ✗ ${risk}`, margin + 3, 8, false, [255, 180, 180]);
+                    });
+                    y += 3;
+                }
+
+                if (chemical.interactions?.do_not_mix && chemical.interactions.do_not_mix.length > 0) {
+                    pdf.setTextColor(255, 150, 150);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('Do Not Mix With:', margin + 2, y);
+                    y += 6;
+                    chemical.interactions.do_not_mix.forEach((mix: string) => {
+                        addLine(`  ☠ ${mix}`, margin + 3, 8, false, [255, 200, 200]);
+                    });
+                }
+            }
+
+            //=== APPLICATION GUIDE ===
+            if (chemical.application_guide) {
+                checkNewPage();
+                addSection('HOW TO APPLY', [150, 255, 200]);
+                const guide = chemical.application_guide;
+                if (guide.method) addLine(`Method: ${guide.method}`, margin + 2, 9);
+                if (guide.dwell_time_min) addLine(`Dwell Time: ${guide.dwell_time_min}-${guide.dwell_time_max} minutes`, margin + 2, 9);
+                if (guide.agitation) addLine(`Agitation: ${guide.agitation}`, margin + 2, 9);
+                if (guide.notes) {
+                    y += 2;
+                    pdf.setTextColor(200, 200, 200);
+                    pdf.setFontSize(8);
+                    pdf.setFont('helvetica', 'italic');
+                    const noteLines = pdf.splitTextToSize(`Note: ${guide.notes}`, pageWidth - 2 * margin - 5);
+                    pdf.text(noteLines, margin + 2, y);
+                    y += noteLines.length * 5;
+                }
+            }
+
+            //=== SURFACE COMPATIBILITY ===
+            if (chemical.surface_compatibility) {
+                checkNewPage();
+                addSection('SURFACE COMPATIBILITY', [100, 255, 200]);
+
+                if (chemical.surface_compatibility.safe && chemical.surface_compatibility.safe.length > 0) {
+                    pdf.setTextColor(100, 255, 150);
+                    pdf.setFontSize(9);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('SAFE ON:', margin + 2, y);
+                    y += 5;
+                    addLine(chemical.surface_compatibility.safe.join(', '), margin + 3, 8, false, [150, 255, 180]);
+                    y += 2;
+                }
+
+                if (chemical.surface_compatibility.risky && chemical.surface_compatibility.risky.length > 0) {
+                    pdf.setTextColor(255, 200, 100);
+                    pdf.setFontSize(9);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('USE CAUTION:', margin + 2, y);
+                    y += 5;
+                    addLine(chemical.surface_compatibility.risky.join(', '), margin + 3, 8, false, [255, 220, 150]);
+                    y += 2;
+                }
+
+                if (chemical.surface_compatibility.avoid && chemical.surface_compatibility.avoid.length > 0) {
+                    pdf.setTextColor(255, 100, 100);
+                    pdf.setFontSize(9);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('DO NOT USE ON:', margin + 2, y);
+                    y += 5;
+                    addLine(chemical.surface_compatibility.avoid.join(', '), margin + 3, 8, false, [255, 150, 150]);
+                }
+            }
+
+            //=== TRAINING VIDEOS ===
+            if (chemical.video_urls && chemical.video_urls.length > 0) {
+                checkNewPage();
+                addSection('TRAINING VIDEOS', [200, 150, 255]);
+                chemical.video_urls.forEach((url: string, idx: number) => {
+                    addLine(`Video ${idx + 1}: ${url}`, margin + 2, 8, false, [180, 180, 255]);
+                });
+            }
+
+            // FOOTER
+            pdf.setFontSize(8);
+            pdf.setTextColor(100, 100, 120);
+            pdf.text(`Generated: ${new Date().toLocaleDateString()} | Prime Auto Detail Chemical Training Card`, margin, pageHeight - 10);
+
+            // SAVE
+            pdf.save(`${chemical.name?.replace(/[^a-z0-9]/gi, '_') || 'Chemical'}_Training_Card.pdf`);
 
         } catch (error) {
-            console.error("PDF Gen Error", error);
-            alert("PDF generation using Canvas failed. Using Print fallback.");
-            window.print();
-        } finally {
-            document.body.removeChild(clone);
+            console.error("PDF Generation Error:", error);
+            toast({ title: "PDF Error", description: "Failed to generate PDF. Please try again.", variant: "destructive" });
         }
     };
 
@@ -202,8 +364,237 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
 
     if (!chemical) return null;
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrint = async () => {
+        if (!chemical) return;
+
+        try {
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 15;
+            const lineHeight = 7;
+            let y = margin;
+
+            // Helper to add text with word wrap
+            const addLine = (text: string, x: number, fontSize: number = 10, bold: boolean = false, color: number[] = [0, 0, 0]) => {
+                pdf.setFontSize(fontSize);
+                pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+                pdf.setTextColor(color[0], color[1], color[2]);
+                const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin - x);
+                pdf.text(lines, x, y);
+                y += lines.length * lineHeight * (fontSize / 10);
+            };
+
+            const addSection = (title: string, color: number[] = [0, 100, 200]) => {
+                y += 3;
+                pdf.setFillColor(240, 240, 245);
+                pdf.rect(margin, y - 5, pageWidth - 2 * margin, 8, 'F');
+                pdf.setTextColor(color[0], color[1], color[2]);
+                pdf.setFontSize(12);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(title.toUpperCase(), margin + 2, y);
+                y += 8;
+                pdf.setTextColor(0, 0, 0);
+            };
+
+            const checkNewPage = (neededSpace: number = 40) => {
+                if (y + neededSpace > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+            };
+
+            // WHITE background for printing
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+            // Header with theme color bar
+            if (chemical.theme_color) {
+                const rgb = parseInt(chemical.theme_color.slice(1), 16);
+                pdf.setFillColor((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255);
+                pdf.rect(0, 0, pageWidth, 8, 'F');
+            }
+
+            y = 18;
+
+            // TITLE
+            pdf.setTextColor(0, 0, 0);
+            pdf.setFontSize(20);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(chemical.name || 'Chemical Card', margin, y);
+            y += 10;
+
+            // Category & Brand
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(80, 80, 80);
+            pdf.text(`${chemical.category || ''}  ${chemical.brand ? '• ' + chemical.brand : ''}`, margin, y);
+            y += 10;
+
+            // HIGH RISK WARNING
+            if (chemical.warnings?.damage_risk === 'High') {
+                pdf.setFillColor(255, 230, 230);
+                pdf.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
+                pdf.setTextColor(200, 0, 0);
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('⚠ HIGH RISK CHEMICAL', margin + 2, y);
+                y += 10;
+            }
+
+            //=== USED FOR ===
+            addSection('USED FOR', [0, 100, 200]);
+            chemical.used_for?.forEach((use: string) => {
+                addLine(`• ${use}`, margin + 3, 9);
+            });
+
+            //=== WHAT IT IS ===
+            checkNewPage();
+            addSection('WHAT IT IS', [0, 100, 200]);
+            addLine(chemical.description || 'No description provided.', margin + 2, 9);
+
+            //=== WHEN TO USE ===
+            checkNewPage();
+            addSection('WHEN TO USE', [0, 150, 50]);
+            addLine(chemical.when_to_use || 'Not specified.', margin + 2, 9);
+
+            //=== WHY USE IT ===
+            checkNewPage();
+            addSection('WHY USE IT', [100, 50, 150]);
+            addLine(chemical.why_to_use || 'Not specified.', margin + 2, 9);
+
+            //=== DILUTION RATIOS ===
+            if (chemical.dilution_ratios && chemical.dilution_ratios.length > 0) {
+                checkNewPage();
+                addSection('DILUTION RATIOS', [200, 100, 0]);
+                chemical.dilution_ratios.forEach((d: any) => {
+                    pdf.setTextColor(60, 60, 60);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(`${d.method} - ${d.soil_level}`, margin + 2, y);
+                    y += 6;
+                    pdf.setTextColor(0, 120, 0);
+                    pdf.setFontSize(11);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(`     ${d.ratio}`, margin + 2, y);
+                    y += 6;
+                    if (d.notes) {
+                        pdf.setTextColor(80, 80, 80);
+                        pdf.setFontSize(8);
+                        pdf.setFont('helvetica', 'italic');
+                        const noteLines = pdf.splitTextToSize(`     ${d.notes}`, pageWidth - 2 * margin - 10);
+                        pdf.text(noteLines, margin + 2, y);
+                        y += noteLines.length * 4;
+                    }
+                    y += 3;
+                });
+            }
+
+            //=== WARNINGS & RISKS ===
+            if (chemical.warnings) {
+                checkNewPage();
+                addSection('CRITICAL WARNINGS & RISKS', [200, 0, 0]);
+
+                if (chemical.warnings.risks && chemical.warnings.risks.length > 0) {
+                    pdf.setTextColor(180, 0, 0);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('Potential Damage:', margin + 2, y);
+                    y += 6;
+                    chemical.warnings.risks.forEach((risk: string) => {
+                        addLine(`  ✗ ${risk}`, margin + 3, 8, false, [150, 0, 0]);
+                    });
+                    y += 3;
+                }
+
+                if (chemical.interactions?.do_not_mix && chemical.interactions.do_not_mix.length > 0) {
+                    pdf.setTextColor(180, 0, 0);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('Do Not Mix With:', margin + 2, y);
+                    y += 6;
+                    chemical.interactions.do_not_mix.forEach((mix: string) => {
+                        addLine(`  ☠ ${mix}`, margin + 3, 8, false, [150, 0, 0]);
+                    });
+                }
+            }
+
+            //=== APPLICATION GUIDE ===
+            if (chemical.application_guide) {
+                checkNewPage();
+                addSection('HOW TO APPLY', [0, 150, 100]);
+                const guide = chemical.application_guide;
+                if (guide.method) addLine(`Method: ${guide.method}`, margin + 2, 9);
+                if (guide.dwell_time_min) addLine(`Dwell Time: ${guide.dwell_time_min}-${guide.dwell_time_max} minutes`, margin + 2, 9);
+                if (guide.agitation) addLine(`Agitation: ${guide.agitation}`, margin + 2, 9);
+                if (guide.notes) {
+                    y += 2;
+                    pdf.setTextColor(80, 80, 80);
+                    pdf.setFontSize(8);
+                    pdf.setFont('helvetica', 'italic');
+                    const noteLines = pdf.splitTextToSize(`Note: ${guide.notes}`, pageWidth - 2 * margin - 5);
+                    pdf.text(noteLines, margin + 2, y);
+                    y += noteLines.length * 5;
+                }
+            }
+
+            //=== SURFACE COMPATIBILITY ===
+            if (chemical.surface_compatibility) {
+                checkNewPage();
+                addSection('SURFACE COMPATIBILITY', [0, 150, 100]);
+
+                if (chemical.surface_compatibility.safe && chemical.surface_compatibility.safe.length > 0) {
+                    pdf.setTextColor(0, 150, 0);
+                    pdf.setFontSize(9);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('SAFE ON:', margin + 2, y);
+                    y += 5;
+                    addLine(chemical.surface_compatibility.safe.join(', '), margin + 3, 8, false, [0, 120, 0]);
+                    y += 2;
+                }
+
+                if (chemical.surface_compatibility.risky && chemical.surface_compatibility.risky.length > 0) {
+                    pdf.setTextColor(200, 150, 0);
+                    pdf.setFontSize(9);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('USE CAUTION:', margin + 2, y);
+                    y += 5;
+                    addLine(chemical.surface_compatibility.risky.join(', '), margin + 3, 8, false, [180, 120, 0]);
+                    y += 2;
+                }
+
+                if (chemical.surface_compatibility.avoid && chemical.surface_compatibility.avoid.length > 0) {
+                    pdf.setTextColor(200, 0, 0);
+                    pdf.setFontSize(9);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('DO NOT USE ON:', margin + 2, y);
+                    y += 5;
+                    addLine(chemical.surface_compatibility.avoid.join(', '), margin + 3, 8, false, [180, 0, 0]);
+                }
+            }
+
+            //=== TRAINING VIDEOS ===
+            if (chemical.video_urls && chemical.video_urls.length > 0) {
+                checkNewPage();
+                addSection('TRAINING VIDEOS', [100, 50, 200]);
+                chemical.video_urls.forEach((url: string, idx: number) => {
+                    addLine(`Video ${idx + 1}: ${url}`, margin + 2, 8, false, [80, 80, 180]);
+                });
+            }
+
+            // FOOTER
+            pdf.setFontSize(8);
+            pdf.setTextColor(120, 120, 120);
+            pdf.text(`Printed: ${new Date().toLocaleDateString()} | Prime Auto Detail Chemical Training Card`, margin, pageHeight - 10);
+
+            // Open print dialog
+            pdf.autoPrint();
+            window.open(pdf.output('bloburl'), '_blank');
+
+        } catch (error) {
+            console.error("Print Generation Error:", error);
+            toast({ title: "Print Error", description: "Failed to generate print version. Please try again.", variant: "destructive" });
+        }
     };
 
     return (
@@ -324,26 +715,46 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                 </ul>
                             </section>
 
-                            {/* WHAT / WHEN / WHY Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="space-y-2">
-                                    <h4 className="flex items-center text-sm font-bold text-zinc-500 uppercase">
-                                        <Info className="w-4 h-4 mr-2" /> What it is
-                                    </h4>
-                                    <p className="text-sm text-zinc-300 leading-relaxed">{chemical.description}</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <h4 className="flex items-center text-sm font-bold text-zinc-500 uppercase">
-                                        <Clock className="w-4 h-4 mr-2" /> When to use
-                                    </h4>
-                                    <p className="text-sm text-zinc-300 leading-relaxed">{chemical.when_to_use}</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <h4 className="flex items-center text-sm font-bold text-zinc-500 uppercase">
-                                        <FlaskConical className="w-4 h-4 mr-2" /> Why use it
-                                    </h4>
-                                    <p className="text-sm text-zinc-300 leading-relaxed">{chemical.why_to_use}</p>
-                                </div>
+                            {/* WHAT / WHEN / WHY as Full-Width Accordions */}
+                            <div className="spacey-4">
+                                {/* What It Is */}
+                                <details className="group bg-zinc-900/50 border border-zinc-800 rounded-lg">
+                                    <summary className="cursor-pointer px-6 py-4 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">
+                                        <h4 className="flex items-center text-sm font-bold text-zinc-300 uppercase">
+                                            <Info className="w-4 h-4 mr-2 text-blue-500" /> What it is
+                                        </h4>
+                                        <span className="text-zinc-500 group-open:rotate-90 transition-transform">▶</span>
+                                    </summary>
+                                    <div className="px-6 pb-4">
+                                        <p className="text-sm text-zinc-300 leading-relaxed">{chemical.description}</p>
+                                    </div>
+                                </details>
+
+                                {/* When to Use */}
+                                <details className="group bg-zinc-900/50 border border-zinc-800 rounded-lg mt-3">
+                                    <summary className="cursor-pointer px-6 py-4 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">
+                                        <h4 className="flex items-center text-sm font-bold text-zinc-300 uppercase">
+                                            <Clock className="w-4 h-4 mr-2 text-green-500" /> When to use
+                                        </h4>
+                                        <span className="text-zinc-500 group-open:rotate-90 transition-transform">▶</span>
+                                    </summary>
+                                    <div className="px-6 pb-4">
+                                        <p className="text-sm text-zinc-300 leading-relaxed">{chemical.when_to_use}</p>
+                                    </div>
+                                </details>
+
+                                {/* Why Use It */}
+                                <details className="group bg-zinc-900/50 border border-zinc-800 rounded-lg mt-3">
+                                    <summary className="cursor-pointer px-6 py-4 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">
+                                        <h4 className="flex items-center text-sm font-bold text-zinc-300 uppercase">
+                                            <FlaskConical className="w-4 h-4 mr-2 text-purple-500" /> Why use it
+                                        </h4>
+                                        <span className="text-zinc-500 group-open:rotate-90 transition-transform">▶</span>
+                                    </summary>
+                                    <div className="px-6 pb-4">
+                                        <p className="text-sm text-zinc-300 leading-relaxed">{chemical.why_to_use}</p>
+                                    </div>
+                                </details>
                             </div>
 
                             <Separator className="bg-zinc-800" />

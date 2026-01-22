@@ -10,7 +10,7 @@ import { Search, ChevronRight } from 'lucide-react';
 type HelpModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'employee' | 'customer';
 };
 
 export default function HelpModal({ open, onOpenChange, role }: HelpModalProps) {

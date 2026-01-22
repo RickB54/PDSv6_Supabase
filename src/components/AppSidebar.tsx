@@ -3,7 +3,7 @@ import {
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
   TicketPercent, GraduationCap, Shield, CheckSquare, CalendarDays,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
-  MessageSquare, Clock, History, ShoppingCart, Video
+  MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle
 } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo } from "react";
@@ -166,7 +166,12 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     return localStorage.getItem('has_unread_chat') === 'true';
   }, [tick]);
 
-  const handleNavClick = () => setOpenMobile(false);
+  const handleNavClick = (url?: string) => {
+    setOpenMobile(false);
+    if (url === '#help') {
+      window.dispatchEvent(new Event('open-help'));
+    }
+  };
 
   // Group State Persistence
   // Default to Dashboards open if empty? Or empty.
@@ -233,6 +238,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: "My Invoices", url: "/my-invoices", icon: FileText },
     { title: "Personal Notes", url: "/notes", icon: BookOpen },
     { title: "Prime Blog", url: "/blog", icon: Newspaper },
+    { title: "Help", url: "#help", icon: HelpCircle },
     { title: "User Settings", url: "/user-settings", icon: Settings },
     { title: "Prime Website", url: "/", icon: Globe },
   ];
@@ -336,25 +342,40 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
             <>
               {CUSTOMER_ITEMS.map((item) => {
                 const isActive = location.pathname === item.url || (item.url.includes('#') && location.pathname + location.hash === item.url);
+                const className = isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors';
+
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
-                      <Link to={item.url}
-                        className={isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors'}
-                        onClick={() => {
-                          handleNavClick();
-                          if (item.url.includes('#')) {
-                            const id = item.url.split('#')[1];
-                            setTimeout(() => {
-                              const el = document.getElementById(id);
-                              if (el) el.scrollIntoView({ behavior: 'smooth' });
-                            }, 100);
-                          }
-                        }}
-                      >
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        {open && <span>{item.title}</span>}
-                      </Link>
+                    <SidebarMenuButton asChild tooltip={item.title} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
+                      {item.url === '#help' ? (
+                        <button
+                          onClick={() => {
+                            window.dispatchEvent(new Event('open-help'));
+                            handleNavClick();
+                          }}
+                          className={className}
+                        >
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          {open && <span>{item.title}</span>}
+                        </button>
+                      ) : (
+                        <Link to={item.url}
+                          className={className}
+                          onClick={() => {
+                            handleNavClick();
+                            if (item.url.includes('#')) {
+                              const id = item.url.split('#')[1];
+                              setTimeout(() => {
+                                const el = document.getElementById(id);
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                              }, 100);
+                            }
+                          }}
+                        >
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          {open && <span>{item.title}</span>}
+                        </Link>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -459,12 +480,13 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
                             return (
                               <SidebarMenuSubItem key={item.title}>
-                                <SidebarMenuSubButton asChild isActive={isActive} onClick={handleNavClick} className="ring-0 outline-none">
+                                <SidebarMenuSubButton asChild isActive={isActive} className="ring-0 outline-none">
                                   {item.url.startsWith('#') ? (
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();
                                         if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
+                                        if (item.url === '#help') window.dispatchEvent(new Event('open-help'));
                                         handleNavClick();
                                       }}
                                       className={className}
@@ -475,6 +497,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                   ) : (
                                     <Link
                                       to={item.url}
+                                      onClick={handleNavClick}
                                       className={className}
                                     >
                                       {item.icon && <item.icon
