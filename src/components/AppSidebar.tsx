@@ -230,7 +230,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   /* ---------------- CUSTOMER ITEMS ---------------- */
   const CUSTOMER_ITEMS: MenuItem[] = [
     { title: "Customer Dashboard", url: "/customer-dashboard", icon: LayoutDashboard },
-    { title: "Book A Job", url: "/book", icon: CalendarDays },
+    { title: "Book A Job", url: "/services", icon: CalendarDays },
     { title: "Contact Support", url: "/contact-support", icon: MessageSquare },
     { title: "Active Jobs", url: "/active-jobs", icon: Clock },
     { title: "Job History", url: "/job-history", icon: History },

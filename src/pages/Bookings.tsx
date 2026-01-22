@@ -285,7 +285,7 @@ export default function Bookings() {
                     </Button>
                   )}
                   <Button asChild className="bg-gradient-hero">
-                    <Link to="/book">
+                    <Link to="/services">
                       <Plus className="h-4 w-4 mr-2" /> New Booking
                     </Link>
                   </Button>

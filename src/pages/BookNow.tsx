@@ -859,15 +859,7 @@ const BookNow = () => {
             </Link>
           </Button>
 
-          {/* 🧪 TEST DATA BUTTON - Only on localhost */}
-          {window.location.hostname === 'localhost' && (
-            <Button
-              onClick={fillTestData}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold shadow-lg"
-            >
-              🧪 Fill Test Data
-            </Button>
-          )}
+
         </div>
 
         <div className="space-y-8 animate-fade-in">

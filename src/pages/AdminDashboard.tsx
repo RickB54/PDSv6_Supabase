@@ -616,15 +616,9 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500 hover:text-white gap-2 h-9 px-4 hidden sm:flex transition-all"
-            >
-              <Link to="/book">
-                <Globe className="h-4 w-4" />
-                Book Online Mock
+            <Button asChild className="bg-gradient-hero">
+              <Link to="/services">
+                <Plus className="h-4 w-4 mr-2" /> New Booking
               </Link>
             </Button>
             <Button
