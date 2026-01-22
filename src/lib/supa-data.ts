@@ -249,19 +249,22 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 
             const allVehsRaw = (c.vehicles || []).map((v: any) => ({
                 id: v.id,
-                make: v.make,
-                model: v.model,
+                make: v.make || '',
+                model: v.model || '',
                 year: v.year ? String(v.year) : '',
-                type: v.type,
-                color: v.color,
-                vin: v.vin,
+                type: v.type || '',
+                color: v.color || '',
+                vin: v.vin || '',
+                mileage: v.mileage || '',
+                conditionInside: v.condition_inside || '',
+                conditionOutside: v.condition_outside || '',
                 generalPhotos: v.general_photos || [],
                 beforePhotos: v.before_photos || [],
                 afterPhotos: v.after_photos || [],
                 videoUrls: v.video_urls || []
             }));
 
-            // Deduplicate vehicles by ID to prevent ghost entries
+            // Deduplicate vehicles by ID
             const seenVehIds = new Set<string>();
             const allVehs = allVehsRaw.filter(v => {
                 if (!v.id) return true;
@@ -270,21 +273,32 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 return true;
             });
 
+            // Fallback strategy: First vehicle from table, then legacy vehicle_info JSONB
             const v = allVehs[0] || {};
+            const vi = c.vehicle_info || {};
+
             return {
                 id: c.id,
                 name: c.full_name || c.name || 'Unknown',
                 email: c.email,
                 phone: c.phone,
                 address: c.address,
-                vehicle: v.make || '',
-                model: v.model || '',
-                year: v.year || '',
-                vehicleType: v.type || '',
-                color: v.color || '',
-                mileage: '',
+                // These top-level properties are key for UI display
+                vehicle: v.make || vi.make || '',
+                model: v.model || vi.model || '',
+                year: v.year || vi.year || '',
+                vehicleType: v.type || vi.type || vi.vehicleType || '',
+                color: v.color || vi.color || '',
+                mileage: v.mileage || vi.mileage || '',
                 vehicles: allVehs,
-                vehicle_info: { make: v.make, model: v.model, year: v.year, type: v.type, color: v.color },
+                vehicle_info: {
+                    make: v.make || vi.make,
+                    model: v.model || vi.model,
+                    year: v.year || vi.year,
+                    type: v.type || vi.type || vi.vehicleType,
+                    color: v.color || vi.color,
+                    mileage: v.mileage || vi.mileage
+                },
                 notes: c.notes,
                 created_at: c.created_at,
                 type: c.type || 'customer',
@@ -297,8 +311,8 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 videoNote: c.video_note || '',
                 howFound: c.how_found || '',
                 howFoundOther: c.how_found_other || '',
-                conditionInside: c.condition_inside || '',
-                conditionOutside: c.condition_outside || ''
+                conditionInside: c.condition_inside || vi.conditionInside || '',
+                conditionOutside: c.condition_outside || vi.conditionOutside || ''
             } as Customer;
         };
 
@@ -433,6 +447,9 @@ export async function upsertSupabaseVehicle(vehicleData: {
     type: string;
     color?: string;
     vin?: string;
+    mileage?: string;
+    conditionInside?: string;
+    conditionOutside?: string;
     customer_id?: string;
     generalPhotos?: string[];
     beforePhotos?: string[];
@@ -447,25 +464,41 @@ export async function upsertSupabaseVehicle(vehicleData: {
             type: vehicleData.type,
             color: vehicleData.color || null,
             vin: vehicleData.vin || null,
-            customer_id: vehicleData.customer_id || null,
+            mileage: vehicleData.mileage || null,
+            // Condition fields - will work after running ADD_VEHICLE_CONDITION_COLUMNS.sql
+            condition_inside: vehicleData.conditionInside || null,
+            condition_outside: vehicleData.conditionOutside || null,
             general_photos: vehicleData.generalPhotos || [],
             before_photos: vehicleData.beforePhotos || [],
             after_photos: vehicleData.afterPhotos || [],
-            video_urls: vehicleData.videoUrls || [],
-            created_at: new Date().toISOString()
+            video_urls: vehicleData.videoUrls || []
         };
 
-        if (vehicleData.id) {
+        // Strict UUID validation for payload.id
+        if (vehicleData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(vehicleData.id)) {
             payload.id = vehicleData.id;
         }
 
+        // Strict UUID validation for customer_id
+        if (vehicleData.customer_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(vehicleData.customer_id)) {
+            payload.customer_id = vehicleData.customer_id;
+        } else {
+            payload.customer_id = null;
+        }
+
+        console.log('🚗 Upserting vehicle with customer_id:', payload.customer_id);
+
         const { data, error } = await supabase
             .from('vehicles')
-            .upsert(payload)
+            .upsert(payload, { onConflict: 'id' })
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Supabase Vehicle Upsert Error:', error);
+            throw error;
+        }
+        console.log('✅ Vehicle saved successfully with ID:', data.id);
         return data;
     } catch (err) {
         console.error('Failed to save vehicle to Supabase:', err);
@@ -503,7 +536,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     if (customer.conditionInside) payload.condition_inside = customer.conditionInside;
     if (customer.conditionOutside) payload.condition_outside = customer.conditionOutside;
 
-    const customerId = customer.id;
+    const customerId = (customer.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customer.id)) ? customer.id : undefined;
 
     // Use native upsert for atomic operation
     const upsertData: any = { ...payload };
@@ -529,8 +562,8 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         throw upsertError;
     }
 
-    const finalCustomer = upserted;
     finalId = upserted.id;
+    const finalVehicles: any[] = [];
 
     // 2. Upsert VEHICLES if info provided
     if (finalId) {
@@ -538,10 +571,11 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         if (customer.vehicles && Array.isArray(customer.vehicles)) {
             for (const v of customer.vehicles) {
                 if (v.make || v.model || v.year) {
-                    await upsertSupabaseVehicle({
+                    const savedVeh = await upsertSupabaseVehicle({
                         ...v,
                         customer_id: finalId
                     });
+                    finalVehicles.push(savedVeh);
                 }
             }
         }
@@ -549,7 +583,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         else if (customer.vehicle_info) {
             const v = customer.vehicle_info;
             if (v.make || v.model || v.year) {
-                await upsertSupabaseVehicle({
+                const savedVeh = await upsertSupabaseVehicle({
                     make: v.make,
                     model: v.model,
                     year: v.year,
@@ -557,11 +591,16 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                     color: v.color,
                     customer_id: finalId
                 });
+                finalVehicles.push(savedVeh);
             }
         }
     }
 
-    return { id: finalId, ...payload };
+    return {
+        ...upserted,
+        name: upserted.full_name, // Map back for consistency
+        vehicles: finalVehicles.length > 0 ? finalVehicles : (customer.vehicles || [])
+    };
 };
 
 /**

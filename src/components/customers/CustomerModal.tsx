@@ -135,9 +135,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   type: v.type,
                   color: v.color,
                   vin: v.vin,
-                  conditionInside: "",
-                  conditionOutside: "",
-                  mileage: ""
+                  mileage: v.mileage || "",
+                  conditionInside: v.condition_inside || "",
+                  conditionOutside: v.condition_outside || "",
+                  generalPhotos: v.general_photos || [],
+                  beforePhotos: v.before_photos || [],
+                  afterPhotos: v.after_photos || [],
+                  videoUrls: v.video_urls || []
                 }))
               }));
             }
@@ -192,17 +196,15 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   };
 
   const handleVehicleSelect = (data: { make: string; model: string; category: string }, index?: number) => {
-    let mappedType = "";
-    const cat = data.category;
-    if (cat === "Compact") mappedType = "Compact/Sedan (Small cars and sedans)";
-    else if (cat === "Midsize / Sedan") mappedType = "Compact/Sedan (Small cars and sedans)";
-    else if (cat === "SUV / Crossover") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
-    else if (cat === "Truck / Oversized") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-    else if (cat === "Oversized Specialty") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-    else if (cat.includes("Compact/Sedan")) mappedType = "Compact/Sedan (Small cars and sedans)";
-    else if (cat.includes("Mid-Size/SUV")) mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
-    else if (cat.includes("Truck/Van/Large SUV")) mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-    else if (cat.includes("Luxury/High-End")) mappedType = "Luxury/High-End (Luxury and premium vehicles)";
+    // Standardize the category string to match our pricing engine requirements
+    let mappedType = data.category;
+
+    // Fallback/Legacy Mapping if category is just "Compact", "Midsize", etc.
+    if (data.category === "Compact") mappedType = "Compact/Sedan (Small cars and sedans)";
+    else if (data.category === "Midsize / Sedan") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
+    else if (data.category === "SUV / Crossover") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
+    else if (data.category === "Truck / Oversized") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
+    else if (data.category === "Oversized Specialty") mappedType = "Luxury/High-End (Luxury and premium vehicles)";
 
     if (typeof index === 'number') {
       const updated = [...(form.vehicles || [])];
@@ -210,7 +212,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         ...updated[index],
         make: data.make,
         model: data.model,
-        type: mappedType || updated[index].type
+        type: mappedType
       };
       setForm(prev => ({ ...prev, vehicles: updated }));
     } else {
@@ -218,7 +220,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         ...prev,
         vehicle: data.make,
         model: data.model,
-        vehicleType: mappedType || prev.vehicleType
+        vehicleType: mappedType
       }));
     }
   };
@@ -285,7 +287,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         .getPublicUrl(filePath);
 
       setForm(prev => {
-        if (vehicleIndex !== undefined && prev.vehicles && prev.vehicles[vehicleIndex]) {
+        if (vehicleIndex !== undefined && vehicleIndex !== -1 && prev.vehicles && prev.vehicles[vehicleIndex]) {
           const updatedVehicles = [...prev.vehicles];
           const vehicle = { ...updatedVehicles[vehicleIndex] };
           const currentMedia = (vehicle as any)[type] || [];
@@ -317,7 +319,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
   const removeMedia = (type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos' | 'shortVideos', index: number, vehicleIndex?: number) => {
     setForm(prev => {
-      if (vehicleIndex !== undefined && prev.vehicles && prev.vehicles[vehicleIndex]) {
+      if (vehicleIndex !== undefined && vehicleIndex !== -1 && prev.vehicles && prev.vehicles[vehicleIndex]) {
         const updatedVehicles = [...prev.vehicles];
         const vehicle = { ...updatedVehicles[vehicleIndex] };
         const currentMedia = (vehicle as any)[type] || [];
@@ -847,13 +849,49 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 </p>
               </div>
 
+              {/* Customer-Level General Media (Always Visible) */}
+              <div className="space-y-4 border border-zinc-800 rounded-lg p-4 bg-zinc-900/20">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-zinc-400 uppercase">General Profile Media</h4>
+                  <Badge variant="outline" className="text-[10px] text-zinc-500">Account Level</Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <MediaUploadField
+                    label="Profile / General"
+                    type="generalPhotos"
+                    photos={form.generalPhotos || []}
+                    vIdx={-1} // -1 means customer-level
+                    onUpload={handleFileUpload}
+                    onRemove={removeMedia}
+                  />
+                  <MediaUploadField
+                    label="Misc Before"
+                    type="beforePhotos"
+                    photos={form.beforePhotos || []}
+                    vIdx={-1}
+                    onUpload={handleFileUpload}
+                    onRemove={removeMedia}
+                  />
+                  <MediaUploadField
+                    label="Misc After"
+                    type="afterPhotos"
+                    photos={form.afterPhotos || []}
+                    vIdx={-1}
+                    onUpload={handleFileUpload}
+                    onRemove={removeMedia}
+                  />
+                </div>
+              </div>
+
               {(form.vehicles || []).length === 0 ? (
                 <div className="text-center py-6 border border-dashed border-zinc-800 rounded-lg">
                   <Car className="h-8 w-8 mx-auto text-zinc-800 mb-2" />
-                  <p className="text-xs text-zinc-500">No vehicles linked to add media to.</p>
+                  <p className="text-xs text-zinc-500">No vehicles linked to add vehicle-specific media to.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-zinc-400 uppercase px-1">Vehicle-Specific Media</h4>
+
                   {(form.vehicles || []).map((vehicle, vIdx) => {
                     const isFirst = vIdx === 0;
                     const content = (
@@ -1042,6 +1080,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         open={vehicleSelectorOpen}
         onOpenChange={setVehicleSelectorOpen}
         onSelect={(data) => handleVehicleSelect(data, currentVehicleIdx !== null ? currentVehicleIdx : undefined)}
+        initialCustomerId={form.id}
       />
 
       <Dialog open={showMap} onOpenChange={setShowMap}>

@@ -1,0 +1,3 @@
+-- Clean localStorage in browser console - paste this:
+localStorage.removeItem('custom_vehicles');
+console.log('✅ Cleared corrupted vehicle list - refresh page now!');

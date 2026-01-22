@@ -110,14 +110,7 @@ const Prospects = () => {
         notes: data.notes,
         type: 'prospect',
         is_archived: (data as any).is_archived || false,
-        vehicle_info: {
-          make: data.vehicle,
-          model: data.model,
-          year: data.year,
-          type: data.vehicleType,
-          color: data.color,
-          mileage: data.mileage
-        },
+        vehicles: data.vehicles, // Pass the multiple vehicles array
         generalPhotos: data.generalPhotos,
         beforePhotos: data.beforePhotos,
         afterPhotos: data.afterPhotos,
@@ -391,34 +384,57 @@ const Prospects = () => {
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-zinc-600'}`} />
 
-                      {/* Photo Thumbnails - clickable to open gallery */}
-                      {(customer.generalPhotos?.length || customer.beforePhotos?.length || customer.afterPhotos?.length) ? (
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                          {customer.generalPhotos?.slice(0, 3).map((photo, idx) => (
-                            <div
-                              key={`thumb-g-${idx}`}
-                              className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
-                              onClick={() => openGallery(customer, idx)}
-                            >
-                              <img src={photo} alt={`${customer.name} - General ${idx + 1}`} className="h-full w-full object-cover" />
+                      {(() => {
+                        // Gather ALL photos from all possible sources for display
+                        const allPhotos: string[] = [
+                          ...(customer.generalPhotos || []),
+                          ...(customer.beforePhotos || []),
+                          ...(customer.afterPhotos || []),
+                          ...(customer.vehicles?.flatMap(v => [
+                            ...(v.generalPhotos || []),
+                            ...(v.beforePhotos || []),
+                            ...(v.afterPhotos || [])
+                          ]) || [])
+                        ].filter(Boolean);
+
+                        if (allPhotos.length > 0) {
+                          return (
+                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                              {allPhotos.slice(0, 3).map((photo, idx) => (
+                                <div
+                                  key={`thumb-${idx}`}
+                                  className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
+                                  onClick={() => openGallery(customer, idx)}
+                                >
+                                  <img src={photo} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div
-                          className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
-                          onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
-                        >
-                          <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
-                        </div>
-                      )}
+                          );
+                        }
+
+                        return (
+                          <div
+                            className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-purple-400 flex items-center justify-center text-zinc-400 font-bold"
+                            onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                          >
+                            <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
+                          </div>
+                        );
+                      })()}
 
                       <div>
                         <h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3>
                         <div className="flex gap-3 text-sm text-zinc-400">
                           <span>{customer.phone || 'No phone'}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span className="hidden sm:inline">{customer.vehicle} {customer.model}</span>
+                          {(customer.vehicle || customer.model) && (
+                            <>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="hidden sm:inline">
+                                {`${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim()}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -447,10 +463,34 @@ const Prospects = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-6">
-                          <section><h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Vehicle Details</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Vehicle</div><div className="text-zinc-200 font-medium">{customer.year} {customer.vehicle} {customer.model}</div></div>
-                              <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50"><div className="text-zinc-500 text-xs">Type/Color</div><div className="text-zinc-200 font-medium">{customer.vehicleType || '-'} / {customer.color || '-'}</div></div>
+                          <section>
+                            <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Vehicle Details</h4>
+                            <div className="space-y-2">
+                              {customer.vehicles && customer.vehicles.length > 0 ? (
+                                customer.vehicles.map((v, i) => (
+                                  <div key={i} className="bg-zinc-950 p-3 rounded border border-zinc-800/50 flex justify-between items-center animate-in fade-in slide-in-from-left-2" style={{ animationDelay: `${i * 100}ms` }}>
+                                    <div>
+                                      <div className="text-zinc-500 text-[10px] uppercase">Vehicle {customer.vehicles!.length > 1 ? i + 1 : ''}</div>
+                                      <div className="text-zinc-200 font-medium">{v.year} {v.make} {v.model}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-zinc-500 text-[10px] uppercase">Type/Color</div>
+                                      <div className="text-zinc-400 text-sm">{v.type || '-'} / {v.color || '-'}</div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50 flex justify-between items-center">
+                                  <div>
+                                    <div className="text-zinc-500 text-[10px] uppercase">Vehicle</div>
+                                    <div className="text-zinc-200 font-medium">{customer.year} {customer.vehicle} {customer.model}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-zinc-500 text-[10px] uppercase">Type/Color</div>
+                                    <div className="text-zinc-400 text-sm">{customer.vehicleType || '-'} / {customer.color || '-'}</div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </section>
                           <section><h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact info</h4>
