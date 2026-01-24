@@ -49,7 +49,10 @@ const About = () => {
     exteriorCareTitle: 'Exterior Care That Protects',
     exteriorCareText: 'Your paint is constantly under attack from UV rays, road salt, and environmental debris. We use multi-stage decontamination and professional polishing to restore clarity, followed by the best protective sealants in the industry.',
     approachTitle: 'Our Approach',
-    approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.'
+    approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.',
+    showTestimonials: false,
+    whoWeAreTitle: 'Who We Are',
+    whoWeAreText: 'Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash." Our focus is on quality over quantity. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We focus on delivering results that exceed expectations through careful attention to detail and professional-grade standards.'
   });
 
   useEffect(() => {
@@ -125,7 +128,11 @@ const About = () => {
                 Who We Are
               </h2>
               <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
-                {sections.length > 0 ? (
+                {aboutData.whoWeAreText ? (
+                  <div className="space-y-4">
+                    <p dangerouslySetInnerHTML={{ __html: aboutData.whoWeAreText.replace(/\n/g, '<br />') }} />
+                  </div>
+                ) : sections.length > 0 ? (
                   sections.map((s, i) => (
                     <div key={i} className="space-y-4">
                       {s.section_title && <h3 className="text-xl font-bold text-blue-800">{s.section_title}</h3>}
@@ -138,7 +145,7 @@ const About = () => {
                       Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash."
                     </p>
                     <p>
-                      Our focus is on <strong>quality over quantity</strong>. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We aren't in the business of hurried automated services; we are in the business of precision detailing and long-term vehicle preservation.
+                      Our focus is on <strong>quality over quantity</strong>. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We focus on delivering results that exceed expectations through careful attention to detail and professional-grade standards.
                     </p>
                   </>
                 )}
@@ -371,7 +378,7 @@ const About = () => {
       </section>
 
       {/* SECTION 6: What Our Customers Say (Testimonials) */}
-      {testimonials.length > 0 && (
+      {aboutData.showTestimonials !== false && testimonials.length > 0 && (
         <section className="py-24 bg-zinc-50">
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="text-center mb-16">

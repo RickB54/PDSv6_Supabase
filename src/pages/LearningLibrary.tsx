@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
+import { Navbar } from "@/components/Navbar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck, Loader2, Upload, CheckCircle2 } from "lucide-react";
@@ -311,10 +312,14 @@ export default function LearningLibrary() {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            <PageHeader title="Learning Library" />
+        <div className="min-h-screen bg-background pb-20 pt-20">
+            <Navbar />
 
             <main className="container mx-auto px-4 py-8 max-w-7xl">
+                <div className="mb-8">
+                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Learning Library</h1>
+                    <p className="text-zinc-400">Educational resources and reference materials</p>
+                </div>
                 {/* Help / Info Section */}
                 <div className="flex items-start gap-4 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg mb-8">
                     <HelpCircle className="w-6 h-6 text-blue-400 shrink-0 mt-0.5" />

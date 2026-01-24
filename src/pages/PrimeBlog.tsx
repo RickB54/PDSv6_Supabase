@@ -382,7 +382,7 @@ export default function PrimeBlog() {
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
-            {isAuth ? <PageHeader title="Prime Blog" /> : <Navbar />}
+            <Navbar />
             <main className="flex-1">
                 {/* Glossy Header */}
                 <div className="relative overflow-hidden bg-zinc-950 pt-24 pb-16 border-b border-zinc-800/50">

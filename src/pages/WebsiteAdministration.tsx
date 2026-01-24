@@ -13,6 +13,7 @@ import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { contentService } from "@/lib/content";
 import { Pencil, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
@@ -45,7 +46,8 @@ export default function WebsiteAdministration() {
     eliteResultsTitle: 'Elite Results. Delivered.',
     eliteResultsText: 'We bring the high-end studio experience to your driveway. No lines, no wait, just unmatched precision.',
     perfectedTitle: 'Perfected for Every Driver',
-    perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.'
+    perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.',
+    showTestimonials: false
   });
   const [aboutData, setAboutData] = useState<any>({
     heroBadge: 'Premium Craftsmanship',
@@ -65,7 +67,10 @@ export default function WebsiteAdministration() {
     exteriorCareTitle: 'Exterior Care That Protects',
     exteriorCareText: 'Your paint is constantly under attack from UV rays, road salt, and environmental debris. We use multi-stage decontamination and professional polishing to restore clarity, followed by the best protective sealants in the industry.',
     approachTitle: 'Our Approach',
-    approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.'
+    approachText: 'Our philosophy is simple: Education first, upsell never. We evaluate your vehicle\'s specific condition and tailor our techniques to provide the best possible results without unnecessary additives.',
+    showTestimonials: false,
+    whoWeAreTitle: 'Who We Are',
+    whoWeAreText: 'Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash." Our focus is on quality over quantity. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We focus on delivering results that exceed expectations through careful attention to detail and professional-grade standards.'
   });
   const [footerData, setFooterData] = useState<any>({
     brandName: 'Prime Auto Detail',
@@ -338,6 +343,20 @@ export default function WebsiteAdministration() {
                 </div>
 
                 <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter">1b. Customer Testimonials (Reviews)</h4>
+                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">{homeData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
+                      <Switch
+                        checked={homeData.showTestimonials}
+                        onCheckedChange={(checked) => setHomeData({ ...homeData, showTestimonials: checked })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the Home page. Recommended to hide for new businesses.</p>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
                   <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">2. Why Detailing Matters (SEO/Education)</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -426,7 +445,38 @@ export default function WebsiteAdministration() {
                 </div>
 
                 <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">2. Restoration Story</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">1b. Customer Testimonials</h4>
+                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">{aboutData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
+                      <Switch
+                        checked={aboutData.showTestimonials}
+                        onCheckedChange={(checked) => setAboutData({ ...aboutData, showTestimonials: checked })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the About page.</p>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">2a. Who We Are</h4>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Section Title</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.whoWeAreTitle} onChange={(e) => setAboutData({ ...aboutData, whoWeAreTitle: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Section Content (Main Bio)</Label>
+                    <textarea
+                      className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm min-h-[150px] text-zinc-300"
+                      value={aboutData.whoWeAreText}
+                      onChange={(e) => setAboutData({ ...aboutData, whoWeAreText: e.target.value })}
+                    />
+                    <p className="text-zinc-500 text-[10px] italic mt-1 font-medium">This replaces the fallback text and takes priority over legacy About Sections below.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">2b. Restoration Story</h4>
                   <div className="space-y-2">
                     <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Title</Label>
                     <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.interiorRefreshTitle} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshTitle: e.target.value })} />

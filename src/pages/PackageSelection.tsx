@@ -29,6 +29,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 
 import { servicePackages, addOns as sharedAddOns, getServiceInstructions } from "@/lib/services";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
+import { Navbar } from "@/components/Navbar";
 
 // --- Types ---
 interface PackageItem {
@@ -515,16 +516,8 @@ export default function PackageSelection() {
     const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            <PageHeader title="Package Comparison">
-                <Button
-                    onClick={() => setServiceComparisonOpen(true)}
-                    variant="outline"
-                    className="h-10 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px]"
-                >
-                    <Info className="w-4 h-4 mr-2" /> Show Services
-                </Button>
-            </PageHeader>
+        <div className="min-h-screen bg-background pb-20 pt-20">
+            <Navbar />
             <div className="p-4 max-w-7xl mx-auto space-y-6">
 
                 {/* Step 1: Select Packages */}
@@ -535,9 +528,19 @@ export default function PackageSelection() {
                                 <div className="p-3 bg-red-500/10 rounded-full border border-red-500/20 shrink-0">
                                     <ListFilter className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
                                 </div>
-                                <div>
-                                    <h2 className="text-xl sm:text-2xl font-bold text-white">Select Packages to Compare</h2>
-                                    <p className="text-zinc-400 text-xs sm:text-sm">Step 1 of 2: Choose items from your menu</p>
+                                <div className="flex flex-col">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tighter">Package Comparison</h2>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-zinc-400 text-xs sm:text-sm">Step 1 of 2: Choose items from your menu</p>
+                                        <Button
+                                            onClick={() => setServiceComparisonOpen(true)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 font-bold uppercase tracking-widest text-[9px] ml-2"
+                                        >
+                                            <Info className="w-3 h-3 mr-1.5" /> Show Services
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                             <Button

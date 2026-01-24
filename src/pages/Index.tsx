@@ -60,7 +60,8 @@ const Index = () => {
     eliteResultsTitle: 'Elite Results. Delivered.',
     eliteResultsText: 'We bring the high-end studio experience to your driveway. No lines, no wait, just unmatched precision.',
     perfectedTitle: 'Perfected for Every Driver',
-    perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.'
+    perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.',
+    showTestimonials: false
   });
 
   const serviceDescriptions: Record<string, string> = {
@@ -344,7 +345,7 @@ const Index = () => {
       </section>
 
       {/* SECTION 6: What Our Customers Say (Testimonials) */}
-      {true && (
+      {homeData.showTestimonials !== false && (
         <section className="py-24 bg-white border-t border-zinc-100">
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="text-center space-y-8">
