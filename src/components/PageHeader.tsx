@@ -31,10 +31,8 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
     navigate('/login');
   };
 
-  // Show back button if we are not at root or dashboard root
-  // Show back button if we are not at a dashboard root or landing page
-  // Show back button if we are not at root or the primary employee dashboard
-  const showBackButton = location.pathname !== '/' && location.pathname !== '/dashboard/employee';
+  // Show back button if we are not at root
+  const showBackButton = location.pathname !== '/';
 
   return (
     <>

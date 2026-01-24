@@ -516,8 +516,8 @@ export default function PackageSelection() {
     const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-background pb-20 pt-20">
-            <Navbar />
+        <div className="min-h-screen bg-background pb-20">
+            <PageHeader title="Package Selection" />
             <div className="p-4 max-w-7xl mx-auto space-y-6">
 
                 {/* Step 1: Select Packages */}

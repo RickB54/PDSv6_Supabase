@@ -170,8 +170,8 @@ const Index = () => {
                 <HoverCard openDelay={0} closeDelay={200}>
                   <HoverCardTrigger asChild>
                     <div className="bg-blue-700 text-white p-6 rounded-xl shadow-xl cursor-pointer hover:bg-zinc-900 transition-colors duration-300 group relative">
-                      <p className="text-4xl font-black italic tracking-tighter group-hover:text-blue-500 transition-colors leading-none">100%</p>
-                      <p className="text-[10px] uppercase font-black tracking-widest opacity-80 group-hover:text-white transition-colors mt-1 text-center">Satisfaction</p>
+                      <p className="text-4xl font-black italic tracking-tighter group-hover:text-blue-500 transition-colors leading-none">ZERO</p>
+                      <p className="text-[10px] uppercase font-black tracking-widest opacity-80 group-hover:text-white transition-colors mt-1 text-center">Compromise</p>
                     </div>
                   </HoverCardTrigger>
                   <HoverCardContent side="left" className="w-[450px] bg-zinc-950 border-zinc-800 text-white p-8 shadow-2xl mr-4 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=left]:slide-in-from-right-2">
@@ -295,13 +295,13 @@ const Index = () => {
               <p className="text-zinc-500 leading-relaxed text-lg">{homeData.eliteResultsText}</p>
               <div className="flex gap-4 pt-4">
                 <div className="flex flex-col">
-                  <span className="text-3xl font-black italic tracking-tighter">95%</span>
-                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Referral Rate</span>
+                  <span className="text-3xl font-black italic tracking-tighter">PRIME</span>
+                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Precision Focused</span>
                 </div>
                 <div className="w-px h-12 bg-zinc-200" />
                 <div className="flex flex-col">
-                  <span className="text-3xl font-black italic tracking-tighter">100%</span>
-                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Client Satisfaction</span>
+                  <span className="text-3xl font-black italic tracking-tighter">ELITE</span>
+                  <span className="text-[10px] text-zinc-400 uppercase font-black tracking-widest">Satisfaction Guaranteed</span>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, UserCog, User, ShoppingCart, Sidebar as SidebarIcon } from "lucide-react";
+import { Menu, X, UserCog, User, ShoppingCart, Sidebar as SidebarIcon, ArrowLeft } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import logo from "@/assets/logo-primary.png";
 import NotificationBell from "@/components/NotificationBell";
@@ -23,6 +23,7 @@ export const Navbar = () => {
   const { toggleSidebar } = useSidebar();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState(getCurrentUser());
   const cartCount = useCartStore((s) => s.count());
 
@@ -88,9 +89,16 @@ export const Navbar = () => {
           {/* Logo & Sidebar Toggle */}
           <div className="flex items-center gap-2">
             {user && (user.role === 'admin' || user.role === 'employee') && (
-              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
-                <SidebarIcon className="h-5 w-5" />
-              </Button>
+              <>
+                <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
+                  <SidebarIcon className="h-5 w-5" />
+                </Button>
+                {location.pathname !== '/' && (
+                  <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-2 text-zinc-400 hover:text-white" title="Go Back">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                )}
+              </>
             )}
             <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
               <img src={logo} alt="Prime Auto Detail" className="h-12 w-auto" />

@@ -133,8 +133,8 @@ export const getMenuGroups = (counts: {
         {
             title: "Help", icon: HelpCircle,
             items: [
-                { title: "Help Guide", url: "#help", role: "admin", key: "help", icon: HelpCircle, iconColor: "text-sky-500" },
-                { title: "Help Guide", url: "#help", role: "employee", key: "help", icon: HelpCircle, iconColor: "text-emerald-500" },
+                { title: "Admin Help Guide", url: "#help-admin", role: "admin", key: "help-admin", icon: HelpCircle, iconColor: "text-sky-500" },
+                { title: "Employee Help Guide", url: "#help-employee", role: "employee", key: "help-employee", icon: HelpCircle, iconColor: "text-emerald-500" },
             ]
         },
         {
