@@ -1454,7 +1454,7 @@ export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: b
             .from('learning_library_items')
             .upsert(payload)
             .select()
-            .single();
+            .maybeSingle();
 
         if (error) {
             console.error("Supabase Upsert Error:", error);

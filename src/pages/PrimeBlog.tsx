@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Footer } from "@/components/Footer";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -24,7 +24,8 @@ import { getCurrentUser } from "@/lib/auth";
 import {
     getLibraryItems, upsertLibraryItem, deleteLibraryItem, deleteLibraryItems,
     LibraryItem, LibraryComment, getComments, addComment, getAllCommentCounts,
-    renameLibraryCategory, deleteLibraryCategory, supabase, copyLibraryItem
+    renameLibraryCategory, deleteLibraryCategory, supabase, copyLibraryItem,
+    uploadLibraryFile
 } from '@/lib/supa-data';
 import { compressImage } from "@/lib/imageUtils";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ import { Switch } from "@/components/ui/switch";
 
 export default function PrimeBlog() {
     const { toast } = useToast();
-    const user = getCurrentUser();
+    const [user, setUser] = useState(getCurrentUser());
     const navigate = useNavigate();
     const isAdmin = user?.role === 'admin' || (user?.role as string) === 'owner';
     const isEmployee = user?.role === 'employee';
@@ -76,7 +77,18 @@ export default function PrimeBlog() {
             const counts = await getAllCommentCounts();
             setCommentCounts(counts);
         }, 30000);
-        return () => clearInterval(interval);
+
+        const updateAuth = () => {
+            setUser(getCurrentUser());
+        };
+        window.addEventListener('auth-changed', updateAuth);
+        window.addEventListener('storage', updateAuth);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('auth-changed', updateAuth);
+            window.removeEventListener('storage', updateAuth);
+        };
     }, []);
 
     const loadItems = async () => {
@@ -176,24 +188,11 @@ export default function PrimeBlog() {
         }
 
         try {
-            const compressed = await compressImage(file);
-            setUploadStatus({ step: 'uploading', message: 'Securing to Prime Cloud...' });
+            const { url, error } = await uploadLibraryFile(file);
+            if (error) throw new Error(error);
+            if (!url) throw new Error("No URL returned from upload");
 
-            const ext = file.name.split('.').pop();
-            const fileName = `blog_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${ext}`;
-            const filePath = `blog/${fileName}`;
-
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('blog-assets') // Standardizing to public blog bucket
-                .upload(filePath, compressed);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('blog-assets')
-                .getPublicUrl(filePath);
-
-            setFormData(prev => ({ ...prev, resource_url: publicUrl, thumbnail_url: publicUrl }));
+            setFormData(prev => ({ ...prev, resource_url: url, thumbnail_url: url }));
             setUploadStatus({ step: 'done', message: 'Upload Complete' });
             setIsUploading(false);
             toast({ title: "Photo Ready", description: "Image processed successfully." });
@@ -236,10 +235,12 @@ export default function PrimeBlog() {
                 setIsEditModalOpen(false);
                 loadItems();
             } else {
-                toast({ title: 'Save Failed', description: result.error?.message || 'Database error.', variant: 'destructive' });
+                console.error('Upsert failed:', result.error);
+                toast({ title: 'Save Failed', description: result.error?.message || 'Database error. Verify your table schema exists.', variant: 'destructive' });
             }
         } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+            console.error('Save exception:', error);
+            toast({ title: 'Critical Error', description: error.message || "An unexpected error occurred during save.", variant: 'destructive' });
         } finally {
             setIsUploading(false);
         }
@@ -732,145 +733,150 @@ export default function PrimeBlog() {
 
                 {/* Add/Edit Post Designer Modal */}
                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                    <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-[700px] rounded-[40px] p-0 overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.6)]">
+                    <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-[700px] rounded-[40px] p-0 overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.6)] flex flex-col max-h-[90vh]">
                         <DialogHeader className="p-8 pb-0 flex flex-row items-center justify-between">
                             <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
                                 {editingItem ? 'REFINE POST' : 'COMPOSE STORY'}
                             </DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Use this form to {editingItem ? 'edit' : 'create'} a blog post with title, category, and visual assets.
+                            </DialogDescription>
                             <Badge variant="outline" className="text-indigo-400 border-indigo-500/30">Prime Editor v2</Badge>
                         </DialogHeader>
 
-                        <form onSubmit={handleSave} className="p-8 space-y-8 pt-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">Title & Theme</Label>
-                                        <Input
-                                            value={formData.title || ''}
-                                            onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                            className="bg-zinc-900 border-zinc-800 rounded-2xl h-14 font-black"
-                                            placeholder="Captivating Post Headline"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">Classification</Label>
-                                        <Select
-                                            value={showNewCategoryInput ? "ADD_NEW" : formData.category}
-                                            onValueChange={(val) => {
-                                                if (val === "ADD_NEW") {
-                                                    setShowNewCategoryInput(true);
-                                                    setFormData({ ...formData, category: "" });
-                                                } else {
-                                                    setShowNewCategoryInput(false);
-                                                    setFormData({ ...formData, category: val });
-                                                }
-                                            }}
-                                        >
-                                            <SelectTrigger className="bg-zinc-900 border-zinc-800 rounded-2xl h-14 font-bold">
-                                                <SelectValue placeholder="Select Category" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                <SelectItem value="General">General Updates</SelectItem>
-                                                <SelectItem value="Before & After">Elite Transformations</SelectItem>
-                                                <SelectItem value="Tips & Tricks">Pro Tips</SelectItem>
-                                                <SelectItem value="Setup">Equipment Setup</SelectItem>
-                                                {customCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                <Separator className="my-2 bg-zinc-800" />
-                                                <SelectItem value="ADD_NEW" className="text-indigo-400 font-black">➕ CREATE NEW CATEGORY</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {showNewCategoryInput && (
-                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                            <Label className="uppercase text-[10px] font-black tracking-widest text-indigo-400 ml-1">New Category Name</Label>
+                        <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8 pt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div className="space-y-2">
+                                            <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">Title & Theme</Label>
                                             <Input
-                                                value={newCategory}
-                                                onChange={e => {
-                                                    setNewCategory(e.target.value);
-                                                    setFormData({ ...formData, category: e.target.value });
-                                                }}
-                                                className="bg-zinc-900 border-indigo-500/50 rounded-2xl h-14 font-black"
-                                                placeholder="e.g. Inside the Shop"
-                                                autoFocus
+                                                value={formData.title || ''}
+                                                onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                                className="bg-zinc-900 border-zinc-800 rounded-2xl h-14 font-black"
+                                                placeholder="Captivating Post Headline"
                                             />
                                         </div>
-                                    )}
 
-                                    <div className="space-y-2">
-                                        <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">Content / Story</Label>
-                                        <Textarea
-                                            value={formData.description || ''}
-                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                            className="bg-zinc-900 border-zinc-800 border rounded-2xl min-h-[160px] font-medium leading-relaxed p-4"
-                                            placeholder="What's the story behind this work?"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1 block">Visual Assets</Label>
-                                    <div
-                                        className={`relative aspect-square rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden ${formData.resource_url ? 'border-indigo-500/50 hover:border-indigo-500' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'}`}
-                                    >
-                                        {formData.resource_url ? (
-                                            <>
-                                                <img src={formData.resource_url} className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                    <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="rounded-2xl">REPLACE</Button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="text-center p-8 space-y-4" onClick={() => fileInputRef.current?.click()}>
-                                                <ImageIcon className="w-12 h-12 text-zinc-700 mx-auto" />
-                                                <div className="space-y-1">
-                                                    <p className="font-black text-sm uppercase tracking-tighter">DRAG OR TAP TO UPLOAD</p>
-                                                    <p className="text-[10px] text-zinc-600 font-bold">OPTIMIZED FOR 4:5 ASIA-X RESOLUTION</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <input ref={fileInputRef} type="file" hidden onChange={handleFileUpload} accept="image/*" />
-                                        {isUploading && (
-                                            <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-30 flex flex-col items-center justify-center space-y-4 text-center p-6">
-                                                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                                                <p className="text-xs font-black uppercase tracking-widest text-indigo-400">{uploadStatus.message}</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {isAdmin && (
-                                        <div className="p-6 rounded-[28px] bg-indigo-500/5 border border-indigo-500/20 space-y-6">
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-1">
-                                                    <p className="text-xs font-black text-indigo-400 uppercase tracking-tighter flex items-center gap-2">
-                                                        <ShieldCheck className="w-3.5 h-3.5" /> VERIFICATION STATUS
-                                                    </p>
-                                                    <p className="text-[10px] text-zinc-500 font-medium">Verify this post is accurate and pro-quality.</p>
-                                                </div>
-                                                <Switch
-                                                    checked={formData.is_verified}
-                                                    onCheckedChange={v => setFormData({ ...formData, is_verified: v })}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-1">
-                                                    <p className="text-xs font-black text-indigo-400 uppercase tracking-tighter flex items-center gap-2">
-                                                        <Globe className="w-3.5 h-3.5" /> SEND TO PUBLIC WEBSITE
-                                                    </p>
-                                                    <p className="text-[10px] text-zinc-500 font-medium">Allow guests to view this on the home portal.</p>
-                                                </div>
-                                                <Switch
-                                                    checked={formData.is_published}
-                                                    onCheckedChange={v => setFormData({ ...formData, is_published: v })}
-                                                />
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">Classification</Label>
+                                            <Select
+                                                value={showNewCategoryInput ? "ADD_NEW" : formData.category}
+                                                onValueChange={(val) => {
+                                                    if (val === "ADD_NEW") {
+                                                        setShowNewCategoryInput(true);
+                                                        setFormData({ ...formData, category: "" });
+                                                    } else {
+                                                        setShowNewCategoryInput(false);
+                                                        setFormData({ ...formData, category: val });
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className="bg-zinc-900 border-zinc-800 rounded-2xl h-14 font-bold">
+                                                    <SelectValue placeholder="Select Category" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                    <SelectItem value="General">General Updates</SelectItem>
+                                                    <SelectItem value="Before & After">Elite Transformations</SelectItem>
+                                                    <SelectItem value="Tips & Tricks">Pro Tips</SelectItem>
+                                                    <SelectItem value="Setup">Equipment Setup</SelectItem>
+                                                    {customCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                    <Separator className="my-2 bg-zinc-800" />
+                                                    <SelectItem value="ADD_NEW" className="text-indigo-400 font-black">➕ CREATE NEW CATEGORY</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
-                                    )}
+
+                                        {showNewCategoryInput && (
+                                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                                <Label className="uppercase text-[10px] font-black tracking-widest text-indigo-400 ml-1">New Category Name</Label>
+                                                <Input
+                                                    value={newCategory}
+                                                    onChange={e => {
+                                                        setNewCategory(e.target.value);
+                                                        setFormData({ ...formData, category: e.target.value });
+                                                    }}
+                                                    className="bg-zinc-900 border-indigo-500/50 rounded-2xl h-14 font-black"
+                                                    placeholder="e.g. Inside the Shop"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">Content / Story</Label>
+                                            <Textarea
+                                                value={formData.description || ''}
+                                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                                className="bg-zinc-900 border-zinc-800 border rounded-2xl min-h-[160px] font-medium leading-relaxed p-4"
+                                                placeholder="What's the story behind this work?"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1 block">Visual Assets</Label>
+                                        <div
+                                            className={`relative aspect-square rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden ${formData.resource_url ? 'border-indigo-500/50 hover:border-indigo-500' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'}`}
+                                        >
+                                            {formData.resource_url ? (
+                                                <>
+                                                    <img src={formData.resource_url} className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                        <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="rounded-2xl">REPLACE</Button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-center p-8 space-y-4" onClick={() => fileInputRef.current?.click()}>
+                                                    <ImageIcon className="w-12 h-12 text-zinc-700 mx-auto" />
+                                                    <div className="space-y-1">
+                                                        <p className="font-black text-sm uppercase tracking-tighter">DRAG OR TAP TO UPLOAD</p>
+                                                        <p className="text-[10px] text-zinc-600 font-bold">OPTIMIZED FOR 4:5 ASIA-X RESOLUTION</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <input ref={fileInputRef} type="file" hidden onChange={handleFileUpload} accept="image/*" />
+                                            {isUploading && (
+                                                <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-30 flex flex-col items-center justify-center space-y-4 text-center p-6">
+                                                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                                                    <p className="text-xs font-black uppercase tracking-widest text-indigo-400">{uploadStatus.message}</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {isAdmin && (
+                                            <div className="p-6 rounded-[28px] bg-indigo-500/5 border border-indigo-500/20 space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-black text-indigo-400 uppercase tracking-tighter flex items-center gap-2">
+                                                            <ShieldCheck className="w-3.5 h-3.5" /> VERIFICATION STATUS
+                                                        </p>
+                                                        <p className="text-[10px] text-zinc-500 font-medium">Verify this post is accurate and pro-quality.</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={formData.is_verified}
+                                                        onCheckedChange={v => setFormData({ ...formData, is_verified: v })}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-black text-indigo-400 uppercase tracking-tighter flex items-center gap-2">
+                                                            <Globe className="w-3.5 h-3.5" /> SEND TO PUBLIC WEBSITE
+                                                        </p>
+                                                        <p className="text-[10px] text-zinc-500 font-medium">Allow guests to view this on the home portal.</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={formData.is_published}
+                                                        onCheckedChange={v => setFormData({ ...formData, is_published: v })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <DialogFooter className="flex justify-between items-center sm:justify-between border-t border-zinc-800/50 pt-8 mt-4 gap-4">
+                            <DialogFooter className="p-8 border-t border-zinc-800/50 bg-zinc-900/20 shrink-0 gap-4">
                                 {editingItem && (
                                     <Button
                                         type="button"
@@ -892,9 +898,10 @@ export default function PrimeBlog() {
                                     </Button>
                                     <Button
                                         disabled={isUploading}
+                                        type="submit"
                                         className="bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl px-12 h-14 shadow-xl shadow-indigo-600/20 transition-all flex-1 sm:flex-none"
                                     >
-                                        {isUploading ? <Loader2 className="animate-spin" /> : (editingItem ? 'UPDATE STORY' : 'PUBLISH STORY')}
+                                        {isUploading ? <Loader2 className="animate-spin" /> : (editingItem ? 'UPDATE STORY' : 'SAVE & PUBLISH STORY')}
                                     </Button>
                                 </div>
                             </DialogFooter>
@@ -912,6 +919,9 @@ export default function PrimeBlog() {
                                         <Settings className="w-8 h-8 text-indigo-400 group-hover:rotate-90 transition-transform duration-500" />
                                         Blog Management Suite
                                     </DialogTitle>
+                                    <DialogDescription className="sr-only">
+                                        Advanced control panel for managing blog posts, categories, and batch operations.
+                                    </DialogDescription>
                                     <p className="text-zinc-500 text-xs font-black uppercase tracking-[0.3em]">Precision Control Panel v4.0</p>
                                 </div>
                                 <Button

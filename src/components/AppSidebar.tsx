@@ -166,7 +166,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     return localStorage.getItem('has_unread_chat') === 'true';
   }, [tick]);
 
-  const handleNavClick = (url?: string) => {
+  const handleNavClick = () => {
     setOpenMobile(false);
   };
 
@@ -476,7 +476,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                             }
 
                             return (
-                              <SidebarMenuSubItem key={item.title}>
+                              <SidebarMenuSubItem key={`${item.title}-${item.url}`}>
                                 <SidebarMenuSubButton asChild isActive={isActive} className="ring-0 outline-none">
                                   {item.url.startsWith('#') ? (
                                     <button
