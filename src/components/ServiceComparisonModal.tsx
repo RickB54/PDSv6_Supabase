@@ -5,6 +5,7 @@ import { Check, Download, Printer, Info, X } from "lucide-react";
 import { servicePackages, getServiceInstructions, ServicePackage } from "@/lib/services";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { AddOnsModal } from "./AddOnsModal";
 
 interface ServiceComparisonModalProps {
     open: boolean;
@@ -15,6 +16,7 @@ export const ServiceComparisonModal: React.FC<ServiceComparisonModalProps> = ({
     open,
     onOpenChange,
 }) => {
+    const [addOnsOpen, setAddOnsOpen] = React.useState(false);
     // Group packages
     const groups = [
         {
@@ -132,6 +134,9 @@ export const ServiceComparisonModal: React.FC<ServiceComparisonModalProps> = ({
                             </p>
                         </div>
                         <div className="flex gap-3 no-print">
+                            <Button variant="outline" onClick={() => setAddOnsOpen(true)} className="font-bold uppercase tracking-widest text-xs border-blue-200 text-blue-700 hover:bg-blue-50">
+                                <Info className="w-4 h-4 mr-2" /> Show Add-ons
+                            </Button>
                             <Button variant="outline" onClick={handlePrint} className="font-bold uppercase tracking-widest text-xs border-zinc-300">
                                 <Printer className="w-4 h-4 mr-2" /> Print List
                             </Button>
@@ -223,6 +228,7 @@ export const ServiceComparisonModal: React.FC<ServiceComparisonModalProps> = ({
                     }
                 `}</style>
             </DialogContent>
+            <AddOnsModal open={addOnsOpen} onOpenChange={setAddOnsOpen} />
         </Dialog>
     );
 };

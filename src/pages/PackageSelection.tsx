@@ -29,6 +29,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 
 import { servicePackages, addOns as sharedAddOns, getServiceInstructions } from "@/lib/services";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
+import { AddOnsModal } from "@/components/AddOnsModal";
 import { Navbar } from "@/components/Navbar";
 
 // --- Types ---
@@ -514,6 +515,7 @@ export default function PackageSelection() {
     );
 
     const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
+    const [addOnsOpen, setAddOnsOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -600,6 +602,9 @@ export default function PackageSelection() {
                                         />
                                         <Label htmlFor="diff-mode" className="text-sm text-zinc-300 cursor-pointer">Show Differences Only</Label>
                                     </div>
+                                    <Button onClick={() => setAddOnsOpen(true)} variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                                        <Info className="mr-2 h-4 w-4" /> Show Add-ons
+                                    </Button>
                                     <Button onClick={handleGeneratePDF} className="bg-white text-black hover:bg-zinc-200">
                                         <Download className="mr-2 h-4 w-4" /> Export PDF
                                     </Button>
@@ -731,6 +736,7 @@ export default function PackageSelection() {
                 </DialogContent>
             </Dialog>
             <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
+            <AddOnsModal open={addOnsOpen} onOpenChange={setAddOnsOpen} />
         </div >
     );
 }
