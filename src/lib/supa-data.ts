@@ -1270,6 +1270,7 @@ export interface LibraryItem {
     is_published?: boolean;
     is_verified?: boolean;
     sort_order?: number;
+    is_pinned?: boolean;
 }
 
 /**
@@ -1297,6 +1298,7 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
                 .replace(/\[meta:created_by=[^\]]+\]/g, '')
                 .replace(/\[meta:original_type=[^\]]+\]/g, '')
                 .replace(/\[meta:sort_order=[^\]]+\]/g, '')
+                .replace(/\[meta:is_pinned=[^\]]+\]/g, '')
                 .trim();
 
             return {
@@ -1304,20 +1306,33 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
                 description: cleanDesc,
                 created_by: createdByMatch ? createdByMatch[1] : undefined,
                 sort_order: sortOrderMatch ? Number(sortOrderMatch[1]) : undefined,
+                is_pinned: desc.includes('[meta:is_pinned=true]'),
                 // Restore type if it was mapped
                 type: originalTypeMatch ? originalTypeMatch[1] : item.type
             };
         });
 
-        // Sort by sort_order (ascending, lower numbers first) then created_at (descending)
+        // PRIORITY SORTING:
+        // 1. IS_PINNED (Pinned posts always first)
+        // 2. NO SORT_ORDER (New/Manual-less posts next, by date)
+        // 3. SORT_ORDER (Manually reordered posts last)
         const sortedData = parsedData.sort((a, b) => {
-            if (a.sort_order !== undefined && b.sort_order !== undefined) {
-                return a.sort_order - b.sort_order;
-            }
-            if (a.sort_order !== undefined) return -1;
-            if (b.sort_order !== undefined) return 1;
+            // Priority 1: Pinned status
+            if (a.is_pinned && !b.is_pinned) return -1;
+            if (!a.is_pinned && b.is_pinned) return 1;
 
-            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            // Priority 2: Handling sort_order (New posts first)
+            // If both don't have sort_order, sort by date
+            if (a.sort_order === undefined && b.sort_order === undefined) {
+                return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            }
+
+            // If one has sort_order and the other doesn't, the one WITHOUT sort_order goes first (user request)
+            if (a.sort_order === undefined) return -1;
+            if (b.sort_order === undefined) return 1;
+
+            // Priority 3: Both have sort_order, use it
+            return a.sort_order - b.sort_order;
         });
 
         return sortedData as LibraryItem[];
@@ -1456,6 +1471,12 @@ export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: b
         if (item.sort_order !== undefined) {
             descriptionToSave = descriptionToSave.replace(/\[meta:sort_order=([^\]]+)\]/g, '').trim();
             descriptionToSave += `\n\n[meta:sort_order=${item.sort_order}]`;
+        }
+
+        // Handle pinning
+        descriptionToSave = descriptionToSave.replace(/\[meta:is_pinned=[^\]]+\]/g, '').trim();
+        if (item.is_pinned) {
+            descriptionToSave += `\n\n[meta:is_pinned=true]`;
         }
 
         const payload: any = {

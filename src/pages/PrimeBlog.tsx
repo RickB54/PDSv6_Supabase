@@ -12,7 +12,7 @@ import {
     Play, Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Video,
     Newspaper, User, RotateCcw, Settings, X, ChevronLeft, MessageSquare,
     Send, CheckCircle2, Globe, EyeOff, ShieldCheck, Download, ExternalLink,
-    Lock, Share2, Filter, ArrowLeft, CalendarDays
+    Lock, Share2, Filter, ArrowLeft, CalendarDays, Pin
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from 'react-router-dom';
@@ -609,6 +609,7 @@ export default function PrimeBlog() {
                                             <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
                                                 {!item.is_verified && <Badge className="bg-red-500/20 text-red-500 border-red-500/30 backdrop-blur-md uppercase tracking-tighter text-[10px]"><EyeOff className="w-3 h-3 mr-1" /> UNVERIFIED</Badge>}
                                                 {!item.is_published && <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 backdrop-blur-md uppercase tracking-tighter text-[10px]"><Lock className="w-3 h-3 mr-1" /> DRAFT</Badge>}
+                                                {item.is_pinned && <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 backdrop-blur-md uppercase tracking-tighter text-[10px]"><Pin className="w-3 h-3 mr-1 fill-indigo-400" /> PINNED</Badge>}
                                             </div>
                                         )}
 
@@ -1017,6 +1018,19 @@ export default function PrimeBlog() {
                                                     <Switch
                                                         checked={formData.is_published}
                                                         onCheckedChange={v => setFormData({ ...formData, is_published: v })}
+                                                    />
+                                                </div>
+
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-black text-indigo-400 uppercase tracking-tighter flex items-center gap-2">
+                                                            <Pin className="w-3.5 h-3.5" /> PIN TO TOP
+                                                        </p>
+                                                        <p className="text-[10px] text-zinc-500 font-medium">Keep this story at the very peak of the blog feed.</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={formData.is_pinned}
+                                                        onCheckedChange={v => setFormData({ ...formData, is_pinned: v })}
                                                     />
                                                 </div>
 

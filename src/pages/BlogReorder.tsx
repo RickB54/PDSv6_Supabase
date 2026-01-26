@@ -22,7 +22,7 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar } from "lucide-react";
+import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function BlogReorder() {
@@ -48,8 +48,25 @@ export default function BlogReorder() {
         try {
             const data = await getLibraryItems();
             // Filter out Chemical Training items as they are in a different section
+            // Filter out Chemical Training items as they are in a different section
             const blogItems = data.filter(item => item.category !== 'Chemical Training');
-            setItems(blogItems);
+
+            // PRIORITY SORTING:
+            // 1. IS_PINNED
+            // 2. NO SORT_ORDER
+            // 3. SORT_ORDER
+            const sortedItems = [...blogItems].sort((a, b) => {
+                if (a.is_pinned && !b.is_pinned) return -1;
+                if (!a.is_pinned && b.is_pinned) return 1;
+                if (a.sort_order === undefined && b.sort_order === undefined) {
+                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                }
+                if (a.sort_order === undefined) return -1;
+                if (b.sort_order === undefined) return 1;
+                return a.sort_order - b.sort_order;
+            });
+
+            setItems(sortedItems);
         } catch (error) {
             console.error("Failed to load blog items:", error);
             toast({ title: "Error loading blog items", variant: "destructive" });
@@ -223,6 +240,7 @@ function SortableItem({ item }: { item: LibraryItem }) {
             <div className="flex-1 min-w-0 text-left">
                 <h4 className="font-black text-sm text-white truncate uppercase tracking-tighter">{item.title}</h4>
                 <div className="flex items-center gap-2 mt-1">
+                    {item.is_pinned && <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black border border-indigo-500/20 flex items-center gap-1"><Pin className="w-2.5 h-2.5 fill-indigo-400" /> PINNED</span>}
                     <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">{item.category}</span>
                     <span className="text-[10px] text-zinc-600 font-bold flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
