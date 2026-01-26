@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck, Loader2, Upload, CheckCircle2 } from "lucide-react";
+import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck, Loader2, Upload, CheckCircle2, Newspaper } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, renameLibraryCategory, deleteLibraryCategory, LibraryItem, supabase } from "@/lib/supa-data";
+import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, renameLibraryCategory, deleteLibraryCategory, LibraryItem, supabase, copyLibraryItem } from "@/lib/supa-data";
 import { SelectSeparator } from "@/components/ui/select";
 import { compressImage } from "@/lib/imageUtils";
 
@@ -21,7 +21,7 @@ export default function LearningLibrary() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const user = getCurrentUser();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || (user?.role as string) === 'owner';
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [items, setItems] = useState<LibraryItem[]>([]);
@@ -105,6 +105,53 @@ export default function LearningLibrary() {
             description: ''
         });
         setIsModalOpen(true);
+    };
+
+    const handleSendToBlog = async (item: LibraryItem) => {
+        if (!isAdmin) return;
+
+        try {
+            // Check for duplicates in the blog section (non 'Chemical Training' categories)
+            const { data: existing, error: checkError } = await supabase
+                .from('learning_library_items')
+                .select('id')
+                .eq('title', item.title)
+                .neq('category', 'Chemical Training');
+
+            if (checkError) throw checkError;
+
+            if (existing && existing.length > 0) {
+                toast({
+                    title: "Duplicate Found",
+                    description: "This story already exists on the Prime Blog.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            // Copy to blog (defaulting to 'General' category)
+            const res = await copyLibraryItem({
+                ...item,
+                is_published: true,
+                is_verified: true
+            }, 'General');
+
+            if (res.success) {
+                toast({
+                    title: "Sent to Blog",
+                    description: "Cloned to Public Blog successfully."
+                });
+            } else {
+                throw res.error;
+            }
+        } catch (err: any) {
+            console.error("Failed to send to blog:", err);
+            toast({
+                title: "Operation Failed",
+                description: err.message || "Cloud synchronization error.",
+                variant: "destructive"
+            });
+        }
     };
 
     const handleEdit = (item: LibraryItem) => {
@@ -419,6 +466,18 @@ export default function LearningLibrary() {
                                                         }}
                                                     >
                                                         <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="secondary"
+                                                        title="Send to Public Blog"
+                                                        className="h-8 w-8 bg-indigo-600/90 border border-indigo-400/50 hover:bg-indigo-500 text-white backdrop-blur transition-all"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleSendToBlog(item);
+                                                        }}
+                                                    >
+                                                        <Newspaper className="w-4 h-4" />
                                                     </Button>
                                                 </div>
                                             )}
