@@ -31,6 +31,8 @@ import { compressImage } from "@/lib/imageUtils";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import jsPDF from "jspdf";
+import { savePDFToArchive } from "@/lib/pdfArchive";
 
 export default function PrimeBlog() {
     const { toast } = useToast();
@@ -99,8 +101,17 @@ export default function PrimeBlog() {
             // Filter: Guests ONLY see Verified & Published. Auth users see everything.
             let blogItems = data.filter(item => item.category !== 'Chemical Training');
 
+            // Filter Logic:
+            // 1. Guests: Only see Verified & Published.
+            // 2. Customers: See (Verified & Published) OR (Their own posts).
+            // 3. Admin/Staff: See everything.
             if (!isAuth) {
                 blogItems = blogItems.filter(item => item.is_verified && item.is_published);
+            } else if (!isAdmin && !isEmployee) {
+                // It's a customer
+                blogItems = blogItems.filter(item =>
+                    (item.is_verified && item.is_published) || (item.created_by === user?.email)
+                );
             }
 
             setItems(blogItems);
@@ -231,7 +242,66 @@ export default function PrimeBlog() {
         try {
             const result = await upsertLibraryItem(itemToSave);
             if (result.success) {
-                toast({ title: 'Post Published', description: itemToSave.is_published ? 'Post is now live!' : 'Post saved for review.' });
+                // If not admin, trigger notification workflow
+                if (!isAdmin) {
+                    try {
+                        // 1. Generate PDF Report of the submission
+                        const doc = new jsPDF();
+                        doc.setFontSize(22);
+                        doc.setTextColor(63, 81, 181); // Indigo color
+                        doc.text("PRIME BLOG SUBMISSION", 105, 20, { align: "center" });
+
+                        doc.setFontSize(12);
+                        doc.setTextColor(40, 40, 40);
+                        doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 30, { align: "center" });
+
+                        doc.setDrawColor(200, 200, 200);
+                        doc.line(20, 35, 190, 35);
+
+                        doc.setFontSize(14);
+                        doc.text("AUTHOR DETAILS", 20, 45);
+                        doc.setFontSize(11);
+                        doc.text(`Email: ${user?.email || 'N/A'}`, 25, 52);
+                        doc.text(`Role: ${user?.role || 'Customer'}`, 25, 58);
+
+                        doc.setFontSize(14);
+                        doc.text("POST CONTENT", 20, 70);
+                        doc.setFontSize(11);
+                        doc.text(`Title: ${itemToSave.title}`, 25, 77);
+                        doc.text(`Category: ${itemToSave.category}`, 25, 83);
+                        doc.text(`Media Type: ${itemToSave.type}`, 25, 89);
+
+                        doc.setFontSize(14);
+                        doc.text("STORY / DESCRIPTION", 20, 100);
+                        doc.setFontSize(10);
+                        const lines = doc.splitTextToSize(itemToSave.description || 'No description provided.', 160);
+                        doc.text(lines, 25, 107);
+
+                        const pdfDataUrl = doc.output('dataurlstring');
+
+                        // 2. Save to PDF Archive (File Manager)
+                        savePDFToArchive("Admin Updates", user?.email || 'User', `blog_${itemToSave.id}`, pdfDataUrl, {
+                            fileName: `Blog_Submission_${itemToSave.title.replace(/\s/g, '_')}_${Date.now()}.pdf`
+                        });
+
+                        // 3. Prepare Gmail Notification
+                        const subject = `[ACTION REQUIRED] New Blog Submission: ${itemToSave.title}`;
+                        const body = `Hello Rick,\n\nA new blog story has been submitted for your approval.\n\n` +
+                            `AUTHOR: ${user?.email || 'Anonymous'}\n` +
+                            `TITLE: ${itemToSave.title}\n` +
+                            `CATEGORY: ${itemToSave.category}\n\n` +
+                            `STORY PREVIEW:\n${itemToSave.description}\n\n` +
+                            `VIEW & APPROVE HERE:\n${window.location.origin}/blog\n\n` +
+                            `A complete PDF record has also been archived in your File Manager under 'Admin Updates'.`;
+
+                        const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        window.open(gmailLink, "_blank");
+                    } catch (err) {
+                        console.error("Auto-notification failed:", err);
+                    }
+                }
+
+                toast({ title: 'Post Published', description: itemToSave.is_published ? 'Post is now live!' : 'Post submitted for review.' });
                 setIsEditModalOpen(false);
                 loadItems();
             } else {
@@ -407,23 +477,34 @@ export default function PrimeBlog() {
                                 </p>
                             </div>
 
-                            <div className="flex flex-wrap gap-3">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={loadItems}
-                                    className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded-2xl h-12 w-12"
-                                    disabled={isLoading}
-                                >
-                                    <RotateCcw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                                </Button>
-                                <Button
-                                    onClick={() => handleAddNew('image')}
-                                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-8 h-12 rounded-2xl shadow-xl shadow-indigo-500/10 transition-all hover:scale-105 active:scale-95 group"
-                                >
-                                    <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
-                                    SHARE YOUR WORK
-                                </Button>
+                            <div className="flex flex-col items-end gap-2">
+                                <div className="flex flex-wrap gap-3">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={loadItems}
+                                        className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded-2xl h-12 w-12"
+                                        disabled={isLoading}
+                                    >
+                                        <RotateCcw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleAddNew('image')}
+                                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-8 h-12 rounded-2xl shadow-xl shadow-indigo-500/10 transition-all hover:scale-105 active:scale-95 group"
+                                    >
+                                        <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
+                                        SHARE YOUR WORK
+                                    </Button>
+                                </div>
+                                {!isAuth ? (
+                                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] animate-pulse pr-2 flex items-center gap-2">
+                                        <Lock className="w-3 h-3" /> Sign in required to share
+                                    </p>
+                                ) : !isAdmin && (
+                                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.2em] pr-2 flex items-center gap-2">
+                                        <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Member submissions require review
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -561,6 +642,11 @@ export default function PrimeBlog() {
                                     </div>
                                     <h3 className="text-3xl font-black text-white">JOURNEY PENDING</h3>
                                     <p className="text-zinc-500 max-w-sm mx-auto font-medium">No verified posts match this criteria yet. Check back soon for new detailing transformations!</p>
+                                    {!isAuth && (
+                                        <Button asChild variant="outline" className="rounded-2xl border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 h-12 px-8 mt-4">
+                                            <Link to="/login">SIGN IN TO SHARE YOUR STORY</Link>
+                                        </Button>
+                                    )}
                                 </div>
                             )}
 
@@ -901,7 +987,13 @@ export default function PrimeBlog() {
                                         type="submit"
                                         className="bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl px-12 h-14 shadow-xl shadow-indigo-600/20 transition-all flex-1 sm:flex-none"
                                     >
-                                        {isUploading ? <Loader2 className="animate-spin" /> : (editingItem ? 'UPDATE STORY' : 'SAVE & PUBLISH STORY')}
+                                        {isUploading ? (
+                                            <Loader2 className="animate-spin" />
+                                        ) : (
+                                            isAdmin ?
+                                                (editingItem ? 'UPDATE STORY' : 'SAVE & PUBLISH STORY') :
+                                                'SUBMIT FOR REVIEW'
+                                        )}
                                     </Button>
                                 </div>
                             </DialogFooter>
