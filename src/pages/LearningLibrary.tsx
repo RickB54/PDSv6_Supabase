@@ -16,12 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, renameLibraryCategory, deleteLibraryCategory, LibraryItem, supabase, copyLibraryItem } from "@/lib/supa-data";
 import { SelectSeparator } from "@/components/ui/select";
 import { compressImage } from "@/lib/imageUtils";
+import jsPDF from "jspdf";
+import { savePDFToArchive } from "@/lib/pdfArchive";
 
 export default function LearningLibrary() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const user = getCurrentUser();
     const isAdmin = user?.role === 'admin' || (user?.role as string) === 'owner';
+    const isActualAdmin = user?.role === 'admin';
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [items, setItems] = useState<LibraryItem[]>([]);
@@ -132,14 +135,70 @@ export default function LearningLibrary() {
             // Copy to blog (defaulting to 'General' category)
             const res = await copyLibraryItem({
                 ...item,
-                is_published: true,
-                is_verified: true
+                is_published: isActualAdmin,
+                is_verified: isActualAdmin
             }, 'General');
 
             if (res.success) {
+                // If not ACTUAL admin, trigger notification workflow
+                if (!isActualAdmin) {
+                    try {
+                        const doc = new jsPDF();
+                        doc.setFontSize(22);
+                        doc.setTextColor(63, 81, 181);
+                        doc.text("PRIME BLOG SUBMISSION (CLONED)", 105, 20, { align: "center" });
+
+                        doc.setFontSize(12);
+                        doc.setTextColor(40, 40, 40);
+                        doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 30, { align: "center" });
+
+                        doc.setDrawColor(200, 200, 200);
+                        doc.line(20, 35, 190, 35);
+
+                        doc.setFontSize(14);
+                        doc.text("AUTHOR DETAILS", 20, 45);
+                        doc.setFontSize(11);
+                        doc.text(`Email: ${user?.email || 'N/A'}`, 25, 52);
+                        doc.text(`Role: ${user?.role || 'Customer'}`, 25, 58);
+
+                        doc.setFontSize(14);
+                        doc.text("POST CONTENT (TRANSFERRED FROM LIBRARY)", 20, 70);
+                        doc.setFontSize(11);
+                        doc.text(`Title: ${item.title}`, 25, 77);
+                        doc.text(`Original Category: ${item.category}`, 25, 83);
+                        doc.text(`Media Type: ${item.type}`, 25, 89);
+
+                        doc.setFontSize(14);
+                        doc.text("STORY / DESCRIPTION", 20, 100);
+                        doc.setFontSize(10);
+                        const lines = doc.splitTextToSize(item.description || 'No description provided.', 160);
+                        doc.text(lines, 25, 107);
+
+                        const pdfDataUrl = doc.output('dataurlstring');
+
+                        savePDFToArchive("Admin Updates", user?.email || 'User', `blog_clone_${res.data?.id}`, pdfDataUrl, {
+                            fileName: `Blog_Clone_${item.title.replace(/\s/g, '_')}_${Date.now()}.pdf`
+                        });
+
+                        const subject = `[ACTION REQUIRED] New Blog Submission (Cloned): ${item.title}`;
+                        const body = `Hello Rick,\n\nA story has been cloned from the Learning Library to the Blog for your approval.\n\n` +
+                            `AUTHOR: ${user?.email || 'Anonymous'}\n` +
+                            `TITLE: ${item.title}\n` +
+                            `ORIGINAL CATEGORY: ${item.category}\n\n` +
+                            `STORY PREVIEW:\n${item.description}\n\n` +
+                            `VIEW & APPROVE HERE:\n${window.location.origin}/blog\n\n` +
+                            `A PDF record is archived in File Manager under 'Admin Updates'.`;
+
+                        const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        window.open(gmailLink, "_blank");
+                    } catch (err) {
+                        console.error("Auto-notification failed:", err);
+                    }
+                }
+
                 toast({
                     title: "Sent to Blog",
-                    description: "Cloned to Public Blog successfully."
+                    description: isActualAdmin ? "Cloned to Public Blog successfully." : "Post submitted for admin review."
                 });
             } else {
                 throw res.error;

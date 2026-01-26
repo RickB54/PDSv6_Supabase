@@ -33,12 +33,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import logo from "@/assets/logo-primary.png";
 
 export default function PrimeBlog() {
     const { toast } = useToast();
     const [user, setUser] = useState(getCurrentUser());
     const navigate = useNavigate();
     const isAdmin = user?.role === 'admin' || (user?.role as string) === 'owner';
+    const isActualAdmin = user?.role === 'admin';
     const isEmployee = user?.role === 'employee';
     const isAuth = !!user;
 
@@ -153,8 +155,8 @@ export default function PrimeBlog() {
             title: '',
             description: '',
             resource_url: '',
-            is_published: false, // User posts aren't published by default
-            is_verified: false   // Needs admin verification
+            is_published: isActualAdmin, // Admin posts are published by default
+            is_verified: isActualAdmin   // Admin posts are verified by default
         });
         setIsEditModalOpen(true);
     };
@@ -218,9 +220,16 @@ export default function PrimeBlog() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.title || !formData.resource_url) {
-            toast({ title: "Incomplete Post", description: "Please add a title and media.", variant: "destructive" });
+        if (!formData.title) {
+            toast({ title: "Title Required", description: "Please add a story title.", variant: "destructive" });
             return;
+        }
+
+        let finalResourceUrl = formData.resource_url;
+        if (!finalResourceUrl) {
+            const proceed = window.confirm("Are you sure you want to post without a picture? We'll use the Prime Auto Detail logo as a placeholder.");
+            if (!proceed) return;
+            finalResourceUrl = logo;
         }
 
         setIsUploading(true);
@@ -230,10 +239,10 @@ export default function PrimeBlog() {
             created_by: (!formData.created_by && user?.email) ? user.email : formData.created_by,
             title: formData.title || '',
             description: formData.description || '',
-            type: formData.type as any,
+            type: formData.type || 'image',
             category: formData.category || 'General',
-            resource_url: formData.resource_url || '',
-            thumbnail_url: formData.thumbnail_url || formData.resource_url || '',
+            resource_url: finalResourceUrl,
+            thumbnail_url: formData.thumbnail_url || finalResourceUrl,
             is_published: formData.is_published ?? false,
             is_verified: formData.is_verified ?? false,
             created_at: formData.created_at || new Date().toISOString()
@@ -242,8 +251,8 @@ export default function PrimeBlog() {
         try {
             const result = await upsertLibraryItem(itemToSave);
             if (result.success) {
-                // If not admin, trigger notification workflow
-                if (!isAdmin) {
+                // If not ACTUAL admin, trigger notification workflow
+                if (!isActualAdmin) {
                     try {
                         // 1. Generate PDF Report of the submission
                         const doc = new jsPDF();
@@ -342,7 +351,9 @@ export default function PrimeBlog() {
 
     const displayedItems = activeCategory === 'All'
         ? items
-        : items.filter(i => i.category === activeCategory);
+        : activeCategory === 'NEEDS REVIEW'
+            ? items.filter(i => !i.is_verified)
+            : items.filter(i => i.category === activeCategory);
 
     const filteredMgmtItems = items.filter(item =>
         item.title.toLowerCase().includes(mgmtSearch.toLowerCase()) ||
@@ -435,7 +446,12 @@ export default function PrimeBlog() {
         setIsProcessing(true);
         const targetCategory = target === 'library' ? 'Chemical Training' : 'General';
         try {
-            const res = await copyLibraryItem(item, targetCategory);
+            // Force published/verified ONLY if the person doing the copying IS the admin
+            const res = await copyLibraryItem({
+                ...item,
+                is_published: target === 'blog' ? isActualAdmin : item.is_published,
+                is_verified: target === 'blog' ? isActualAdmin : item.is_verified
+            }, targetCategory);
             if (res.success) {
                 toast({
                     title: "Content Cloned",
@@ -454,7 +470,30 @@ export default function PrimeBlog() {
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
             <Navbar />
+
             <main className="flex-1">
+                {/* Admin Needs Review Banner */}
+                {isActualAdmin && items.some(i => !i.is_verified) && (
+                    <div className="bg-red-600/10 border-b border-red-500/20 py-3 animate-in slide-in-from-top duration-500">
+                        <div className="container mx-auto px-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <ShieldCheck className="w-5 h-5 text-red-500 animate-pulse" />
+                                <p className="text-xs font-black uppercase tracking-widest text-red-400">
+                                    Attention: {items.filter(i => !i.is_verified).length} blog posts are waiting for your verification.
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setActiveCategory('NEEDS REVIEW')}
+                                className="text-[10px] font-black uppercase tracking-tighter hover:bg-red-500 hover:text-white rounded-xl h-8 px-4"
+                            >
+                                REVIEW NOW
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Glossy Header */}
                 <div className="relative overflow-hidden bg-zinc-950 pt-24 pb-16 border-b border-zinc-800/50">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-transparent to-purple-950/20" />
@@ -516,6 +555,15 @@ export default function PrimeBlog() {
                         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full md:w-auto">
                             <TabsList className="bg-transparent h-14 p-1 gap-1">
                                 <TabsTrigger value="All" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">ALL POSTS</TabsTrigger>
+                                {isActualAdmin && items.some(i => !i.is_verified) && (
+                                    <TabsTrigger value="NEEDS REVIEW" className="rounded-2xl px-6 data-[state=active]:bg-red-600 data-[state=active]:text-white transition-all text-red-400 font-bold flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4" />
+                                        NEEDS REVIEW
+                                        <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 h-4 ml-1">
+                                            {items.filter(i => !i.is_verified).length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                )}
                                 <TabsTrigger value="General" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">UPDATES</TabsTrigger>
                                 {customCategories.map(cat => (
                                     <TabsTrigger key={cat} value={cat} className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase">{cat}</TabsTrigger>
@@ -990,7 +1038,7 @@ export default function PrimeBlog() {
                                         {isUploading ? (
                                             <Loader2 className="animate-spin" />
                                         ) : (
-                                            isAdmin ?
+                                            isActualAdmin ?
                                                 (editingItem ? 'UPDATE STORY' : 'SAVE & PUBLISH STORY') :
                                                 'SUBMIT FOR REVIEW'
                                         )}
