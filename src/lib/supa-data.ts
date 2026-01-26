@@ -1269,6 +1269,7 @@ export interface LibraryItem {
     created_by?: string; // Email of the user who created it
     is_published?: boolean;
     is_verified?: boolean;
+    sort_order?: number;
 }
 
 /**
@@ -1289,22 +1290,37 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
             const createdByMatch = desc.match(/\[meta:created_by=([^\]]+)\]/);
             const originalTypeMatch = desc.match(/\[meta:original_type=([^\]]+)\]/);
 
+            const sortOrderMatch = desc.match(/\[meta:sort_order=([^\]]+)\]/);
+
             // Clean description for display
             const cleanDesc = desc
                 .replace(/\[meta:created_by=[^\]]+\]/g, '')
                 .replace(/\[meta:original_type=[^\]]+\]/g, '')
+                .replace(/\[meta:sort_order=[^\]]+\]/g, '')
                 .trim();
 
             return {
                 ...item,
                 description: cleanDesc,
                 created_by: createdByMatch ? createdByMatch[1] : undefined,
+                sort_order: sortOrderMatch ? Number(sortOrderMatch[1]) : undefined,
                 // Restore type if it was mapped
                 type: originalTypeMatch ? originalTypeMatch[1] : item.type
             };
         });
 
-        return parsedData as LibraryItem[];
+        // Sort by sort_order (ascending, lower numbers first) then created_at (descending)
+        const sortedData = parsedData.sort((a, b) => {
+            if (a.sort_order !== undefined && b.sort_order !== undefined) {
+                return a.sort_order - b.sort_order;
+            }
+            if (a.sort_order !== undefined) return -1;
+            if (b.sort_order !== undefined) return 1;
+
+            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
+
+        return sortedData as LibraryItem[];
     } catch (err) {
         console.error('Error fetching library items:', err);
         return [];
@@ -1436,6 +1452,12 @@ export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: b
             descriptionToSave += `\n\n[meta:original_type=image]`;
         }
 
+        // Handle manual sort order
+        if (item.sort_order !== undefined) {
+            descriptionToSave = descriptionToSave.replace(/\[meta:sort_order=([^\]]+)\]/g, '').trim();
+            descriptionToSave += `\n\n[meta:sort_order=${item.sort_order}]`;
+        }
+
         const payload: any = {
             id: item.id || crypto.randomUUID(),
             title: item.title,
@@ -1449,6 +1471,11 @@ export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: b
             is_verified: item.is_verified ?? false,
             updated_at: new Date().toISOString()
         };
+
+        // Allow overriding created_at for manual publish dates
+        if (item.created_at) {
+            payload.created_at = item.created_at;
+        }
 
         const { data, error } = await supabase
             .from('learning_library_items')

@@ -39,7 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Beaker, CalendarDays, UserPlus, Plus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe, Video } from "lucide-react";
+import { AlertTriangle, Beaker, CalendarDays, UserPlus, Plus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe, Video, ListOrdered } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -906,6 +906,7 @@ export default function AdminDashboard() {
                   <RedBox accent="zinc" title="Todo" href="/tasks" Icon={CheckSquare} badgeCount={badgeByType('todo_overdue')} />
                 )}
                 <RedBox accent="indigo" title="Prime Blog" href="/f150-setup" Icon={Newspaper} />
+                <RedBox accent="indigo" title="Blog Layout Architect" href="/blog-reorder" Icon={ListOrdered} />
                 <Link to="/team-chat" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
                   <Users className="w-3.5 h-3.5 text-blue-600" />
                   <span>Team Chat</span>

@@ -77,6 +77,7 @@ import UserSettings from "./pages/UserSettings";
 import SectionLanding from "./pages/SectionLanding";
 import LearningLibrary from "./pages/LearningLibrary";
 import PrimeBlog from "./pages/PrimeBlog";
+import BlogReorder from "./pages/BlogReorder";
 import ChemicalsLibrary from "./pages/ChemicalsLibrary";
 import AdminChemicals from "@/pages/AdminChemicals";
 import VehicleGallery from "./pages/VehicleGallery";
@@ -271,6 +272,7 @@ const App = () => {
                       <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
                       <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
                       <Route path="/blog" element={<PrimeBlog />} />
+                      <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><BlogReorder /></ProtectedRoute>} />
                       <Route path="/f150-setup" element={<PrimeBlog />} />
 
                       {/* Customer-Facing (when logged in) */}

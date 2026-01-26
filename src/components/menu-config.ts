@@ -22,7 +22,8 @@ import {
     UserCircle,
     Book,
     Phone,
-    HelpCircle
+    HelpCircle,
+    ListOrdered
 } from "lucide-react";
 
 export type MenuItem = {
@@ -128,6 +129,7 @@ export const getMenuGroups = (counts: {
             title: "Company Blog", icon: Newspaper,
             items: [
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper },
+                { title: "Blog Layout Architect", url: "/blog-reorder", role: "admin", key: "blog-reorder", icon: ListOrdered },
             ]
         },
         {

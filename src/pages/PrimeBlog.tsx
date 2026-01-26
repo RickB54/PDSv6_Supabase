@@ -12,7 +12,7 @@ import {
     Play, Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Video,
     Newspaper, User, RotateCcw, Settings, X, ChevronLeft, MessageSquare,
     Send, CheckCircle2, Globe, EyeOff, ShieldCheck, Download, ExternalLink,
-    Lock, Share2, Filter, ArrowLeft
+    Lock, Share2, Filter, ArrowLeft, CalendarDays
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from 'react-router-dom';
@@ -156,7 +156,8 @@ export default function PrimeBlog() {
             description: '',
             resource_url: '',
             is_published: isActualAdmin, // Admin posts are published by default
-            is_verified: isActualAdmin   // Admin posts are verified by default
+            is_verified: isActualAdmin,   // Admin posts are verified by default
+            created_at: new Date().toISOString()
         });
         setIsEditModalOpen(true);
     };
@@ -1003,6 +1004,28 @@ export default function PrimeBlog() {
                                                         checked={formData.is_published}
                                                         onCheckedChange={v => setFormData({ ...formData, is_published: v })}
                                                     />
+                                                </div>
+
+                                                <div className="space-y-4 pt-4 border-t border-indigo-500/10">
+                                                    <div className="flex flex-col gap-2">
+                                                        <Label className="uppercase text-[10px] font-black tracking-widest text-indigo-400 ml-1 flex items-center gap-2">
+                                                            <CalendarDays className="w-3.5 h-3.5" /> PUBLISH DATE & TIME
+                                                        </Label>
+                                                        <Input
+                                                            type="datetime-local"
+                                                            value={formData.created_at ? new Date(new Date(formData.created_at).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                                                            onChange={e => {
+                                                                const date = new Date(e.target.value);
+                                                                if (!isNaN(date.getTime())) {
+                                                                    setFormData({ ...formData, created_at: date.toISOString() });
+                                                                }
+                                                            }}
+                                                            className="bg-zinc-900 border-indigo-500/20 rounded-xl h-12 font-black text-indigo-300"
+                                                        />
+                                                        <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest pl-1">
+                                                            Manually adjust the timestamp to reorder chronologically
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
