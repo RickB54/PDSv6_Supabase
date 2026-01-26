@@ -190,8 +190,8 @@ function SortableItem({ item }: { item: LibraryItem }) {
             ref={setNodeRef}
             style={style}
             className={`flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 ${isDragging
-                    ? 'bg-indigo-600/20 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.2)] scale-[1.02]'
-                    : 'bg-zinc-900/30 border-zinc-900 hover:border-zinc-800'
+                ? 'bg-indigo-600/20 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.2)] scale-[1.02]'
+                : 'bg-zinc-900/30 border-zinc-900 hover:border-zinc-800'
                 }`}
         >
             <div
@@ -207,7 +207,16 @@ function SortableItem({ item }: { item: LibraryItem }) {
                 {item.type === 'video' ? (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-500 text-xs">VIDEO</div>
                 ) : (
-                    <img src={item.resource_url} className="w-full h-full object-cover" alt={item.title} />
+                    <img
+                        src={item.resource_url}
+                        className="w-full h-full object-cover"
+                        alt={item.title}
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/logo-3inch.png";
+                            target.className = "w-full h-full object-contain p-2 opacity-20 grayscale";
+                        }}
+                    />
                 )}
             </div>
 

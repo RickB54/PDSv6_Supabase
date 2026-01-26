@@ -33,7 +33,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
-import logo from "@/assets/logo-primary.png";
 
 export default function PrimeBlog() {
     const { toast } = useToast();
@@ -227,10 +226,11 @@ export default function PrimeBlog() {
         }
 
         let finalResourceUrl = formData.resource_url;
-        if (!finalResourceUrl) {
+        // If no URL or it's a temporary blob URL (from failed/incomplete upload), use placeholder
+        if (!finalResourceUrl || finalResourceUrl.startsWith('blob:')) {
             const proceed = window.confirm("Are you sure you want to post without a picture? We'll use the Prime Auto Detail logo as a placeholder.");
             if (!proceed) return;
-            finalResourceUrl = logo;
+            finalResourceUrl = "/logo-3inch.png";
         }
 
         setIsUploading(true);
@@ -628,7 +628,16 @@ export default function PrimeBlog() {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <img src={item.resource_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
+                                                <img
+                                                    src={item.resource_url}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                                    loading="lazy"
+                                                    onError={(e) => {
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.src = "/logo-3inch.png";
+                                                        target.className = "w-full h-full object-contain p-8 opacity-40 grayscale";
+                                                    }}
+                                                />
                                             )}
 
                                             {/* Bottom Overlay Info */}
@@ -773,6 +782,11 @@ export default function PrimeBlog() {
                                                         src={selectedItem.resource_url}
                                                         className="max-h-[70vh] w-auto rounded-[32px] shadow-2xl border border-zinc-800 object-contain"
                                                         alt={selectedItem.title}
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = "/logo-3inch.png";
+                                                            target.className = "max-h-[300px] w-auto opacity-40 grayscale p-12";
+                                                        }}
                                                     />
                                                     <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button
