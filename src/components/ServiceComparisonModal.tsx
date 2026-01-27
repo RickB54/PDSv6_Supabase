@@ -1,7 +1,8 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Download, Printer, Info, X } from "lucide-react";
+import { Check, Download, Printer, Info, X, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { servicePackages, getServiceInstructions, ServicePackage } from "@/lib/services";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -37,87 +38,175 @@ export const ServiceComparisonModal: React.FC<ServiceComparisonModalProps> = ({
     ];
 
     const generatePDF = () => {
-        const doc = new jsPDF('p', 'mm', 'a4');
-        const timestamp = new Date().toLocaleString();
+        try {
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const timestamp = new Date().toLocaleString();
 
-        doc.setFontSize(20);
-        doc.setTextColor(220, 38, 38); // Prime Red
-        doc.text("PRIME AUTO DETAIL", 105, 15, { align: 'center' });
+            doc.setFontSize(22);
+            doc.setTextColor(220, 38, 38); // Prime Red
+            doc.setFont("helvetica", "bold");
+            doc.text("PRIME AUTO DETAIL", 105, 15, { align: 'center' });
 
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.text("Professional Service Matrix", 105, 23, { align: 'center' });
+            doc.setFontSize(14);
+            doc.setTextColor(30, 58, 138); // Blue
+            doc.text("SERVICE FEATURE COMPARISON MATRIX", 105, 23, { align: 'center' });
 
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Generated on ${timestamp}`, 200, 10, { align: 'right' });
+            doc.setFontSize(8);
+            doc.setTextColor(120, 120, 120);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Generated on ${timestamp}`, 200, 10, { align: 'right' });
 
-        let currentY = 30;
+            let currentY = 32;
 
-        groups.forEach((group) => {
-            doc.setFontSize(12);
-            doc.setTextColor(220, 38, 38);
-            doc.text(group.title.toUpperCase(), 14, currentY);
-            currentY += 5;
+            groups.forEach((group, index) => {
+                // Category Header
+                doc.setFontSize(12);
+                doc.setTextColor(220, 38, 38);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${index + 1}. ${group.title.toUpperCase()}`, 14, currentY);
+                currentY += 6;
 
-            // Collect all unique steps for this group
+                const allStepNames = Array.from(new Set(
+                    group.packages.flatMap(p => p.steps.map(s => s.name))
+                ));
+
+                const tableData = allStepNames.flatMap(stepName => {
+                    const pkgStep = group.packages.map(p => p.steps.find(s => s.name === stepName)).find(Boolean);
+                    const instructions = pkgStep?.instructions || getServiceInstructions(stepName, pkgStep?.id);
+
+                    const mainRow = [stepName];
+                    group.packages.forEach((pkg) => {
+                        const hasStep = pkg.steps.some(s => s.name === stepName);
+                        mainRow.push(hasStep ? "YES" : "-");
+                    });
+
+                    // Sub-row for instructions
+                    const instructionRow = [`  > ${instructions}`, ...group.packages.map(() => "")];
+
+                    return [mainRow, instructionRow];
+                });
+
+                const head = [["SERVICE FEATURE / STEP", ...group.packages.map(p => p.name.replace('Prime ', ''))]];
+
+                autoTable(doc, {
+                    startY: currentY,
+                    head: head,
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [30, 58, 138],
+                        textColor: [255, 255, 255],
+                        fontSize: 8,
+                        fontStyle: 'bold',
+                        halign: 'center'
+                    },
+                    styles: { fontSize: 7, cellPadding: 2 },
+                    columnStyles: {
+                        0: { cellWidth: 120 },
+                        1: { halign: 'center', fontStyle: 'bold' },
+                        2: { halign: 'center', fontStyle: 'bold' }
+                    },
+                    didParseCell: (data: any) => {
+                        // Style instruction rows differently
+                        if (data.row.index % 2 !== 0) {
+                            data.cell.styles.fontStyle = 'italic';
+                            data.cell.styles.textColor = [100, 100, 100];
+                            data.cell.styles.fontSize = 6;
+                        }
+                        // Highlight YES in Emerald
+                        if (data.cell.text[0] === 'YES') {
+                            data.cell.styles.textColor = [5, 150, 105];
+                        }
+                    }
+                });
+
+                currentY = (doc as any).lastAutoTable.finalY + 15;
+
+                // Prevent category title from being orphaned at bottom
+                if (currentY > 250 && index < groups.length - 1) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+            });
+
+            doc.save(`Prime_Comparison_Matrix_${new Date().toISOString().split('T')[0]}.pdf`);
+            toast.success("Comparison PDF generated successfully");
+        } catch (err) {
+            console.error("PDF generation error:", err);
+            toast.error("Failed to generate PDF. Please try again.");
+        }
+    };
+
+    const handlePrint = () => {
+        const win = window.open('', '_blank');
+        if (!win) return;
+
+        let sectionsHtml = "";
+        groups.forEach((group, gIdx) => {
             const allStepNames = Array.from(new Set(
                 group.packages.flatMap(p => p.steps.map(s => s.name))
             ));
 
-            const tableData = allStepNames.flatMap(stepName => {
+            let tableRows = "";
+            allStepNames.forEach(stepName => {
                 const pkgStep = group.packages.map(p => p.steps.find(s => s.name === stepName)).find(Boolean);
                 const instructions = pkgStep?.instructions || getServiceInstructions(stepName, pkgStep?.id);
 
-                const mainRow = [stepName];
-                group.packages.forEach((pkg) => {
+                let cellsHtml = "";
+                group.packages.forEach(pkg => {
                     const hasStep = pkg.steps.some(s => s.name === stepName);
-                    mainRow.push(hasStep ? "YES" : "-");
+                    cellsHtml += `<td style="padding:10px;text-align:center;border:1px solid #eee;">${hasStep ? '<span style="color:#059669;font-weight:bold;">YES</span>' : '<span style="color:#e5e7eb;">/</span>'}</td>`;
                 });
 
-                const instructionRow = [`  > ${instructions}`, ...group.packages.map(() => "")];
-
-                return [mainRow, instructionRow];
+                tableRows += `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px;border:1px solid #eee;">
+                            <div style="font-weight:bold;font-size:13px;color:#1e3a8a;">${stepName}</div>
+                            <div style="font-size:10px;color:#666;font-style:italic;margin-top:4px;">&gt; ${instructions}</div>
+                        </td>
+                        ${cellsHtml}
+                    </tr>
+                `;
             });
 
-            const head = [["SERVICE FEATURE / STEP", ...group.packages.map(p => p.name.replace('Prime ', ''))]];
-
-            autoTable(doc, {
-                startY: currentY,
-                head: head,
-                body: tableData,
-                theme: 'grid',
-                headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-                styles: { fontSize: 7, cellPadding: 2 },
-                columnStyles: {
-                    0: { cellWidth: 120 },
-                    1: { halign: 'center' },
-                    2: { halign: 'center' }
-                },
-                didParseCell: (data) => {
-                    if (data.row.index % 2 !== 0) {
-                        data.cell.styles.fontStyle = 'italic';
-                        data.cell.styles.textColor = [100, 100, 100];
-                        data.cell.styles.fontSize = 6;
-                    }
-                },
-                didDrawPage: (data) => {
-                    currentY = data.cursor?.y || currentY;
-                }
-            });
-
-            currentY = (doc as any).lastAutoTable.finalY + 15;
-            if (currentY > 260) {
-                doc.addPage();
-                currentY = 20;
-            }
+            sectionsHtml += `
+                <div style="margin-bottom:40px;page-break-inside:avoid;">
+                    <h3 style="color:#dc2626;text-transform:uppercase;font-size:16px;border-bottom:2px solid #dc2626;padding-bottom:5px;margin-bottom:15px;">
+                        ${gIdx + 1}. ${group.title}
+                    </h3>
+                    <table style="width:100%;border-collapse:collapse;border:1px solid #ddd;">
+                        <thead>
+                            <tr style="background:#1e3a8a;color:white;">
+                                <th style="padding:12px;text-align:left;font-size:11px;">SERVICE FEATURE / STEP</th>
+                                ${group.packages.map(pkg => `<th style="padding:12px;font-size:11px;">${pkg.name.replace('Prime ', '')}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
         });
 
-        doc.save(`Prime_Services_Comparison_${new Date().toISOString().split('T')[0]}.pdf`);
-    };
-
-    const handlePrint = () => {
-        window.print();
+        win.document.write(`
+            <html>
+                <head>
+                    <title>Prime Service Comparisons</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 40px; max-width: 1000px; margin: 0 auto; color: #333; }
+                        h1 { color: #dc2626; margin-bottom: 5px; }
+                        .subtitle { color: #666; font-size: 14px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>PRIME AUTO DETAIL</h1>
+                    <div class="subtitle">Service Comparison Matrix - Essential vs Elite</div>
+                    <div style="font-size:11px;color:#999;margin-bottom:20px;">Generated: ${new Date().toLocaleString()}</div>
+                    ${sectionsHtml}
+                    <script>window.onload = function(){ window.print(); window.close(); }</script>
+                </body>
+            </html>
+        `);
+        win.document.close();
     };
 
     return (

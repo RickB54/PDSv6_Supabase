@@ -73,6 +73,8 @@ export default function PrimeBlog() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
     const [mgmtSearch, setMgmtSearch] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
     useEffect(() => {
         loadItems();
@@ -350,11 +352,28 @@ export default function PrimeBlog() {
         return url;
     };
 
-    const displayedItems = activeCategory === 'All'
-        ? items
-        : activeCategory === 'NEEDS REVIEW'
-            ? items.filter(i => !i.is_verified)
-            : items.filter(i => i.category === activeCategory);
+    const displayedItems = items.filter(item => {
+        // Category filter
+        const matchesCategory = activeCategory === 'All'
+            ? true
+            : activeCategory === 'NEEDS REVIEW'
+                ? !item.is_verified
+                : item.category === activeCategory;
+
+        // Search filter
+        const searchStr = searchTerm.toLowerCase();
+        const matchesSearch = item.title.toLowerCase().includes(searchStr) ||
+            item.description.toLowerCase().includes(searchStr);
+
+        // Date range filter
+        const itemDate = item.created_at ? new Date(item.created_at).getTime() : 0;
+        const start = dateRange.start ? new Date(dateRange.start).getTime() : 0;
+        // Set end to end of day
+        const end = dateRange.end ? new Date(dateRange.end).getTime() + 86400000 : Infinity;
+        const matchesDate = itemDate >= start && itemDate <= end;
+
+        return matchesCategory && matchesSearch && matchesDate;
+    });
 
     const filteredMgmtItems = items.filter(item =>
         item.title.toLowerCase().includes(mgmtSearch.toLowerCase()) ||
@@ -509,8 +528,13 @@ export default function PrimeBlog() {
                                         Showcase & Tips
                                     </Badge>
                                 </div>
-                                <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none group">
-                                    THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-white to-purple-400">PRIME</span> BLOG
+                                <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none group flex items-baseline gap-4">
+                                    <span>
+                                        THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-white to-purple-400">PRIME</span> BLOG
+                                    </span>
+                                    <span className="text-xl md:text-2xl font-black text-zinc-700 bg-zinc-800/50 px-3 py-1 rounded-2xl border border-zinc-800">
+                                        {items.length}
+                                    </span>
                                 </h1>
                                 <p className="text-zinc-400 text-lg font-medium leading-relaxed">
                                     Explore the details behind our finest transformations, technical tips from the pros, and daily operations at Prime Auto Detail.
@@ -572,10 +596,50 @@ export default function PrimeBlog() {
                             </TabsList>
                         </Tabs>
 
-                        <div className="flex items-center gap-4 px-4 w-full md:w-auto">
+                        <div className="flex flex-wrap items-center gap-4 px-4 w-full md:w-auto">
+                            <div className="flex items-center gap-2 bg-zinc-950/50 border border-zinc-800 rounded-2xl px-3 h-11">
+                                <CalendarDays className="w-4 h-4 text-zinc-500" />
+                                <input
+                                    type="date"
+                                    value={dateRange.start}
+                                    onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                    className="bg-transparent border-none text-[10px] font-black text-zinc-400 focus:ring-0 w-24 outline-none uppercase"
+                                    placeholder="Start"
+                                />
+                                <span className="text-zinc-700 font-bold">/</span>
+                                <input
+                                    type="date"
+                                    value={dateRange.end}
+                                    onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                    className="bg-transparent border-none text-[10px] font-black text-zinc-400 focus:ring-0 w-24 outline-none uppercase"
+                                    placeholder="End"
+                                />
+                                {(dateRange.start || dateRange.end) && (
+                                    <button
+                                        onClick={() => setDateRange({ start: "", end: "" })}
+                                        className="p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
+                            </div>
+
                             <div className="relative group flex-1 md:w-64">
                                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                                <Input placeholder="Search articles..." className="bg-zinc-950/50 border-zinc-800 pl-10 rounded-2xl h-11 focus:border-indigo-500/50 transition-all" />
+                                <Input
+                                    placeholder="Search stories..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="bg-zinc-950/50 border-zinc-800 pl-10 rounded-2xl h-11 focus:border-indigo-500/50 transition-all text-xs font-medium"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm("")}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
                             </div>
                             {isAdmin && (
                                 <Button

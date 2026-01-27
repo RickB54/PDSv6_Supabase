@@ -77,6 +77,7 @@ import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import api from "@/lib/api";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { isSupabaseEnabled } from "@/lib/auth";
@@ -423,7 +424,15 @@ export default function PackagePricing() {
 
     const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
       const key = `${type}:${id}:${size}`;
-      return parseFloat(saved[key]) || 0;
+      const savedVal = parseFloat(saved[key]);
+      if (!isNaN(savedVal)) return savedVal;
+
+      // Fallback to built-in or custom definition pricing
+      const item = type === 'package'
+        ? [...builtInPackages, ...(snapshot?.customPackages || [])].find(p => p.id === id)
+        : [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
+
+      return (item as any)?.pricing?.[size] || 0;
     };
     const rowHtml = (name: string, type: 'package' | 'addon', id: string) => `
       <tr>
@@ -486,8 +495,15 @@ export default function PackagePricing() {
       const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
 
       const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
-        const key = `${type}:${id}:${size}`; // liveGetKey logic
-        return parseFloat(saved[key]) || 0;
+        const key = `${type}:${id}:${size}`;
+        const savedVal = parseFloat(saved[key]);
+        if (!isNaN(savedVal)) return savedVal;
+
+        const item = type === 'package'
+          ? [...builtInPackages, ...(snapshot?.customPackages || [])].find(p => p.id === id)
+          : [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
+
+        return (item as any)?.pricing?.[size] || 0;
       };
 
       let y = 45;
@@ -545,6 +561,76 @@ export default function PackagePricing() {
           doc.text(`$${price.toFixed(2)}`, xPos[i], y, { align: 'right' });
         });
         y += 8;
+      });
+
+      // --- NEW: SERVICE FEATURE COMPARISON MATRIX ---
+      doc.addPage();
+      y = 20;
+      doc.setTextColor(220, 38, 38);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("SERVICE FEATURE COMPARISON", 105, y, { align: "center" });
+      y += 10;
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Comparison between Essential and Elite package levels across all categories.", 105, y, { align: "center" });
+      y += 15;
+
+      const compGroups = [
+        {
+          title: "Exterior Details",
+          packages: builtInPackages.filter(p => p.id.includes("exterior"))
+        },
+        {
+          title: "Interior Details",
+          packages: builtInPackages.filter(p => p.id.includes("interior"))
+        },
+        {
+          title: "Full Detail Packages",
+          packages: [
+            builtInPackages.find(p => p.id === "prime-essential-full"),
+            builtInPackages.find(p => p.id === "prime-elite-full")
+          ].filter(Boolean) as any[]
+        }
+      ];
+
+      compGroups.forEach((group) => {
+        if (y > 240) { doc.addPage(); y = 20; }
+        doc.setFontSize(12);
+        doc.setTextColor(220, 38, 38);
+        doc.text(group.title.toUpperCase(), 14, y);
+        y += 5;
+
+        const allSteps = Array.from(new Set(group.packages.flatMap(p => p.steps.map(s => s.name))));
+        const tableBody = allSteps.flatMap(stepName => {
+          const mainRow = [stepName];
+          group.packages.forEach(p => {
+            mainRow.push(p.steps.some((s: any) => s.name === stepName) ? "YES" : "-");
+          });
+          const stepObj = group.packages.flatMap(p => p.steps).find((s: any) => s.name === stepName);
+          const instructions = stepObj?.instructions || "Perform this step with detailing precision.";
+          return [mainRow, [`  > ${instructions}`, ...group.packages.map(() => "")]];
+        });
+
+        autoTable(doc, {
+          startY: y,
+          head: [["FEATURE / STEP", ...group.packages.map(p => p.name.replace("Prime ", ""))]],
+          body: tableBody,
+          theme: 'grid',
+          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontSize: 8 },
+          styles: { fontSize: 7, cellPadding: 2 },
+          columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'center' }, 2: { halign: 'center' } },
+          didParseCell: (data) => {
+            if (data.row.index % 2 !== 0) {
+              data.cell.styles.fontStyle = 'italic';
+              data.cell.styles.textColor = [100, 100, 100];
+              data.cell.styles.fontSize = 6;
+            }
+          }
+        });
+
+        // Update y for next table
+        y = (doc as any).lastAutoTable.finalY + 15;
       });
 
       const fileName = `prime_pricing_list_${new Date().toISOString().split('T')[0]}.pdf`;
