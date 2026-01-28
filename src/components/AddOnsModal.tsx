@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Printer, X, PlusCircle, CheckCircle2 } from "lucide-react";
 import { addOns } from "@/lib/services";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 
 interface AddOnsModalProps {
     open: boolean;

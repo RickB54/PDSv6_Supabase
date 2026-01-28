@@ -77,7 +77,7 @@ import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import api from "@/lib/api";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { isSupabaseEnabled } from "@/lib/auth";

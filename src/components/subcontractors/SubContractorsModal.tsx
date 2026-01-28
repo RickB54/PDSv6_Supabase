@@ -12,7 +12,7 @@ import { Search, Plus, FileDown, ArrowLeft, Star, MapPin, Phone, Mail, Globe } f
 import { getSubContractors, upsertSubContractor, deleteSubContractor } from "@/lib/db";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 
 interface SubContractor {
     id?: string;
@@ -480,3 +480,4 @@ export default function SubContractorsModal({ open, onOpenChange }: { open: bool
         </Dialog>
     );
 }
+

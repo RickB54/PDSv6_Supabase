@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 
 export interface PDFBookingData {
     id: string;
@@ -77,3 +77,4 @@ export const generateBookingPDF = (data: PDFBookingData, meta: PDFMeta): string 
 
     return doc.output('datauristring');
 };
+

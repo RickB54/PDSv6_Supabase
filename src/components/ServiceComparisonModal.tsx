@@ -5,7 +5,7 @@ import { Check, Download, Printer, Info, X, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { servicePackages, getServiceInstructions, ServicePackage } from "@/lib/services";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import { AddOnsModal } from "./AddOnsModal";
 
 interface ServiceComparisonModalProps {

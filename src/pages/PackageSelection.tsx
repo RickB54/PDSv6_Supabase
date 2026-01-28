@@ -24,7 +24,7 @@ import { Plus, Trash2, Edit2, Save, FileText, Download, CheckCircle2, ArrowRight
 import localforage from "localforage";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
 import { servicePackages, addOns as sharedAddOns, getServiceInstructions } from "@/lib/services";
@@ -740,3 +740,4 @@ export default function PackageSelection() {
         </div >
     );
 }
+

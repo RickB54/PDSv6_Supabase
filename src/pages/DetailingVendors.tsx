@@ -12,7 +12,7 @@ import { Package, Plus, Search, FileDown, Edit, Trash2, ArrowLeft } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { getDetailingVendors, upsertDetailingVendor, deleteDetailingVendor } from "@/lib/db";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
 const VENDOR_CATEGORIES = [
@@ -479,3 +479,4 @@ export default function DetailingVendors() {
         </div>
     );
 }
+

@@ -40,7 +40,7 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import localforage from "localforage";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 
 interface Expense {
     id: string;
@@ -1804,3 +1804,4 @@ const CompanyBudget = () => {
 };
 
 export default CompanyBudget;
+

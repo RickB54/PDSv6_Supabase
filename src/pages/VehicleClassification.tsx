@@ -11,7 +11,7 @@ import { CheckCircle2, AlertCircle, ArrowLeft, Car, Edit, Trash2, History, FileD
 import { useToast } from "@/hooks/use-toast";
 import vehicleDatabase from "@/data/vehicle_db.json";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 
 import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
@@ -821,3 +821,4 @@ export default function VehicleClassification() {
         </div>
     );
 }
+

@@ -46,7 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getInvoices, getExpenses, upsertExpense } from "@/lib/db";
 import { getReceivables, upsertReceivable, Receivable } from "@/lib/receivables";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import localforage from "localforage";
 import { getCategoryColors } from "@/lib/categoryColors";
@@ -1394,3 +1394,4 @@ const Accounting = () => {
 };
 
 export default Accounting;
+
