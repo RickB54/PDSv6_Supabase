@@ -6,18 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { servicePackages } from "@/lib/services";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import localforage from "localforage";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
+import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
-import { getSupabaseEstimates } from "@/lib/supa-data";
+import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport } from "@/lib/supa-data";
 
 const Reports = () => {
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
@@ -40,6 +45,14 @@ const Reports = () => {
   const [customerJobsOpen, setCustomerJobsOpen] = useState<boolean>(false);
   const [customerJobs, setCustomerJobs] = useState<any[]>([]);
   const [customerJobsCustomer, setCustomerJobsCustomer] = useState<any | null>(null);
+
+  // Tax Report State
+  const [taxYear, setTaxYear] = useState<number>(new Date().getFullYear());
+  const [taxReport, setTaxReport] = useState<any>(null);
+  const [isGeneratingTax, setIsGeneratingTax] = useState(false);
+  const [taxHistory, setTaxHistory] = useState<any[]>([]);
+  const [showTaxHistory, setShowTaxHistory] = useState(false);
+  const [mileageRate, setMileageRate] = useState<number>(0.67);
 
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
@@ -73,6 +86,8 @@ const Reports = () => {
     const incomeData = await getReceivables();
     const expenseData = await getExpenses();
     const payrollData = (await localforage.getItem<any[]>("payroll-history")) || [];
+    const taxReportsData = await getSupabaseTaxReports();
+
     setCustomers(cust);
     setInvoices(inv);
     setChemicals(chems);
@@ -83,6 +98,7 @@ const Reports = () => {
     setIncome(incomeData);
     setExpenses(expenseData);
     setPayrollHistory(payrollData);
+    setTaxHistory(taxReportsData);
   };
 
   const filterByDate = (items: any[], dateField = "createdAt") => {
@@ -485,6 +501,180 @@ const Reports = () => {
     );
   }
 
+  const generateTaxReport = async () => {
+    setIsGeneratingTax(true);
+    try {
+      const yearStart = `${taxYear}-01-01`;
+      const yearEnd = `${taxYear}-12-31`;
+
+      // 1. Gather Income
+      const invs = await getSupabaseInvoices();
+      const yearInvoices = invs.filter(inv => {
+        const d = inv.date || inv.createdAt;
+        return d && d >= yearStart && d <= yearEnd;
+      });
+      const grossRevenue = yearInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+
+      // Breakdown by services
+      const revenueByService: Record<string, number> = {};
+      yearInvoices.forEach(inv => {
+        (inv.services || []).forEach((s: any) => {
+          const name = s.name || 'Other';
+          revenueByService[name] = (revenueByService[name] || 0) + (s.price || 0);
+        });
+      });
+
+      // 2. Gather Expenses
+      const exps = await getSupabaseTaxExpenses(taxYear);
+      const totalExpenses = exps.reduce((sum, e) => sum + e.amount, 0);
+      const deductibleExpenses = exps.filter(e => e.is_deductible).reduce((sum, e) => sum + e.amount, 0);
+      const nonDeductibleExpenses = totalExpenses - deductibleExpenses;
+
+      const expensesByCategory: Record<string, number> = {};
+      exps.forEach(e => {
+        expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
+      });
+
+      // 3. Gather Mileage
+      const logs = await getSupabaseMileageLogs();
+      const yearLogs = logs.filter(l => l.date >= yearStart && l.date <= yearEnd);
+      const totalMiles = yearLogs.reduce((sum, l) => sum + Number(l.miles_driven), 0);
+      const mileageDeduction = totalMiles * mileageRate;
+
+      // Monthly mileage breakdown
+      const monthlyMileage: number[] = new Array(12).fill(0);
+      yearLogs.forEach(l => {
+        const month = new Date(l.date).getMonth();
+        monthlyMileage[month] += Number(l.miles_driven);
+      });
+
+      // 4. Inventory/Assets (already in tax expenses if tagged, but we can verify)
+      const assetExpenses = exps.filter(e => e.asset_id).reduce((sum, e) => sum + e.amount, 0);
+
+      const report = {
+        year: taxYear,
+        generatedAt: new Date().toISOString(),
+        income: {
+          grossRevenue,
+          byService: revenueByService,
+          invoiceCount: yearInvoices.length
+        },
+        expenses: {
+          total: totalExpenses,
+          deductible: deductibleExpenses,
+          nonDeductible: nonDeductibleExpenses,
+          byCategory: expensesByCategory,
+          assetRelated: assetExpenses
+        },
+        mileage: {
+          totalMiles,
+          deduction: mileageDeduction,
+          rate: mileageRate,
+          monthly: monthlyMileage
+        },
+        netIncome: grossRevenue - deductibleExpenses - mileageDeduction
+      };
+
+      setTaxReport(report);
+      toast.success(`${taxYear} Tax Report Generated`);
+    } catch (err) {
+      console.error("Failed to generate tax report:", err);
+      toast.error("Generation failed");
+    } finally {
+      setIsGeneratingTax(false);
+    }
+  };
+
+  const saveTaxReportArchive = async () => {
+    if (!taxReport) return;
+    try {
+      await saveSupabaseTaxReport({
+        year: taxReport.year,
+        report_name: `${taxReport.year} Combined Tax Summary`,
+        report_data: taxReport,
+        notes: `Generated on ${new Date(taxReport.generatedAt).toLocaleString()}`
+      });
+      const updated = await getSupabaseTaxReports();
+      setTaxHistory(updated);
+      toast.success("Report archived for historical reference");
+    } catch (err) {
+      toast.error("Failed to archive report");
+    }
+  };
+
+  const generateTaxPDF = () => {
+    if (!taxReport) return;
+    const doc = new jsPDF();
+    const margin = 20;
+    let y = 20;
+
+    doc.setFontSize(22);
+    doc.setTextColor(40);
+    doc.text(`Tax Summary Report - ${taxReport.year}`, margin, y);
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date(taxReport.generatedAt).toLocaleString()}`, margin, y);
+    y += 15;
+
+    // Summary Section
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Executive Summary", margin, y);
+    y += 7;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Metric', 'Amount']],
+      body: [
+        ['Gross Revenue', `$${taxReport.income.grossRevenue.toLocaleString()}`],
+        ['Deductible Expenses', `$${taxReport.expenses.deductible.toLocaleString()}`],
+        ['Mileage Deduction', `$${taxReport.mileage.deduction.toLocaleString()}`],
+        ['Net Taxable Profit', `$${taxReport.netIncome.toLocaleString()}`],
+      ],
+      theme: 'striped',
+      headStyles: { fillStyle: 'emerald' as any }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // Income Details
+    doc.text("Income Breakdown", margin, y);
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Service/Category', 'Amount']],
+      body: Object.entries(taxReport.income.byService).map(([k, v]) => [k, `$${Number(v).toLocaleString()}`])
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // Expense Details
+    doc.text("Expense Categories", margin, y);
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Category', 'Amount']],
+      body: Object.entries(taxReport.expenses.byCategory).map(([k, v]) => [k, `$${Number(v).toLocaleString()}`])
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // Mileage
+    doc.text("Mileage Log Summary", margin, y);
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Year', 'Total Miles', 'IRS Rate', 'Deduction']],
+      body: [[
+        taxReport.year,
+        `${taxReport.mileage.totalMiles} mi`,
+        `$${taxReport.mileage.rate}/mi`,
+        `$${taxReport.mileage.deduction.toLocaleString()}`
+      ]]
+    });
+
+    doc.save(`Tax_Report_${taxReport.year}.pdf`);
+  };
+
   const lowStockChemicals = chemicals.filter(c => c.currentStock < c.threshold);
   const lowStockMaterials = materials.filter(m => (m.quantity || 0) < (m.threshold || m.lowThreshold || 0));
   const lowStockTools = tools.filter(t => (t.quantity || 0) < (t.threshold || 0));
@@ -513,6 +703,7 @@ const Reports = () => {
     { id: 'employee', label: 'Employee' },
     { id: 'estimates', label: 'Estimates' },
     { id: 'accounting', label: 'Accounting' },
+    { id: 'tax-report', label: 'Tax Report' },
   ]
 
   const initialTab = new URLSearchParams(window.location.search).get('tab') || 'customers';
@@ -1005,6 +1196,206 @@ const Reports = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="tax-report">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                <div className="space-y-1">
+                  <h2 className="text-2xl md:text-3xl font-black text-white flex items-center gap-2">
+                    <FileText className="h-6 w-6 text-emerald-500" />
+                    Generated Tax Report
+                  </h2>
+                  <p className="text-zinc-400 text-sm">Consolidated financial overview for accounting and tax filing.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center bg-black/40 rounded-xl border border-zinc-800 p-1 px-2 h-10">
+                    <Label className="px-2 text-[10px] text-zinc-500 uppercase font-bold">Year</Label>
+                    <Select value={String(taxYear)} onValueChange={(val) => setTaxYear(Number(val))}>
+                      <SelectTrigger className="w-[80px] h-8 bg-transparent border-none text-white focus:ring-0 text-xs font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                        {[2023, 2024, 2025, 2026].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center bg-black/40 rounded-xl border border-zinc-800 p-1 px-2 h-10">
+                    <Label className="px-2 text-[10px] text-zinc-500 uppercase font-bold">Rate/mi</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={mileageRate}
+                      onChange={(e) => setMileageRate(Number(e.target.value))}
+                      className="w-12 h-8 bg-transparent border-none text-white focus:ring-0 text-xs text-center font-bold"
+                    />
+                  </div>
+                  <Button onClick={generateTaxReport} disabled={isGeneratingTax} size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 px-4 rounded-xl shadow-lg shadow-emerald-500/20">
+                    {isGeneratingTax ? "..." : "Generate Report"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowTaxHistory(true)} className="border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:bg-zinc-800 h-10 rounded-xl">
+                    <History className="h-4 w-4 mr-2" /> History
+                  </Button>
+                </div>
+              </div>
+
+              {!taxReport && !isGeneratingTax && (
+                <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-950/30">
+                  <Calculator className="h-16 w-16 text-zinc-700 mb-4" />
+                  <h3 className="text-xl font-medium text-zinc-400">Ready to Generate</h3>
+                  <p className="text-zinc-500 max-w-xs mt-2">Select a year above to consolidate all income, expenses, and mileage data.</p>
+                </div>
+              )}
+
+              {taxReport && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800/50 flex flex-col justify-between">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Gross Revenue</span>
+                      <span className="text-3xl font-black text-white mt-2">${taxReport.income.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800/50 flex flex-col justify-between">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Deductible Exp</span>
+                      <span className="text-3xl font-black text-red-500 mt-2">
+                        -${(taxReport.expenses.deductible + taxReport.mileage.deduction).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="p-4 bg-zinc-950 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col justify-between">
+                      <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Net Taxable Profit</span>
+                      <span className="text-3xl font-black text-emerald-400 mt-2">${taxReport.netIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800/50 flex flex-col justify-between">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Business Miles</span>
+                      <span className="text-3xl font-black text-blue-400 mt-2">{taxReport.mileage.totalMiles.toLocaleString()} mi</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pb-4 border-b border-zinc-800">
+                    <Button variant="outline" size="sm" onClick={saveTaxReportArchive} className="border-zinc-700 text-zinc-300">
+                      <Save className="h-4 w-4 mr-2" /> Save to History
+                    </Button>
+                    <Button size="sm" className="bg-zinc-100 text-black hover:bg-white font-bold" onClick={generateTaxPDF}>
+                      <Printer className="h-4 w-4 mr-2" /> Print Summary PDF
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <section>
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <TrendingUp className="h-5 w-5 text-emerald-500" />
+                          Business Income Summary
+                        </h3>
+                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden">
+                          <Table>
+                            <TableBody>
+                              {Object.entries(taxReport.income.byService).map(([name, val]: [any, any]) => (
+                                <TableRow key={name} className="border-zinc-800/50">
+                                  <TableCell className="text-zinc-300">{name}</TableCell>
+                                  <TableCell className="text-right text-emerald-400 font-mono">${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow className="bg-zinc-900/50 border-t-2 border-zinc-800 font-bold">
+                                <TableCell className="text-white">Total Gross Income</TableCell>
+                                <TableCell className="text-right text-white font-mono">${taxReport.income.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </section>
+
+                      <section>
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-red-500" />
+                          Business Expenses Summary
+                        </h3>
+                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden">
+                          <Table>
+                            <TableBody>
+                              {Object.entries(taxReport.expenses.byCategory).map(([name, val]: [any, any]) => (
+                                <TableRow key={name} className="border-zinc-800/50">
+                                  <TableCell className="text-zinc-300">{name}</TableCell>
+                                  <TableCell className="text-right text-red-400 font-mono">${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow className="bg-zinc-900/50 border-t-2 border-zinc-800">
+                                <TableCell className="text-zinc-400 text-sm">Non-Deductible total included above</TableCell>
+                                <TableCell className="text-right text-zinc-400 font-mono text-sm">(${taxReport.expenses.nonDeductible.toLocaleString(undefined, { minimumFractionDigits: 2 })})</TableCell>
+                              </TableRow>
+                              <TableRow className="bg-zinc-900/50 border-t-2 border-zinc-800 font-bold">
+                                <TableCell className="text-white">Total Deductible (Operations)</TableCell>
+                                <TableCell className="text-right text-white font-mono">${taxReport.expenses.deductible.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </section>
+                    </div>
+
+                    <div className="space-y-6">
+                      <section>
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <PieChart className="h-5 w-5 text-blue-500" />
+                          Mileage Log Summary
+                        </h3>
+                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 p-6">
+                          <div className="flex justify-between items-center mb-6">
+                            <div>
+                              <p className="text-xs text-zinc-500 uppercase font-bold tracking-widest">IRS Rate ({taxReport.year})</p>
+                              <p className="text-2xl font-black text-white">${taxReport.mileage.rate} / mi</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Estimated Deduction</p>
+                              <p className="text-2xl font-black text-blue-400">${taxReport.mileage.deduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold text-zinc-400 uppercase mb-2">Monthly Breakdown (Miles)</p>
+                            <div className="grid grid-cols-6 gap-2">
+                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => (
+                                <div key={m} className="bg-zinc-900 p-2 rounded border border-zinc-800 text-center">
+                                  <span className="block text-[10px] text-zinc-500 font-bold">{m}</span>
+                                  <span className="text-xs text-zinc-300">{taxReport.mileage.monthly[idx] || 0}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section>
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <History className="h-5 w-5 text-purple-500" />
+                          Inventory & Asset Expenses
+                        </h3>
+                        <Card className="p-4 bg-zinc-950 border-purple-500/20">
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Total Asset Purchases</span>
+                            <span className="text-purple-400 font-bold">${taxReport.expenses.assetRelated.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 mt-2 italic">Calculated from deductible inventory acquisitions.</p>
+                        </Card>
+                      </section>
+
+                      <Card className="p-6 bg-gradient-to-br from-zinc-900 to-zinc-950 border-emerald-500/30">
+                        <h4 className="text-emerald-500 font-black uppercase text-xs mb-4">Year-To-Date Final Overview</h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-zinc-400"><span>Gross Revenue</span><span>${taxReport.income.grossRevenue.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-zinc-400"><span>Operating Expenses</span><span>-${taxReport.expenses.deductible.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-zinc-400"><span>Mileage Deduction</span><span>-${taxReport.mileage.deduction.toLocaleString()}</span></div>
+                          <Separator className="bg-zinc-800" />
+                          <div className="flex justify-between items-end pt-2">
+                            <span className="text-white font-bold text-lg">Net Profit</span>
+                            <span className="text-3xl font-black text-emerald-400">${taxReport.netIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
         </Tabs>
 
         {/* DIALOGS */}
@@ -1051,6 +1442,60 @@ const Reports = () => {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showTaxHistory} onOpenChange={setShowTaxHistory}>
+          <DialogContent className="max-w-3xl bg-zinc-950 border-zinc-800 text-zinc-200">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <History className="h-5 w-5 text-zinc-400" />
+                Tax Report Archive
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 border rounded-xl border-zinc-800 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-zinc-900">
+                  <TableRow className="border-zinc-800">
+                    <TableHead className="text-zinc-400">Year</TableHead>
+                    <TableHead className="text-zinc-400">Name</TableHead>
+                    <TableHead className="text-zinc-400">Generated On</TableHead>
+                    <TableHead className="text-right text-zinc-400">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {taxHistory.map((report) => (
+                    <TableRow key={report.id} className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableCell className="font-bold text-white">{report.year}</TableCell>
+                      <TableCell className="text-zinc-300">{report.report_name}</TableCell>
+                      <TableCell className="text-zinc-500 text-xs">{new Date(report.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setTaxReport(report.report_data);
+                            setTaxYear(report.year);
+                            setShowTaxHistory(false);
+                          }}
+                          className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                        >
+                          View Report
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {taxHistory.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-zinc-500">No archived reports found.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <DialogFooter className="mt-4 border-t border-zinc-800 pt-4">
+              <Button variant="outline" onClick={() => setShowTaxHistory(false)} className="border-zinc-700 text-zinc-300">Close</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

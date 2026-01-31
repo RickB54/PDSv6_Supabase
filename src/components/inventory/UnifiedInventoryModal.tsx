@@ -8,7 +8,7 @@ import api from "@/lib/api";
 import localforage from "localforage";
 import { Trash2, Upload, X, ImageIcon, Info, Save, Camera } from "lucide-react";
 import browserImageCompression from "browser-image-compression";
-import { supabase } from "@/lib/supa-data";
+import { supabase, upsertSupabaseTaxExpense } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals } from "@/lib/chemicals";
 
 type Mode = 'chemical' | 'material' | 'tool';
@@ -24,6 +24,7 @@ interface ChemicalForm {
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
   chemicalLibraryId?: string;
+  isTaxDeductible?: boolean;
 }
 
 interface MaterialForm {
@@ -38,6 +39,7 @@ interface MaterialForm {
   unitOfMeasure: string; // e.g., "pads", "units"
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
+  isTaxDeductible?: boolean;
 }
 
 interface ToolForm {
@@ -55,6 +57,7 @@ interface ToolForm {
   unitOfMeasure: string; // e.g., "units"
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
+  isTaxDeductible?: boolean;
 }
 
 type Props = {
@@ -89,6 +92,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
     consumptionRatePerJob: "0",
     imageUrl: "",
     chemicalLibraryId: "",
+    isTaxDeductible: true,
   });
 
   const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
@@ -314,6 +318,25 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
         const { saveMaterial } = await import("@/lib/inventory-data");
         await saveMaterial(payload, isNew);
+      }
+
+      // INTEGRATION: Track as Tax Expense if enabled and new
+      if (form.isTaxDeductible && isNew) {
+        try {
+          await upsertSupabaseTaxExpense({
+            date: form.purchaseDate || new Date().toISOString().split('T')[0],
+            amount: cost,
+            vendor: "Inventory Purchase",
+            category: mode === 'tool' ? "Equipment" : "Supplies",
+            notes: `Purchased ${form.name}`,
+            is_deductible: true,
+            asset_id: id
+          });
+        } catch (taxErr) {
+          console.error("Failed to create tax expense record:", taxErr);
+          // Don't fail the whole save if tax record fails, but warn.
+          toast.warning("Inventory saved, but failed to create tax record.");
+        }
       }
 
       toast.success("Item saved");
@@ -740,6 +763,32 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
                 </>
               )}
             </div>
+          </div>
+
+          {/* Tax Integration Section */}
+          <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
+              <Save className="h-4 w-4 text-emerald-400" />
+              Tax Tracking
+            </h3>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isTaxDeductible"
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-emerald-500"
+                checked={form.isTaxDeductible}
+                onChange={(e) => setForm({ ...form, isTaxDeductible: e.target.checked })}
+              />
+              <Label htmlFor="isTaxDeductible" className="text-sm text-zinc-300 cursor-pointer">
+                Track as Tax Deductible Expense
+                {form.id ? "" : " (Will create record in Taxes)"}
+              </Label>
+            </div>
+            {!form.id && (
+              <p className="text-[10px] text-zinc-500 mt-1 italic">
+                * If checked, a record will be added to your Tax Ledger automatically at the current purchase price.
+              </p>
+            )}
           </div>
 
           {/* Usage Tracking Section */}

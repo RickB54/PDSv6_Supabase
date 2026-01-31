@@ -41,6 +41,7 @@ import localforage from "localforage";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import { getSupabaseTaxExpenses } from "@/lib/supa-data";
 
 interface Expense {
     id: string;
@@ -165,10 +166,23 @@ const CompanyBudget = () => {
         const incomes = await getReceivables();
         const expenses = await getExpenses<Expense>();
         const invoices = await getInvoices() as Invoice[];
+
+        // Fetch Tax Expenses and map to budget Expense type
+        const taxExpenses = await getSupabaseTaxExpenses();
+        const mappedTaxExpenses: Expense[] = taxExpenses.map(te => ({
+            id: te.id!,
+            amount: te.amount,
+            category: te.category,
+            description: `[TAX] ${te.vendor || ''} ${te.notes || ''}`.trim(),
+            createdAt: te.date
+        }));
+
+        const combinedExpenses = [...expenses, ...mappedTaxExpenses];
+
         setIncomeList(incomes as Receivable[]);
-        setExpenseList(expenses as Expense[]);
-        setInvoiceList(invoices); // Set state
-        processCategoryData(incomes, expenses, invoices);
+        setExpenseList(combinedExpenses);
+        setInvoiceList(invoices);
+        processCategoryData(incomes, combinedExpenses, invoices);
     };
 
     const loadCustomCategories = async () => {

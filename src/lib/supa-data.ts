@@ -1801,4 +1801,195 @@ export const deleteSupabaseBooking = async (id: string) => {
     }
 };
 
+// ------------------------------------------------------------------
+// Mileage Tracking
+// ------------------------------------------------------------------
+
+export interface MileageLog {
+    id?: string;
+    date: string;
+    miles_driven: number;
+    purpose: string;
+    start_location?: string;
+    end_location?: string;
+    odometer_start?: number;
+    odometer_end?: number;
+    customer_id?: string;
+    job_id?: string;
+    is_business: boolean;
+    created_at?: string;
+}
+
+export const getSupabaseMileageLogs = async (): Promise<MileageLog[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('mileage_log')
+            .select('*, customers(full_name)')
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error('getSupabaseMileageLogs error:', error);
+            return [];
+        }
+
+        return (data || []).map(m => ({
+            ...m,
+            customerName: m.customers?.full_name
+        }));
+    } catch (err) {
+        console.error('getSupabaseMileageLogs exception:', err);
+        return [];
+    }
+};
+
+export const upsertSupabaseMileageLog = async (log: Partial<MileageLog>) => {
+    try {
+        const { data, error } = await supabase
+            .from('mileage_log')
+            .upsert(log)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('upsertSupabaseMileageLog error:', err);
+        throw err;
+    }
+};
+
+export const deleteSupabaseMileageLog = async (id: string) => {
+    try {
+        const { error } = await supabase
+            .from('mileage_log')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseMileageLog error:', err);
+        throw err;
+    }
+};
+
+// ------------------------------------------------------------------
+// Tax tracking
+// ------------------------------------------------------------------
+
+export interface TaxExpense {
+    id?: string;
+    date: string;
+    amount: number;
+    vendor?: string;
+    payment_method?: string;
+    category: string;
+    tags?: string[];
+    is_deductible: boolean;
+    notes?: string;
+    receipt_url?: string;
+    asset_id?: string;
+    is_recurring: boolean;
+    recurring_interval?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface TaxReportArchive {
+    id?: string;
+    year: number;
+    report_name: string;
+    report_data: any;
+    created_at?: string;
+    created_by?: string;
+    notes?: string;
+}
+
+export const getSupabaseTaxExpenses = async (year?: number): Promise<TaxExpense[]> => {
+    try {
+        let query = supabase.from('tax_expenses').select('*');
+
+        if (year) {
+            query = query.gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
+        }
+
+        const { data, error } = await query.order('date', { ascending: false });
+
+        if (error) {
+            console.error('getSupabaseTaxExpenses error:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (err) {
+        console.error('getSupabaseTaxExpenses exception:', err);
+        return [];
+    }
+};
+
+export const upsertSupabaseTaxExpense = async (expense: Partial<TaxExpense>) => {
+    try {
+        const { data, error } = await supabase
+            .from('tax_expenses')
+            .upsert(expense)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('upsertSupabaseTaxExpense error:', err);
+        throw err;
+    }
+};
+
+export const deleteSupabaseTaxExpense = async (id: string) => {
+    try {
+        const { error } = await supabase
+            .from('tax_expenses')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseTaxExpense error:', err);
+        throw err;
+    }
+};
+
+export const getSupabaseTaxReports = async (year?: number): Promise<TaxReportArchive[]> => {
+    try {
+        let query = supabase.from('tax_reports').select('*');
+        if (year) query = query.eq('year', year);
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('getSupabaseTaxReports error:', err);
+        return [];
+    }
+};
+
+export const saveSupabaseTaxReport = async (report: Partial<TaxReportArchive>) => {
+    try {
+        const { data, error } = await supabase.from('tax_reports').insert(report).select().single();
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('saveSupabaseTaxReport error:', err);
+        throw err;
+    }
+};
+
+export const deleteSupabaseTaxReport = async (id: string) => {
+    try {
+        const { error } = await supabase.from('tax_reports').delete().eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseTaxReport error:', err);
+        throw err;
+    }
+};
+
+
+
 

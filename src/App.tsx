@@ -90,7 +90,10 @@ import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
 import ScrollToTop from "./components/ScrollToTop";
 import AvailabilityManager from "./pages/AvailabilityManager";
 import Availability from "./pages/Availability";
+import MileageTracking from "./pages/MileageTracking";
+import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
+
 
 const queryClient = new QueryClient();
 
@@ -232,6 +235,9 @@ const App = () => {
                       <Route path="/company-budget" element={<ProtectedRoute allowedRoles={['admin']}><CompanyBudget /></ProtectedRoute>} />
                       <Route path="/discount-coupons" element={<ProtectedRoute allowedRoles={['admin']}><DiscountCoupons /></ProtectedRoute>} />
                       <Route path="/package-pricing" element={<ProtectedRoute allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
+                      <Route path="/mileage" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
+                      <Route path="/taxes" element={<ProtectedRoute allowedRoles={['admin']}><Taxes /></ProtectedRoute>} />
+
 
                       {/* Inventory & Assets */}
                       <Route path="/inventory-control" element={<ProtectedRoute allowedRoles={['admin']}><InventoryControl /></ProtectedRoute>} />

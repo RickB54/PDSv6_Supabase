@@ -9,7 +9,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge } from "lucide-react";
+import { format } from "date-fns";
+
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -107,6 +109,16 @@ const ServiceChecklist = () => {
   const [customerSearchResults, setCustomerSearchResults] = useState<CustomerType[]>([]);
   const [vehicleTypeOther, setVehicleTypeOther] = useState<string>("");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
+
+  // Mileage State
+  const [odometerStart, setOdometerStart] = useState<string>("");
+  const [odometerEnd, setOdometerEnd] = useState<string>("");
+  const milesTraveled = useMemo(() => {
+    const start = parseFloat(odometerStart);
+    const end = parseFloat(odometerEnd);
+    if (!isNaN(start) && !isNaN(end) && end >= start) return end - start;
+    return 0;
+  }, [odometerStart, odometerEnd]);
 
   // Read employee from URL params (from Staff Schedule "Start Job")
   useEffect(() => {
@@ -1232,6 +1244,28 @@ const ServiceChecklist = () => {
       if (!idToUse) {
         throw new Error('Checklist not saved (select package and vehicle).');
       }
+
+      // Handle Mileage Logging
+      if (milesTraveled > 0) {
+        step = 'mileage_log';
+        const customer = customers.find(c => c.id === selectedCustomer);
+        const pkg = servicePackages.find(p => p.id === selectedPackage) || (getCustomPackages().find((p: any) => p.id === selectedPackage) as any);
+        const pkgName = pkg?.name || "Service";
+
+        await import('@/lib/supa-data').then(m => m.upsertSupabaseMileageLog({
+          date: format(new Date(), "yyyy-MM-dd"),
+          miles_driven: milesTraveled,
+          purpose: "Customer job",
+          odometer_start: parseFloat(odometerStart),
+          odometer_end: parseFloat(odometerEnd),
+          customer_id: selectedCustomer || undefined,
+          job_id: idToUse,
+          is_business: true,
+          start_location: "Office/Hub", // Default or could be dynamic
+          end_location: customer?.address || "Customer Location"
+        }));
+      }
+
       step = 'post_materials';
       await postChecklistMaterials(idToUse, true);
       step = 'archive_pdf';
@@ -1247,6 +1281,7 @@ const ServiceChecklist = () => {
       console.error('Finish Job Error:', step, e);
     }
   };
+
 
   const generatePDF = () => {
     const doc = new jsPDF();
@@ -1827,7 +1862,60 @@ const ServiceChecklist = () => {
             onSave={(newChemRows, newMatRows) => { setChemRows(newChemRows); setMatRows(newMatRows); }}
           />
 
+          {/* Mileage Section (New) */}
+          <Card className="p-6 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border-indigo-500/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-indigo-500/20 rounded-lg">
+                <Gauge className="h-5 w-5 text-indigo-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Job Mileage Tracking</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+              <div className="space-y-2">
+                <Label className="text-zinc-400">Odometer Start</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="Enter start reading"
+                    className="bg-black/40 border-zinc-800 font-mono text-zinc-200"
+                    value={odometerStart}
+                    onChange={(e) => setOdometerStart(e.target.value)}
+                  />
+                  <span className="absolute right-3 top-2.5 text-zinc-600 text-xs">mi</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-zinc-400">Odometer End</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="Enter end reading"
+                    className="bg-black/40 border-zinc-800 font-mono text-zinc-200"
+                    value={odometerEnd}
+                    onChange={(e) => setOdometerEnd(e.target.value)}
+                  />
+                  <span className="absolute right-3 top-2.5 text-zinc-600 text-xs">mi</span>
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 flex justify-between items-center h-10 mb-0.5">
+                <span className="text-zinc-500 text-xs uppercase font-medium">Auto-Calculated</span>
+                <span className={`font-mono font-bold text-lg ${milesTraveled > 0 ? 'text-indigo-400' : 'text-zinc-600'}`}>
+                  {milesTraveled.toFixed(1)} <span className="text-xs font-normal">mi</span>
+                </span>
+              </div>
+            </div>
+            {milesTraveled > 0 && (
+              <p className="text-[10px] text-zinc-500 mt-2 italic animate-in fade-in">
+                * Mileage will be automatically logged to Finance upon finishing the job.
+              </p>
+            )}
+          </Card>
+
           {/* Complete & Save controls */}
+
           <div className="flex items-center gap-3">
             <Button onClick={finishJob} className="bg-red-600 text-white">
               <Save className="h-4 w-4 mr-2" />Finish Job
