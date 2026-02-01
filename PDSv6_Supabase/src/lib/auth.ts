@@ -200,7 +200,7 @@ function getEmailRoleOverride(email: string): 'admin' | 'employee' | null {
     const admins = normalizeEnvList(import.meta.env.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAIL);
     const employees = normalizeEnvList(import.meta.env.VITE_EMPLOYEE_EMAILS || import.meta.env.VITE_EMPLOYEE_EMAIL);
     // Hardcoded safety fallback for immediate restoration if env not set
-    const defaultAdmins = ['primedetailsolutions.ma.nh@gmail.com'];
+    const defaultAdmins = ['Rick.PrimeAutoDetail@gmail.com'];
     const adminList = admins.length ? admins : defaultAdmins;
     if (adminList.includes(e)) return 'admin';
     if (employees.includes(e)) return 'employee';

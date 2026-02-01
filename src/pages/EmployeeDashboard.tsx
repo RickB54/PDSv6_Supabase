@@ -193,7 +193,7 @@ const EmployeeDashboard = () => {
 
       // Open Gmail compose for reliability
       const body = `Priority: ${priority}\nEmployee: ${actor}\n\n${message}`;
-      const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=primedetailsolutions.ma.nh@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(gmailLink, "_blank");
 
       toast({ title: "Sent", description: "Your message was prepared; PDF saved in File Manager." });

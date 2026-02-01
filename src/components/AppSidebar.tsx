@@ -220,8 +220,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     // User asked for it "below Employee Dashboard" which is usually in TOP_ITEMS or a group. 
     // Usually Employee Dashboard is a top item.
     { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
+    { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics' },
     { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery' },
-    { title: 'Reports', url: '/reports', icon: FileBarChart, role: 'admin', key: 'reports' }
+    { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined }
   ];
 
   /* ---------------- CUSTOMER ITEMS ---------------- */

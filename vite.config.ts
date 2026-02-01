@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
             hours: 'Appointments daily 8 AM–6 PM',
             phone: '(555) 123-4567',
             address: 'Methuen, MA',
-            email: 'primedetailsolutions.ma.nh@gmail.com',
+            email: 'Rick.PrimeAutoDetail@gmail.com',
           };
 
           function sendJson(res: any, obj: any) {

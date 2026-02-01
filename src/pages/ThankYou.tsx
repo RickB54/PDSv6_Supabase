@@ -9,7 +9,7 @@ export default function ThankYou() {
   const total = params.get("total") || "0";
   const time = params.get("time") || "";
   const date = params.get("date") || "";
-  const technician = "Prime Detail Solutions Team";
+  const technician = "Prime Auto Detail Team";
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 relative overflow-hidden font-sans">

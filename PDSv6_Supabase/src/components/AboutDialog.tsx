@@ -13,13 +13,13 @@ export default function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex justify-center mb-4">
-            <img src={logo} alt="Prime Detail Solutions" className="w-40" />
+            <img src={logo} alt="Prime Auto Detail" className="w-40" />
           </div>
-          <DialogTitle className="text-center text-2xl">About Prime Detail Solutions</DialogTitle>
+          <DialogTitle className="text-center text-2xl">About Prime Auto Detail</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-center">
           <p className="text-muted-foreground">
-            Welcome to Prime Detail Solutions — your trusted partner in premium auto care.
+            Welcome to Prime Auto Detail — your trusted partner in premium auto care.
           </p>
           <p className="text-muted-foreground">
             We specialize in high-quality interior and exterior detailing, paint correction,
@@ -28,12 +28,12 @@ export default function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           </p>
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Email: <a href="mailto:primedetailsolutions.ma.nh@gmail.com?subject=Inquiry from Website" className="text-primary hover:underline">
-                primedetailsolutions.ma.nh@gmail.com
+              Email: <a href="mailto:Rick.PrimeAutoDetail@gmail.com?subject=Inquiry from Website" className="text-primary hover:underline">
+                Rick.PrimeAutoDetail@gmail.com
               </a>
             </p>
             <p className="text-xs text-muted-foreground mt-2">
-              © Prime Detail Solutions. All rights reserved.
+              © Prime Auto Detail. All rights reserved.
             </p>
           </div>
         </div>

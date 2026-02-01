@@ -61,7 +61,7 @@ All colors MUST be HSL.
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 0 72% 51%;
 
-    /* Custom tokens for Prime Detail Solutions */
+    /* Custom tokens for Prime Auto Detail */
     --gradient-hero: linear-gradient(135deg, hsl(210, 100%, 50%) 0%, hsl(210, 100%, 40%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(0, 0%, 98%) 100%);
     --shadow-glow: 0 0 30px hsl(210, 100%, 50% / 0.15);

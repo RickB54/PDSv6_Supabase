@@ -602,7 +602,7 @@ const api = async (endpoint, options = {}) => {
       const existing = (await localforage.getItem(key)) || [];
       const list = Array.isArray(existing) ? existing : [];
       const seed = [
-        { id: 't_default_michael', name: 'Michael R.', quote: 'Prime Detail Solutions transformed my car! The attention to detail is incredible. My Tesla looks brand new again. Highly recommend!' },
+        { id: 't_default_michael', name: 'Michael R.', quote: 'Prime Auto Detail transformed my car! The attention to detail is incredible. My Tesla looks brand new again. Highly recommend!' },
         { id: 't_default_sarah', name: 'Sarah K.', quote: 'Professional, friendly, and affordable. The ceramic coating has kept my BMW looking pristine for months. Best detailing service in Methuen!' },
         { id: 't_default_james', name: 'James D.', quote: 'I love their mobile service! They came to my office and detailed my truck while I worked. Convenient and exceptional results.' },
         { id: 't_default_lisa', name: 'Lisa M.', quote: 'The interior cleaning was amazing. They removed pet hair and odors I thought were permanent. My SUV smells and looks fantastic!' },

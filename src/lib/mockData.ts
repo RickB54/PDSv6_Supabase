@@ -62,7 +62,7 @@ function buildJobPDF(customerName: string, employeeName: string, pkgName: string
     }
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text('Prime Detail Solutions', 105, 18, { align: 'center' });
+    doc.text('Prime Auto Detail', 105, 18, { align: 'center' });
     doc.setFontSize(12);
     doc.text('Service Checklist — Job Completed (Mock)', 105, 26, { align: 'center' });
     doc.text(`Date: ${new Date().toLocaleString()}`, 20, 38);

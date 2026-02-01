@@ -79,7 +79,6 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "employee", icon: CalendarDays },
                 { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays, badge: counts.tentativeBookingsCount, badgeColor: counts.bookingsBadgeColor },
-                { title: "Analytics", url: "/bookings-analytics", key: "bookings-analytics", icon: FileBarChart },
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
                 { title: "Tasks", url: "/tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users },
@@ -103,10 +102,22 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
+            title: "Reports", icon: FileBarChart,
+            items: [
+                { title: "Reports Dashboard", url: "/reports", role: "admin", key: "reports", icon: FileBarChart },
+                { title: "Customers", url: "/reports?tab=customers", role: "admin", key: "reports-customers", icon: Users },
+                { title: "Invoices", url: "/reports?tab=invoices", role: "admin", key: "reports-invoices", icon: FileText },
+                { title: "Inventory", url: "/reports?tab=inventory", role: "admin", key: "reports-inventory", icon: Package },
+                { title: "Employee", url: "/reports?tab=employee", role: "admin", key: "reports-employee", icon: GraduationCap },
+                { title: "Estimates", url: "/reports?tab=estimates", role: "admin", key: "reports-estimates", icon: FileText },
+                { title: "Accounting", url: "/reports?tab=accounting", role: "admin", key: "reports-accounting", icon: Calculator },
+                { title: "Tax Report", url: "/reports?tab=tax-report", role: "admin", key: "reports-tax", icon: FileText },
+            ]
+        },
+        {
             title: "Inventory & Assets", icon: Package,
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package },
-                { title: "File Manager", url: "/file-manager", role: "admin", key: "file-manager", badge: counts.fileCount > 0 ? counts.fileCount : undefined, icon: FileText },
                 { title: "Mobile Setup", url: "/mobile-setup", role: "admin", key: "mobile-setup", icon: Package },
                 { title: "Detailing Vendors", url: "/detailing-vendors", role: "admin", key: "detailing-vendors", icon: Users },
             ]

@@ -2749,7 +2749,7 @@ export default function PackagePricing() {
         <Dialog open={viewAllOpen} onOpenChange={setViewAllOpen}>
           <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Current Live Pricing — Prime Detail Solutions</DialogTitle>
+              <DialogTitle>Current Live Pricing — Prime Auto Detail</DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-end gap-3 mb-4">
               <Button variant="outline" onClick={printPrices}>Print</Button>

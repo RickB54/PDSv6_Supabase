@@ -34,7 +34,7 @@ const Contact = () => {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
@@ -42,14 +42,14 @@ const Contact = () => {
       newErrors.email = "Invalid email format";
     }
     if (!formData.message.trim()) newErrors.message = "Message is required";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast({
         title: "Please fix errors",
@@ -77,12 +77,12 @@ const Contact = () => {
     doc.text(`Phone: ${formData.phone || "N/A"}`, 20, 70);
     doc.text(`Vehicle: ${formData.vehicle || "N/A"}`, 20, 80);
     doc.text("Message:", 20, 95);
-    
+
     const lines = doc.splitTextToSize(formData.message, 170);
     doc.text(lines, 20, 105);
 
     const pdfDataUrl = doc.output('dataurlstring');
-    
+
     // Save to File Manager
     savePDFToArchive("Customer", formData.name, `contact_${Date.now()}`, pdfDataUrl);
 
@@ -96,7 +96,7 @@ const Contact = () => {
       `Message:\n${formData.message}\n\n` +
       `Submitted: ${new Date().toLocaleString()}\n` +
       `Portal Link (auto): ${window.location.origin}/portal?token=auto-${Date.now()}`;
-    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=primedetailsolutions.ma.nh@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(gmailLink, "_blank");
 
     toast({
@@ -115,7 +115,7 @@ const Contact = () => {
           message: formData.message,
         });
       }
-    } catch {}
+    } catch { }
 
     // Reset form
     setFormData({
@@ -131,12 +131,12 @@ const Contact = () => {
     try {
       const formEl = e.target as HTMLFormElement;
       formEl.submit();
-    } catch {}
+    } catch { }
 
     setSubmitting(false);
 
     // Redirect consistent with Book Now flow
-    try { window.location.href = "/thank-you?contact=1"; } catch {}
+    try { window.location.href = "/thank-you?contact=1"; } catch { }
   };
 
   // Load contact info and keep in sync with admin edits
@@ -151,16 +151,16 @@ const Contact = () => {
               hours: c.hours || 'Appointments daily 8 AM–6 PM',
               phone: c.phone || '(555) 123-4567',
               address: c.address || 'Methuen, MA',
-              email: c.email || 'primedetailsolutions.ma.nh@gmail.com',
+              email: c.email || 'Rick.PrimeAutoDetail@gmail.com',
             });
           } else {
-            setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' });
+            setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
           }
         } else {
-          setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' });
+          setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
         }
       } catch {
-        setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'primedetailsolutions.ma.nh@gmail.com' });
+        setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
       }
     };
     load();
@@ -174,7 +174,7 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-16 max-w-6xl">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/">
@@ -182,11 +182,11 @@ const Contact = () => {
             Previous
           </Link>
         </Button>
-        
+
         <div className="text-center mb-12">
           <img
             src={logo}
-            alt="Prime Detail Solutions"
+            alt="Prime Auto Detail"
             className="mx-auto mb-4 cursor-pointer w-[3in]"
             onClick={() => setShowAbout(true)}
           />
@@ -196,7 +196,7 @@ const Contact = () => {
           </p>
         </div>
 
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Contact Form */}
           <Card className="p-6 md:p-8 bg-gradient-card border-border">
             <h2 className="text-2xl font-bold text-foreground mb-6">Send us a message</h2>
@@ -268,8 +268,8 @@ const Contact = () => {
               {/* Netlify reCAPTCHA v2 */}
               <div data-netlify-recaptcha="true"></div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-gradient-hero min-h-[56px]"
                 disabled={submitting}
               >
@@ -290,8 +290,8 @@ const Contact = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                  <a 
-                    href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(contactInfo?.email || 'primedetailsolutions.ma.nh@gmail.com')}&su=Website%20Inquiry`}
+                  <a
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(contactInfo?.email || 'Rick.PrimeAutoDetail@gmail.com')}&su=Website%20Inquiry`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-primary transition-colors"
@@ -309,8 +309,8 @@ const Contact = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">Phone</h3>
-                  <a 
-                    href={`tel:${(contactInfo?.phone || '(555) 123-4567').replace(/[^+\d]/g,'')}`}
+                  <a
+                    href={`tel:${(contactInfo?.phone || '(555) 123-4567').replace(/[^+\d]/g, '')}`}
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
                     {contactInfo ? (contactInfo.phone || '(555) 123-4567') : 'Loading contact info...'}

@@ -71,7 +71,7 @@ const About = () => {
 
       {/* Title moved below hero to prevent overlap */}
       <section className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">About Prime Detail Solutions</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">About Prime Auto Detail</h1>
         <p className="text-xl text-muted-foreground">Your trusted partner in premium auto care</p>
       </section>
 
@@ -87,7 +87,7 @@ const About = () => {
         <div className="space-y-16">
           {/* Mission Statement */}
           <Card className="p-8 md:p-12 bg-gradient-card border-border">
-            <h2 className="text-3xl font-bold text-center mb-6 text-foreground">Welcome to Prime Detail Solutions</h2>
+            <h2 className="text-3xl font-bold text-center mb-6 text-foreground">Welcome to Prime Auto Detail</h2>
             <p className="text-lg text-muted-foreground text-center max-w-4xl mx-auto leading-relaxed mb-8">
               Your trusted partner in premium auto care in Methuen, MA. We specialize in high-quality
               interior and exterior detailing, paint correction, ceramic coatings, and mobile services.
@@ -179,7 +179,7 @@ const About = () => {
 
           {/* Footer */}
           <div className="text-center text-muted-foreground text-sm">
-            <p>© {new Date().getFullYear()} Prime Detail Solutions. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
           </div>
         </div>
       </main>

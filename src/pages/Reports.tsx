@@ -25,6 +25,7 @@ import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
 import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport } from "@/lib/supa-data";
 
 const Reports = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [customers, setCustomers] = useState<any[]>([]);
@@ -706,8 +707,10 @@ const Reports = () => {
     { id: 'tax-report', label: 'Tax Report' },
   ]
 
-  const initialTab = new URLSearchParams(window.location.search).get('tab') || 'customers';
-  const [tab, setTab] = useState(initialTab);
+  const tab = searchParams.get('tab') || 'customers';
+  const setTab = (newTab: string) => {
+    setSearchParams({ tab: newTab }, { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
