@@ -1,10 +1,11 @@
 import {
-  Home, ClipboardCheck, Search, FileText, Calculator, BookOpen, Users,
+  Home, ClipboardCheck, Search, Calculator, BookOpen, Users,
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
-  TicketPercent, GraduationCap, Shield, CheckSquare, CalendarDays,
+  TicketPercent, GraduationCap, Shield, CalendarDays,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
   MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle
 } from "lucide-react";
+import { FileText, CheckSquare } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo } from "react";
 import {

@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
+import { GlobalModals } from "@/components/GlobalModals";
 import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled } from "@/lib/auth";
 import supabase from "@/lib/supabase";
 import "@/lib/storage-utils";
@@ -177,8 +178,12 @@ const App = () => {
     window.addEventListener('open-call-assistant', onOpenCallAssistant);
 
     const onOpenHelp = (e: any) => {
-      if (e.detail?.role) setHelpRole(e.detail.role);
-      else setHelpRole(user?.role || 'customer');
+      const role = e.detail?.role || user?.role;
+      if (role === 'admin' || role === 'employee' || role === 'customer') {
+        setHelpRole(role);
+      } else {
+        setHelpRole('customer');
+      }
       setHelpOpen(true);
     };
     window.addEventListener('open-help', onOpenHelp);
@@ -202,6 +207,7 @@ const App = () => {
         <SidebarProvider defaultOpen={true}>
           <Toaster />
           <Sonner />
+          <GlobalModals />
           <BrowserRouter>
             <ScrollToTop />
             <ConditionalGlobalChat />
@@ -210,7 +216,7 @@ const App = () => {
               {user ? (
                 <div className={`flex min-h-screen w-full ${user.role === 'admin' || user.role === 'employee' ? 'dark-theme bg-black' : ''}`}>
                   <AppSidebar key={user.id} user={user} />
-                  <div className="flex-1 overflow-x-hidden pt-24">
+                  <div className="flex-1 overflow-x-hidden pt-0">
                     <Routes>
                       {/* Dashboard Routes */}
                       <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

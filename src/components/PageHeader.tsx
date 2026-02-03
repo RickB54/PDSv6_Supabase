@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import AboutDialog from "@/components/AboutDialog";
 import { useState } from "react";
 import { LogOut, Globe, User, ArrowLeft, Maximize2, Minimize2 } from "lucide-react";
+import { FileText, CheckSquare } from "lucide-react";
 import logo from "@/assets/logo-primary.png";
 import NotificationBell from "@/components/NotificationBell";
 import { Link } from "react-router-dom";
@@ -79,6 +80,29 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
                 <span className="sr-only">Website</span>
               </Link>
             </Button>
+
+            {(user?.role === 'admin' || user?.role === 'employee') && (
+              <div className="flex items-center gap-1 border-x border-border/50 px-2 mx-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { path: location.pathname } }))}
+                  title="Quick Note"
+                >
+                  <FileText className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-quick-task', { detail: { path: location.pathname } }))}
+                  title="Quick Task"
+                >
+                  <CheckSquare className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
 
             {user?.role === 'admin' && <NotificationBell />}
 

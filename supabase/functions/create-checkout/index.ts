@@ -13,10 +13,21 @@ const stripe = new Stripe(stripeSecret!, {
   apiVersion: "2023-10-16",
 });
 
-// Use SITE_URL env (if provided) otherwise default to local dev port 6061
-const siteUrl = Deno.env.get("SITE_URL") || "http://localhost:6061";
+// Use SITE_URL env (if provided) otherwise default to production domain
+const siteUrl = Deno.env.get("SITE_URL") || "https://primeautodetail.net";
 
 serve(async (req) => {
+  // CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const customerEmail: string | undefined = body.customerEmail || undefined;
@@ -28,28 +39,31 @@ serve(async (req) => {
       ? body.lineItems
       : [];
 
-    const PRICE_ID = priceId || "price_1SUqfeAx5DEMIPk4YbyLjL6L"; // fallback
+    // Fallback is still there but marked as test-only
+    const PRICE_ID = priceId || "price_1SUqfeAx5DEMIPk4YbyLjL6L";
 
     const line_items = rawItems.length > 0
       ? rawItems
-          .filter((i) => typeof i.amount === 'number' && i.amount! > 0)
-          .map((i) => ({
-            price_data: {
-              currency: 'usd',
-              product_data: { name: i.name || 'Item' },
-              unit_amount: Math.round((i.amount || 0) * 100),
-            },
-            quantity: i.quantity && i.quantity > 0 ? i.quantity : 1,
-          }))
-      : [
-          {
-            price: PRICE_ID,
-            quantity: 1,
+        .filter((i) => typeof i.amount === 'number' && i.amount! > 0)
+        .map((i) => ({
+          price_data: {
+            currency: 'usd',
+            product_data: { name: i.name || 'Item' },
+            unit_amount: Math.round((i.amount || 0) * 100),
           },
-        ];
+          quantity: i.quantity && i.quantity > 0 ? i.quantity : 1,
+        }))
+      : [
+        {
+          price: PRICE_ID,
+          quantity: 1,
+        },
+      ];
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      automatic_payment_methods: {
+        enabled: true,
+      },
       mode,
       customer_email: customerEmail,
       line_items,
@@ -59,12 +73,13 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("❌ Checkout error:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

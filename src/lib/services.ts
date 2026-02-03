@@ -251,7 +251,7 @@ export const addOns: AddOn[] = [
   { id: 'stain-treatment', name: 'Stain Treatment', category: 'interior', description: 'Professional stain removal for carpets and upholstery', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 110 } },
   { id: 'scratch-repair', name: 'Scratch Repair', category: 'exterior', description: 'Minor scratch repair and touch-up', basePrice: 200, pricing: { compact: 200, midsize: 200, truck: 200, luxury: 200 } },
   { id: 'eco-package', name: 'Eco-Friendly Package', category: 'exterior', description: 'Complete detail using environmentally-safe products', basePrice: 120, pricing: { compact: 120, midsize: 130, truck: 140, luxury: 150 } },
-  { id: 'headlight-restoration', name: 'Headlight Restoration', category: 'exterior', description: 'Restore clarity to oxidized and yellowed headlights', basePrice: 90, pricing: { compact: 90, midsize: 90, truck: 90, luxury: 90 } },
+  { id: 'headlight-restoration', name: 'Headlight Restoration', category: 'exterior', description: 'Restore clarity to oxidized and yellowed headlights', basePrice: 35, pricing: { compact: 35, midsize: 40, truck: 50, luxury: 65 } },
   { id: 'engine-detail', name: 'Engine Bay Detailing', category: 'exterior', description: 'Professional cleaning and dressing of engine compartment', basePrice: 110, pricing: { compact: 110, midsize: 110, truck: 110, luxury: 110 } },
   { id: 'clay-bar', name: 'Clay Bar & Iron Decontamination', category: 'exterior', description: 'Deep removal of embedded surface contaminants and iron particles', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 120 } }
 ];

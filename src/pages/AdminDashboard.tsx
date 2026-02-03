@@ -39,7 +39,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Beaker, CalendarDays, UserPlus, Plus, FileText, Package, DollarSign, Calculator, Folder, Users, Grid3X3, CheckSquare, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe, Video, ListOrdered } from "lucide-react";
+import { AlertTriangle, Beaker, CalendarDays, UserPlus, Plus, Package, DollarSign, Calculator, Folder, Users, Grid3X3, Tag, Settings as Cog, Shield, ClipboardCheck, RotateCcw, BookOpen, HelpCircle, FileBarChart, Newspaper, Phone, Globe, Video, ListOrdered } from "lucide-react";
+import { FileText, CheckSquare } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { CheatSheetPanel } from "@/pages/CheatSheet";
@@ -60,6 +61,7 @@ import OrientationModal from "@/components/training/OrientationModal";
 import jsPDF from 'jspdf';
 import { savePDFToArchive } from '@/lib/pdfArchive';
 import { useBookingsStore } from "@/store/bookings";
+import { PrimeCentralHub } from "@/components/admin/PrimeCentralHub";
 
 type Job = { finishedAt: string; totalRevenue: number; status: string };
 
@@ -610,974 +612,591 @@ export default function AdminDashboard() {
   // Removed auto FAQ seeding to keep Website Administration independent
 
   return (
-    <div>
-      <PageHeader title="Admin Dashboard" />
-      <div className="p-2 sm:p-4 space-y-6 max-w-screen-xl mx-auto overflow-x-hidden">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <div className="flex items-center gap-3">
-            <Button asChild className="bg-gradient-hero">
-              <Link to="/services">
-                <Plus className="h-4 w-4 mr-2" /> New Booking
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full h-9 w-9 text-muted-foreground hover:text-primary hover:bg-muted"
-              onClick={() => setHelpOpen(true)}
-              title="Help"
-            >
-              <HelpCircle className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-        {/* Removed top-right Website Administration button; now a dashboard box below */}
-        {/* Real-time Alerts banner with deep purple background */}
-        <Card className="p-4 border-purple-500/60 border bg-purple-900">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-white" />
-              <h2 className="font-bold text-white">Real-time Alerts</h2>
-            </div>
-            <div className="flex items-center justify-between w-full sm:w-auto gap-3 text-sm">
-              <span className="text-white">Unread: {unreadCount}</span>
-              <Button size="sm" className="bg-black text-red-700 border-red-700 hover:bg-red-800/20" onClick={dismissAll}>Dismiss All</Button>
-            </div>
-          </div>
-          <Separator className="my-3" />
-          <div className="space-y-2 max-h-48 overflow-auto">
-            {[...latest].reverse().slice(0, 10).map((a) => (
-              <div key={a.id} className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-white">{a.title}</span>
-                <div className="flex items-center gap-2">
-                  <a href={a.href} className="text-xs text-blue-400 hover:underline" onClick={() => markRead(a.id)}>Open</a>
-                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => markRead(a.id)}>Mark read</Button>
-                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs bg-black text-red-700 border-red-700 hover:bg-red-800/20" onClick={() => dismiss(a.id)}>Dismiss</Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+    <>
+      <div className="p-4 sm:p-8 space-y-8">
+        <PageHeader
+          title="Prime Central Hub"
+          subtitle="Owner-focused business management & operations"
+        />
 
-        {/* Eight grouped boxes with combined menu items in a 3x3-style grid */}
-        {/* Eight grouped boxes with combined menu items in a 3x3-style grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          {/* Row 1, Col 1: Client Intake Tools (NEW) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-6 h-6 text-blue-400" />
-              <div className="text-lg font-bold">Customer Intake</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-primary text-primary hover:bg-primary/10 w-fit"
-                >
-                  <Phone className="w-3.5 h-3.5 text-primary" />
-                  <span>Phone Assistant</span>
-                </button>
-                <Link to="/vehicle-classification" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
-                  <Grid3X3 className="w-3.5 h-3.5 text-green-600" />
-                  <span>Vehicle Classification</span>
-                </Link>
-                <Link to="/client-evaluation" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
-                  <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Client Evaluation</span>
-                </Link>
-                <Link to="/addon-upsell-script" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-purple-600 text-purple-600 hover:bg-purple-600/10 w-fit">
-                  <Package className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Addon Upsell Script</span>
-                </Link>
-                <Link to="/package-selection" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-orange-600 text-orange-600 hover:bg-orange-600/10 w-fit">
-                  <FileText className="w-3.5 h-3.5 text-orange-600" />
-                  <span>Package Comparison Guide</span>
-                </Link>
-                <Link to="/prospects" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-purple-500 text-purple-500 hover:bg-purple-500/10 w-fit">
-                  <Users className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Prospects</span>
-                </Link>
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 1, Col 2: Admin Control (Existing) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-6 h-6 text-blue-500" />
-              <div className="text-lg font-bold">Admin Control</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-col gap-2">
-                <Link to="/website-admin" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
-                  <Shield className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Website Administration</span>
-                </Link>
-                <Link to="/admin/users" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-pink-600 text-pink-600 hover:bg-pink-600/10 w-fit">
-                  <Users className="w-3.5 h-3.5 text-pink-600" />
-                  <span>Users & Roles</span>
-                </Link>
-                {!isMenuHidden('settings') && (
-                  <Link to="/settings" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-600/10 w-fit">
-                    <Cog className="w-3.5 h-3.5 text-cyan-600" />
-                    <span>Company Settings</span>
-                  </Link>
-                )}
-                <button onClick={() => { setMockDataOpen(true); setMockReport(null); }} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-red-600 text-red-600 hover:bg-red-600/10 w-fit">
-                  <Tag className="w-3.5 h-3.5 text-red-600" />
-                  <span>Mock Data System</span>
-                </button>
-                {!isMenuHidden('file-manager') && (
-                  <RedBox accent="yellow" title="File Manager" href="/file-manager" Icon={Folder} badgeCount={unviewedFilesCount} />
-                )}
-                <Link to="/notes" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-amber-500 text-amber-500 hover:bg-amber-500/10 w-fit">
-                  <BookOpen className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Personal Notes</span>
-                </Link>
-                <Link to="/reports" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 w-fit">
-                  <FileBarChart className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Reports</span>
-                </Link>
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 1, Col 3: Job Operations (Existing) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <ClipboardCheck className="w-6 h-6 text-orange-500" />
-              <div className="text-lg font-bold">Job Operations</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-col gap-2">
-                {!isMenuHidden('start-job') && (
-                  <RedBox accent="orange" title="Start a Job" href="/service-checklist" Icon={ClipboardCheck} />
-                )}
-                {!isMenuHidden('jobs-completed-admin') && (
-                  <RedBox accent="orange" title="Jobs Completed by Admin" href="/jobs-completed?employee=admin" Icon={FileText} badgeCount={adminJobsCount} />
-                )}
-                {!isMenuHidden('book-new-job') && (
-                  <RedBox accent="orange" title="Book Now via website" href="/book-now" Icon={ClipboardCheck} />
-                )}
-                <RedBox accent="orange" title="Bookings" href="/bookings?add=true" Icon={CalendarDays} />
-                <RedBox accent="orange" title="Analytics" href="/bookings-analytics" Icon={FileBarChart} />
-                <RedBox accent="cyan" title="Media Library" href="/vehicle-gallery" Icon={Video} />
-                <button
-                  onClick={() => setSubContractorsOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit"
-                >
-                  <Users className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Sub-Contractors</span>
-                </button>
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 2, Col 1: Search Products & Services (NEW) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-6 h-6 text-blue-400" />
-              <div className="text-lg font-bold">Search Products & Services</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-row flex-wrap gap-2">
-                <Link to="/detailing-vendors" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10">
-                  <Package className="w-3.5 h-3.5 text-green-600" />
-                  <span>Detailing Vendors</span>
-                </Link>
-                {/* Package Pricing moved here */}
-                {!isMenuHidden('package-pricing') && (
-                  <Link to="/package-pricing" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-pink-600 text-pink-600 hover:bg-pink-600/10">
-                    <Tag className="w-3.5 h-3.5 text-pink-600" />
-                    <span>Package Pricing</span>
-                  </Link>
-                )}
-                <Link to="/chemicals" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-cyan-600 text-cyan-600 hover:bg-cyan-600/10">
-                  <Beaker className="w-3.5 h-3.5 text-cyan-600" />
-                  <span>Chemical Cards</span>
-                </Link>
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 2, Col 2: Training Hub (Existing) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <ClipboardCheck className="w-6 h-6 text-green-500" />
-              <div className="text-lg font-bold">Training Hub</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => setCheatOpen(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-purple-600 text-purple-600 hover:bg-purple-600/10 cursor-pointer w-fit">
-                  <FileText className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Open Cheat Sheet</span>
-                </button>
-
-                <Link to="/exam-admin" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 w-fit">
-                  <Cog className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Manage Exam</span>
-                </Link>
-                <button type="button" onClick={() => setOrientationOpen(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-orange-600 text-orange-600 hover:bg-orange-600/10 w-fit">
-                  <ClipboardCheck className="w-3.5 h-3.5 text-orange-600" />
-                  <span>Auto Detailing Handbook</span>
-                </button>
-                <Link to="/exam" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-green-600 text-green-600 hover:bg-green-600/10 w-fit">
-                  <ClipboardCheck className="w-3.5 h-3.5 text-green-600" />
-                  <span>Take Exam</span>
-                </Link>
-                <Link to="/training-manual" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-purple-500 text-purple-500 hover:bg-purple-500/10 w-fit">
-                  <BookOpen className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Prime Training Center</span>
-                </Link>
-                <Link to="/app-manual" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-cyan-500 text-cyan-500 hover:bg-cyan-500/10 w-fit">
-                  <BookOpen className="w-3.5 h-3.5 text-cyan-500" />
-                  <span>App Manual</span>
-                </Link>
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 2, Col 3: Finance Center (Existing) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <DollarSign className="w-6 h-6 text-green-600" />
-              <div className="text-lg font-bold">Finance Center</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-row flex-wrap gap-2">
-                {!isMenuHidden('company-budget') && (
-                  <RedBox accent="blue" title="Company Budget" href="/company-budget" Icon={DollarSign} />
-                )}
-                {!isMenuHidden('invoicing') && (
-                  <RedBox accent="green" title="Create Invoice" href="/invoicing" Icon={FileText} badgeCount={Math.max(unpaidInvoices, badgeByType('invoice_unpaid'))} />
-                )}
-                {!isMenuHidden('payroll') && (
-                  <RedBox accent="green" title="Payroll Due" href="/payroll" Icon={DollarSign} badgeCount={Math.max(badgeByType('payroll_due'), overdueCount)} />
-                )}
-                {!isMenuHidden('pay-employee') && (
-                  <RedBox accent="green" title="Pay Employee" href="/payroll?modal=checks" Icon={DollarSign} />
-                )}
-                {!isMenuHidden('accounting') && (
-                  <RedBox accent="green" title="Accounting" href="/accounting" Icon={Calculator} badgeCount={badgeByType('accounting_update')} />
-                )}
-                {!isMenuHidden('discount-coupons') && (
-                  <RedBox accent="green" title="Discount Coupons" href="/discount-coupons" Icon={Tag} />
-                )}
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 3, Col 1: Inventory & Files (Existing) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Folder className="w-6 h-6 text-yellow-500" />
-              <div className="text-lg font-bold">Inventory & Files</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-row flex-wrap gap-2">
-                {!isMenuHidden('inventory-control') && (
-                  <RedBox accent="yellow" title="Low Inventory" href="/inventory-control" Icon={Package} badgeCount={criticalInventory} />
-                )}
-                {!isMenuHidden('inventory-control') && (
-                  <RedBox accent="yellow" title="Material Updates" href="/inventory-control?updates=true" Icon={FileText} />
-                )}
-
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 3, Col 2: Tasks & Portal (Moved from Customer Hub) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <CheckSquare className="w-6 h-6 text-zinc-400" />
-              <div className="text-lg font-bold">Tasks & Portal</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-col gap-2">
-                {!isMenuHidden('employee-dashboard') && (
-                  <RedBox accent="zinc" title="Staff Portal" href="/employee-dashboard" Icon={Grid3X3} />
-                )}
-                {!isMenuHidden('bookings') && (
-                  <RedBox accent="zinc" title="Bookings Calendar" href="/bookings" Icon={CalendarDays} badgeCount={newBookingsToday} />
-                )}
-                {!isMenuHidden('service-checklist') && (
-                  <RedBox accent="zinc" title="Todo" href="/tasks" Icon={CheckSquare} badgeCount={badgeByType('todo_overdue')} />
-                )}
-                <RedBox accent="indigo" title="Prime Blog" href="/f150-setup" Icon={Newspaper} />
-                <RedBox accent="indigo" title="Blog Layout Architect" href="/blog-reorder" Icon={ListOrdered} />
-                <Link to="/team-chat" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-600/10 w-fit">
-                  <Users className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Team Chat</span>
-                </Link>
-                <Link to="/notes" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-amber-500 text-amber-500 hover:bg-amber-500/10 w-fit">
-                  <BookOpen className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Personal Notes</span>
-                </Link>
-              </div>
-            </Card>
-          </Card>
-
-          {/* Row 3, Col 3: Customer Hub (Existing) */}
-          <Card className="relative p-5 bg-[#18181b] rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-6 h-6 text-purple-500" />
-              <div className="text-lg font-bold">Customer Hub</div>
-            </div>
-            <Card className="p-4 bg-[#0f0f13] rounded-xl border border-zinc-800">
-              <div className="flex flex-row flex-wrap gap-2">
-                {!isMenuHidden('search-customer') && (
-                  <RedBox accent="purple" title="Add Customer" onClick={() => setAddCustomerOpen(true)} Icon={UserPlus} badgeCount={badgeByType('customer_added')} />
-                )}
-                {!isMenuHidden('customer-profiles') && (
-                  <RedBox accent="purple" title="Customer Profiles" href="/search-customer" Icon={Users} badgeCount={alertsAll.filter(a => a.payload?.recordType === 'Customer' && !a.read).length} />
-                )}
-                <RedBox accent="green" title="Estimates" href="/estimates" Icon={FileText} />
-              </div>
-            </Card>
-          </Card>
-        </div>
-
-        {/* Add Customer Popup */}
-        <CustomerModal
-          open={addCustomerOpen}
-          onOpenChange={setAddCustomerOpen}
-          initial={null}
-          onSave={async (data) => {
-            try {
-              await upsertCustomer(data as any);
-              setAddCustomerOpen(false);
-              toast({ title: 'Customer Saved', description: 'Record stored.' });
-            } catch (err: any) {
-              setAddCustomerOpen(false);
-              toast({ title: 'Error', description: 'Failed to save customer.', variant: 'destructive' });
+        <PrimeCentralHub
+          onQuickAction={(action) => {
+            if (action.startsWith('modal:')) {
+              const modalId = action.replace('modal:', '');
+              switch (modalId) {
+                case 'add-customer': setAddCustomerOpen(true); break;
+                case 'cheat-sheet': setCheatOpen(true); break;
+                case 'subcontractors': setSubContractorsOpen(true); break;
+                case 'user-admin': setUserAdminOpen(true); break;
+                case 'employee-mgmt': setEmployeeMgmtOpen(true); break;
+                case 'mock-data': setMockDataOpen(true); break;
+                case 'orientation': setOrientationOpen(true); break;
+              }
             }
           }}
         />
+      </div>
 
-        {/* Orientation Welcome Popup */}
-        <OrientationModal
-          open={orientationOpen}
-          onOpenChange={setOrientationOpen}
-        />
+      {/* Add Customer Popup */}
+      <CustomerModal
+        open={addCustomerOpen}
+        onOpenChange={setAddCustomerOpen}
+        initial={null}
+        onSave={async (data) => {
+          try {
+            await upsertCustomer(data as any);
+            setAddCustomerOpen(false);
+            toast({ title: 'Customer Saved', description: 'Record stored.' });
+          } catch (err: any) {
+            setAddCustomerOpen(false);
+            toast({ title: 'Error', description: 'Failed to save customer.', variant: 'destructive' });
+          }
+        }}
+      />
 
-        <SubContractorsModal open={subContractorsOpen} onOpenChange={setSubContractorsOpen} />
+      {/* Orientation Welcome Popup */}
+      <OrientationModal
+        open={orientationOpen}
+        onOpenChange={setOrientationOpen}
+      />
 
-        {/* Cheat Sheet Dialog */}
-        <Dialog open={cheatOpen} onOpenChange={setCheatOpen}>
-          <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
-            <DialogHeader>
-              <DialogTitle>Training Cheat Sheet</DialogTitle>
-            </DialogHeader>
-            <CheatSheetPanel embedded />
-          </DialogContent>
-        </Dialog>
+      <SubContractorsModal open={subContractorsOpen} onOpenChange={setSubContractorsOpen} />
 
-        {/* Mock Data System Popup — local-only users/employees/inventory */}
-        <Dialog open={mockDataOpen} onOpenChange={setMockDataOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Mock Data System (Local Only)</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6 text-sm">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  className="bg-red-700 hover:bg-red-800"
-                  onClick={async () => {
+      {/* Cheat Sheet Dialog */}
+      <Dialog open={cheatOpen} onOpenChange={setCheatOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Training Cheat Sheet</DialogTitle>
+          </DialogHeader>
+          <CheatSheetPanel embedded />
+        </DialogContent>
+      </Dialog>
+
+      {/* Mock Data System Popup — local-only users/employees/inventory */}
+      <Dialog open={mockDataOpen} onOpenChange={setMockDataOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Mock Data System (Local Only)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 text-sm">
+            <div className="flex flex-wrap gap-3">
+              <Button
+                className="bg-red-700 hover:bg-red-800"
+                onClick={async () => {
+                  try {
+                    setMockReport({ progress: ['Starting local-only insertion…'], createdAt: new Date().toISOString() });
+                    const push = (msg: string) => setMockReport((prev: any) => ({ ...(prev || {}), progress: [...((prev?.progress) || []), `${new Date().toLocaleTimeString()} — ${msg}`] }));
+                    const tracker = await insertStaticMockBasic(push, { customers: 5, employees: 5, chemicals: 3, materials: 3 });
+                    // Build simple report
+                    const usersLF = (await localforage.getItem<any[]>('users')) || [];
+                    const customersLF = (await localforage.getItem<any[]>('customers')) || [];
+                    const employeesLF = (await localforage.getItem<any[]>('company-employees')) || [];
+                    const chemicalsLF = (await localforage.getItem<any[]>('chemicals')) || [];
+                    const materialsLF = (await localforage.getItem<any[]>('materials')) || [];
+                    const summary = {
+                      local_users: usersLF.length,
+                      local_customers: customersLF.length,
+                      local_employees: employeesLF.length,
+                      chemicals_count: chemicalsLF.length,
+                      materials_count: materialsLF.length,
+                      mode: 'Local only — Not Linked to Supabase',
+                    };
+                    setMockReport((prev: any) => ({ ...(prev || {}), customers: tracker.customers, employees: tracker.employees, inventory: tracker.inventory, summary }));
                     try {
-                      setMockReport({ progress: ['Starting local-only insertion…'], createdAt: new Date().toISOString() });
-                      const push = (msg: string) => setMockReport((prev: any) => ({ ...(prev || {}), progress: [...((prev?.progress) || []), `${new Date().toLocaleTimeString()} — ${msg}`] }));
-                      const tracker = await insertStaticMockBasic(push, { customers: 5, employees: 5, chemicals: 3, materials: 3 });
-                      // Build simple report
-                      const usersLF = (await localforage.getItem<any[]>('users')) || [];
-                      const customersLF = (await localforage.getItem<any[]>('customers')) || [];
-                      const employeesLF = (await localforage.getItem<any[]>('company-employees')) || [];
-                      const chemicalsLF = (await localforage.getItem<any[]>('chemicals')) || [];
-                      const materialsLF = (await localforage.getItem<any[]>('materials')) || [];
-                      const summary = {
-                        local_users: usersLF.length,
-                        local_customers: customersLF.length,
-                        local_employees: employeesLF.length,
-                        chemicals_count: chemicalsLF.length,
-                        materials_count: materialsLF.length,
-                        mode: 'Local only — Not Linked to Supabase',
-                      };
-                      setMockReport((prev: any) => ({ ...(prev || {}), customers: tracker.customers, employees: tracker.employees, inventory: tracker.inventory, summary }));
-                      try {
-                        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
-                        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'customers' } }));
-                        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'employees' } }));
-                        window.dispatchEvent(new CustomEvent('inventory-changed'));
-                      } catch { }
-                      toast?.({ title: 'Static Mock Data Inserted', description: 'Added customers, employees, and inventory locally.' });
-                    } catch (e: any) {
-                      const errMsg = e?.message || String(e);
-                      setMockReport((prev: any) => ({ ...(prev || {}), errors: [...(prev?.errors || []), errMsg] }));
-                    }
-                  }}
-                >Insert Mock Data</Button>
-                <Button
-                  variant="outline"
-                  className="border-red-700 text-red-700 hover:bg-red-700/10"
-                  onClick={async () => {
+                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
+                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'customers' } }));
+                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'employees' } }));
+                      window.dispatchEvent(new CustomEvent('inventory-changed'));
+                    } catch { }
+                    toast?.({ title: 'Static Mock Data Inserted', description: 'Added customers, employees, and inventory locally.' });
+                  } catch (e: any) {
+                    const errMsg = e?.message || String(e);
+                    setMockReport((prev: any) => ({ ...(prev || {}), errors: [...(prev?.errors || []), errMsg] }));
+                  }
+                }}
+              >Insert Mock Data</Button>
+              <Button
+                variant="outline"
+                className="border-red-700 text-red-700 hover:bg-red-700/10"
+                onClick={async () => {
+                  try {
+                    setMockReport((prev: any) => ({ ...(prev || {}), progress: ['Removing local-only mock data…'] }));
+                    await removeStaticMockBasic((msg) => setMockReport((prev: any) => ({ ...(prev || {}), progress: [...((prev?.progress) || []), `${new Date().toLocaleTimeString()} — ${msg}`] })));
                     try {
-                      setMockReport((prev: any) => ({ ...(prev || {}), progress: ['Removing local-only mock data…'] }));
-                      await removeStaticMockBasic((msg) => setMockReport((prev: any) => ({ ...(prev || {}), progress: [...((prev?.progress) || []), `${new Date().toLocaleTimeString()} — ${msg}`] })));
-                      try {
-                        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
-                        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'customers' } }));
-                        window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'employees' } }));
-                        window.dispatchEvent(new CustomEvent('inventory-changed'));
-                      } catch { }
-                      setMockReport((prev: any) => ({ ...(prev || {}), removed: true, removedAt: new Date().toISOString() }));
-                      toast?.({ title: 'Static Mock Data Removed', description: 'Local-only mock data was cleared.' });
-                    } catch (e: any) {
-                      const errMsg = e?.message || String(e);
-                      setMockReport((prev: any) => ({ ...(prev || {}), errors: [...(prev?.errors || []), errMsg] }));
+                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
+                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'customers' } }));
+                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'employees' } }));
+                      window.dispatchEvent(new CustomEvent('inventory-changed'));
+                    } catch { }
+                    setMockReport((prev: any) => ({ ...(prev || {}), removed: true, removedAt: new Date().toISOString() }));
+                    toast?.({ title: 'Static Mock Data Removed', description: 'Local-only mock data was cleared.' });
+                  } catch (e: any) {
+                    const errMsg = e?.message || String(e);
+                    setMockReport((prev: any) => ({ ...(prev || {}), errors: [...(prev?.errors || []), errMsg] }));
+                  }
+                }}
+              >Remove Mock Data</Button>
+              <Button
+                variant="secondary"
+                className="border-red-700 text-white bg-red-700 hover:bg-red-800"
+                onClick={() => {
+                  try {
+                    const doc = new jsPDF();
+                    let y = 30;
+                    const addLine = (text: string, indent = 0) => {
+                      doc.text(text, 20 + indent, y);
+                      y += 6;
+                      if (y > 270) { doc.addPage(); y = 20; }
+                    };
+
+                    doc.setFontSize(18);
+                    doc.text('Mock Data Report', 105, 18, { align: 'center' });
+                    doc.setFontSize(11);
+                    const created = mockReport?.createdAt ? new Date(mockReport.createdAt).toLocaleString() : new Date().toLocaleString();
+                    const removed = mockReport?.removedAt ? new Date(mockReport.removedAt).toLocaleString() : '—';
+                    addLine(`Created: ${created}`);
+                    addLine(`Removed: ${removed}`);
+
+                    // Live Progress
+                    if ((mockReport?.progress || []).length > 0) {
+                      doc.setFontSize(12);
+                      addLine('Live Progress:');
+                      doc.setFontSize(11);
+                      (mockReport?.progress || []).forEach((ln: string) => addLine(`- ${ln}`, 6));
                     }
-                  }}
-                >Remove Mock Data</Button>
-                <Button
-                  variant="secondary"
-                  className="border-red-700 text-white bg-red-700 hover:bg-red-800"
-                  onClick={() => {
-                    try {
-                      const doc = new jsPDF();
-                      let y = 30;
-                      const addLine = (text: string, indent = 0) => {
-                        doc.text(text, 20 + indent, y);
-                        y += 6;
-                        if (y > 270) { doc.addPage(); y = 20; }
-                      };
 
-                      doc.setFontSize(18);
-                      doc.text('Mock Data Report', 105, 18, { align: 'center' });
-                      doc.setFontSize(11);
-                      const created = mockReport?.createdAt ? new Date(mockReport.createdAt).toLocaleString() : new Date().toLocaleString();
-                      const removed = mockReport?.removedAt ? new Date(mockReport.removedAt).toLocaleString() : '—';
-                      addLine(`Created: ${created}`);
-                      addLine(`Removed: ${removed}`);
-
-                      // Live Progress
-                      if ((mockReport?.progress || []).length > 0) {
-                        doc.setFontSize(12);
-                        addLine('Live Progress:');
-                        doc.setFontSize(11);
-                        (mockReport?.progress || []).forEach((ln: string) => addLine(`- ${ln}`, 6));
-                      }
-
-                      // Summary
-                      if (mockReport?.summary) {
-                        doc.setFontSize(12);
-                        addLine('Summary:');
-                        doc.setFontSize(11);
-                        addLine(`Local Users: ${mockReport.summary.local_users}`, 6);
-                        addLine(`Local Customers: ${mockReport.summary.local_customers}`, 6);
-                        addLine(`Local Employees: ${mockReport.summary.local_employees}`, 6);
-                        addLine(`Chemicals: ${mockReport.summary.chemicals_count}`, 6);
-                        addLine(`Materials: ${mockReport.summary.materials_count}`, 6);
-                        addLine(`Mode: ${mockReport.summary.mode}`, 6);
-                      }
-
-                      // Customers
+                    // Summary
+                    if (mockReport?.summary) {
                       doc.setFontSize(12);
-                      addLine('Customers:');
+                      addLine('Summary:');
                       doc.setFontSize(11);
-                      (mockReport?.customers || []).forEach((c: any) => addLine(`- ${c.name} — ${c.email}`, 6));
-
-                      // Employees
-                      doc.setFontSize(12);
-                      addLine('Employees:');
-                      doc.setFontSize(11);
-                      (mockReport?.employees || []).forEach((e: any) => addLine(`- ${e.name} — ${e.email}`, 6));
-
-                      // Inventory
-                      doc.setFontSize(12);
-                      addLine('Inventory:');
-                      doc.setFontSize(11);
-                      (mockReport?.inventory || []).forEach((i: any) => addLine(`- ${i.category}: ${i.name}`, 6));
-
-                      // Removal status
-                      if (mockReport?.removed) {
-                        doc.setFontSize(12);
-                        addLine('Removal Status:');
-                        doc.setFontSize(11);
-                        addLine(`Mock data removed at ${new Date(mockReport.removedAt).toLocaleString()}`, 6);
-                      }
-
-                      // Errors
-                      if ((mockReport?.errors || []).length > 0) {
-                        doc.setFontSize(12);
-                        addLine('Issues detected:');
-                        doc.setFontSize(11);
-                        (mockReport.errors || []).forEach((err: any) => addLine(`- ${String(err)}`, 6));
-                      }
-
-                      const dataUrl = doc.output('dataurlstring');
-                      const today = new Date().toISOString().split('T')[0];
-                      const fileName = `MockData_Report_${today}.pdf`;
-                      savePDFToArchive('Mock Data' as any, 'Admin', `mock-data-${Date.now()}`, dataUrl, { fileName, path: 'Mock Data/' });
-                      toast?.({ title: 'Saved to File Manager', description: 'Mock Data Report archived.' });
-                    } catch (e: any) {
-                      toast?.({ title: 'Save Failed', description: e?.message || 'Could not generate PDF', variant: 'destructive' });
+                      addLine(`Local Users: ${mockReport.summary.local_users}`, 6);
+                      addLine(`Local Customers: ${mockReport.summary.local_customers}`, 6);
+                      addLine(`Local Employees: ${mockReport.summary.local_employees}`, 6);
+                      addLine(`Chemicals: ${mockReport.summary.chemicals_count}`, 6);
+                      addLine(`Materials: ${mockReport.summary.materials_count}`, 6);
+                      addLine(`Mode: ${mockReport.summary.mode}`, 6);
                     }
-                  }}
-                >Save to PDF</Button>
+
+                    // Customers
+                    doc.setFontSize(12);
+                    addLine('Customers:');
+                    doc.setFontSize(11);
+                    (mockReport?.customers || []).forEach((c: any) => addLine(`- ${c.name} — ${c.email}`, 6));
+
+                    // Employees
+                    doc.setFontSize(12);
+                    addLine('Employees:');
+                    doc.setFontSize(11);
+                    (mockReport?.employees || []).forEach((e: any) => addLine(`- ${e.name} — ${e.email}`, 6));
+
+                    // Inventory
+                    doc.setFontSize(12);
+                    addLine('Inventory:');
+                    doc.setFontSize(11);
+                    (mockReport?.inventory || []).forEach((i: any) => addLine(`- ${i.category}: ${i.name}`, 6));
+
+                    // Removal status
+                    if (mockReport?.removed) {
+                      doc.setFontSize(12);
+                      addLine('Removal Status:');
+                      doc.setFontSize(11);
+                      addLine(`Mock data removed at ${new Date(mockReport.removedAt).toLocaleString()}`, 6);
+                    }
+
+                    // Errors
+                    if ((mockReport?.errors || []).length > 0) {
+                      doc.setFontSize(12);
+                      addLine('Issues detected:');
+                      doc.setFontSize(11);
+                      (mockReport.errors || []).forEach((err: any) => addLine(`- ${String(err)}`, 6));
+                    }
+
+                    const dataUrl = doc.output('dataurlstring');
+                    const today = new Date().toISOString().split('T')[0];
+                    const fileName = `MockData_Report_${today}.pdf`;
+                    savePDFToArchive('Mock Data' as any, 'Admin', `mock-data-${Date.now()}`, dataUrl, { fileName, path: 'Mock Data/' });
+                    toast?.({ title: 'Saved to File Manager', description: 'Mock Data Report archived.' });
+                  } catch (e: any) {
+                    toast?.({ title: 'Save Failed', description: e?.message || 'Could not generate PDF', variant: 'destructive' });
+                  }
+                }}
+              >Save to PDF</Button>
+            </div>
+
+            {mockReport?.progress && (
+              <div className="rounded-md border p-3">
+                <div className="font-semibold mb-2">Live Progress</div>
+                {(mockReport.progress || []).map((ln: string, i: number) => (
+                  <div key={`md-prog-${i}`}>- {ln}</div>
+                ))}
               </div>
+            )}
 
-              {mockReport?.progress && (
-                <div className="rounded-md border p-3">
-                  <div className="font-semibold mb-2">Live Progress</div>
-                  {(mockReport.progress || []).map((ln: string, i: number) => (
-                    <div key={`md-prog-${i}`}>- {ln}</div>
-                  ))}
-                </div>
+            <div>
+              <div className="font-semibold">Customers Created</div>
+              {(mockReport?.customers || []).map((c: any, i: number) => (
+                <div key={`md-c-${i}`} className="mt-1">- {c.name} ({c.email}) — Local only; appears in Admin → Customers and dropdowns</div>
+              ))}
+            </div>
+            <div>
+              <div className="font-semibold">Employees Created</div>
+              {(mockReport?.employees || []).map((e: any, i: number) => (
+                <div key={`md-e-${i}`} className="mt-1">- {e.name} ({e.email}) — Local only; appears in Admin → Company Employees and selectors</div>
+              ))}
+            </div>
+            <div>
+              <div className="font-semibold">Inventory Added</div>
+              {(mockReport?.inventory || []).map((i: any, idx: number) => (
+                <div key={`md-i-${idx}`} className="mt-1">- {i.name} — {i.category} — Local only; appears in Inventory Control and Inventory Report</div>
+              ))}
+            </div>
+            <div>
+              <div className="font-semibold">Summary</div>
+              <div className="text-muted-foreground">{mockReport?.summary?.mode}</div>
+              {mockReport?.summary && (
+                <div className="text-muted-foreground">Local counts — users={mockReport.summary.local_users}, customers={mockReport.summary.local_customers}, employees={mockReport.summary.local_employees}, chemicals={mockReport.summary.chemicals_count}, materials={mockReport.summary.materials_count}</div>
               )}
+              <div className="text-xs mt-1">No Supabase interactions. If using Supabase-backed mock system later, ensure your Supabase env/config is valid.</div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-              <div>
-                <div className="font-semibold">Customers Created</div>
-                {(mockReport?.customers || []).map((c: any, i: number) => (
-                  <div key={`md-c-${i}`} className="mt-1">- {c.name} ({c.email}) — Local only; appears in Admin → Customers and dropdowns</div>
-                ))}
-              </div>
-              <div>
-                <div className="font-semibold">Employees Created</div>
-                {(mockReport?.employees || []).map((e: any, i: number) => (
-                  <div key={`md-e-${i}`} className="mt-1">- {e.name} ({e.email}) — Local only; appears in Admin → Company Employees and selectors</div>
-                ))}
-              </div>
-              <div>
-                <div className="font-semibold">Inventory Added</div>
-                {(mockReport?.inventory || []).map((i: any, idx: number) => (
-                  <div key={`md-i-${idx}`} className="mt-1">- {i.name} — {i.category} — Local only; appears in Inventory Control and Inventory Report</div>
-                ))}
-              </div>
-              <div>
-                <div className="font-semibold">Summary</div>
-                <div className="text-muted-foreground">{mockReport?.summary?.mode}</div>
-                {mockReport?.summary && (
-                  <div className="text-muted-foreground">Local counts — users={mockReport.summary.local_users}, customers={mockReport.summary.local_customers}, employees={mockReport.summary.local_employees}, chemicals={mockReport.summary.chemicals_count}, materials={mockReport.summary.materials_count}</div>
-                )}
-                <div className="text-xs mt-1">No Supabase interactions. If using Supabase-backed mock system later, ensure your Supabase env/config is valid.</div>
+      {/* User Administration Modal */}
+      <Dialog open={userAdminOpen} onOpenChange={setUserAdminOpen}>
+        {/* Centered, full-viewport content without conflicting positioning */}
+        <DialogContent className="max-w-none w-screen h-screen sm:rounded-none p-0 bg-black text-white overflow-hidden">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle className="text-red-500">User Administration — Full Control</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 space-y-6 h-[calc(100%-4rem)] overflow-auto">
+            {/* Search */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="relative">
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users by name or email" className="bg-zinc-900 border-zinc-700 text-white" />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* User Administration Modal */}
-        <Dialog open={userAdminOpen} onOpenChange={setUserAdminOpen}>
-          {/* Centered, full-viewport content without conflicting positioning */}
-          <DialogContent className="max-w-none w-screen h-screen sm:rounded-none p-0 bg-black text-white overflow-hidden">
-            <DialogHeader className="px-6 pt-6">
-              <DialogTitle className="text-red-500">User Administration — Full Control</DialogTitle>
-            </DialogHeader>
-            <div className="px-6 pb-6 space-y-6 h-[calc(100%-4rem)] overflow-auto">
-              {/* Search */}
-              <div className="grid grid-cols-1 gap-4">
-                <div className="relative">
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users by name or email" className="bg-zinc-900 border-zinc-700 text-white" />
+            {/* Section 1: User List */}
+            <Card className="p-4 bg-zinc-900 border-zinc-800">
+              <h3 className="text-lg font-semibold mb-4">User List</h3>
+              <div className="w-full overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-zinc-300">Name</TableHead>
+                      <TableHead className="text-zinc-300">Email</TableHead>
+                      <TableHead className="text-zinc-300">Role</TableHead>
+                      <TableHead className="text-zinc-300">Last Login</TableHead>
+                      <TableHead className="text-zinc-300">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="text-white">{u.name}</TableCell>
+                        <TableCell className="text-white">{u.email}</TableCell>
+                        <TableCell>
+                          <Select value={u.role} onValueChange={(val) => handleUpdateRole(u.id, val as 'employee' | 'admin')}>
+                            <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                              <SelectValue placeholder="Role" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                              <SelectItem value="employee">Employee</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-zinc-300">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '—'}</TableCell>
+                        <TableCell className="space-x-2">
+                          <Button size="sm" className="bg-red-700 hover:bg-red-800" onClick={() => handleImpersonate(u.id)}>Impersonate</Button>
+                          <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setDeleteId(u.id)}>Delete</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-zinc-400 py-8">No users found.</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+
+            {/* Section 2: Add New User */}
+            <Card className="p-4 bg-zinc-900 border-zinc-800">
+              <h3 className="text-lg font-semibold mb-4">Add New User</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-sm text-zinc-400">Name</label>
+                  <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
+                </div>
+                <div>
+                  <label className="text-sm text-zinc-400">Email</label>
+                  <Input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
+                </div>
+                <div>
+                  <label className="text-sm text-zinc-400">Role</label>
+                  <Select value={newRole} onValueChange={(val) => setNewRole(val as 'employee' | 'admin')}>
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+              <div className="mt-4">
+                <Button className="bg-red-700 hover:bg-red-800" onClick={handleCreateUser}>Create & Authorize User</Button>
+              </div>
+            </Card>
 
-              {/* Section 1: User List */}
-              <Card className="p-4 bg-zinc-900 border-zinc-800">
-                <h3 className="text-lg font-semibold mb-4">User List</h3>
+            {/* Section 3: Impersonate */}
+            <Card className="p-4 bg-zinc-900 border-zinc-800">
+              <h3 className="text-lg font-semibold mb-4">Impersonate</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div>
+                  <label className="text-sm text-zinc-400">Select User</label>
+                  <Select value={impersonateId || ''} onValueChange={(val) => setImpersonateId(val)}>
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Choose user" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800 max-h-64 overflow-y-auto">
+                      {users.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.name} — {u.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Button className="bg-red-700 hover:bg-red-800" disabled={!impersonateId} onClick={() => impersonateId && handleImpersonate(impersonateId)}>Sign On As Selected</Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Section 4: Menu Visibility */}
+            <Card className="p-4 bg-zinc-900 border-zinc-800">
+              <h3 className="text-lg font-semibold mb-4">Menu Visibility</h3>
+              <p className="text-sm text-zinc-400 mb-2">Hide or show items in the slide-out menu. Hidden items will also be removed from Admin Dashboard quick actions.</p>
+              <MenuVisibilityControls />
+            </Card>
+
+            {/* Section 5: Website Admin */}
+            <Card className="p-4 bg-zinc-900 border-zinc-800">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">Website Admin</h3>
+                <span className="text-xs text-zinc-400">Port 6066 • Red/Black</span>
+              </div>
+              {/* Vehicle Types */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold">Vehicle Types</h4>
+                  <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewVehicleOpen(true)}>Add New</Button>
+                </div>
                 <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-zinc-300">Name</TableHead>
-                        <TableHead className="text-zinc-300">Email</TableHead>
-                        <TableHead className="text-zinc-300">Role</TableHead>
-                        <TableHead className="text-zinc-300">Last Login</TableHead>
-                        <TableHead className="text-zinc-300">Actions</TableHead>
+                        <TableHead className="text-zinc-300">Description</TableHead>
+                        <TableHead className="text-zinc-300">Edit</TableHead>
+                        <TableHead className="text-zinc-300">Delete</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers.map((u) => (
-                        <TableRow key={u.id}>
-                          <TableCell className="text-white">{u.name}</TableCell>
-                          <TableCell className="text-white">{u.email}</TableCell>
+                      {vehicleTypes.map((vt: any) => (
+                        <TableRow key={vt.id}>
+                          <TableCell className="text-white">{vt.name}</TableCell>
+                          <TableCell className="text-zinc-300">{vt.description || '—'}</TableCell>
                           <TableCell>
-                            <Select value={u.role} onValueChange={(val) => handleUpdateRole(u.id, val as 'employee' | 'admin')}>
-                              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                                <SelectValue placeholder="Role" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-900 border-zinc-800">
-                                <SelectItem value="employee">Employee</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(vt)}>Edit</Button>
                           </TableCell>
-                          <TableCell className="text-zinc-300">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '—'}</TableCell>
-                          <TableCell className="space-x-2">
-                            <Button size="sm" className="bg-red-700 hover:bg-red-800" onClick={() => handleImpersonate(u.id)}>Impersonate</Button>
-                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setDeleteId(u.id)}>Delete</Button>
+                          <TableCell>
+                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" disabled={vt.protected} onClick={async () => {
+                              if (!confirm('Delete this vehicle type?')) return;
+                              await api(`/api/vehicle-types/${vt.id}`, { method: 'DELETE' });
+                              const updated = await api('/api/vehicle-types', { method: 'GET' });
+                              setVehicleTypes(Array.isArray(updated) ? updated : []);
+                              // Push live vehicle types to server so all dropdowns immediately reflect deletion
+                              try {
+                                await fetch('http://localhost:6066/api/vehicle-types/live', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify(Array.isArray(updated) ? updated : []),
+                                });
+                              } catch { }
+                              try { await postFullSync(); } catch { }
+                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
+                              toast({ title: 'Vehicle type deleted', description: vt.name });
+                            }}>Delete</Button>
                           </TableCell>
                         </TableRow>
                       ))}
-                      {filteredUsers.length === 0 && (
+                      {vehicleTypes.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-zinc-400 py-8">No users found.</TableCell>
+                          <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No vehicle types</TableCell>
                         </TableRow>
                       )}
                     </TableBody>
                   </Table>
                 </div>
-              </Card>
-
-              {/* Section 2: Add New User */}
-              <Card className="p-4 bg-zinc-900 border-zinc-800">
-                <h3 className="text-lg font-semibold mb-4">Add New User</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-sm text-zinc-400">Name</label>
-                    <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-                  </div>
-                  <div>
-                    <label className="text-sm text-zinc-400">Email</label>
-                    <Input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-                  </div>
-                  <div>
-                    <label className="text-sm text-zinc-400">Role</label>
-                    <Select value={newRole} onValueChange={(val) => setNewRole(val as 'employee' | 'admin')}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800">
-                        <SelectItem value="employee">Employee</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Button className="bg-red-700 hover:bg-red-800" onClick={handleCreateUser}>Create & Authorize User</Button>
-                </div>
-              </Card>
-
-              {/* Section 3: Impersonate */}
-              <Card className="p-4 bg-zinc-900 border-zinc-800">
-                <h3 className="text-lg font-semibold mb-4">Impersonate</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                  <div>
-                    <label className="text-sm text-zinc-400">Select User</label>
-                    <Select value={impersonateId || ''} onValueChange={(val) => setImpersonateId(val)}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                        <SelectValue placeholder="Choose user" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800 max-h-64 overflow-y-auto">
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>{u.name} — {u.email}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Button className="bg-red-700 hover:bg-red-800" disabled={!impersonateId} onClick={() => impersonateId && handleImpersonate(impersonateId)}>Sign On As Selected</Button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Section 4: Menu Visibility */}
-              <Card className="p-4 bg-zinc-900 border-zinc-800">
-                <h3 className="text-lg font-semibold mb-4">Menu Visibility</h3>
-                <p className="text-sm text-zinc-400 mb-2">Hide or show items in the slide-out menu. Hidden items will also be removed from Admin Dashboard quick actions.</p>
-                <MenuVisibilityControls />
-              </Card>
-
-              {/* Section 5: Website Admin */}
-              <Card className="p-4 bg-zinc-900 border-zinc-800">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">Website Admin</h3>
-                  <span className="text-xs text-zinc-400">Port 6066 • Red/Black</span>
-                </div>
-                {/* Vehicle Types */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">Vehicle Types</h4>
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewVehicleOpen(true)}>Add New</Button>
-                  </div>
-                  <div className="w-full overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-zinc-300">Name</TableHead>
-                          <TableHead className="text-zinc-300">Description</TableHead>
-                          <TableHead className="text-zinc-300">Edit</TableHead>
-                          <TableHead className="text-zinc-300">Delete</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {vehicleTypes.map((vt: any) => (
-                          <TableRow key={vt.id}>
-                            <TableCell className="text-white">{vt.name}</TableCell>
-                            <TableCell className="text-zinc-300">{vt.description || '—'}</TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(vt)}>Edit</Button>
-                            </TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" disabled={vt.protected} onClick={async () => {
-                                if (!confirm('Delete this vehicle type?')) return;
-                                await api(`/api/vehicle-types/${vt.id}`, { method: 'DELETE' });
-                                const updated = await api('/api/vehicle-types', { method: 'GET' });
-                                setVehicleTypes(Array.isArray(updated) ? updated : []);
-                                // Push live vehicle types to server so all dropdowns immediately reflect deletion
-                                try {
-                                  await fetch('http://localhost:6066/api/vehicle-types/live', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(Array.isArray(updated) ? updated : []),
-                                  });
-                                } catch { }
-                                try { await postFullSync(); } catch { }
-                                try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
-                                toast({ title: 'Vehicle type deleted', description: vt.name });
-                              }}>Delete</Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {vehicleTypes.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No vehicle types</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                {/* FAQs */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">FAQs</h4>
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewFaqOpen(true)}>Add New</Button>
-                  </div>
-                  <div className="w-full overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-zinc-300">Question</TableHead>
-                          <TableHead className="text-zinc-300">Answer</TableHead>
-                          <TableHead className="text-zinc-300">Edit</TableHead>
-                          <TableHead className="text-zinc-300">Delete</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {faqs.map((fq: any) => (
-                          <TableRow key={fq.id}>
-                            <TableCell className="text-white">{fq.question}</TableCell>
-                            <TableCell className="text-zinc-300">{fq.answer}</TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(fq)}>Edit</Button>
-                            </TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
-                                if (!confirm('Delete this FAQ?')) return;
-                                await api(`/api/faqs/${fq.id}`, { method: 'DELETE' });
-                                const updated = await api('/api/faqs', { method: 'GET' });
-                                setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                                try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
-                                toast({ title: 'FAQ deleted' });
-                              }}>Delete</Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {faqs.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No FAQs</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                {/* Contact */}
-                <div className="mb-6">
-                  <h4 className="font-semibold mb-2">Contact</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-zinc-300">Hours</Label>
-                      <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label className="text-zinc-300">Phone</Label>
-                      <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label className="text-zinc-300">Address</Label>
-                      <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label className="text-zinc-300">Email</Label>
-                      <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                      await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
-                      // Push to live endpoint on 6066 so Contact page reflects changes immediately
-                      try {
-                        await fetch('http://localhost:6066/api/contact/live', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(contactInfo),
-                        });
-                      } catch { }
-                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch { }
-                      toast({ title: 'Contact updated', description: 'Synced live on port 6066' });
-                    }}>Save Contact</Button>
-                  </div>
-                </div>
-
-                {/* About */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">About Sections</h4>
-                    <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewAboutOpen(true)}>Add New</Button>
-                  </div>
-                  <div className="w-full overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-zinc-300">Section</TableHead>
-                          <TableHead className="text-zinc-300">Content</TableHead>
-                          <TableHead className="text-zinc-300">Edit</TableHead>
-                          <TableHead className="text-zinc-300">Delete</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {aboutSections.map((s: any) => (
-                          <TableRow key={s.id}>
-                            <TableCell className="text-white">{s.section}</TableCell>
-                            <TableCell className="text-zinc-300">{s.content}</TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(s)}>Edit</Button>
-                            </TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
-                                if (!confirm('Delete this section?')) return;
-                                await api(`/api/about/${s.id}`, { method: 'DELETE' });
-                                const updated = await api('/api/about', { method: 'GET' });
-                                setAboutSections(Array.isArray(updated) ? updated : []);
-                                toast({ title: 'Section deleted' });
-                              }}>Delete</Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {aboutSections.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No sections</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </Card>
-
-              <div className="flex justify-end">
-                <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setUserAdminOpen(false)}>Close</Button>
               </div>
 
-              {/* Vehicle Type Edit Modal */}
-              <Dialog open={!!editVehicle} onOpenChange={(o) => !o && setEditVehicle(null)}>
-                <DialogContent className="bg-black text-white">
-                  <DialogHeader>
-                    <DialogTitle>Edit Vehicle Type</DialogTitle>
-                  </DialogHeader>
-                  {editVehicle && (
-                    <div className="space-y-3">
-                      <Input className="bg-zinc-800 border-zinc-700 text-white" value={editVehicle.name} onChange={(e) => setEditVehicle({ ...editVehicle, name: e.target.value })} placeholder="Name" />
-                      <Input className="bg-zinc-800 border-zinc-700 text-white" value={editVehicle.description || ''} onChange={(e) => setEditVehicle({ ...editVehicle, description: e.target.value })} placeholder="Description" />
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(null)}>Cancel</Button>
-                        <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                          await api(`/api/vehicle-types/${editVehicle.id}`, { method: 'PUT', body: JSON.stringify({ name: editVehicle.name, description: editVehicle.description }) });
-                          const updated = await api('/api/vehicle-types', { method: 'GET' });
-                          setVehicleTypes(Array.isArray(updated) ? updated : []);
-                          // Push live vehicle types to server so all dropdowns reflect edits immediately
-                          try {
-                            await fetch('http://localhost:6066/api/vehicle-types/live', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify(Array.isArray(updated) ? updated : []),
-                            });
-                          } catch { }
-                          // Notify other pages and trigger live refresh
-                          try { await postFullSync(); } catch { }
-                          try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
-                          setEditVehicle(null);
-                          toast({ title: 'Vehicle type updated' });
-                        }}>Save</Button>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
+              {/* FAQs */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold">FAQs</h4>
+                  <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewFaqOpen(true)}>Add New</Button>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-zinc-300">Question</TableHead>
+                        <TableHead className="text-zinc-300">Answer</TableHead>
+                        <TableHead className="text-zinc-300">Edit</TableHead>
+                        <TableHead className="text-zinc-300">Delete</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {faqs.map((fq: any) => (
+                        <TableRow key={fq.id}>
+                          <TableCell className="text-white">{fq.question}</TableCell>
+                          <TableCell className="text-zinc-300">{fq.answer}</TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(fq)}>Edit</Button>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
+                              if (!confirm('Delete this FAQ?')) return;
+                              await api(`/api/faqs/${fq.id}`, { method: 'DELETE' });
+                              const updated = await api('/api/faqs', { method: 'GET' });
+                              setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
+                              try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
+                              toast({ title: 'FAQ deleted' });
+                            }}>Delete</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {faqs.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No FAQs</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
 
-              {/* Vehicle Type Add Modal */}
-              <Dialog open={newVehicleOpen} onOpenChange={setNewVehicleOpen}>
-                <DialogContent className="bg-black text-white">
-                  <DialogHeader>
-                    <DialogTitle>Add Vehicle Type</DialogTitle>
-                  </DialogHeader>
+              {/* Contact */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-2">Contact</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-zinc-300">Hours</Label>
+                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-zinc-300">Phone</Label>
+                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-zinc-300">Address</Label>
+                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-zinc-300">Email</Label>
+                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                    await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
+                    // Push to live endpoint on 6066 so Contact page reflects changes immediately
+                    try {
+                      await fetch('http://localhost:6066/api/contact/live', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(contactInfo),
+                      });
+                    } catch { }
+                    try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'contact' } })); } catch { }
+                    toast({ title: 'Contact updated', description: 'Synced live on port 6066' });
+                  }}>Save Contact</Button>
+                </div>
+              </div>
+
+              {/* About */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold">About Sections</h4>
+                  <Button className="bg-red-700 hover:bg-red-800" onClick={() => setNewAboutOpen(true)}>Add New</Button>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-zinc-300">Section</TableHead>
+                        <TableHead className="text-zinc-300">Content</TableHead>
+                        <TableHead className="text-zinc-300">Edit</TableHead>
+                        <TableHead className="text-zinc-300">Delete</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {aboutSections.map((s: any) => (
+                        <TableRow key={s.id}>
+                          <TableCell className="text-white">{s.section}</TableCell>
+                          <TableCell className="text-zinc-300">{s.content}</TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(s)}>Edit</Button>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={async () => {
+                              if (!confirm('Delete this section?')) return;
+                              await api(`/api/about/${s.id}`, { method: 'DELETE' });
+                              const updated = await api('/api/about', { method: 'GET' });
+                              setAboutSections(Array.isArray(updated) ? updated : []);
+                              toast({ title: 'Section deleted' });
+                            }}>Delete</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {aboutSections.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-zinc-400 py-6">No sections</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setUserAdminOpen(false)}>Close</Button>
+            </div>
+
+            {/* Vehicle Type Edit Modal */}
+            <Dialog open={!!editVehicle} onOpenChange={(o) => !o && setEditVehicle(null)}>
+              <DialogContent className="bg-black text-white">
+                <DialogHeader>
+                  <DialogTitle>Edit Vehicle Type</DialogTitle>
+                </DialogHeader>
+                {editVehicle && (
                   <div className="space-y-3">
-                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={newVehicleName} onChange={(e) => setNewVehicleName(e.target.value)} placeholder="Name" />
-                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={newVehicleDesc} onChange={(e) => setNewVehicleDesc(e.target.value)} placeholder="Description" />
-                    <div>
-                      <label className="text-sm text-zinc-400">$ Amount — Multiplier for packages/add-ons (e.g. 100 for Compact, 150 for Luxury)</label>
-                      <Input
-                        type="number"
-                        step={1}
-                        min={0}
-                        max={10000}
-                        className="bg-zinc-800 border-red-700 text-white placeholder:text-white"
-                        value={newVehicleMultiplier}
-                        onChange={(e) => setNewVehicleMultiplier(e.target.value)}
-                        onBlur={() => {
-                          const raw = Number(newVehicleMultiplier);
-                          if (Number.isFinite(raw)) {
-                            const rounded = Math.round(raw);
-                            if (rounded !== raw) {
-                              setNewVehicleMultiplier(String(rounded));
-                              toast({ title: `Rounded to $${rounded}` });
-                            }
-                          }
-                        }}
-                        placeholder="$150"
-                      />
-                    </div>
+                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={editVehicle.name} onChange={(e) => setEditVehicle({ ...editVehicle, name: e.target.value })} placeholder="Name" />
+                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={editVehicle.description || ''} onChange={(e) => setEditVehicle({ ...editVehicle, description: e.target.value })} placeholder="Description" />
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewVehicleOpen(false)}>Cancel</Button>
+                      <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(null)}>Cancel</Button>
                       <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                        const safeName = (newVehicleName || '').trim();
-                        if (!safeName) {
-                          toast({ title: 'Name required', description: 'Please enter a vehicle type name.' });
-                          return;
-                        }
-                        const slug = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `vt_${Date.now()}`;
-                        // 1) Create the vehicle type record
-                        await api('/api/vehicle-types', { method: 'POST', body: JSON.stringify({ id: slug, name: safeName, description: newVehicleDesc, hasPricing: true }) });
-                        // 2) Validate and apply $ Amount multiplier to seed pricing for new type
-                        let amt = Math.round(Number(newVehicleMultiplier || '100'));
-                        if (!Number.isFinite(amt) || amt < 0 || amt > 10000) {
-                          toast({ title: 'Invalid $ Amount', description: 'Enter a whole number between 0 and 10000.', variant: 'destructive' });
-                          return;
-                        }
-                        if (String(amt) !== String(newVehicleMultiplier)) {
-                          toast({ title: `Rounded to $${amt}` });
-                        }
-                        if (!confirm('Update all packages? (affects live site)')) {
-                          return;
-                        }
-                        await api('/api/packages/apply-vehicle-multiplier', { method: 'POST', body: JSON.stringify({ vehicleTypeId: slug, multiplier: amt }) });
-                        // 3) Refresh vehicle types list
+                        await api(`/api/vehicle-types/${editVehicle.id}`, { method: 'PUT', body: JSON.stringify({ name: editVehicle.name, description: editVehicle.description }) });
                         const updated = await api('/api/vehicle-types', { method: 'GET' });
                         setVehicleTypes(Array.isArray(updated) ? updated : []);
-                        // Push live vehicle types to server for immediate dropdown sync
+                        // Push live vehicle types to server so all dropdowns reflect edits immediately
                         try {
                           await fetch('http://localhost:6066/api/vehicle-types/live', {
                             method: 'POST',
@@ -1585,148 +1204,226 @@ export default function AdminDashboard() {
                             body: JSON.stringify(Array.isArray(updated) ? updated : []),
                           });
                         } catch { }
-                        // 4) Post full sync so live site sees pricing updates
+                        // Notify other pages and trigger live refresh
                         try { await postFullSync(); } catch { }
-                        // 5) Dispatch content-changed events so dropdowns refresh immediately
                         try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
-                        try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
-                        // 6) Force refresh Service and Book Now pages in other tabs
-                        try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
-                        // Reset form
-                        setNewVehicleName('');
-                        setNewVehicleDesc('');
-                        setNewVehicleMultiplier('100');
-                        setNewVehicleOpen(false);
-                        toast({ title: 'Vehicle type added', description: `Seeded pricing: $ Amount × base compact` });
+                        setEditVehicle(null);
+                        toast({ title: 'Vehicle type updated' });
                       }}>Save</Button>
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
+                )}
+              </DialogContent>
+            </Dialog>
 
-              {/* FAQ Edit Modal */}
-              <Dialog open={!!editFaq} onOpenChange={(o) => !o && setEditFaq(null)}>
-                <DialogContent className="bg-black text-white">
-                  <DialogHeader>
-                    <DialogTitle>Edit FAQ</DialogTitle>
-                  </DialogHeader>
-                  {editFaq && (
-                    <div className="space-y-3">
-                      <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-24" value={editFaq.question} onChange={(e) => setEditFaq({ ...editFaq, question: e.target.value })} placeholder="Question" />
-                      <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={editFaq.answer} onChange={(e) => setEditFaq({ ...editFaq, answer: e.target.value })} placeholder="Answer" />
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(null)}>Cancel</Button>
-                        <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                          await api(`/api/faqs/${editFaq.id}`, { method: 'PUT', body: JSON.stringify({ question: editFaq.question, answer: editFaq.answer }) });
-                          const updated = await api('/api/faqs', { method: 'GET' });
-                          setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
-                          try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
-                          setEditFaq(null);
-                          toast({ title: 'FAQ updated' });
-                        }}>Save</Button>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
+            {/* Vehicle Type Add Modal */}
+            <Dialog open={newVehicleOpen} onOpenChange={setNewVehicleOpen}>
+              <DialogContent className="bg-black text-white">
+                <DialogHeader>
+                  <DialogTitle>Add Vehicle Type</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <Input className="bg-zinc-800 border-zinc-700 text-white" value={newVehicleName} onChange={(e) => setNewVehicleName(e.target.value)} placeholder="Name" />
+                  <Input className="bg-zinc-800 border-zinc-700 text-white" value={newVehicleDesc} onChange={(e) => setNewVehicleDesc(e.target.value)} placeholder="Description" />
+                  <div>
+                    <label className="text-sm text-zinc-400">$ Amount — Multiplier for packages/add-ons (e.g. 100 for Compact, 150 for Luxury)</label>
+                    <Input
+                      type="number"
+                      step={1}
+                      min={0}
+                      max={10000}
+                      className="bg-zinc-800 border-red-700 text-white placeholder:text-white"
+                      value={newVehicleMultiplier}
+                      onChange={(e) => setNewVehicleMultiplier(e.target.value)}
+                      onBlur={() => {
+                        const raw = Number(newVehicleMultiplier);
+                        if (Number.isFinite(raw)) {
+                          const rounded = Math.round(raw);
+                          if (rounded !== raw) {
+                            setNewVehicleMultiplier(String(rounded));
+                            toast({ title: `Rounded to $${rounded}` });
+                          }
+                        }
+                      }}
+                      placeholder="$150"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewVehicleOpen(false)}>Cancel</Button>
+                    <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                      const safeName = (newVehicleName || '').trim();
+                      if (!safeName) {
+                        toast({ title: 'Name required', description: 'Please enter a vehicle type name.' });
+                        return;
+                      }
+                      const slug = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `vt_${Date.now()}`;
+                      // 1) Create the vehicle type record
+                      await api('/api/vehicle-types', { method: 'POST', body: JSON.stringify({ id: slug, name: safeName, description: newVehicleDesc, hasPricing: true }) });
+                      // 2) Validate and apply $ Amount multiplier to seed pricing for new type
+                      let amt = Math.round(Number(newVehicleMultiplier || '100'));
+                      if (!Number.isFinite(amt) || amt < 0 || amt > 10000) {
+                        toast({ title: 'Invalid $ Amount', description: 'Enter a whole number between 0 and 10000.', variant: 'destructive' });
+                        return;
+                      }
+                      if (String(amt) !== String(newVehicleMultiplier)) {
+                        toast({ title: `Rounded to $${amt}` });
+                      }
+                      if (!confirm('Update all packages? (affects live site)')) {
+                        return;
+                      }
+                      await api('/api/packages/apply-vehicle-multiplier', { method: 'POST', body: JSON.stringify({ vehicleTypeId: slug, multiplier: amt }) });
+                      // 3) Refresh vehicle types list
+                      const updated = await api('/api/vehicle-types', { method: 'GET' });
+                      setVehicleTypes(Array.isArray(updated) ? updated : []);
+                      // Push live vehicle types to server for immediate dropdown sync
+                      try {
+                        await fetch('http://localhost:6066/api/vehicle-types/live', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(Array.isArray(updated) ? updated : []),
+                        });
+                      } catch { }
+                      // 4) Post full sync so live site sees pricing updates
+                      try { await postFullSync(); } catch { }
+                      // 5) Dispatch content-changed events so dropdowns refresh immediately
+                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'vehicle-types' } })); } catch { }
+                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
+                      // 6) Force refresh Service and Book Now pages in other tabs
+                      try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
+                      // Reset form
+                      setNewVehicleName('');
+                      setNewVehicleDesc('');
+                      setNewVehicleMultiplier('100');
+                      setNewVehicleOpen(false);
+                      toast({ title: 'Vehicle type added', description: `Seeded pricing: $ Amount × base compact` });
+                    }}>Save</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
-              {/* FAQ Add Modal */}
-              <Dialog open={newFaqOpen} onOpenChange={setNewFaqOpen}>
-                <DialogContent className="bg-black text-white">
-                  <DialogHeader>
-                    <DialogTitle>Add FAQ</DialogTitle>
-                  </DialogHeader>
+            {/* FAQ Edit Modal */}
+            <Dialog open={!!editFaq} onOpenChange={(o) => !o && setEditFaq(null)}>
+              <DialogContent className="bg-black text-white">
+                <DialogHeader>
+                  <DialogTitle>Edit FAQ</DialogTitle>
+                </DialogHeader>
+                {editFaq && (
                   <div className="space-y-3">
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-24" value={newFaqQ} onChange={(e) => setNewFaqQ(e.target.value)} placeholder="Question" />
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={newFaqA} onChange={(e) => setNewFaqA(e.target.value)} placeholder="Answer" />
+                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-24" value={editFaq.question} onChange={(e) => setEditFaq({ ...editFaq, question: e.target.value })} placeholder="Question" />
+                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={editFaq.answer} onChange={(e) => setEditFaq({ ...editFaq, answer: e.target.value })} placeholder="Answer" />
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewFaqOpen(false)}>Cancel</Button>
+                      <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(null)}>Cancel</Button>
                       <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                        await api('/api/faqs', { method: 'POST', body: JSON.stringify({ question: newFaqQ, answer: newFaqA }) });
+                        await api(`/api/faqs/${editFaq.id}`, { method: 'PUT', body: JSON.stringify({ question: editFaq.question, answer: editFaq.answer }) });
                         const updated = await api('/api/faqs', { method: 'GET' });
                         setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
                         try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
-                        setNewFaqQ('');
-                        setNewFaqA('');
-                        setNewFaqOpen(false);
-                        toast({ title: 'FAQ added' });
+                        setEditFaq(null);
+                        toast({ title: 'FAQ updated' });
                       }}>Save</Button>
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
+                )}
+              </DialogContent>
+            </Dialog>
 
-              {/* About Edit Modal */}
-              <Dialog open={!!editAbout} onOpenChange={(o) => !o && setEditAbout(null)}>
-                <DialogContent className="bg-black text-white">
-                  <DialogHeader>
-                    <DialogTitle>Edit Section</DialogTitle>
-                  </DialogHeader>
-                  {editAbout && (
-                    <div className="space-y-3">
-                      <Input className="bg-zinc-800 border-zinc-700 text-white" value={editAbout.section} onChange={(e) => setEditAbout({ ...editAbout, section: e.target.value })} placeholder="Section name" />
-                      <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={editAbout.content} onChange={(e) => setEditAbout({ ...editAbout, content: e.target.value })} placeholder="Content" />
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(null)}>Cancel</Button>
-                        <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                          await api(`/api/about/${editAbout.id}`, { method: 'PUT', body: JSON.stringify({ section: editAbout.section, content: editAbout.content }) });
-                          const updated = await api('/api/about', { method: 'GET' });
-                          setAboutSections(Array.isArray(updated) ? updated : []);
-                          setEditAbout(null);
-                          toast({ title: 'Section updated' });
-                        }}>Save</Button>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
+            {/* FAQ Add Modal */}
+            <Dialog open={newFaqOpen} onOpenChange={setNewFaqOpen}>
+              <DialogContent className="bg-black text-white">
+                <DialogHeader>
+                  <DialogTitle>Add FAQ</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-24" value={newFaqQ} onChange={(e) => setNewFaqQ(e.target.value)} placeholder="Question" />
+                  <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={newFaqA} onChange={(e) => setNewFaqA(e.target.value)} placeholder="Answer" />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewFaqOpen(false)}>Cancel</Button>
+                    <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                      await api('/api/faqs', { method: 'POST', body: JSON.stringify({ question: newFaqQ, answer: newFaqA }) });
+                      const updated = await api('/api/faqs', { method: 'GET' });
+                      setFaqs(Array.isArray(updated) ? updated : (Array.isArray((updated as any)?.items) ? (updated as any).items : []));
+                      try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'faqs' } })); } catch { }
+                      setNewFaqQ('');
+                      setNewFaqA('');
+                      setNewFaqOpen(false);
+                      toast({ title: 'FAQ added' });
+                    }}>Save</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
-              {/* About Add Modal */}
-              <Dialog open={newAboutOpen} onOpenChange={setNewAboutOpen}>
-                <DialogContent className="bg-black text-white">
-                  <DialogHeader>
-                    <DialogTitle>Add Section</DialogTitle>
-                  </DialogHeader>
+            {/* About Edit Modal */}
+            <Dialog open={!!editAbout} onOpenChange={(o) => !o && setEditAbout(null)}>
+              <DialogContent className="bg-black text-white">
+                <DialogHeader>
+                  <DialogTitle>Edit Section</DialogTitle>
+                </DialogHeader>
+                {editAbout && (
                   <div className="space-y-3">
-                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={newAboutSection} onChange={(e) => setNewAboutSection(e.target.value)} placeholder="Section" />
-                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={newAboutContent} onChange={(e) => setNewAboutContent(e.target.value)} placeholder="Content" />
+                    <Input className="bg-zinc-800 border-zinc-700 text-white" value={editAbout.section} onChange={(e) => setEditAbout({ ...editAbout, section: e.target.value })} placeholder="Section name" />
+                    <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={editAbout.content} onChange={(e) => setEditAbout({ ...editAbout, content: e.target.value })} placeholder="Content" />
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewAboutOpen(false)}>Cancel</Button>
+                      <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(null)}>Cancel</Button>
                       <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
-                        await api('/api/about', { method: 'POST', body: JSON.stringify({ section: newAboutSection, content: newAboutContent }) });
+                        await api(`/api/about/${editAbout.id}`, { method: 'PUT', body: JSON.stringify({ section: editAbout.section, content: editAbout.content }) });
                         const updated = await api('/api/about', { method: 'GET' });
                         setAboutSections(Array.isArray(updated) ? updated : []);
-                        setNewAboutSection('');
-                        setNewAboutContent('');
-                        setNewAboutOpen(false);
-                        toast({ title: 'Section added' });
+                        setEditAbout(null);
+                        toast({ title: 'Section updated' });
                       }}>Save</Button>
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+                )}
+              </DialogContent>
+            </Dialog>
 
-            {/* Delete Confirm */}
-            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete user?</AlertDialogTitle>
-                  <AlertDialogDescription>This will remove the user permanently.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="button-group-responsive">
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction className="bg-destructive" onClick={() => deleteId && handleDelete(deleteId)}>Yes, Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </DialogContent>
-        </Dialog>
+            {/* About Add Modal */}
+            <Dialog open={newAboutOpen} onOpenChange={setNewAboutOpen}>
+              <DialogContent className="bg-black text-white">
+                <DialogHeader>
+                  <DialogTitle>Add Section</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <Input className="bg-zinc-800 border-zinc-700 text-white" value={newAboutSection} onChange={(e) => setNewAboutSection(e.target.value)} placeholder="Section" />
+                  <textarea className="w-full rounded-md bg-zinc-800 border-zinc-700 text-white p-2 h-28" value={newAboutContent} onChange={(e) => setNewAboutContent(e.target.value)} placeholder="Content" />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewAboutOpen(false)}>Cancel</Button>
+                    <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                      await api('/api/about', { method: 'POST', body: JSON.stringify({ section: newAboutSection, content: newAboutContent }) });
+                      const updated = await api('/api/about', { method: 'GET' });
+                      setAboutSections(Array.isArray(updated) ? updated : []);
+                      setNewAboutSection('');
+                      setNewAboutContent('');
+                      setNewAboutOpen(false);
+                      toast({ title: 'Section added' });
+                    }}>Save</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
 
-        {/* User Management — Employee Rights Modal */}
-        {/* Employee Mgmt Dialog Placeholder */}
-      </div>
+          {/* Delete Confirm */}
+          <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete user?</AlertDialogTitle>
+                <AlertDialogDescription>This will remove the user permanently.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="button-group-responsive">
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction className="bg-destructive" onClick={() => deleteId && handleDelete(deleteId)}>Yes, Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Management — Employee Rights Modal */}
+      {/* Employee Mgmt Dialog Placeholder */}
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={(user?.role === 'admin') ? 'admin' : 'employee'} />
-    </div>
+    </>
   );
 }
