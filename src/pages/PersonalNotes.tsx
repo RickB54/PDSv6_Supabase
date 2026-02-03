@@ -69,7 +69,7 @@ export default function PersonalNotes() {
     const filteredNotes = useMemo(() => {
         let list = store.notes;
 
-        // 1. Search (Global)
+        // 1. Search (Global across all notes)
         if (store.searchQuery) {
             const q = store.searchQuery.toLowerCase();
             list = list.filter(n =>
@@ -78,24 +78,26 @@ export default function PersonalNotes() {
                 n.tags?.some(t => t.toLowerCase().includes(q))
             );
         } else {
-            // 2. Hierarchy Filter
+            // 2. Hierarchy Filter (OneNote-style: Notebook > Section > Pages)
             if (store.activeSectionId === 'quick-notes') {
-                list = list.filter(n => !n.section_id); // Quick notes have no section
+                // Quick Notes: only show notes without a section
+                list = list.filter(n => !n.section_id);
             } else if (store.activeSectionId) {
+                // Specific section selected: only show notes in that section
                 list = list.filter(n => n.section_id === store.activeSectionId);
             } else if (store.activeNotebookId) {
-                // Show all notes in notebook?? Usually OneNote requires picking a section.
-                // For better UX, if notebook picked but no section, maybe show nothing or all sections?
-                // Let's filter to sections in this notebook
-                const sectionIds = store.sections.filter(s => s.notebook_id === store.activeNotebookId).map(s => s.id);
+                // Notebook selected but no section: show ALL notes from ALL sections in this notebook
+                const sectionIds = store.sections
+                    .filter(s => s.notebook_id === store.activeNotebookId)
+                    .map(s => s.id);
                 list = list.filter(n => n.section_id && sectionIds.includes(n.section_id));
             } else {
-                // Determine what to show on "Home"? Maybe Quick Notes?
+                // No notebook or section selected: default to Quick Notes
                 list = list.filter(n => !n.section_id);
             }
         }
 
-        // 3. Sort (Pinned first, then updated)
+        // 3. Sort (Pinned first, then by last updated)
         return list.sort((a, b) => {
             if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
             return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
@@ -184,21 +186,32 @@ export default function PersonalNotes() {
     const handleDeleteImage = async (urlToDelete: string) => {
         if (!activeNote) return;
         const imageRegex = new RegExp(`!\\[.*?\\]\\(${urlToDelete.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
-        const updatedContent = activeNote.content.replace(imageRegex, '').trim();
+        const updatedContent = activeNote.content.replace(imageRegex, '');
         await store.updateNote(activeNote.id, { content: updatedContent });
         toast.success("Image removed from note");
     };
 
     const getCleanContent = (content: string) => {
         if (!content) return '';
-        return content.replace(/!\[.*?\]\((https?:\/\/[^\)]+)\)/g, '').trim();
+        // Find the start of the first image markdown
+        const splitIndex = content.search(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
+        if (splitIndex === -1) return content;
+        // Everything before the first image is considered the editable text
+        return content.substring(0, splitIndex);
     };
 
     const handleTextChange = (newText: string) => {
         if (!activeNote) return;
-        const imageMatches = activeNote.content.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/g) || [];
-        const finalContent = newText + (imageMatches.length > 0 ? '\n\n' + imageMatches.join('\n') : '');
-        store.updateNote(activeNote.id, { content: finalContent });
+        // Find where the images start in the existing content
+        const splitIndex = activeNote.content.search(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
+        if (splitIndex === -1) {
+            // No images, just update text
+            store.updateNote(activeNote.id, { content: newText });
+        } else {
+            // Preserve the images part exactly as it is (including its preceding whitespace)
+            const imagesPart = activeNote.content.substring(splitIndex);
+            store.updateNote(activeNote.id, { content: newText + imagesPart });
+        }
     };
 
     const navigateLightbox = (direction: 'next' | 'prev') => {
@@ -246,7 +259,7 @@ export default function PersonalNotes() {
             const currentContent = activeNote.content || '';
             const imageMarkdown = uploadedUrls.map(url => `![Image](${url})`).join('\n');
             await store.updateNote(activeNote.id, {
-                content: currentContent + '\n' + imageMarkdown + '\n'
+                content: (activeNote.content ? activeNote.content + '\n' : '') + imageMarkdown
             });
             toast.success("Image uploaded successfully!");
         } catch (error: any) {
@@ -552,14 +565,14 @@ export default function PersonalNotes() {
                                         </div>
                                     </ScrollArea>
 
-                                    {/* Mobile Toolbar */}
-                                    <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-4">
+                                    {/* Mobile Toolbar - Fixed at Bottom */}
+                                    <div className="shrink-0 p-4 border-t border-zinc-800 bg-zinc-900/95 backdrop-blur-xl flex items-center gap-3">
                                         <Button
-                                            className="h-12 w-12 rounded-2xl bg-zinc-800 hover:bg-zinc-700 p-0 relative"
+                                            className="h-12 w-12 rounded-2xl bg-blue-600 hover:bg-blue-500 p-0 relative shrink-0"
                                             onClick={() => document.getElementById('note-image-upload-mobile')?.click()}
                                             disabled={uploadingImage}
                                         >
-                                            <ImageIcon className={`w-6 h-6 ${uploadingImage ? 'text-blue-500 animate-pulse' : 'text-zinc-400'}`} />
+                                            <ImageIcon className={`w-6 h-6 ${uploadingImage ? 'animate-pulse' : ''} text-white`} />
                                             <input id="note-image-upload-mobile" type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleImageUpload} />
                                         </Button>
 
