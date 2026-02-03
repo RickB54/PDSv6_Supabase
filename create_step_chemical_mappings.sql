@@ -12,6 +12,9 @@ create table if not exists public.step_chemical_mappings (
   updated_at timestamptz default now()
 );
 
+-- Enable RLS
+alter table public.step_chemical_mappings enable row level security;
+
 -- Policy to allow read access to everyone
 create policy "Allow public read access"
   on public.step_chemical_mappings for select
