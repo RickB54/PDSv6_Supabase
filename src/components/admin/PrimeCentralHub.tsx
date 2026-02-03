@@ -41,6 +41,22 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectSeparator,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useBookingsStore } from "@/store/bookings";
 import { useAlertsStore } from "@/store/alerts";
 import { useNotesStore, Note } from "@/store/notes";
@@ -61,6 +77,7 @@ interface PrimeCentralHubProps {
 }
 
 const AVAILABLE_SHORTCUTS: Shortcut[] = [
+    // Core Operations
     { id: 'bookings', label: 'Bookings Calendar', detail: 'Manage appointments', type: 'link', target: '/bookings' },
     { id: 'accounting', label: 'Accounting', detail: 'Financial overview', type: 'link', target: '/accounting' },
     { id: 'inventory', label: 'Inventory Control', detail: 'Stock management', type: 'link', target: '/inventory-control' },
@@ -68,15 +85,36 @@ const AVAILABLE_SHORTCUTS: Shortcut[] = [
     { id: 'reports', label: 'Reports', detail: 'Business analytics', type: 'link', target: '/reports' },
     { id: 'file-manager', label: 'File Manager', detail: 'Audit docs & photos', type: 'link', target: '/file-manager' },
     { id: 'training', label: 'Training Center', detail: 'Prime Training Manual', type: 'link', target: '/training-manual' },
+    { id: 'learning-library', label: 'Learning Library', detail: 'Videos & Articles', type: 'link', target: '/learning-library' },
     { id: 'gallery', label: 'Vehicle Gallery', detail: 'Work samples', type: 'link', target: '/vehicle-gallery' },
     { id: 'tasks', label: 'Tasks & Portal', detail: 'Operational items', type: 'link', target: '/tasks' },
     { id: 'payroll', label: 'Payroll', detail: 'Employee earnings', type: 'link', target: '/payroll' },
+    { id: 'staff-schedule', label: 'Staff Schedule', detail: 'Employee shifts', type: 'link', target: '/staff-schedule' },
+    { id: 'user-mgmt', label: 'Users & Roles', detail: 'Manage app access', type: 'link', target: '/user-management' },
+    { id: 'search-customer', label: 'Customer Profiles', detail: 'CRM database', type: 'link', target: '/search-customer' },
+    { id: 'prospects', label: 'Prospects', detail: 'Leads & Enquiries', type: 'link', target: '/prospects' },
+    { id: 'estimates', label: 'Estimates', detail: 'Quotes & Proposals', type: 'link', target: '/estimates' },
+    { id: 'invoicing', label: 'Invoicing', detail: 'Billing & Payments', type: 'link', target: '/invoicing' },
+    { id: 'availability', label: 'Availability Manager', detail: 'Staff blockouts', type: 'link', target: '/availability-manager' },
+    { id: 'vehicle-classification', label: 'Vehicle Classes', detail: 'Size definitions', type: 'link', target: '/vehicle-classification' },
+    { id: 'client-evaluation', label: 'Client Evaluation', detail: 'Inspection reports', type: 'link', target: '/client-evaluation' },
+    { id: 'addon-upsell', label: 'Addon Script', detail: 'Sales guidance', type: 'link', target: '/addon-upsell-script' },
+    { id: 'mileage', label: 'Mileage Tracking', detail: 'Vehicle logs', type: 'link', target: '/mileage' },
+    { id: 'budget', label: 'Company Budget', detail: 'Expense planning', type: 'link', target: '/company-budget' },
+    { id: 'taxes', label: 'Tax Center', detail: 'Reporting & Filings', type: 'link', target: '/taxes' },
+    { id: 'coupons', label: 'Discount Coupons', detail: 'Promo code management', type: 'link', target: '/discount-coupons' },
+    { id: 'mobile-setup', label: 'Mobile Setup', detail: 'Field unit config', type: 'link', target: '/mobile-setup' },
+    { id: 'detailing-vendors', label: 'Detailing Vendors', detail: 'Supplier database', type: 'link', target: '/detailing-vendors' },
+    { id: 'settings', label: 'App Settings', detail: 'Global configuration', type: 'link', target: '/settings' },
+
     // Modals
-    { id: 'modal-add-customer', label: 'Add Customer', detail: 'Quick intake system', type: 'modal', target: 'add-customer' },
+    { id: 'modal-add-customer', label: 'Quick Add Customer', detail: 'Intake modal', type: 'modal', target: 'add-customer' },
     { id: 'modal-cheat-sheet', label: 'Cheat Sheet', detail: 'Training quick reference', type: 'modal', target: 'cheat-sheet' },
-    { id: 'modal-subcontractors', label: 'SubContractors', detail: 'Manage external teams', type: 'modal', target: 'subcontractors' },
-    { id: 'modal-user-admin', label: 'User Admin', detail: 'System roles & rights', type: 'modal', target: 'user-admin' },
-    { id: 'modal-mock-data', label: 'Mock Data System', detail: 'Development tools', type: 'modal', target: 'mock-data' },
+    { id: 'modal-subcontractors', label: 'SubContractors', detail: 'External teams', type: 'modal', target: 'subcontractors' },
+    { id: 'modal-user-admin', label: 'User Admin', detail: 'Roles & Rights', type: 'modal', target: 'user-admin' },
+    { id: 'modal-employee-mgmt', label: 'Employee Mgmt', detail: 'Details & History', type: 'modal', target: 'employee-mgmt' },
+    { id: 'modal-mock-data', label: 'Mock Data System', detail: 'Control center', type: 'modal', target: 'mock-data' },
+    { id: 'modal-orientation', label: 'Employee Orientation', detail: 'Onboarding flow', type: 'modal', target: 'orientation' },
 ];
 
 const DEFAULT_PINNED = ['reports', 'training', 'package-pricing', 'gallery'];
@@ -645,37 +683,9 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                     </Card>
                 </div>
 
-                {/* Section 5: Quick Actions */}
                 <div className="space-y-4">
-                    <h2 className="text-lg font-semibold text-white">Quick Actions</h2>
-                    <div className="grid grid-cols-1 gap-2">
-                        {[
-                            { label: 'New Booking', icon: Plus, link: '/services', color: 'bg-blue-500' },
-                            { label: 'Assign Staff', icon: UserPlus, link: '/bookings', color: 'bg-purple-500' },
-                            { label: 'Start Job', icon: Play, link: '/service-checklist', color: 'bg-orange-500' },
-                            { label: 'Upload Photos', icon: Camera, link: '/vehicle-gallery', color: 'bg-cyan-500' },
-                            { label: 'Create Invoice', icon: FileText, link: '/invoicing', color: 'bg-emerald-500' },
-                        ].map((action, i) => (
-                            <Link key={i} to={action.link} className="flex items-center gap-3 p-3 bg-zinc-900/40 border border-zinc-800 rounded-xl hover:bg-zinc-800/60 transition-colors text-white group">
-                                <div className={`p-2 ${action.color}/10 rounded-lg group-hover:scale-110 transition-transform`}>
-                                    <action.icon className={`w-4 h-4 ${action.color.replace('bg-', 'text-')}`} />
-                                </div>
-                                <span className="text-sm font-medium">{action.label}</span>
-                                <ArrowRight className="w-3.5 h-3.5 ml-auto text-zinc-700 group-hover:text-zinc-300 transition-colors" />
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Section 6: Recent & Pinned Access */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-zinc-400" />
-                        <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-                    </div>
-                    <Card className="divide-y divide-zinc-800 bg-zinc-900/40 border-zinc-800 overflow-hidden">
+                    <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+                    <Card className="divide-y divide-zinc-800 bg-zinc-900/40 border-zinc-800 overflow-hidden h-full">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((recent, i) => (
                                 <div key={i} className="p-3 hover:bg-zinc-800/40 transition-colors flex items-center justify-between cursor-pointer group">
@@ -692,69 +702,108 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         )}
                     </Card>
                 </div>
+            </section>
 
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <h2 className="text-lg font-semibold text-white">Pinned / Favorites</h2>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        {pinnedShortcuts.length > 0 ? (
-                            pinnedShortcuts.map((pin) => (
-                                pin.type === 'link' ? (
-                                    <Link key={pin.id} to={pin.target}>
-                                        <Card className="p-3 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group">
-                                            <div className="text-sm font-medium text-zinc-200 group-hover:text-white">{pin.label}</div>
-                                            <div className="text-[11px] text-zinc-500 line-clamp-1">{pin.detail}</div>
-                                        </Card>
-                                    </Link>
-                                ) : (
-                                    <Card key={pin.id} onClick={() => onQuickAction?.(`modal:${pin.target}`)} className="p-3 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group">
-                                        <div className="text-sm font-medium text-zinc-200 group-hover:text-white">{pin.label}</div>
-                                        <div className="text-[11px] text-zinc-500 line-clamp-1">{pin.detail}</div>
-                                    </Card>
-                                )
-                            ))
-                        ) : (
-                            <div className="col-span-2 p-6 border border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center text-center">
-                                <p className="text-zinc-600 text-sm">No shortcuts pinned yet.</p>
-                            </div>
-                        )}
-                    </div>
-                    <Button
-                        onClick={() => setIsManaging(true)}
-                        variant="ghost"
-                        className="w-full justify-start text-xs text-zinc-500 hover:text-zinc-300 h-8 gap-2"
-                    >
-                        <Plus className="w-3 h-3" /> Manage Favorites
-                    </Button>
+            {/* Section 5: Quick Actions */}
+            <section className="space-y-4 mt-8">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-white">Quick Actions</h2>
+                    <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Workflow</Badge>
                 </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {[
+                        { label: 'New Booking', icon: Plus, link: '/services', color: 'bg-blue-500' },
+                        { label: 'Assign Staff', icon: UserPlus, link: '/bookings', color: 'bg-purple-500' },
+                        { label: 'Start Job', icon: Play, link: '/service-checklist', color: 'bg-orange-500' },
+                        { label: 'Upload Photos', icon: Camera, link: '/vehicle-gallery', color: 'bg-cyan-500' },
+                        { label: 'Create Invoice', icon: FileText, link: '/invoicing', color: 'bg-emerald-500' },
+                    ].map((action, i) => (
+                        <Link key={i} to={action.link} className="flex flex-col items-center gap-3 p-4 bg-zinc-900/40 border border-zinc-800 rounded-2xl hover:bg-zinc-800/60 transition-all hover:border-zinc-700 text-white group">
+                            <div className={`p-3 ${action.color}/10 rounded-xl group-hover:scale-110 transition-transform`}>
+                                <action.icon className={`w-5 h-5 ${action.color.replace('bg-', 'text-')}`} />
+                            </div>
+                            <span className="text-sm font-medium text-center">{action.label}</span>
+                        </Link>
+                    ))}
+                </div>
+            </section>
+
+            {/* Section 6: Favorites Accordion */}
+            <section className="space-y-2 mt-8">
+                <Accordion type="single" collapsible className="w-full border-none" defaultValue="favorites">
+                    <AccordionItem value="favorites" className="border-none">
+                        <div className="flex items-center justify-between gap-4 mb-2">
+                            <AccordionTrigger className="hover:no-underline py-0 border-none group">
+                                <div className="flex items-center gap-2">
+                                    <Star className="w-4 h-4 text-yellow-500" />
+                                    <h2 className="text-lg font-semibold text-white">Pinned / Favorites</h2>
+                                </div>
+                            </AccordionTrigger>
+                            <Button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsManaging(true);
+                                }}
+                                variant="ghost"
+                                className="text-xs bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white h-7 gap-1.5 px-3 rounded-full transition-all border border-emerald-500/20"
+                            >
+                                <Plus className="w-3 h-3" /> Manage Favorites
+                            </Button>
+                        </div>
+                        <AccordionContent className="pt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {pinnedShortcuts.length > 0 ? (
+                                    pinnedShortcuts.map((pin) => (
+                                        pin.type === 'link' ? (
+                                            <Link key={pin.id} to={pin.target}>
+                                                <Card className="p-4 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group hover:bg-zinc-800/20">
+                                                    <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
+                                                    <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
+                                                </Card>
+                                            </Link>
+                                        ) : (
+                                            <Card key={pin.id} onClick={() => onQuickAction?.(`modal:${pin.target}`)} className="p-4 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group hover:bg-zinc-800/20">
+                                                <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
+                                                <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
+                                            </Card>
+                                        )
+                                    ))
+                                ) : (
+                                    <div className="col-span-full p-8 border border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center text-center">
+                                        <p className="text-zinc-600 text-sm">No shortcuts pinned yet. Click manage to add some!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </section>
 
             {/* Manage Favorites Modal */}
             <Dialog open={isManaging} onOpenChange={setIsManaging}>
-                <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white">
-                    <DialogHeader>
-                        <DialogTitle>Manage Functional Favorites</DialogTitle>
-                        <DialogDescription className="text-zinc-500">
+                <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="text-2xl font-bold">Manage Functional Favorites</DialogTitle>
+                        <DialogDescription className="text-zinc-400">
                             Select existing application modules or create a custom shortcut to pin to your dashboard.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-6 my-4">
-                        <section className="space-y-3">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                        <section className="space-y-4">
                             <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Available Modules</h3>
-                            <ScrollArea className="h-[250px] rounded-md border border-zinc-800 p-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <ScrollArea className="h-[250px] pr-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {AVAILABLE_SHORTCUTS.map((s) => (
-                                        <div key={s.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-zinc-900 transition-colors">
+                                        <div key={s.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-zinc-900 transition-colors border border-transparent hover:border-zinc-800 group">
                                             <Checkbox
                                                 id={s.id}
                                                 checked={pinnedIds.includes(s.id)}
                                                 onCheckedChange={() => handleTogglePinned(s.id)}
+                                                className="border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                                             />
-                                            <div className="flex flex-col">
-                                                <Label htmlFor={s.id} className="text-sm font-medium">{s.label}</Label>
+                                            <div className="flex flex-col leading-tight">
+                                                <Label htmlFor={s.id} className="text-sm font-semibold group-hover:text-white transition-colors cursor-pointer">{s.label}</Label>
                                                 <span className="text-[10px] text-zinc-500">{s.detail}</span>
                                             </div>
                                         </div>
@@ -765,63 +814,83 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
                         <section className="space-y-4 pt-4 border-t border-zinc-800">
                             <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Add Custom Shortcut</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end p-4 bg-zinc-900/40 rounded-xl border border-zinc-800">
                                 <div className="space-y-2">
                                     <Label className="text-xs">Label</Label>
                                     <UIInput
                                         placeholder="e.g. My Custom Tool"
-                                        className="bg-zinc-900 border-zinc-800 h-9"
+                                        className="bg-zinc-950 border-zinc-800 h-9 text-xs"
                                         value={customLabel}
                                         onChange={(e) => setCustomLabel(e.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-2 lg:col-span-1">
-                                    <Label className="text-xs">Target (URL or Modal ID)</Label>
-                                    <UIInput
-                                        placeholder="/my-page or my-modal"
-                                        className="bg-zinc-900 border-zinc-800 h-9"
+                                    <Label className="text-xs">Select Target (Searchable)</Label>
+                                    <Select
                                         value={customTarget}
-                                        onChange={(e) => setCustomTarget(e.target.value)}
-                                    />
+                                        onValueChange={(val) => {
+                                            setCustomTarget(val);
+                                            const item = AVAILABLE_SHORTCUTS.find(s => s.target === val);
+                                            if (item) {
+                                                setCustomType(item.type);
+                                                if (!customLabel) setCustomLabel(item.label);
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9 text-xs">
+                                            <SelectValue placeholder="Pick a page or modal" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-zinc-950 border-zinc-800 text-white max-h-[300px]">
+                                            <SelectGroup>
+                                                <SelectLabel className="text-zinc-500 text-[10px] uppercase">Pages & Links</SelectLabel>
+                                                {AVAILABLE_SHORTCUTS.filter(s => s.type === 'link').map(s => (
+                                                    <SelectItem key={s.id} value={s.target} className="text-xs">{s.label}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                            <SelectSeparator className="bg-zinc-800" />
+                                            <SelectGroup>
+                                                <SelectLabel className="text-zinc-500 text-[10px] uppercase">Interactive Modals</SelectLabel>
+                                                {AVAILABLE_SHORTCUTS.filter(s => s.type === 'modal').map(s => (
+                                                    <SelectItem key={s.id} value={s.target} className="text-xs">{s.label}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="flex gap-2">
                                     <div className="space-y-2 flex-1">
                                         <Label className="text-xs">Type</Label>
-                                        <select
-                                            className="w-full bg-zinc-900 border-zinc-800 border rounded-md h-9 text-xs px-2"
-                                            value={customType}
-                                            onChange={(e) => setCustomType(e.target.value as 'link' | 'modal')}
-                                        >
-                                            <option value="link">Page Link</option>
-                                            <option value="modal">Dashboard Modal</option>
-                                        </select>
+                                        <Select value={customType} onValueChange={(val) => setCustomType(val as 'link' | 'modal')}>
+                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                                                <SelectItem value="link" className="text-xs">Page Link</SelectItem>
+                                                <SelectItem value="modal" className="text-xs">Modal</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <Button onClick={handleAddCustom} size="sm" className="h-9 self-end bg-blue-600 hover:bg-blue-700">
+                                    <Button onClick={handleAddCustom} size="sm" className="h-9 self-end bg-blue-600 hover:bg-blue-700 font-bold">
                                         Add
                                     </Button>
                                 </div>
                             </div>
 
                             {customShortcuts.length > 0 && (
-                                <div className="pt-2">
-                                    <Label className="text-xs text-zinc-500 mb-2 block">Custom Items</Label>
-                                    <div className="space-y-2">
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-zinc-500">Your Custom Shortcuts</Label>
+                                    <div className="flex flex-wrap gap-2">
                                         {customShortcuts.map((s) => (
-                                            <div key={s.id} className="flex items-center justify-between p-2 bg-zinc-900/50 rounded-lg border border-zinc-800">
-                                                <div className="flex items-center gap-3">
-                                                    <Checkbox
-                                                        id={s.id}
-                                                        checked={pinnedIds.includes(s.id)}
-                                                        onCheckedChange={() => handleTogglePinned(s.id)}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-medium">{s.label}</span>
-                                                        <span className="text-[10px] text-zinc-600">{s.target} ({s.type})</span>
-                                                    </div>
-                                                </div>
-                                                <Button onClick={() => handleRemoveCustom(s.id)} variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-red-500">
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </Button>
+                                            <div key={s.id} className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full">
+                                                <Checkbox
+                                                    checked={pinnedIds.includes(s.id)}
+                                                    onCheckedChange={() => handleTogglePinned(s.id)}
+                                                    className="h-3 w-3 border-zinc-700"
+                                                />
+                                                <span className="text-[11px] font-medium">{s.label}</span>
+                                                <button onClick={() => handleRemoveCustom(s.id)} className="text-zinc-500 hover:text-red-400">
+                                                    <X className="w-3 h-3" />
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -830,8 +899,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         </section>
                     </div>
 
-                    <DialogFooter className="pt-4 border-t border-zinc-800">
-                        <Button onClick={() => setIsManaging(false)} className="bg-zinc-800 hover:bg-zinc-700 text-white">
+                    <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-950">
+                        <Button onClick={() => setIsManaging(false)} className="bg-zinc-800 hover:bg-zinc-700 text-white w-full sm:w-auto">
                             Close & Save
                         </Button>
                     </DialogFooter>
@@ -843,9 +912,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                 <DialogContent className="max-w-md bg-zinc-950 border-zinc-800 text-white">
                     <DialogHeader>
                         <DialogTitle>Personal Notes</DialogTitle>
-                        <DialogDescription>
-                            Attach a note to your dashboard for quick reference and planning.
-                        </DialogDescription>
+                        <DialogDescription>Attach a note to your dashboard for quick reference.</DialogDescription>
                     </DialogHeader>
 
                     <div className="py-4 space-y-4">
@@ -888,8 +955,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                     <FileText className="w-8 h-8 mb-2 opacity-20" />
                                     No notes found.
                                 </div>
-                            )
-                            }
+                            )}
                         </ScrollArea>
                     </div>
 
