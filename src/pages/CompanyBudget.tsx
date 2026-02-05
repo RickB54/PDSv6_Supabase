@@ -32,6 +32,12 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Download, PieChart as PieChartIcon, BarChart3, TrendingUp, Plus, Filter, ChevronDown, Trash2, Pencil, Printer, FileText } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getReceivables, Receivable, upsertReceivable, deleteReceivable } from "@/lib/receivables";
@@ -884,6 +890,46 @@ const CompanyBudget = () => {
                         </Card>
                     </div>
 
+
+                    {/* Tax-Deductible Inventory Section */}
+                    {(() => {
+                        const taxInventoryExpenses = expenseList.filter(e =>
+                            e.description?.startsWith('[TAX]') && e.category && ['Equipment', 'Supplies'].includes(e.category)
+                        );
+                        const totalTaxInventory = taxInventoryExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+                        if (taxInventoryExpenses.length === 0) return null;
+
+                        return (
+                            <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="tax-inventory" className="border rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
+                                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                                        <div className="flex justify-between items-center w-full pr-4">
+                                            <div className="text-left">
+                                                <Label className="text-sm text-muted-foreground">Tax-Deductible Inventory</Label>
+                                                <p className="text-2xl font-bold text-purple-600 mt-1">${totalTaxInventory.toFixed(2)}</p>
+                                                <p className="text-xs text-muted-foreground mt-1">{taxInventoryExpenses.length} items marked for tax deduction</p>
+                                            </div>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-6 pb-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
+                                            {taxInventoryExpenses.map((exp, idx) => (
+                                                <div key={`tax-inv-${idx}`} className="flex justify-between items-center p-2 bg-background/50 rounded border border-purple-200/30">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate">{exp.description?.replace('[TAX]', '').trim() || 'Inventory Item'}</p>
+                                                        <p className="text-xs text-muted-foreground">{exp.category} • {(exp.createdAt || '').slice(0, 10)}</p>
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-purple-600 ml-2">${exp.amount.toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                        );
+                    })()}
+
                     {/* Main Content */}
                     <Tabs defaultValue="overview" className="space-y-4">
                         <TabsList className="flex h-auto flex-wrap justify-start gap-2 bg-muted/50 p-1">
@@ -916,49 +962,99 @@ const CompanyBudget = () => {
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {/* Paid Invoices */}
-                                                    {invoiceList.filter(inv => {
-                                                        const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
-                                                            ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
-                                                            : 0;
-                                                        return amt > 0 && filterByDate(inv.createdAt || inv.date);
-                                                    }).map(inv => (
-                                                        <TableRow key={`inv-${inv.id}`}>
-                                                            <TableCell>{(inv.createdAt || inv.date || '').slice(0, 10)}</TableCell>
-                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
-                                                            <TableCell>Paid Invoice</TableCell>
-                                                            <TableCell>${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
-                                                            <TableCell>
-                                                                {/* Invoices are read-only here */}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
+                                                    {(() => {
+                                                        // Group income by category
+                                                        const incomeByCategory = new Map<string, any[]>();
 
-                                                    {/* Manual Income */}
-                                                    {incomeList.filter(i => filterByDate(i.date || i.createdAt || '')).map(inc => (
-                                                        <TableRow key={`inc-${inc.id}`}>
-                                                            <TableCell>{(inc.date || inc.createdAt || '').slice(0, 10)}</TableCell>
-                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{inc.category || 'Manual'}</span></TableCell>
-                                                            <TableCell>{inc.description || inc.customerName || '-'}</TableCell>
-                                                            <TableCell>${(inc.amount || 0).toFixed(2)}</TableCell>
-                                                            <TableCell>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                    onClick={async () => {
-                                                                        if (confirm('Delete this manual income entry?')) {
-                                                                            if (inc.id) await deleteReceivable(inc.id);
-                                                                            loadData();
-                                                                            toast.success("Income deleted");
+                                                        // Add paid invoices
+                                                        invoiceList.filter(inv => {
+                                                            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                                ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                                : 0;
+                                                            return amt > 0 && filterByDate(inv.createdAt || inv.date);
+                                                        }).forEach(inv => {
+                                                            const category = 'Invoice';
+                                                            if (!incomeByCategory.has(category)) incomeByCategory.set(category, []);
+                                                            incomeByCategory.get(category)!.push({ type: 'invoice', data: inv });
+                                                        });
+
+                                                        // Add manual income
+                                                        incomeList.filter(i => filterByDate(i.date || i.createdAt || '')).forEach(inc => {
+                                                            const category = inc.category || 'Manual';
+                                                            if (!incomeByCategory.has(category)) incomeByCategory.set(category, []);
+                                                            incomeByCategory.get(category)!.push({ type: 'income', data: inc });
+                                                        });
+
+                                                        // Sort categories alphabetically
+                                                        const sortedCategories = Array.from(incomeByCategory.keys()).sort();
+
+                                                        return sortedCategories.map(category => {
+                                                            const items = incomeByCategory.get(category)!;
+                                                            const subtotal = items.reduce((sum, item) => {
+                                                                if (item.type === 'invoice') {
+                                                                    const inv = item.data;
+                                                                    return sum + ((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                                        ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                                                                        : 0);
+                                                                } else {
+                                                                    return sum + (item.data.amount || 0);
+                                                                }
+                                                            }, 0);
+
+                                                            return (
+                                                                <>
+                                                                    {items.map((item, idx) => {
+                                                                        if (item.type === 'invoice') {
+                                                                            const inv = item.data;
+                                                                            return (
+                                                                                <TableRow key={`inv-${inv.id}`}>
+                                                                                    <TableCell>{(inv.createdAt || inv.date || '').slice(0, 10)}</TableCell>
+                                                                                    <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
+                                                                                    <TableCell>Paid Invoice</TableCell>
+                                                                                    <TableCell>${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
+                                                                                    <TableCell>
+                                                                                        {/* Invoices are read-only here */}
+                                                                                    </TableCell>
+                                                                                </TableRow>
+                                                                            );
+                                                                        } else {
+                                                                            const inc = item.data;
+                                                                            return (
+                                                                                <TableRow key={`inc-${inc.id}`}>
+                                                                                    <TableCell>{(inc.date || inc.createdAt || '').slice(0, 10)}</TableCell>
+                                                                                    <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{inc.category || 'Manual'}</span></TableCell>
+                                                                                    <TableCell>{inc.description || inc.customerName || '-'}</TableCell>
+                                                                                    <TableCell>${(inc.amount || 0).toFixed(2)}</TableCell>
+                                                                                    <TableCell>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                                            onClick={async () => {
+                                                                                                if (confirm('Delete this manual income entry?')) {
+                                                                                                    if (inc.id) await deleteReceivable(inc.id);
+                                                                                                    loadData();
+                                                                                                    toast.success("Income deleted");
+                                                                                                }
+                                                                                            }}
+                                                                                        >
+                                                                                            <Trash2 className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </TableCell>
+                                                                                </TableRow>
+                                                                            );
                                                                         }
-                                                                    }}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
+                                                                    })}
+                                                                    {/* Category Subtotal Row */}
+                                                                    <TableRow className="bg-green-50 dark:bg-green-950/20 font-semibold">
+                                                                        <TableCell colSpan={3} className="text-right">{category} Subtotal:</TableCell>
+                                                                        <TableCell className="text-green-600">${subtotal.toFixed(2)}</TableCell>
+                                                                        <TableCell></TableCell>
+                                                                    </TableRow>
+                                                                </>
+                                                            );
+                                                        });
+                                                    })()}
                                                 </TableBody>
                                             </Table>
                                         </div>
@@ -979,30 +1075,59 @@ const CompanyBudget = () => {
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {expenseList.filter(e => filterByDate(e.createdAt)).map(exp => (
-                                                        <TableRow key={`exp-${exp.id}`}>
-                                                            <TableCell>{(exp.createdAt || '').slice(0, 10)}</TableCell>
-                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{exp.category || 'General'}</span></TableCell>
-                                                            <TableCell>{exp.description || '-'}</TableCell>
-                                                            <TableCell>${(exp.amount || 0).toFixed(2)}</TableCell>
-                                                            <TableCell>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                    onClick={async () => {
-                                                                        if (confirm('Delete this expense entry?')) {
-                                                                            if (exp.id) await deleteExpense(exp.id);
-                                                                            loadData();
-                                                                            toast.success("Expense deleted");
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
+                                                    {(() => {
+                                                        // Group expenses by category
+                                                        const expenseByCategory = new Map<string, any[]>();
+
+                                                        expenseList.filter(e => filterByDate(e.createdAt)).forEach(exp => {
+                                                            const category = exp.category || 'General';
+                                                            if (!expenseByCategory.has(category)) expenseByCategory.set(category, []);
+                                                            expenseByCategory.get(category)!.push(exp);
+                                                        });
+
+                                                        // Sort categories alphabetically
+                                                        const sortedCategories = Array.from(expenseByCategory.keys()).sort();
+
+                                                        return sortedCategories.map(category => {
+                                                            const items = expenseByCategory.get(category)!;
+                                                            const subtotal = items.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+                                                            return (
+                                                                <>
+                                                                    {items.map(exp => (
+                                                                        <TableRow key={`exp-${exp.id}`}>
+                                                                            <TableCell>{(exp.createdAt || '').slice(0, 10)}</TableCell>
+                                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{exp.category || 'General'}</span></TableCell>
+                                                                            <TableCell>{exp.description || '-'}</TableCell>
+                                                                            <TableCell>${(exp.amount || 0).toFixed(2)}</TableCell>
+                                                                            <TableCell>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                                    onClick={async () => {
+                                                                                        if (confirm('Delete this expense entry?')) {
+                                                                                            if (exp.id) await deleteExpense(exp.id);
+                                                                                            loadData();
+                                                                                            toast.success("Expense deleted");
+                                                                                        }
+                                                                                    }}
+                                                                                >
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    ))}
+                                                                    {/* Category Subtotal Row */}
+                                                                    <TableRow className="bg-red-50 dark:bg-red-950/20 font-semibold">
+                                                                        <TableCell colSpan={3} className="text-right">{category} Subtotal:</TableCell>
+                                                                        <TableCell className="text-red-600">${subtotal.toFixed(2)}</TableCell>
+                                                                        <TableCell></TableCell>
+                                                                    </TableRow>
+                                                                </>
+                                                            );
+                                                        });
+                                                    })()}
                                                 </TableBody>
                                             </Table>
                                         </div>

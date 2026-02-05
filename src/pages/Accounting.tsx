@@ -51,6 +51,7 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import localforage from "localforage";
 import { getCategoryColors } from "@/lib/categoryColors";
 import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
+import { getSupabaseTaxExpenses } from "@/lib/supa-data";
 
 interface Invoice {
   id?: string;
@@ -135,12 +136,25 @@ const Accounting = () => {
     itemCount: { chemicals: 0, materials: 0, tools: 0, total: 0 }
   });
 
+  // Tax-deductible inventory
+  const [taxInventoryExpenses, setTaxInventoryExpenses] = useState<any[]>([]);
+
   useEffect(() => {
     loadData();
     loadCustomCategories();
     getSupabaseCustomers().then(setCustomers); // Load customers
     getInventoryTotals().then(setInventoryTotals); // Load inventory
+    loadTaxInventory(); // Load tax-deductible inventory
   }, [dateFilter]);
+
+  const loadTaxInventory = async () => {
+    const taxExpenses = await getSupabaseTaxExpenses();
+    // Filter only inventory items (Equipment and Supplies categories)
+    const inventoryTaxExpenses = taxExpenses.filter(te =>
+      te.category && ['Equipment', 'Supplies'].includes(te.category) && te.is_deductible
+    );
+    setTaxInventoryExpenses(inventoryTaxExpenses);
+  };
 
   const loadCustomCategories = async () => {
     const cats = await localforage.getItem<string[]>("customCategories") || [];
@@ -723,6 +737,57 @@ const Accounting = () => {
               </div>
             </div>
           </Card>
+
+
+          {/* Tax-Deductible Inventory Section */}
+          {taxInventoryExpenses.length > 0 && (
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="tax-inventory" className="border rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center w-full pr-4 gap-4">
+                    <div className="text-left">
+                      <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <DollarSign className="h-6 w-6 text-purple-500" />
+                        Tax-Deductible Inventory
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Inventory items marked for tax deduction
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-left md:text-right">
+                        <Label className="text-xs text-muted-foreground">Total Amount</Label>
+                        <p className="text-xl font-bold text-purple-600">
+                          ${taxInventoryExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="text-left md:text-right">
+                        <Label className="text-xs text-muted-foreground">Items</Label>
+                        <p className="text-xl font-bold text-purple-600">
+                          {taxInventoryExpenses.length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
+                    {taxInventoryExpenses.map((exp, idx) => (
+                      <div key={`tax-inv-${idx}`} className="flex justify-between items-center p-3 bg-background/50 rounded border border-purple-200/30 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{exp.notes || exp.vendor || 'Inventory Item'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {exp.category} • {new Date(exp.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-purple-600 ml-2">${exp.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
 
           {/* Break-Even Analysis */}
           <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
