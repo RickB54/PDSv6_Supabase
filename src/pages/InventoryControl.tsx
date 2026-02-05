@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -68,6 +68,11 @@ const InventoryControl = () => {
   const [updateChecklistText, setUpdateChecklistText] = useState("");
   const [updateEmployee, setUpdateEmployee] = useState<string>("");
   const [updateChemId, setUpdateChemId] = useState<string>("");
+
+  // Search queries for each category
+  const [chemicalSearch, setChemicalSearch] = useState("");
+  const [supplySearch, setSupplySearch] = useState("");
+  const [equipmentSearch, setEquipmentSearch] = useState("");
   const [updateChemFraction, setUpdateChemFraction] = useState<string>("");
   const [updateMatId, setUpdateMatId] = useState<string>("");
   const [updateMatQtyNote, setUpdateMatQtyNote] = useState<string>("");
@@ -247,6 +252,392 @@ const InventoryControl = () => {
     const normalizedMode = mode === 'material' ? 'supply' : mode === 'tool' ? 'equipment' : mode;
     setModalMode(normalizedMode as 'chemical' | 'supply' | 'equipment');
     setModalOpen(true);
+  };
+
+  // Filter functions for search
+  const filteredChemicals = chemicals.filter(c =>
+    c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
+    (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase()))
+  );
+
+  const filteredSupplies = supplies.filter(s =>
+    s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
+    (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase()))
+  );
+  const filteredEquipment = equipment.filter(e =>
+    e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
+  );
+
+  // PDF Download - creates actual PDF file
+  const downloadInventoryPDF = async (category: 'chemicals' | 'supplies' | 'equipment') => {
+    const items = category === 'chemicals' ? filteredChemicals :
+      category === 'supplies' ? filteredSupplies : filteredEquipment;
+
+    const color = category === 'chemicals' ? [234, 179, 8] :
+      category === 'supplies' ? [59, 130, 246] : [168, 85, 247];
+
+    const categoryName = category === 'chemicals' ? 'Chemicals' :
+      category === 'supplies' ? 'Supplies' : 'Equipment';
+
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    // Header
+    pdf.setFillColor(color[0], color[1], color[2], 0.1);
+    pdf.rect(10, 10, pageWidth - 20, 30, 'F');
+    pdf.setTextColor(color[0], color[1], color[2]);
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`${categoryName} Inventory Report`, pageWidth / 2, 25, { align: 'center' });
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, 35, { align: 'center' });
+
+    yPos = 50;
+
+    // Summary
+    pdf.setFillColor(color[0], color[1], color[2], 0.05);
+    pdf.rect(10, yPos, pageWidth - 20, 20, 'F');
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+
+    const totalValue = category === 'chemicals' ?
+      items.reduce((a, c: any) => a + (c.costPerBottle * c.currentStock), 0) :
+      category === 'supplies' ?
+        items.reduce((a, m: any) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0) :
+        items.reduce((a, t: any) => a + (t.price || 0), 0);
+
+    pdf.text(`Total Items: ${items.length}`, 15, yPos + 10);
+    pdf.text(`Total Value: $${totalValue.toFixed(2)}`, pageWidth / 2, yPos + 10);
+
+    if (category !== 'equipment') {
+      const lowStock = category === 'chemicals' ?
+        items.filter((c: any) => c.currentStock < c.threshold).length :
+        items.filter((m: any) => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length;
+      pdf.setTextColor(239, 68, 68);
+      pdf.text(`Low Stock: ${lowStock}`, pageWidth - 60, yPos + 10);
+    }
+
+    yPos += 30;
+
+    // Items
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+
+    items.forEach((item: any, idx) => {
+      // Check if we need a new page
+      if (yPos > pageHeight - 60) {
+        pdf.addPage();
+        yPos = 20;
+      }
+
+      // Item header
+      pdf.setFillColor(color[0], color[1], color[2]);
+      pdf.rect(10, yPos, pageWidth - 20, 10, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+
+      const itemName = category === 'chemicals' && item.brand ?
+        `${item.brand} / ${item.name}` : item.name;
+      pdf.text(itemName, 15, yPos + 7);
+
+      yPos += 15;
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+
+      // Item fields
+      if (category === 'chemicals') {
+        if (item.brand) {
+          pdf.text(`Brand: ${item.brand}`, 15, yPos);
+          yPos += 5;
+        }
+        pdf.text(`Product: ${item.name}`, 15, yPos);
+        yPos += 5;
+        pdf.text(`Size: ${item.bottleSize}`, 15, yPos);
+        pdf.text(`Cost/Bottle: $${item.costPerBottle.toFixed(2)}`, pageWidth / 2, yPos);
+        yPos += 5;
+
+        const stockColor = item.currentStock < item.threshold ? [239, 68, 68] : [0, 0, 0];
+        pdf.setTextColor(stockColor[0], stockColor[1], stockColor[2]);
+        pdf.text(`Stock: ${item.currentStock} bottles`, 15, yPos);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`Threshold: ${item.threshold}`, pageWidth / 2, yPos);
+        yPos += 5;
+        pdf.text(`Total Value: $${(item.costPerBottle * item.currentStock).toFixed(2)}`, 15, yPos);
+        yPos += 5;
+        if (item.notes) {
+          pdf.text(`Notes: ${item.notes.substring(0, 80)}`, 15, yPos);
+          yPos += 5;
+        }
+      } else if (category === 'supplies') {
+        pdf.text(`Name: ${item.name}`, 15, yPos);
+        yPos += 5;
+        pdf.text(`Category: ${item.category}`, 15, yPos);
+        if (item.subtype) pdf.text(`Subtype: ${item.subtype}`, pageWidth / 2, yPos);
+        yPos += 5;
+        pdf.text(`Cost/Item: $${(item.costPerItem || 0).toFixed(2)}`, 15, yPos);
+
+        const stockColor = typeof item.lowThreshold === 'number' && item.quantity < item.lowThreshold ? [239, 68, 68] : [0, 0, 0];
+        pdf.setTextColor(stockColor[0], stockColor[1], stockColor[2]);
+        pdf.text(`Quantity: ${item.quantity}`, pageWidth / 2, yPos);
+        pdf.setTextColor(0, 0, 0);
+        yPos += 5;
+        if (typeof item.lowThreshold === 'number') {
+          pdf.text(`Threshold: ${item.lowThreshold}`, 15, yPos);
+          yPos += 5;
+        }
+        pdf.text(`Total Value: $${((item.costPerItem || 0) * (item.quantity || 0)).toFixed(2)}`, 15, yPos);
+        yPos += 5;
+        if (item.notes) {
+          pdf.text(`Notes: ${item.notes.substring(0, 80)}`, 15, yPos);
+          yPos += 5;
+        }
+      } else {
+        pdf.text(`Name: ${item.name}`, 15, yPos);
+        yPos += 5;
+        pdf.text(`Price: $${(item.price || 0).toFixed(2)}`, 15, yPos);
+        if (item.purchaseDate) pdf.text(`Purchased: ${new Date(item.purchaseDate).toLocaleDateString()}`, pageWidth / 2, yPos);
+        yPos += 5;
+        if (item.warranty) {
+          pdf.text(`Warranty: ${item.warranty}`, 15, yPos);
+          yPos += 5;
+        }
+        if (item.lifeExpectancy) {
+          pdf.text(`Life Expectancy: ${item.lifeExpectancy}`, 15, yPos);
+          yPos += 5;
+        }
+        if (item.notes) {
+          pdf.text(`Notes: ${item.notes.substring(0, 80)}`, 15, yPos);
+          yPos += 5;
+        }
+      }
+
+      yPos += 5;
+      // Separator line
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(10, yPos, pageWidth - 10, yPos);
+      yPos += 10;
+    });
+
+    // Save PDF
+    pdf.save(`${categoryName}_Inventory_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Print Preview - opens print dialog
+  const printInventory = (category: 'chemicals' | 'supplies' | 'equipment') => {
+    const items = category === 'chemicals' ? filteredChemicals :
+      category === 'supplies' ? filteredSupplies : filteredEquipment;
+
+    const color = category === 'chemicals' ? '#eab308' :
+      category === 'supplies' ? '#3b82f6' : '#a855f7';
+
+    const categoryName = category === 'chemicals' ? 'Chemicals' :
+      category === 'supplies' ? 'Supplies' : 'Equipment';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${categoryName} Inventory Report</title>
+        <style>
+          @media print {
+            @page { margin: 0.5in; }
+            .page-break { page-break-before: always; }
+          }
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            color: #1f2937;
+          }
+          .header {
+            background: linear-gradient(135deg, ${color}22, ${color}44);
+            border-left: 4px solid ${color};
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+          }
+          h1 { 
+            color: ${color}; 
+            margin: 0 0 10px 0;
+            font-size: 28px;
+          }
+          .meta { 
+            color: #6b7280; 
+            font-size: 14px;
+          }
+          .item {
+            border: 2px solid ${color}33;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f9fafb;
+            break-inside: avoid;
+          }
+          .item-header {
+            background: ${color};
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 16px -20px;
+            border-radius: 6px 6px 0 0;
+            font-size: 18px;
+            font-weight: bold;
+          }
+          .field {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .field:last-child { border-bottom: none; }
+          .field-label {
+            font-weight: 600;
+            color: #4b5563;
+          }
+          .field-value {
+            color: #1f2937;
+          }
+          .low-stock {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding-left: 12px;
+          }
+          .summary {
+            background: ${color}11;
+            border: 2px solid ${color};
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+          }
+          .summary-item {
+            text-align: center;
+          }
+          .summary-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: ${color};
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${categoryName} Inventory Report</h1>
+          <div class="meta">Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</div>
+          <div class="meta">Total Items: ${items.length}</div>
+        </div>
+        
+        ${category === 'chemicals' ? `
+          <div class="summary">
+            <div class="summary-item">
+              <div class="summary-label">Total Items</div>
+              <div class="summary-value">${items.length}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Total Value</div>
+              <div class="summary-value">$${items.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(2)}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Low Stock</div>
+              <div class="summary-value" style="color: #ef4444;">${items.filter(c => c.currentStock < c.threshold).length}</div>
+            </div>
+          </div>
+          ${items.map((c, idx) => `
+            <div class="item ${c.currentStock < c.threshold ? 'low-stock' : ''}">
+              <div class="item-header">${c.brand ? `${c.brand} / ` : ''}${c.name}</div>
+              ${c.brand ? `<div class="field"><div class="field-label">Brand</div><div class="field-value">${c.brand}</div></div>` : ''}
+              <div class="field"><div class="field-label">Product Name</div><div class="field-value">${c.name}</div></div>
+              <div class="field"><div class="field-label">Bottle Size</div><div class="field-value">${c.bottleSize}</div></div>
+              <div class="field"><div class="field-label">Cost Per Bottle</div><div class="field-value">$${c.costPerBottle.toFixed(2)}</div></div>
+              <div class="field"><div class="field-label">Current Stock</div><div class="field-value" style="${c.currentStock < c.threshold ? 'color: #ef4444; font-weight: bold;' : ''}">${c.currentStock} bottles</div></div>
+              <div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${c.threshold} bottles</div></div>
+              <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${(c.costPerBottle * c.currentStock).toFixed(2)}</div></div>
+              ${c.chemicalLibraryId ? `<div class="field"><div class="field-label">Linked to Library</div><div class="field-value">Yes</div></div>` : ''}
+              ${c.notes ? `<div class="field"><div class="field-label">Notes</div><div class="field-value">${c.notes}</div></div>` : ''}
+            </div>
+            ${(idx + 1) % 3 === 0 && idx < items.length - 1 ? '<div class="page-break"></div>' : ''}
+          `).join('')}
+        ` : category === 'supplies' ? `
+          <div class="summary">
+            <div class="summary-item">
+              <div class="summary-label">Total Items</div>
+              <div class="summary-value">${items.length}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Total Value</div>
+              <div class="summary-value">$${items.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(2)}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Low Stock</div>
+              <div class="summary-value" style="color: #ef4444;">${items.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length}</div>
+            </div>
+          </div>
+          ${items.map((m, idx) => `
+            <div class="item ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'low-stock' : ''}">
+              <div class="item-header">${m.name}</div>
+              <div class="field"><div class="field-label">Name</div><div class="field-value">${m.name}</div></div>
+              <div class="field"><div class="field-label">Category</div><div class="field-value">${m.category}</div></div>
+              ${m.subtype ? `<div class="field"><div class="field-label">Subtype/Size</div><div class="field-value">${m.subtype}</div></div>` : ''}
+              <div class="field"><div class="field-label">Cost Per Item</div><div class="field-value">$${(m.costPerItem || 0).toFixed(2)}</div></div>
+              <div class="field"><div class="field-label">Quantity</div><div class="field-value" style="${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'color: #ef4444; font-weight: bold;' : ''}">${m.quantity} units</div></div>
+              ${typeof m.lowThreshold === 'number' ? `<div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${m.lowThreshold} units</div></div>` : ''}
+              <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${((m.costPerItem || 0) * (m.quantity || 0)).toFixed(2)}</div></div>
+              ${m.notes ? `<div class="field"><div class="field-label">Notes</div><div class="field-value">${m.notes}</div></div>` : ''}
+            </div>
+            ${(idx + 1) % 3 === 0 && idx < items.length - 1 ? '<div class="page-break"></div>' : ''}
+          `).join('')}
+        ` : `
+          <div class="summary">
+            <div class="summary-item">
+              <div class="summary-label">Total Items</div>
+              <div class="summary-value">${items.length}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Total Value</div>
+              <div class="summary-value">$${items.reduce((a, t) => a + (t.price || 0), 0).toFixed(2)}</div>
+            </div>
+          </div>
+          ${items.map((t, idx) => `
+            <div class="item">
+              <div class="item-header">${t.name}</div>
+              <div class="field"><div class="field-label">Name</div><div class="field-value">${t.name}</div></div>
+              <div class="field"><div class="field-label">Price</div><div class="field-value">$${(t.price || 0).toFixed(2)}</div></div>
+              ${t.purchaseDate ? `<div class="field"><div class="field-label">Purchase Date</div><div class="field-value">${new Date(t.purchaseDate).toLocaleDateString()}</div></div>` : ''}
+              ${t.warranty ? `<div class="field"><div class="field-label">Warranty</div><div class="field-value">${t.warranty}</div></div>` : ''}
+              ${t.lifeExpectancy ? `<div class="field"><div class="field-label">Life Expectancy</div><div class="field-value">${t.lifeExpectancy}</div></div>` : ''}
+              ${t.notes ? `<div class="field"><div class="field-label">Notes</div><div class="field-value">${t.notes}</div></div>` : ''}
+            </div>
+            ${(idx + 1) % 3 === 0 && idx < items.length - 1 ? '<div class="page-break"></div>' : ''}
+          `).join('')}
+        `}
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    // Trigger print dialog
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   // Save handled inside UnifiedInventoryModal; refresh list on onSaved
@@ -484,11 +875,23 @@ const InventoryControl = () => {
 
           {expandedSections.chemicals && (
             <div className="p-4 border-t border-yellow-500/10 animate-in slide-in-from-top-2 duration-200">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
                   <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300" onClick={() => downloadInventoryPDF('chemicals')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300" onClick={() => printInventory('chemicals')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search chemicals..."
+                    className="pl-8 h-9 bg-zinc-900 border-zinc-700 text-white"
+                    value={chemicalSearch}
+                    onChange={(e) => setChemicalSearch(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -503,7 +906,7 @@ const InventoryControl = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {chemicals.map(c => (
+                    {filteredChemicals.map(c => (
                       <TableRow
                         key={c.id}
                         className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer"
@@ -511,7 +914,7 @@ const InventoryControl = () => {
                       >
                         <TableCell className="font-medium flex items-center gap-2 text-white">
                           {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
-                          {c.name}
+                          {c.brand ? `${c.brand} / ${c.name}` : c.name}
                         </TableCell>
                         <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
                         <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
@@ -561,7 +964,7 @@ const InventoryControl = () => {
 
               {/* Mobile Card View (Chemicals) */}
               <div className="md:hidden space-y-3">
-                {chemicals.map(c => (
+                {filteredChemicals.map(c => (
                   <div
                     key={c.id}
                     className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors"
@@ -571,7 +974,7 @@ const InventoryControl = () => {
                       <div>
                         <div className="font-bold text-white flex items-center gap-2">
                           {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
-                          {c.name}
+                          {c.brand ? `${c.brand} / ${c.name}` : c.name}
                         </div>
                         <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
                       </div>
@@ -673,11 +1076,23 @@ const InventoryControl = () => {
 
           {expandedSections.materials && (
             <div className="p-4 border-t border-blue-500/10 animate-in slide-in-from-top-2 duration-200">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={openAddMaterial} className="bg-blue-600 hover:bg-blue-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Supply</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("supplies"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
                   <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" className="text-blue-400 hover:text-blue-300" onClick={() => downloadInventoryPDF('supplies')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline" className="text-blue-400 hover:text-blue-300" onClick={() => printInventory('supplies')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search supplies..."
+                    className="pl-8 h-9 bg-zinc-900 border-zinc-700 text-white"
+                    value={supplySearch}
+                    onChange={(e) => setSupplySearch(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -692,7 +1107,7 @@ const InventoryControl = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {materials.map(m => (
+                    {filteredSupplies.map(m => (
                       <TableRow
                         key={m.id}
                         className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer"
@@ -806,11 +1221,23 @@ const InventoryControl = () => {
 
           {expandedSections.tools && (
             <div className="p-4 border-t border-purple-500/10 animate-in slide-in-from-top-2 duration-200">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={openAddTool} className="bg-purple-600 hover:bg-purple-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Equipment</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("equipment"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
                   <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" className="text-purple-400 hover:text-purple-300" onClick={() => downloadInventoryPDF('equipment')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline" className="text-purple-400 hover:text-purple-300" onClick={() => printInventory('equipment')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search equipment..."
+                    className="pl-8 h-9 bg-zinc-900 border-zinc-700 text-white"
+                    value={equipmentSearch}
+                    onChange={(e) => setEquipmentSearch(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -825,7 +1252,7 @@ const InventoryControl = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tools.map(t => (
+                    {filteredEquipment.map(t => (
                       <TableRow
                         key={t.id}
                         className="border-purple-500/10 hover:bg-purple-500/5 cursor-pointer"
@@ -1195,8 +1622,6 @@ const InventoryControl = () => {
       />
     </div >
   );
-};
+}
 
 export default InventoryControl;
-
-

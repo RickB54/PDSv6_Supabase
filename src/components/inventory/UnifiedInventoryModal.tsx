@@ -8,7 +8,7 @@ import api from "@/lib/api";
 import localforage from "localforage";
 import { Trash2, Upload, X, ImageIcon, Info, Save, Camera } from "lucide-react";
 import browserImageCompression from "browser-image-compression";
-import { supabase, upsertSupabaseTaxExpense } from "@/lib/supa-data";
+import { supabase, upsertSupabaseTaxExpense, getSupabaseTaxExpenses } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals } from "@/lib/chemicals";
 
 // Updated naming: material → supply, tool → equipment
@@ -18,6 +18,7 @@ type Mode = 'chemical' | 'supply' | 'equipment' | 'material' | 'tool'; // materi
 interface ChemicalForm {
   id?: string;
   name: string;
+  brand?: string; // NEW: Brand name for chemicals
   bottleSize: string;
   costPerBottle: string; // numeric string - MANDATORY
   currentStock: string; // numeric string
@@ -88,6 +89,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [form, setForm] = useState<ChemicalForm & SupplyForm & EquipmentForm>({
     id: undefined,
     name: "",
+    brand: "", // NEW: Brand field
     bottleSize: "",
     costPerBottle: "",
     currentStock: "0",
@@ -151,6 +153,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         ...f,
         id: initial.id || f.id,
         name: initial.name || "",
+        brand: (initial as any).brand || "", // NEW: Load brand
         bottleSize: (initial as any).bottleSize || "",
         costPerBottle: initial?.costPerBottle ? String(initial.costPerBottle) : ((initial as any).costPerBottle || ""),
         currentStock: initial?.currentStock ? String(initial.currentStock) : ((initial as any).currentStock || f.currentStock),
@@ -289,6 +292,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const payload = {
           id,
           name: form.name.trim(),
+          brand: form.brand?.trim() || undefined, // NEW: Include brand
           bottleSize: form.bottleSize.trim(),
           costPerBottle: numeric(form.costPerBottle),
           currentStock: Math.round(numeric(form.currentStock)),
@@ -335,26 +339,39 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         await saveMaterial(payload, isNew);
       }
 
-      // INTEGRATION: Track as Tax Expense if enabled and new
-      if (form.isTaxDeductible && isNew) {
+      // INTEGRATION: Track as Tax Expense if enabled
+      // Check if this item should be added to tax expenses
+      if (form.isTaxDeductible) {
         try {
-          await upsertSupabaseTaxExpense({
-            date: form.purchaseDate || new Date().toISOString().split('T')[0],
-            amount: cost,
-            vendor: "Inventory Purchase",
-            category: (mode === 'equipment' || mode === 'tool') ? "Equipment" : "Supplies",
-            notes: `Purchased ${form.name}`,
-            is_deductible: true,
-            asset_id: id
-          });
+          // Check if a tax expense record already exists for this asset
+          const existingExpenses = await getSupabaseTaxExpenses();
+          const existingRecord = existingExpenses.find(exp => exp.asset_id === id);
+
+          // Only create if it doesn't exist yet
+          if (!existingRecord) {
+            await upsertSupabaseTaxExpense({
+              date: form.purchaseDate || new Date().toISOString().split('T')[0],
+              amount: cost,
+              vendor: "Inventory Purchase",
+              category: (mode === 'equipment' || mode === 'tool') ? "Equipment" : "Supplies",
+              notes: `Purchased ${form.name}`,
+              is_deductible: true,
+              is_recurring: false,
+              asset_id: id
+            });
+            toast.success("Item saved and added to tax deductions");
+          } else {
+            toast.success("Item saved (already in tax deductions)");
+          }
         } catch (taxErr) {
           console.error("Failed to create tax expense record:", taxErr);
           // Don't fail the whole save if tax record fails, but warn.
           toast.warning("Inventory saved, but failed to create tax record.");
         }
+      } else {
+        toast.success("Item saved");
       }
 
-      toast.success("Item saved");
       onOpenChange(false);
       await onSaved?.();
 
@@ -427,6 +444,17 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                 />
               </div>
+              {mode === 'chemical' && (
+                <div>
+                  <Label className="text-xs text-zinc-400">Brand (Optional)</Label>
+                  <Input
+                    value={form.brand || ""}
+                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                    placeholder="e.g., Superior Products, Meguiar's"
+                  />
+                </div>
+              )}
               {mode === 'chemical' && (
                 <div>
                   <Label className="text-xs text-zinc-400">Main Chemical Card (Link)</Label>

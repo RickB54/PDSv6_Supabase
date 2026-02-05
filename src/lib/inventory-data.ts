@@ -5,6 +5,7 @@ import { upsertExpense } from './db';
 export interface Chemical {
     id: string;
     name: string;
+    brand?: string; // NEW: Brand name
     bottleSize: string;
     costPerBottle: number;
     threshold: number;
@@ -73,10 +74,10 @@ export async function getChemicals(): Promise<Chemical[]> {
     return (data || []).map(item => ({
         id: item.id,
         name: item.name,
+        brand: item.brand, // NEW: Map brand
         bottleSize: item.bottle_size || '',
         costPerBottle: item.cost_per_bottle || 0,
         threshold: item.threshold || 0,
-        currentStock: item.current_stock || 0,
         currentStock: item.current_stock || 0,
         imageUrl: item.image_url,
         chemicalLibraryId: item.chemical_library_id,
@@ -91,6 +92,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     const dbData: any = {
         user_id: session.user.id,
         name: chemical.name,
+        brand: chemical.brand || null, // NEW: Save brand
         bottle_size: chemical.bottleSize,
         cost_per_bottle: chemical.costPerBottle,
         threshold: chemical.threshold,

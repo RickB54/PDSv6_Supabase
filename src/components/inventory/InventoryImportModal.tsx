@@ -129,7 +129,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     subtype: "Towels",
                     costPerItem: 2.50,
                     quantity: 50,
-                    lowThreshold: 10,
+                    lowThreshold: 1,
                     notes: "Optional notes"
                 }
             ];
@@ -266,11 +266,11 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const addItem = () => {
         let newItem: any = {};
         if (activeTab === "chemicals") {
-            newItem = { name: "", bottleSize: "", costPerBottle: 0, currentStock: 0, description: "" };
+            newItem = { name: "", bottleSize: "", costPerBottle: 0, currentStock: 0, threshold: 1, description: "" };
         } else if (activeTab === "equipment") {
             newItem = { name: "", price: 0, purchaseDate: "", notes: "" };
         } else if (activeTab === "supplies") {
-            newItem = { name: "", category: "", costPerItem: 0, quantity: 0, notes: "" };
+            newItem = { name: "", category: "", costPerItem: 0, quantity: 0, lowThreshold: 1, notes: "" };
         }
 
         const newItems = [...parsedItems, newItem];
@@ -389,7 +389,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         name: row.name,
                         bottleSize: row.bottleSize || "16 oz",
                         costPerBottle: Number(row.costPerBottle) || 0,
-                        threshold: Number(row.threshold) || 5,
+                        threshold: Number(row.threshold) || 1,
                         currentStock: Number(row.currentStock) || 0,
                         // Note: chemicals table doesn't have notes/description column mapped in saveChemical currently, 
                         // but we can add it if schema supports it or ignore it. 
@@ -423,7 +423,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         subtype: row.subtype || "",
                         costPerItem: Number(row.costPerItem) || 0,
                         quantity: Number(row.quantity) || 0,
-                        lowThreshold: Number(row.lowThreshold) || 5,
+                        lowThreshold: Number(row.lowThreshold) || 1,
                         notes: row.notes || "",
                         imageUrl: ""
                     }, true);
@@ -678,7 +678,11 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                                     <Label className="text-[10px]">Qty</Label>
                                                                     <Input type="number" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="h-7 text-xs" />
                                                                 </div>
-                                                                <div className="space-y-0.5 md:col-span-2">
+                                                                <div className="space-y-0.5">
+                                                                    <Label className="text-[10px]">Low Threshold</Label>
+                                                                    <Input type="number" value={item.lowThreshold} onChange={(e) => updateItem(index, 'lowThreshold', e.target.value)} className="h-7 text-xs" />
+                                                                </div>
+                                                                <div className="space-y-0.5">
                                                                     <Label className="text-[10px]">Category</Label>
                                                                     <Input value={item.category} onChange={(e) => updateItem(index, 'category', e.target.value)} className="h-7 text-xs" />
                                                                 </div>
