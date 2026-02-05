@@ -11,7 +11,9 @@ import browserImageCompression from "browser-image-compression";
 import { supabase, upsertSupabaseTaxExpense } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals } from "@/lib/chemicals";
 
-type Mode = 'chemical' | 'material' | 'tool';
+// Updated naming: material → supply, tool → equipment
+// Backward compatibility maintained in data layer
+type Mode = 'chemical' | 'supply' | 'equipment' | 'material' | 'tool'; // material & tool kept for backward compat
 
 interface ChemicalForm {
   id?: string;
@@ -25,9 +27,11 @@ interface ChemicalForm {
   imageUrl?: string;
   chemicalLibraryId?: string;
   isTaxDeductible?: boolean;
+  notes?: string;
 }
 
-interface MaterialForm {
+// Renamed: Material → Supply
+interface SupplyForm {
   id?: string;
   name: string;
   category: string;
@@ -42,7 +46,8 @@ interface MaterialForm {
   isTaxDeductible?: boolean;
 }
 
-interface ToolForm {
+// Renamed: Tool → Equipment
+interface EquipmentForm {
   id?: string;
   name: string;
   category: string;
@@ -64,20 +69,29 @@ type Props = {
   mode: Mode;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  initial?: Partial<ChemicalForm & MaterialForm & ToolForm> | null;
+  initial?: Partial<ChemicalForm & SupplyForm & EquipmentForm> | null;
   onSaved?: () => Promise<void> | void;
 };
 
 
 
-export default function UnifiedInventoryModal({ mode, open, onOpenChange, initial, onSaved }: Props) {
-  const [form, setForm] = useState<ChemicalForm & MaterialForm & ToolForm>({
+export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChange, initial, onSaved }: Props) {
+  // Normalize mode: map legacy names to new names
+  const normalizeMode = (m: Mode): Mode => {
+    if (m === 'material') return 'supply';
+    if (m === 'tool') return 'equipment';
+    return m;
+  };
+
+  const mode = normalizeMode(modeProp);
+
+  const [form, setForm] = useState<ChemicalForm & SupplyForm & EquipmentForm>({
     id: undefined,
     name: "",
     bottleSize: "",
     costPerBottle: "",
     currentStock: "0",
-    threshold: "0",
+    threshold: "1",
     category: "Rag",
     subtype: "",
     quantity: "0",
@@ -115,13 +129,13 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
   const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
 
   const chemicalUnits = ["oz", "mL", "L", "Gallons", "Quarts", "Pints", "Custom"];
-  const materialUnits = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg", "Custom"];
-  const toolUnits = ["Units", "Pieces", "Sets", "Custom"];
+  const supplyUnits = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg", "Custom"]; // Renamed from materialUnits
+  const equipmentUnits = ["Units", "Pieces", "Sets", "Custom"]; // Renamed from toolUnits
 
   const getUnitOptions = () => {
     if (mode === 'chemical') return chemicalUnits;
-    if (mode === 'tool') return toolUnits;
-    return materialUnits;
+    if (mode === 'equipment' || mode === 'tool') return equipmentUnits;
+    return supplyUnits; // supply or material
   };
 
   useEffect(() => {
@@ -163,7 +177,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         bottleSize: "",
         costPerBottle: "",
         currentStock: "0",
-        threshold: mode === 'chemical' ? "2" : "",
+        threshold: "1",
         category: "Rag",
         subtype: "",
         quantity: "0",
@@ -174,7 +188,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         price: "",
         cost: "",
         lifeExpectancy: "",
-        unitOfMeasure: mode === 'chemical' ? "oz" : mode === 'tool' ? "Units" : "Units",
+        unitOfMeasure: mode === 'chemical' ? "oz" : mode === 'equipment' || mode === 'tool' ? "Units" : "Units",
         consumptionRatePerJob: "0",
         imageUrl: "",
         chemicalLibraryId: "",
@@ -261,7 +275,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
 
       // Validate cost field (MANDATORY)
       const cost = mode === 'chemical' ? numeric(form.costPerBottle) :
-        mode === 'tool' ? numeric(form.price) :
+        (mode === 'equipment' || mode === 'tool') ? numeric(form.price) :
           numeric(form.costPerItem);
       if (cost <= 0) {
         toast.error("Cost is required and must be greater than 0");
@@ -281,13 +295,14 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
           threshold: Math.round(numeric(form.threshold)),
           imageUrl: form.imageUrl,
           chemicalLibraryId: form.chemicalLibraryId || undefined,
+          notes: form.notes || undefined,
         };
 
         // Import inventory-data at top of file
         const { saveChemical } = await import("@/lib/inventory-data");
         await saveChemical(payload, isNew);
 
-      } else if (mode === 'tool') {
+      } else if (mode === 'equipment' || mode === 'tool') {
         const payload = {
           id,
           name: form.name.trim(),
@@ -302,7 +317,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         const { saveTool } = await import("@/lib/inventory-data");
         await saveTool(payload, isNew);
 
-      } else {
+      } else { // supply or material
         const payload = {
           id,
           name: form.name.trim(),
@@ -327,7 +342,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
             date: form.purchaseDate || new Date().toISOString().split('T')[0],
             amount: cost,
             vendor: "Inventory Purchase",
-            category: mode === 'tool' ? "Equipment" : "Supplies",
+            category: (mode === 'equipment' || mode === 'tool') ? "Equipment" : "Supplies",
             notes: `Purchased ${form.name}`,
             is_deductible: true,
             asset_id: id
@@ -362,8 +377,8 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
         <DialogHeader className="p-6 pb-4 border-b border-zinc-800">
           <DialogTitle className="text-white">
             {mode === 'chemical' ? (form.id ? 'Edit Chemical' : 'Add Chemical') :
-              mode === 'tool' ? (form.id ? 'Edit Tool' : 'Add Tool') :
-                (form.id ? 'Edit Material' : 'Add Material')}
+              (mode === 'equipment' || mode === 'tool') ? (form.id ? 'Edit Equipment' : 'Add Equipment') :
+                (form.id ? 'Edit Supply' : 'Add Supply')}
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -450,7 +465,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
                   />
                 </div>
               )}
-              {mode === 'material' && (
+              {(mode === 'supply' || mode === 'material') && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs text-zinc-400">Category</Label>
@@ -510,7 +525,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
                   </div>
                 </div>
               )}
-              {mode === 'tool' && (
+              {(mode === 'equipment' || mode === 'tool') && (
                 <div>
                   <Label className="text-xs text-zinc-400">Category</Label>
                   <select
@@ -609,7 +624,7 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
                     )}
                   </div>
                 </>
-              ) : mode === 'tool' ? (
+              ) : (mode === 'equipment' || mode === 'tool') ? (
                 <>
                   <div>
                     <Label className="text-xs text-zinc-400">Quantity</Label>
@@ -807,10 +822,10 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
             </div>
           </div>
 
-          {/* Tool-specific Details */}
-          {mode === 'tool' && (
+          {/* Equipment-specific Details */}
+          {(mode === 'equipment' || mode === 'tool') && (
             <div className="bg-purple-900/20 border border-purple-700/30 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-purple-300 mb-3">Tool Details</h3>
+              <h3 className="text-sm font-semibold text-purple-300 mb-3">Equipment Details</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs text-zinc-400">Warranty Info</Label>
@@ -844,20 +859,18 @@ export default function UnifiedInventoryModal({ mode, open, onOpenChange, initia
           )}
 
           {/* Notes Section */}
-          {(mode === 'material' || mode === 'tool') && (
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-zinc-300 mb-3">Additional Notes</h3>
-              <div>
-                <Label className="text-xs text-zinc-400">Notes</Label>
-                <Input
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                  placeholder="Any additional information..."
-                />
-              </div>
+          <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-zinc-300 mb-3">Additional Notes</h3>
+            <div>
+              <Label className="text-xs text-zinc-400">Notes</Label>
+              <Input
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                placeholder="Any additional information..."
+              />
             </div>
-          )}
+          </div>
         </div>
         <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-end gap-2 mt-auto">
           <Button

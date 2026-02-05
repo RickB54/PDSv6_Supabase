@@ -18,16 +18,23 @@ import { Sparkles, Search } from "lucide-react";
 interface InventoryImportModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    defaultTab?: "chemicals" | "tools" | "materials";
+    defaultTab?: "chemicals" | "supplies" | "equipment" | "tools" | "materials"; // Legacy names supported
 }
 
 export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemicals" }: InventoryImportModalProps) {
-    const [activeTab, setActiveTab] = useState<"chemicals" | "tools" | "materials">(defaultTab);
+    // Normalize legacy tab names
+    const normalizeTab = (tab: string): "chemicals" | "supplies" | "equipment" => {
+        if (tab === 'materials') return 'supplies';
+        if (tab === 'tools') return 'equipment';
+        return tab as "chemicals" | "supplies" | "equipment";
+    };
+
+    const [activeTab, setActiveTab] = useState<"chemicals" | "supplies" | "equipment">(normalizeTab(defaultTab));
 
     // Reset tab when reopening with a new default
     useEffect(() => {
         if (open && defaultTab) {
-            setActiveTab(defaultTab);
+            setActiveTab(normalizeTab(defaultTab));
         }
     }, [open, defaultTab]);
     const [isImporting, setIsImporting] = useState(false);
@@ -54,8 +61,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             let items: any[] = [];
             try {
                 if (activeTab === "chemicals") items = await getChemicals();
-                else if (activeTab === "tools") items = await getTools();
-                else if (activeTab === "materials") items = await getMaterials();
+                else if (activeTab === "equipment") items = await getTools(); // DB still uses tools table
+                else if (activeTab === "supplies") items = await getMaterials(); // DB still uses materials table
 
                 setExistingNames(new Set(items.map(i => i.name.toLowerCase().trim())));
             } catch (e) {
@@ -65,22 +72,22 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         loadExisting();
     }, [activeTab, open]);
 
-    const validateClassification = (item: any, type: 'chemicals' | 'tools' | 'materials'): string | null => {
+    const validateClassification = (item: any, type: 'chemicals' | 'supplies' | 'equipment'): string | null => {
         const name = (item.name || "").toLowerCase();
         const desc = (item.description || item.notes || "").toLowerCase();
         const combined = name + " " + desc;
 
-        const toolKeywords = ["pressure washer", "generator", "inverter", "compressor", "vacuum", "extractor", "steam", "machine", "polisher", "buffer", "hose reel", "tank", "pump", "drill", "sander", "heater", "fan", "blower"];
-        const materialKeywords = ["towel", "microfiber", "mitt", "wash mitt", "brush", "pad", "applicator", "sponge", "glove", "tape", "paper", "rag", "wipe", "bottle", "trigger", "clay bar"];
+        const equipmentKeywords = ["pressure washer", "generator", "inverter", "compressor", "vacuum", "extractor", "steam", "machine", "polisher", "buffer", "hose reel", "tank", "pump", "drill", "sander", "heater", "fan", "blower"];
+        const supplyKeywords = ["towel", "microfiber", "mitt", "wash mitt", "brush", "pad", "applicator", "sponge", "glove", "tape", "paper", "rag", "wipe", "bottle", "trigger", "clay bar"];
         const powerKeywords = ["electric", "volt", "amp", "battery", "cordless", "gasoline", "engine", "motor", "watts"];
 
-        if (type === 'materials') {
-            if (toolKeywords.some(k => combined.includes(k))) return "Warning: This appears to be a Tool (Durable Equipment). Move to Tools.";
-            if (powerKeywords.some(k => combined.includes(k))) return "Warning: Powered equipment must be classified as Tools.";
+        if (type === 'supplies') {
+            if (equipmentKeywords.some(k => combined.includes(k))) return "Warning: This appears to be Equipment (Durable). Move to Equipment.";
+            if (powerKeywords.some(k => combined.includes(k))) return "Warning: Powered equipment must be classified as Equipment.";
         }
 
-        if (type === 'tools') {
-            if (materialKeywords.some(k => combined.includes(k))) return "Warning: This appears to be a Material (Consumable). Move to Materials.";
+        if (type === 'equipment') {
+            if (supplyKeywords.some(k => combined.includes(k))) return "Warning: This appears to be a Supply (Consumable). Move to Supplies.";
         }
 
         return null;
@@ -102,22 +109,22 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 }
             ];
             filename = "chemicals_template.json";
-        } else if (activeTab === "tools") {
+        } else if (activeTab === "equipment") {
             data = [
                 {
-                    name: "Example Tool Name",
+                    name: "Example Equipment Name",
                     price: 150.00,
                     purchaseDate: "2024-01-01",
                     warranty: "2 Years",
                     lifeExpectancy: "5 Years",
-                    notes: "Optional notes about this tool"
+                    notes: "Optional notes about this equipment"
                 }
             ];
-            filename = "tools_template.json";
-        } else if (activeTab === "materials") {
+            filename = "equipment_template.json";
+        } else if (activeTab === "supplies") {
             data = [
                 {
-                    name: "Example Material Name",
+                    name: "Example Supply Name",
                     category: "Microfiber",
                     subtype: "Towels",
                     costPerItem: 2.50,
@@ -126,7 +133,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     notes: "Optional notes"
                 }
             ];
-            filename = "materials_template.json";
+            filename = "supplies_template.json";
         }
 
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -151,9 +158,9 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 threshold: item.threshold,
                 currentStock: 0,
                 description: item.description,
-                category: item.category // kept for reference in UI, not necessarily saved unless schema supports
+                category: item.category
             }));
-        } else if (activeTab === "tools") {
+        } else if (activeTab === "equipment") {
             items = DETAILING_TOOLS.map(item => ({
                 name: item.name,
                 price: item.suggestedPrice,
@@ -163,7 +170,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 notes: item.description,
                 category: item.category
             }));
-        } else if (activeTab === "materials") {
+        } else if (activeTab === "supplies") {
             items = DETAILING_MATERIALS.map(item => ({
                 name: item.name,
                 category: item.type,
@@ -260,9 +267,9 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         let newItem: any = {};
         if (activeTab === "chemicals") {
             newItem = { name: "", bottleSize: "", costPerBottle: 0, currentStock: 0, description: "" };
-        } else if (activeTab === "tools") {
+        } else if (activeTab === "equipment") {
             newItem = { name: "", price: 0, purchaseDate: "", notes: "" };
-        } else if (activeTab === "materials") {
+        } else if (activeTab === "supplies") {
             newItem = { name: "", category: "", costPerItem: 0, quantity: 0, notes: "" };
         }
 
@@ -332,7 +339,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 notes: item.description,
                 category: item.category
             };
-            if (activeTab !== 'tools') setActiveTab('tools');
+            if (activeTab !== 'equipment') setActiveTab('equipment');
         } else if (result.type === 'materials') {
             const item = result.originalItem;
             newItem = {
@@ -344,7 +351,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 lowThreshold: item.threshold || 5,
                 notes: item.description
             };
-            if (activeTab !== 'materials') setActiveTab('materials');
+            if (activeTab !== 'supplies') setActiveTab('supplies');
         }
 
         const newItems = [...parsedItems, newItem];
@@ -393,7 +400,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     }, true);
                     importedCount++;
                 }
-            } else if (activeTab === "tools") {
+            } else if (activeTab === "equipment") {
                 for (const row of itemsToImport) {
                     if (!row.name) continue;
                     await saveTool({
@@ -407,7 +414,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     }, true);
                     importedCount++;
                 }
-            } else if (activeTab === "materials") {
+            } else if (activeTab === "supplies") {
                 for (const row of itemsToImport) {
                     if (!row.name) continue;
                     await saveMaterial({
@@ -451,12 +458,12 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     <div className="flex justify-between items-center mb-4">
                         <TabsList className="grid w-[400px] grid-cols-3">
                             <TabsTrigger value="chemicals" disabled={step === "preview" || step === "ai_results"}>Chemicals</TabsTrigger>
-                            <TabsTrigger value="materials" disabled={step === "preview" || step === "ai_results"} className="flex flex-col items-center leading-none py-1">
-                                <span>Materials</span>
+                            <TabsTrigger value="supplies" disabled={step === "preview" || step === "ai_results"} className="flex flex-col items-center leading-none py-1">
+                                <span>Supplies</span>
                                 <span className="text-[9px] opacity-70">(Consumable)</span>
                             </TabsTrigger>
-                            <TabsTrigger value="tools" disabled={step === "preview" || step === "ai_results"} className="flex flex-col items-center leading-none py-1">
-                                <span>Tools</span>
+                            <TabsTrigger value="equipment" disabled={step === "preview" || step === "ai_results"} className="flex flex-col items-center leading-none py-1">
+                                <span>Equipment</span>
                                 <span className="text-[9px] opacity-70">(Durable)</span>
                             </TabsTrigger>
                         </TabsList>
@@ -649,7 +656,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                                 </div>
                                                             </>
                                                         )}
-                                                        {activeTab === "tools" && (
+                                                        {activeTab === "equipment" && (
                                                             <>
                                                                 <div className="space-y-0.5">
                                                                     <Label className="text-[10px]">Price ($)</Label>
@@ -661,7 +668,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                                 </div>
                                                             </>
                                                         )}
-                                                        {activeTab === "materials" && (
+                                                        {activeTab === "supplies" && (
                                                             <>
                                                                 <div className="space-y-0.5">
                                                                     <Label className="text-[10px]">Cost/Item ($)</Label>
@@ -683,8 +690,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                     <div className="space-y-0.5">
                                                         <Label className="text-[10px]">Description / Notes</Label>
                                                         <Input
-                                                            value={activeTab === 'tools' ? item.notes : item.description || item.notes || ""}
-                                                            onChange={(e) => updateItem(index, activeTab === 'tools' ? 'notes' : 'description', e.target.value)}
+                                                            value={activeTab === 'equipment' ? item.notes : item.description || item.notes || ""}
+                                                            onChange={(e) => updateItem(index, activeTab === 'equipment' ? 'notes' : 'description', e.target.value)}
                                                             className="h-7 text-xs text-muted-foreground"
                                                             placeholder="Details..."
                                                         />

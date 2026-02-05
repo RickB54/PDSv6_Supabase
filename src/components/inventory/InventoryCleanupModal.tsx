@@ -15,7 +15,7 @@ interface InventoryCleanupModalProps {
 }
 
 export function InventoryCleanupModal({ open, onOpenChange }: InventoryCleanupModalProps) {
-    const [activeTab, setActiveTab] = useState<"chemicals" | "tools" | "materials">("chemicals");
+    const [activeTab, setActiveTab] = useState<"chemicals" | "supplies" | "equipment">("chemicals");
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [selection, setSelection] = useState<Set<string>>(new Set());
@@ -34,8 +34,8 @@ export function InventoryCleanupModal({ open, onOpenChange }: InventoryCleanupMo
         try {
             let data: any[] = [];
             if (activeTab === "chemicals") data = await getChemicals();
-            else if (activeTab === "tools") data = await getTools();
-            else if (activeTab === "materials") data = await getMaterials();
+            else if (activeTab === "equipment") data = await getTools(); // DB still uses tools table
+            else if (activeTab === "supplies") data = await getMaterials(); // DB still uses materials table
 
             // Sort by createdAt desc (newest first)
             data.sort((a, b) => {
@@ -79,9 +79,9 @@ export function InventoryCleanupModal({ open, onOpenChange }: InventoryCleanupMo
             const ids = Array.from(selection);
             if (activeTab === "chemicals") {
                 await Promise.all(ids.map(id => deleteChemical(id)));
-            } else if (activeTab === "tools") {
+            } else if (activeTab === "equipment") {
                 await Promise.all(ids.map(id => deleteTool(id)));
-            } else if (activeTab === "materials") {
+            } else if (activeTab === "supplies") {
                 await Promise.all(ids.map(id => deleteMaterial(id)));
             }
             toast.success(`Deleted ${selection.size} items.`);
@@ -127,8 +127,8 @@ export function InventoryCleanupModal({ open, onOpenChange }: InventoryCleanupMo
                     <div className="flex justify-between items-center mb-4">
                         <TabsList className="grid w-[400px] grid-cols-3">
                             <TabsTrigger value="chemicals">Chemicals</TabsTrigger>
-                            <TabsTrigger value="materials">Materials</TabsTrigger>
-                            <TabsTrigger value="tools">Tools</TabsTrigger>
+                            <TabsTrigger value="supplies">Supplies</TabsTrigger>
+                            <TabsTrigger value="equipment">Equipment</TabsTrigger>
                         </TabsList>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => toggleAll(true)} className="text-xs">All</Button>
