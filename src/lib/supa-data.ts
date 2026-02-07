@@ -1285,32 +1285,25 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
 
         if (error) throw error;
 
-        // Parse Metadata from Description
-        const parsedData = (data || []).map((item: any) => {
-            const desc = item.description || '';
-            const createdByMatch = desc.match(/\[meta:created_by=([^\]]+)\]/);
-            const originalTypeMatch = desc.match(/\[meta:original_type=([^\]]+)\]/);
-
-            const sortOrderMatch = desc.match(/\[meta:sort_order=([^\]]+)\]/);
-
-            // Clean description for display
-            const cleanDesc = desc
-                .replace(/\[meta:created_by=[^\]]+\]/g, '')
-                .replace(/\[meta:original_type=[^\]]+\]/g, '')
-                .replace(/\[meta:sort_order=[^\]]+\]/g, '')
-                .replace(/\[meta:is_pinned=[^\]]+\]/g, '')
-                .trim();
-
-            return {
-                ...item,
-                description: cleanDesc,
-                created_by: createdByMatch ? createdByMatch[1] : undefined,
-                sort_order: sortOrderMatch ? Number(sortOrderMatch[1]) : undefined,
-                is_pinned: desc.includes('[meta:is_pinned=true]'),
-                // Restore type if it was mapped
-                type: originalTypeMatch ? originalTypeMatch[1] : item.type
-            };
-        });
+        // Map columns directly (Schema Update Fix)
+        const parsedData = (data || []).map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            description: item.content || item.description || '', // Fix: Align with schema 'content'
+            type: item.type,
+            duration: item.duration,
+            category: item.category,
+            thumbnail_url: item.thumbnail_url,
+            resource_url: item.resource_url,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            is_published: item.is_published ?? false,
+            is_verified: item.is_verified ?? false,
+            // New Schema Columns
+            created_by: item.created_by,
+            sort_order: item.sort_order,
+            is_pinned: item.is_pinned ?? false
+        }));
 
         // PRIORITY SORTING:
         // 1. IS_PINNED (Pinned posts always first)
@@ -1448,48 +1441,22 @@ export async function deleteLibraryCategory(targetCategory: string): Promise<{ s
  */
 export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: boolean; data?: LibraryItem; error?: any }> {
     try {
-        // Pack metadata into description for persistence
-        // We use the raw description + the tag
-        let descriptionToSave = item.description || '';
-
-        // Handle OWNER metadata (created_by)
-        if (item.created_by) {
-            descriptionToSave = descriptionToSave.replace(/\[meta:created_by=([^\]]+)\]/g, '').trim();
-            descriptionToSave += `\n\n[meta:created_by=${item.created_by}]`;
-        }
-
-        // Handle TYPE mapping (DB only allows video, pdf, article)
-        // We map 'image' -> 'article' and add metadata
-        let typeToSave = item.type;
-        if (item.type === 'image') {
-            typeToSave = 'article';
-            descriptionToSave = descriptionToSave.replace(/\[meta:original_type=([^\]]+)\]/g, '').trim();
-            descriptionToSave += `\n\n[meta:original_type=image]`;
-        }
-
-        // Handle manual sort order
-        if (item.sort_order !== undefined) {
-            descriptionToSave = descriptionToSave.replace(/\[meta:sort_order=([^\]]+)\]/g, '').trim();
-            descriptionToSave += `\n\n[meta:sort_order=${item.sort_order}]`;
-        }
-
-        // Handle pinning
-        descriptionToSave = descriptionToSave.replace(/\[meta:is_pinned=[^\]]+\]/g, '').trim();
-        if (item.is_pinned) {
-            descriptionToSave += `\n\n[meta:is_pinned=true]`;
-        }
-
         const payload: any = {
             id: item.id || crypto.randomUUID(),
             title: item.title,
-            description: descriptionToSave,
-            type: typeToSave,
+            content: item.description, // Fix: Align with schema 'content'
+            description: item.description, // Fallback for legacy
+            type: item.type, // Schema supports 'image' now
             duration: item.duration,
             category: item.category,
             thumbnail_url: item.thumbnail_url,
             resource_url: item.resource_url,
             is_published: item.is_published ?? false,
             is_verified: item.is_verified ?? false,
+            // New Schema Columns
+            created_by: item.created_by,
+            sort_order: item.sort_order,
+            is_pinned: item.is_pinned,
             updated_at: new Date().toISOString()
         };
 
@@ -1704,36 +1671,44 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
         console.log(`[getSupabaseBookings] Fetched ${data?.length} rows. Filtering by currentUser=${filterByCurrentUser}`);
 
-
         return (data || []).map((b: any) => {
+            // Priority: Columns -> Legacy meta (if migration incomplete)
             const meta = b.booking_vehicle || {};
-            // If date is missing (legacy?), try to recover from scheduled_at, meta or ignore
             const dateStr = b.date || b.scheduled_at || meta.date || new Date().toISOString();
 
             return {
                 id: b.id,
-                title: b.title || b.service_package || meta.title || b.service || 'Service',
-                customer: b.customer_name || (b.customers ? b.customers.full_name : null) || meta.customer_name || 'Unknown',
+                // Map columns first, fallback to meta
+                title: b.service_package || b.title || meta.title || b.service || 'Service',
+                customer: b.customers?.full_name || b.customer_name || meta.customer_name || 'Unknown',
                 customerEmail: b.customers?.email || meta.email,
                 customerPhone: b.customers?.phone || meta.phone,
                 customerId: b.customer_id,
+
+                // CRITICAL: Hybrid Availability expects 'scheduled_at'
                 date: dateStr,
+                scheduled_at: dateStr,
+
                 endTime: b.end_time || meta.end_time,
                 status: b.status || 'confirmed',
                 notes: b.notes || meta.notes,
-                vehicle: b.vehicle_type || meta.type || b.vehicles?.type || '',
-                vehicleMake: b.make || meta.make || b.vehicles?.make || '',
-                vehicleModel: b.model || meta.model || b.vehicles?.model || '',
-                vehicleYear: b.year || meta.year || b.vehicles?.year || '',
+
+                // Vehicle Relations
+                vehicleId: b.vehicle_id || meta.vehicle_id,
+                vehicle: b.vehicles?.type || b.vehicle_type || meta.type || (b.booking_vehicle?.type) || '',
+                vehicleMake: b.vehicles?.make || b.make || meta.make || (b.booking_vehicle?.make) || '',
+                vehicleModel: b.vehicles?.model || b.model || meta.model || (b.booking_vehicle?.model) || '',
+                vehicleYear: b.vehicles?.year || b.year || meta.year || (b.booking_vehicle?.year) || '',
+
                 addons: Array.isArray(b.add_ons) ? b.add_ons : [],
-                price: b.price || b.service_price || meta.price,
+                price: b.service_price || b.price || meta.price,
                 assignedEmployee: b.assigned_employee || meta.assigned_employee,
                 bookedBy: b.booked_by || meta.booked_by,
                 createdAt: b.created_at || meta.created_at,
-                vehicleId: b.vehicle_id || meta.vehicle_id,
-                reminderFrequency: meta.reminder_frequency,
-                hasReminder: meta.has_reminder,
-                isArchived: meta.is_archived
+
+                reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
+                hasReminder: b.has_reminder || meta.has_reminder,
+                isArchived: b.is_archived || meta.is_archived
             };
         });
     } catch (err) {
@@ -1744,33 +1719,37 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
 export const upsertSupabaseBooking = async (booking: any) => {
     try {
-        // Robust payload: stash everything potentially missing in booking_vehicle JSONB
-        const meta = {
-            type: booking.vehicle,
-            make: booking.vehicleMake,
-            model: booking.vehicleModel,
-            year: booking.vehicleYear,
-            title: booking.title,
-            customer_name: booking.customer,
-            end_time: booking.endTime,
-            price: booking.price,
-            assigned_employee: booking.assignedEmployee,
-            booked_by: booking.bookedBy,
-            reminder_frequency: booking.reminderFrequency,
-            has_reminder: booking.hasReminder,
-            is_archived: booking.isArchived,
-            vehicle_id: booking.vehicleId || booking.vehicle_id, // Stash in meta too
-            notes: booking.notes
-        };
-
+        // PREPARE PAYLOAD FOR NEW SCHEMA
+        // Mapping frontend booking object to Supabase columns
         const payload: any = {
             id: booking.id,
-            customer_id: booking.customerId || null,
-            vehicle_id: booking.vehicleId || booking.vehicle_id || null, // Top-level if column exists
-            date: booking.date,
-            status: booking.status,
-            booking_vehicle: meta,
-            add_ons: booking.addons,
+
+            // Core Relations
+            customer_id: booking.customerId || booking.customer_id || null,
+            vehicle_id: booking.vehicleId || booking.vehicle_id || null,
+
+            // Scheduling
+            scheduled_at: booking.date || booking.scheduled_at, // Fix: Align with schema
+            date: booking.date, // Fallback
+            end_time: booking.endTime,
+
+            // Details
+            service_package: booking.title || booking.service_package, // Fix: Align with schema
+            title: booking.title, // Fallback
+            status: booking.status || 'confirmed',
+            notes: booking.notes,
+            service_price: booking.price || booking.service_price, // Fix: Align with schema
+            price: booking.price, // Fallback
+
+            // Meta / Admin
+            assigned_employee: booking.assignedEmployee,
+            booked_by: booking.bookedBy,
+            is_archived: booking.isArchived || false,
+
+            // JSONB fields (stay as JSONB if schema uses it for arrays)
+            add_ons: booking.addons || [],
+
+            // Timestamps
             created_at: booking.createdAt || new Date().toISOString()
         };
 
@@ -1781,7 +1760,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
             .single();
 
         if (error) {
-            console.warn('Upsert booking warning (trying fallback?):', error);
+            console.error('Upsert booking error:', error);
             throw error;
         }
         return data;
