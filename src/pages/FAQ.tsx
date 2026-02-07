@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EducationalContent } from "@/components/faq/EducationalContent";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
@@ -122,6 +123,7 @@ const FAQ = () => {
               </Accordion>
             </Card>
 
+
             <div className="text-center pt-8 bg-zinc-50 rounded-3xl p-12 border border-zinc-100">
               <p className="text-zinc-500 text-xl font-medium mb-6">Still have questions?</p>
               <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest px-12 h-16 rounded-full shadow-xl hover:shadow-blue-600/20 transition-all active:scale-95 text-lg">
@@ -131,6 +133,10 @@ const FAQ = () => {
           </div>
         )}
       </main>
+
+      {/* Educational Content Section - Separated from main FAQ */}
+      <EducationalContent />
+
       <Footer />
     </div>
   );

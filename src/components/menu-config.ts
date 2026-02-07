@@ -23,7 +23,8 @@ import {
     Book,
     Phone,
     HelpCircle,
-    ListOrdered
+    ListOrdered,
+    Beaker
 } from "lucide-react";
 
 export type MenuItem = {
@@ -126,6 +127,7 @@ export const getMenuGroups = (counts: {
             title: "Prime Training Center", icon: GraduationCap,
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
+                { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
                 { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },

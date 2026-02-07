@@ -80,6 +80,7 @@ import LearningLibrary from "./pages/LearningLibrary";
 import PrimeBlog from "./pages/PrimeBlog";
 import BlogReorder from "./pages/BlogReorder";
 import ChemicalsLibrary from "./pages/ChemicalsLibrary";
+import ChemicalTraining from "./pages/ChemicalTraining";
 import AdminChemicals from "@/pages/AdminChemicals";
 import VehicleGallery from "./pages/VehicleGallery";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -253,6 +254,7 @@ const App = () => {
 
                       {/* Training & Staff */}
                       <Route path="/training-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
+                      <Route path="/chemical-training" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
                       <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
                       <Route path="/chemicals" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
                       <Route path="/admin/chemicals" element={<ProtectedRoute allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />

@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
 import localforage from "localforage";
@@ -31,6 +31,7 @@ import { Progress } from "@/components/ui/progress";
 import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
 import { getSupabaseEmployees } from "@/lib/supa-data";
 import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
+import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionModal";
 import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummary";
 
 type DisplayService = {
@@ -250,6 +251,8 @@ const ServiceChecklist = () => {
       setJobStartTime(Date.now());
     }
   }, [checklistSteps, jobStartTime]);
+
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -1503,6 +1506,9 @@ const ServiceChecklist = () => {
                 <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-7 text-xs ml-2">
                   <FlaskConical className="w-3 h-3 mr-1" /> Prep Chemicals
                 </Button>
+                <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-7 text-xs ml-2">
+                  <Sparkles className="w-3 h-3 mr-1" /> Decision Helper
+                </Button>
               </div>
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="sm" onClick={() => {
@@ -2119,6 +2125,10 @@ const ServiceChecklist = () => {
         stepId={currentStepId}
         stepName={currentStepName}
         isAdmin={getCurrentUser()?.role === 'admin' || getCurrentUser()?.role === 'owner'}
+      />
+      <ChemicalDecisionModal
+        open={decisionModalOpen}
+        onOpenChange={setDecisionModalOpen}
       />
       <PrepChemicalsSummary
         open={prepSummaryOpen}
