@@ -146,3 +146,5 @@ export default {
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
+
+// Config updated to trigger restart

@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0", // Allow access from network (for phone testing)
       port: 6066,
       strictPort: true,
+      // Trigger restart
     },
     preview: {
       host: "localhost",
