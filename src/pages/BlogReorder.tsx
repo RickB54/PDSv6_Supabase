@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, uploadLibraryFile } from "@/lib/supa-data";
+import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, uploadLibraryFile, getComments, deleteComment, updateComment, LibraryComment } from "@/lib/supa-data";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +33,7 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon } from "lucide-react";
+import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -48,6 +48,11 @@ export default function BlogReorder() {
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [formData, setFormData] = useState<Partial<LibraryItem>>({});
     const [isUploading, setIsUploading] = useState(false);
+    
+    // Comment management state
+    const [comments, setComments] = useState<LibraryComment[]>([]);
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editingCommentText, setEditingCommentText] = useState("");
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -135,10 +140,14 @@ export default function BlogReorder() {
         }
     };
 
-    const handleEdit = (item: LibraryItem) => {
+    const handleEdit = async (item: LibraryItem) => {
         setEditingItem(item);
         setFormData({ ...item });
         setIsEditModalOpen(true);
+        
+        // Load comments for this post
+        const postComments = await getComments(item.id);
+        setComments(postComments);
     };
 
     const handleDelete = async (id: string) => {
@@ -373,6 +382,110 @@ export default function BlogReorder() {
                                 <Switch checked={formData.is_published} onCheckedChange={v => setFormData({ ...formData, is_published: v })} />
                             </div>
                         </div>
+
+                        {/* Comment Management Section */}
+                        {comments.length > 0 && (
+                            <div className="pt-6 border-t border-zinc-800/50 space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <MessageSquare className="w-4 h-4 text-indigo-400" />
+                                    <Label className="uppercase text-[10px] font-black tracking-widest text-indigo-400">
+                                        COMMENTS ({comments.length})
+                                    </Label>
+                                </div>
+                                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                                    {comments.map((comment) => (
+                                        <div key={comment.id} className="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 space-y-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-black text-zinc-300">{comment.author}</p>
+                                                    <p className="text-[10px] text-zinc-600 font-bold">
+                                                        {new Date(comment.created_at).toLocaleDateString('en-US', { 
+                                                            month: 'short', 
+                                                            day: 'numeric',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg"
+                                                        onClick={() => {
+                                                            setEditingCommentId(comment.id);
+                                                            setEditingCommentText(comment.text);
+                                                        }}
+                                                        title="Edit comment"
+                                                    >
+                                                        <Edit2 className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                                                        onClick={async () => {
+                                                            if (window.confirm('Delete this comment permanently?')) {
+                                                                const success = await deleteComment(comment.id);
+                                                                if (success) {
+                                                                    setComments(prev => prev.filter(c => c.id !== comment.id));
+                                                                    toast({ title: "Comment Deleted" });
+                                                                } else {
+                                                                    toast({ title: "Delete Failed", variant: "destructive" });
+                                                                }
+                                                            }
+                                                        }}
+                                                        title="Delete comment"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            {editingCommentId === comment.id ? (
+                                                <div className="space-y-2 pt-2">
+                                                    <Textarea
+                                                        value={editingCommentText}
+                                                        onChange={e => setEditingCommentText(e.target.value)}
+                                                        className="bg-zinc-900 border-zinc-700 text-sm min-h-[60px]"
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={async () => {
+                                                                const success = await updateComment(comment.id, editingCommentText);
+                                                                if (success) {
+                                                                    setComments(prev => prev.map(c => 
+                                                                        c.id === comment.id ? { ...c, text: editingCommentText } : c
+                                                                    ));
+                                                                    setEditingCommentId(null);
+                                                                    toast({ title: "Comment Updated" });
+                                                                } else {
+                                                                    toast({ title: "Update Failed", variant: "destructive" });
+                                                                }
+                                                            }}
+                                                            className="bg-indigo-600 hover:bg-indigo-500 h-8 text-xs"
+                                                        >
+                                                            Save
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => setEditingCommentId(null)}
+                                                            className="h-8 text-xs"
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-zinc-400 leading-relaxed">{comment.text}</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <DialogFooter className="p-8 bg-zinc-900/30 border-t border-zinc-800 shrink-0 gap-4">

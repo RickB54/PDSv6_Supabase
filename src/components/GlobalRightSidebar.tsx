@@ -17,7 +17,8 @@ import {
     Video,
     Phone,
     Package,
-    Calculator // Added Calculator icon
+    Calculator,
+    CalendarDays // Added for Staff Schedule
 } from "lucide-react";
 
 export function GlobalRightSidebar() {
@@ -68,9 +69,9 @@ export function GlobalRightSidebar() {
             </Button>
 
             {/* Existing Icons */}
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/team-chat')} title="Team Chat" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <MessageSquare className="w-5 h-5 text-emerald-500" />
-                {!collapsed && <span>Team Chat</span>}
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/staff-schedule')} title="Staff Schedule" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <CalendarDays className="w-5 h-5 text-emerald-500" />
+                {!collapsed && <span>Staff Schedule</span>}
             </Button>
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <CheckSquare className="w-5 h-5 text-blue-500" />

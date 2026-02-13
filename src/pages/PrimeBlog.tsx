@@ -25,7 +25,7 @@ import {
     getLibraryItems, upsertLibraryItem, deleteLibraryItem, deleteLibraryItems,
     LibraryItem, LibraryComment, getComments, addComment, getAllCommentCounts,
     renameLibraryCategory, deleteLibraryCategory, supabase, copyLibraryItem,
-    uploadLibraryFile
+    uploadLibraryFile, deleteComment, updateComment
 } from '@/lib/supa-data';
 import { compressImage } from "@/lib/imageUtils";
 import { Badge } from "@/components/ui/badge";
@@ -1412,6 +1412,10 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
     const [newComment, setNewComment] = useState("");
     const [loading, setLoading] = useState(false);
     const [replyingTo, setReplyingTo] = useState<LibraryComment | null>(null);
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editingCommentText, setEditingCommentText] = useState("");
+    
+    const isAdmin = currentUser?.role === 'admin' || (currentUser?.role as string) === 'owner';
 
     const loadComments = useCallback(async () => {
         const data = await getComments(postId);
@@ -1471,7 +1475,14 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
                                             <span className="font-black text-zinc-200 text-xs uppercase tracking-tighter">{c.author}</span>
                                             <span className="text-[9px] text-zinc-600 font-bold uppercase">{new Date(c.created_at).toLocaleDateString()}</span>
                                         </div>
-                                        <Button
+                                        <div className="flex gap-1">
+                                            {(isAdmin || c.author === currentUser?.email || c.author === currentUser?.name) && (
+                                                <>
+                                                    <Button variant="ghost" size="sm" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); }} className="h-7 px-2 text-[10px] font-black text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Edit comment"><Edit2 className="w-3 h-3" /></Button>
+                                                    <Button variant="ghost" size="sm" onClick={async () => { if (window.confirm('Delete this comment permanently?')) { const success = await deleteComment(c.id); if (success) { setComments(prev => prev.filter(comment => comment.id !== c.id)); toast({ title: "Comment Deleted" }); } else { toast({ title: "Delete Failed", variant: "destructive" }); } } }} className="h-7 px-2 text-[10px] font-black text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Delete comment"><Trash2 className="w-3 h-3" /></Button>
+                                                </>
+                                            )}
+                                            <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => {
@@ -1482,8 +1493,19 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
                                         >
                                             REPLY
                                         </Button>
+                                        </div>
                                     </div>
-                                    <p className="text-zinc-400 text-sm leading-relaxed">{c.text}</p>
+                                    {editingCommentId === c.id ? (
+                                        <div className="space-y-2 pt-2">
+                                            <Textarea value={editingCommentText} onChange={e => setEditingCommentText(e.target.value)} className="bg-zinc-900 border-zinc-700 text-sm min-h-[60px]" />
+                                            <div className="flex gap-2">
+                                                <Button size="sm" onClick={async () => { const success = await updateComment(c.id, editingCommentText); if (success) { setComments(prev => prev.map(comment => comment.id === c.id ? { ...comment, text: editingCommentText } : comment)); setEditingCommentId(null); toast({ title: "Comment Updated" }); } else { toast({ title: "Update Failed", variant: "destructive" }); } }} className="bg-indigo-600 hover:bg-indigo-500 h-8 text-xs font-bold">Save</Button>
+                                                <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)} className="h-8 text-xs">Cancel</Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-zinc-400 text-sm leading-relaxed">{c.text}</p>
+                                    )}
                                 </div>
                             </div>
 

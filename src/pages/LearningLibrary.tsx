@@ -37,6 +37,9 @@ export default function LearningLibrary() {
     // Video player state
     const [isPlayerOpen, setIsPlayerOpen] = useState(false);
     const [playingItem, setPlayingItem] = useState<LibraryItem | null>(null);
+    
+    // Content viewer state (for articles/posts)
+    const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
 
     const [formData, setFormData] = useState<Partial<LibraryItem>>({
         type: 'video',
@@ -370,20 +373,20 @@ export default function LearningLibrary() {
     };
 
     const handleViewResource = (item: LibraryItem) => {
-        if (!item.resource_url) {
-            toast({
-                title: "No Resource URL",
-                description: "This resource doesn't have a URL set yet. Edit it to add a link.",
-                variant: "destructive"
-            });
+        // For articles and general posts, show in the modal viewer
+        if (item.type === 'article' || !item.resource_url || item.resource_url.startsWith('#')) {
+            setSelectedItem(item);
             return;
         }
 
         if (item.type === 'video') {
             setPlayingItem(item);
             setIsPlayerOpen(true);
-        } else {
+        } else if (item.type === 'pdf') {
             window.open(item.resource_url, '_blank');
+        } else {
+            // For images and other content with descriptions, show in viewer
+            setSelectedItem(item);
         }
     };
 
@@ -541,7 +544,14 @@ export default function LearningLibrary() {
                                                 </div>
                                             )}
                                             <div className="aspect-video bg-zinc-950 relative flex items-center justify-center overflow-hidden rounded-t-xl">
-                                                {((item.type === 'video' || item.type === 'image') && item.resource_url && (item.type === 'image' || getYouTubeThumbnail(item.resource_url))) ? (
+                                                {/* Priority: 1. thumbnail_url, 2. YouTube thumbnail, 3. Image resource_url, 4. Icon fallback */}
+                                                {item.thumbnail_url ? (
+                                                    <img
+                                                        src={item.thumbnail_url}
+                                                        alt={item.title}
+                                                        className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500"
+                                                    />
+                                                ) : ((item.type === 'video' || item.type === 'image') && item.resource_url && (item.type === 'image' || getYouTubeThumbnail(item.resource_url))) ? (
                                                     <img
                                                         src={item.type === 'image' ? item.resource_url : getYouTubeThumbnail(item.resource_url)!}
                                                         alt={item.title}
@@ -783,6 +793,97 @@ export default function LearningLibrary() {
                     </div>
                 </DialogContent>
             </Dialog >
+
+            {/* Content Viewer Modal */}
+            <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+                <DialogContent className="max-w-4xl w-full max-h-[90vh] bg-zinc-950 border-zinc-800/50 p-0 overflow-hidden flex flex-col rounded-3xl">
+                    {selectedItem && (
+                        <>
+                            {/* Header */}
+                            <div className="p-6 md:p-8 bg-zinc-900/50 border-b border-zinc-800/50 shrink-0">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="text-xs font-black uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
+                                                {selectedItem.category}
+                                            </span>
+                                            <span className="text-xs font-black uppercase tracking-wider text-zinc-500 bg-zinc-800/50 px-3 py-1 rounded-lg">
+                                                {selectedItem.type}
+                                            </span>
+                                        </div>
+                                        <DialogTitle className="text-2xl md:text-3xl font-black text-white leading-tight">
+                                            {selectedItem.title}
+                                        </DialogTitle>
+                                        {selectedItem.created_at && (
+                                            <p className="text-xs text-zinc-500 font-bold mt-2 uppercase tracking-widest">
+                                                {new Date(selectedItem.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Scrollable Content */}
+                            <div className="overflow-y-auto flex-1 p-6 md:p-8 space-y-6">
+                                {/* Thumbnail/Image */}
+                                {(selectedItem.thumbnail_url || selectedItem.resource_url) && selectedItem.type !== 'article' && (
+                                    <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900">
+                                        <img
+                                            src={selectedItem.thumbnail_url || selectedItem.resource_url}
+                                            alt={selectedItem.title}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = "/logo-3inch.png";
+                                                target.className = "w-full h-full object-contain p-8 opacity-40 grayscale";
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Description/Content */}
+                                {selectedItem.description && (
+                                    <div className="prose prose-invert max-w-none">
+                                        <p className="text-zinc-300 text-base leading-relaxed whitespace-pre-wrap">
+                                            {selectedItem.description}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Resource Link if available */}
+                                {selectedItem.resource_url && !selectedItem.resource_url.startsWith('#') && selectedItem.type !== 'image' && (
+                                    <div className="pt-4 border-t border-zinc-800">
+                                        <Button
+                                            onClick={() => window.open(selectedItem.resource_url, '_blank')}
+                                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 rounded-xl"
+                                        >
+                                            Open Full Resource
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-zinc-800/50 bg-zinc-900/30 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3 text-sm text-zinc-500">
+                                        {selectedItem.duration && (
+                                            <span className="font-bold">{selectedItem.duration}</span>
+                                        )}
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setSelectedItem(null)}
+                                        className="text-zinc-400 hover:text-white"
+                                    >
+                                        Close
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div >
     );
 }

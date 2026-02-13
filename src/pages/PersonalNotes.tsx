@@ -516,32 +516,22 @@ export default function PersonalNotes() {
                                                         {noteImages.map((url, idx) => (
                                                             <div
                                                                 key={idx}
-                                                                className="relative aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 group shadow-2xl"
+                                                                className="relative aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl active:scale-95 transition-transform"
                                                                 onClick={() => setLightboxIndex(idx)}
-                                                                onMouseEnter={() => setHoveredImage(url)}
-                                                                onMouseLeave={() => setHoveredImage(null)}
                                                             >
                                                                 <img src={url} alt="Note asset" className="w-full h-full object-cover" />
-                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                                    <div className="flex gap-2">
-                                                                        <div className="h-8 w-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                                                            <Maximize2 className="w-4 h-4 text-white" />
-                                                                        </div>
-                                                                        <Button
-                                                                            size="icon"
-                                                                            variant="ghost"
-                                                                            className="h-8 w-8 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-500 border border-red-500/20"
-                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteImage(url); }}
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                                {hoveredImage === url && (
-                                                                    <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-md p-2 rounded-lg text-[8px] text-zinc-400 break-all border border-white/10">
-                                                                        <span className="font-bold text-zinc-200">SOURCE: </span>{url}
-                                                                    </div>
-                                                                )}
+                                                                {/* Small X button in top-right corner always visible on mobile */}
+                                                                <button
+                                                                    className="absolute top-2 right-2 h-6 w-6 rounded-full bg-red-500/90 hover:bg-red-500 text-white flex items-center justify-center shadow-lg border border-white/20 z-10"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (window.confirm('Delete this image?')) {
+                                                                            handleDeleteImage(url);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -579,8 +569,11 @@ export default function PersonalNotes() {
                                         <VoiceInput
                                             onTranscript={(text) => {
                                                 if (activeNote) {
-                                                    const currentContent = activeNote.content || '';
-                                                    store.updateNote(activeNote.id, { content: currentContent + '\n' + text });
+                                                    // Get current clean text content (without images)
+                                                    const currentText = getCleanContent(activeNote.content);
+                                                    // Append new voice text with proper spacing
+                                                    const newText = currentText ? `${currentText} ${text}` : text;
+                                                    handleTextChange(newText);
                                                 }
                                             }}
                                             className="flex-1"
@@ -778,8 +771,11 @@ export default function PersonalNotes() {
                                                 <VoiceInput
                                                     onTranscript={(text) => {
                                                         if (activeNote) {
-                                                            const currentContent = activeNote.content || '';
-                                                            store.updateNote(activeNote.id, { content: currentContent + '\n' + text });
+                                                            // Get current clean text content (without images)
+                                                            const currentText = getCleanContent(activeNote.content);
+                                                            // Append new voice text with proper spacing
+                                                            const newText = currentText ? `${currentText} ${text}` : text;
+                                                            handleTextChange(newText);
                                                         }
                                                     }}
                                                 />
@@ -869,7 +865,12 @@ export default function PersonalNotes() {
                                                                         size="icon"
                                                                         variant="ghost"
                                                                         className="h-12 w-12 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 transition-all active:scale-95"
-                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteImage(url); }}
+                                                                        onClick={(e) => { 
+                                                                            e.stopPropagation(); 
+                                                                            if (window.confirm('Are you sure you want to delete this image?')) {
+                                                                                handleDeleteImage(url); 
+                                                                            }
+                                                                        }}
                                                                     >
                                                                         <Trash2 className="w-5 h-5" />
                                                                     </Button>
@@ -993,7 +994,13 @@ export default function PersonalNotes() {
                             variant="ghost"
                             size="icon"
                             className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteImage(noteImages[lightboxIndex]); setLightboxIndex(null); }}
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (window.confirm('Are you sure you want to delete this image?')) {
+                                    handleDeleteImage(noteImages[lightboxIndex]); 
+                                    setLightboxIndex(null); 
+                                }
+                            }}
                         >
                             <Trash2 className="w-5 h-5" />
                         </Button>

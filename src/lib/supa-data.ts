@@ -1398,6 +1398,50 @@ export async function getAllCommentCounts(): Promise<Record<string, number>> {
     }
 }
 
+export async function deleteComment(commentId: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('learning_library_comments')
+            .delete()
+            .eq('id', commentId);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error("Error deleting comment:", error);
+        return false;
+    }
+}
+
+export async function updateComment(commentId: string, text: string): Promise<boolean> {
+    try {
+        console.log('Updating comment:', { commentId, text });
+        const { data, error } = await supabase.from('learning_library_comments').update({ text }).eq('id', commentId).select();
+        if (error) { console.error('Supabase error updating comment:', error); throw error; }
+        console.log('Comment updated successfully:', data);
+        return true;
+    } catch (error) {
+        console.error('Error updating comment:', error);
+        return false;
+    }
+}
+
+export async function deleteAllCommentsForPost(postId: string): Promise<{ success: boolean; count: number }> {
+    try {
+        const { data, error } = await supabase
+            .from('learning_library_comments')
+            .delete()
+            .eq('post_id', postId)
+            .select();
+
+        if (error) throw error;
+        return { success: true, count: data ? data.length : 0 };
+    } catch (error) {
+        console.error("Error deleting comments for post:", error);
+        return { success: false, count: 0 };
+    }
+}
+
 /**
  * Rename a category across all posts
  */

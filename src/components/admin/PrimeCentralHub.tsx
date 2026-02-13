@@ -67,9 +67,13 @@ interface Shortcut {
     id: string;
     label: string;
     detail: string;
-    type: 'link' | 'modal';
+    type: 'link' | 'modal' | 'content'; // Added 'content' for Learning Library items
     target: string;
     isCustom?: boolean;
+    // Fields for Learning Library content items
+    thumbnail_url?: string;
+    content_type?: 'video' | 'article' | 'pdf' | 'image';
+    resource_url?: string;
 }
 
 interface PrimeCentralHubProps {
@@ -139,7 +143,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
     // Custom form state
     const [customLabel, setCustomLabel] = useState('');
     const [customTarget, setCustomTarget] = useState('');
-    const [customType, setCustomType] = useState<'link' | 'modal'>('link');
+    const [customType, setCustomType] = useState<'link' | 'modal' | 'content'>('link');
 
     useEffect(() => {
         getInvoices().then(val => setInvoices(Array.isArray(val) ? val : []));
@@ -753,8 +757,45 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         <AccordionContent className="pt-4">
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                 {pinnedShortcuts.length > 0 ? (
-                                    pinnedShortcuts.map((pin) => (
-                                        pin.type === 'link' ? (
+                                    pinnedShortcuts.map((pin) => {
+                                        // Handle content-type shortcuts (from Learning Library)
+                                        if (pin.type === 'content') {
+                                            return (
+                                                <div key={pin.id} onClick={() => pin.resource_url && window.open(pin.resource_url, '_blank')} className="cursor-pointer group">
+                                                    <Card className="overflow-hidden bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all h-full hover:bg-zinc-800/20">
+                                                        {/* Thumbnail Section */}
+                                                        {pin.thumbnail_url ? (
+                                                            <div className="aspect-video w-full bg-zinc-950 overflow-hidden">
+                                                                <img 
+                                                                    src={pin.thumbnail_url} 
+                                                                    alt={pin.label}
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="aspect-video w-full bg-zinc-950 flex items-center justify-center">
+                                                                <FileText className="w-8 h-8 text-zinc-700" />
+                                                            </div>
+                                                        )}
+                                                        {/* Content Section */}
+                                                        <div className="p-3">
+                                                            <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1 line-clamp-2">{pin.label}</div>
+                                                            <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
+                                                            {pin.content_type && (
+                                                                <div className="mt-2">
+                                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                                                        {pin.content_type}
+                                                                    </Badge>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </Card>
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        // Handle regular link shortcuts
+                                        return pin.type === 'link' ? (
                                             <Link key={pin.id} to={pin.target}>
                                                 <Card className="p-4 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group hover:bg-zinc-800/20">
                                                     <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
@@ -766,8 +807,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                                 <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
                                                 <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
                                             </Card>
-                                        )
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="col-span-full p-8 border border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center text-center">
                                         <p className="text-zinc-600 text-sm">No shortcuts pinned yet. Click manage to add some!</p>

@@ -29,9 +29,12 @@ export function VoiceInput({ onTranscript, className = '' }: VoiceInputProps) {
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
+        let hasCalledOnTranscript = false; // Flag to prevent duplicate calls
+
         recognition.onstart = () => {
             setIsListening(true);
             finalTranscriptRef.current = '';
+            hasCalledOnTranscript = false;
             toast.info('🎤 Listening... Speak now');
         };
 
@@ -73,15 +76,22 @@ export function VoiceInput({ onTranscript, className = '' }: VoiceInputProps) {
                 toast.error('No speech detected. Try again.');
             } else if (event.error === 'not-allowed') {
                 toast.error('Microphone access denied');
+            } else {
+                toast.error(`Error: ${event.error}`);
             }
             stopListening();
         };
 
         recognition.onend = () => {
-            if (finalTranscriptRef.current) {
-                onTranscript(finalTranscriptRef.current.trim());
+            const transcriptText = finalTranscriptRef.current.trim();
+            
+            // Only call onTranscript once with the final text
+            if (transcriptText && !hasCalledOnTranscript) {
+                hasCalledOnTranscript = true;
+                onTranscript(transcriptText);
                 toast.success('✅ Voice input added');
             }
+            
             setIsListening(false);
             setTranscript('');
             finalTranscriptRef.current = '';
