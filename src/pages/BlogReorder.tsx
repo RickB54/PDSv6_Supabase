@@ -75,12 +75,12 @@ export default function BlogReorder() {
             const sortedItems = [...blogItems].sort((a, b) => {
                 if (a.is_pinned && !b.is_pinned) return -1;
                 if (!a.is_pinned && b.is_pinned) return 1;
-                if (a.sort_order === undefined && b.sort_order === undefined) {
+                if (a.sort_order == null && b.sort_order == null) {
                     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
                 }
-                if (a.sort_order === undefined) return -1;
-                if (b.sort_order === undefined) return 1;
-                return a.sort_order - b.sort_order;
+                if (a.sort_order == null) return -1;
+                if (b.sort_order == null) return 1;
+                return (a.sort_order || 0) - (b.sort_order || 0);
             });
 
             setItems(sortedItems);
@@ -108,15 +108,24 @@ export default function BlogReorder() {
         setIsSaving(true);
         try {
             // Update each item with its new sort_order
-            const updatePromises = items.map((item, index) => {
+            const results = await Promise.all(items.map((item, index) => {
                 return upsertLibraryItem({
                     ...item,
                     sort_order: index + 1 // 1-based index
                 });
-            });
+            }));
 
-            await Promise.all(updatePromises);
-            toast({ title: "Order saved successfully", description: "The blog display sequence has been updated." });
+            const failures = results.filter(r => !r.success);
+            if (failures.length > 0) {
+                console.error("Some updates failed:", failures);
+                toast({ 
+                    title: "Partial Success", 
+                    description: `Successfully updated ${results.length - failures.length} posts, but ${failures.length} failed. Check database schema.`,
+                    variant: "destructive"
+                });
+            } else {
+                toast({ title: "Order saved successfully", description: "The blog display sequence has been updated." });
+            }
             await loadItems(); // Refresh to ensure everything is in sync
         } catch (error) {
             console.error("Failed to save order:", error);

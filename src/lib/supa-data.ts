@@ -1316,16 +1316,16 @@ export async function getLibraryItems(): Promise<LibraryItem[]> {
 
             // Priority 2: Handling sort_order (New posts first)
             // If both don't have sort_order, sort by date
-            if (a.sort_order === undefined && b.sort_order === undefined) {
+            if (a.sort_order == null && b.sort_order == null) {
                 return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
             }
 
             // If one has sort_order and the other doesn't, the one WITHOUT sort_order goes first (user request)
-            if (a.sort_order === undefined) return -1;
-            if (b.sort_order === undefined) return 1;
+            if (a.sort_order == null) return -1;
+            if (b.sort_order == null) return 1;
 
             // Priority 3: Both have sort_order, use it
-            return a.sort_order - b.sort_order;
+            return (a.sort_order || 0) - (b.sort_order || 0);
         });
 
         return sortedData as LibraryItem[];
