@@ -49,6 +49,7 @@ export const TOP_ITEMS: MenuItem[] = [
     { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard },
     { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red" },
     { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard },
+    { title: "View As Customer", url: "/customer-dashboard", role: "admin", key: "customer-view-dashboard", icon: LayoutDashboard },
 ];
 
 // Note: Badge counts like todoCount, payrollDueCount, etc. are dynamic and passed from the component.

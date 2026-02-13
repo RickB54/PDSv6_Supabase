@@ -308,6 +308,17 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const collapsibleMode = "icon";
   const sidebarClass = "border-r border-border";
 
+    const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') ||
+    location.pathname.startsWith('/customer-portal') ||
+    location.pathname.startsWith('/active-jobs') ||
+    location.pathname.startsWith('/job-history') ||
+    location.pathname.startsWith('/my-invoices') ||
+    location.pathname.startsWith('/payments-cart') ||
+    location.pathname.startsWith('/customer-account') ||
+    location.pathname.startsWith('/customer-profile') ||
+    location.pathname.startsWith('/portal') ||
+    location.pathname.startsWith('/contact-support');
+
   return (
     <Sidebar className={sidebarClass} collapsible={collapsibleMode as any}>
       <div className="p-4 border-b border-border pt-24">
@@ -336,8 +347,20 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       </div>
 
       <SidebarContent>
+        {isAdmin && isViewingAsCustomer && (
+          <div className="px-2 py-2">
+            <Button 
+              variant="destructive" 
+              className="w-full text-xs font-bold uppercase tracking-wider h-8 bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-800"
+              onClick={() => navigate('/dashboard/admin')}
+            >
+               Exit Customer View
+            </Button>
+          </div>
+        )}
+
         <SidebarMenu>
-          {isCustomer && (
+          {(isCustomer || (isAdmin && isViewingAsCustomer)) && (
             <>
               {CUSTOMER_ITEMS.map((item) => {
                 const isActive = location.pathname === item.url || (item.url.includes('#') && location.pathname + location.hash === item.url);
@@ -349,7 +372,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                       {item.url === '#help' ? (
                         <button
                           onClick={() => {
-                            window.dispatchEvent(new Event('open-help'));
+                            // Specify role: 'customer' to force HelpModal to show strictly customer content
+                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'customer' } }));
                             handleNavClick();
                           }}
                           className={className}
@@ -372,6 +396,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                           }}
                         >
                           {item.icon && <item.icon className="h-4 w-4" />}
+                          {/* If viewing as customer, rename 'Customer Dashboard' to just 'Dashboard' for cleaner look if desired, or keep as is. */}
                           {open && <span>{item.title}</span>}
                         </Link>
                       )}
@@ -382,7 +407,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
             </>
           )}
 
-          {(isAdmin || isEmployee) && (
+          {/* Only show Admin/Employee menu if NOT in "View As Customer" mode */}
+          {(isAdmin || isEmployee) && !isViewingAsCustomer && (
             <>
               {/* Top Items (Admin Dashboard) */}
               {TOP_ITEMS.map((item) => {

@@ -21,10 +21,13 @@ import {
     CalendarDays // Added for Staff Schedule
 } from "lucide-react";
 
+import { getCurrentUser } from "@/lib/auth";
+
 export function GlobalRightSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(true);
+    const user = getCurrentUser();
 
     // Hide on login/public pages if necessary
     if (['/login', '/signup', '/'].includes(location.pathname)) return null;
@@ -96,12 +99,6 @@ export function GlobalRightSidebar() {
             </Button>
 
             {/* Additional High Value */}
-            {/* User requested 'Person' icon to go to Customers Page, assuming /search-customer for Admin/Employee */}
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/search-customer')} title="Customer Profiles" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <Users className="w-5 h-5 text-indigo-400" />
-                {!collapsed && <span>Customers</span>}
-            </Button>
-
             {/* Personal Notes (Replaces previous 'Quick Ref') */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/notes')} title="Personal Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Book className="w-5 h-5 text-amber-200" />
