@@ -220,8 +220,55 @@ export function GlobalChatWidget() {
         return isMe;
     });
 
+    // Drag functionality
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const isDraggingRef = useRef(false);
+    const dragStartPosRef = useRef({ x: 0, y: 0 });
+    const startPositionRef = useRef({ x: 0, y: 0 });
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        // Only allow left click or touch
+        if (e.button !== 0) return;
+
+        e.preventDefault();
+
+        isDraggingRef.current = false;
+        dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+        startPositionRef.current = { ...position };
+
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+            const deltaX = moveEvent.clientX - dragStartPosRef.current.x;
+            const deltaY = moveEvent.clientY - dragStartPosRef.current.y;
+
+            // Threshold to consider it a drag
+            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+                isDraggingRef.current = true;
+            }
+
+            setPosition({
+                x: startPositionRef.current.x + deltaX,
+                y: startPositionRef.current.y + deltaY
+            });
+        };
+
+        const handlePointerUp = () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+
+            if (!isDraggingRef.current) {
+                setIsOpen(true);
+            }
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
     return (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 font-sans">
+        <div 
+            className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 font-sans touch-none"
+            style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+        >
             {isOpen && (
                 <Card className="w-[350px] h-[500px] flex flex-col shadow-2xl border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     {/* Header */}
@@ -345,7 +392,7 @@ export function GlobalChatWidget() {
                             : 'bg-primary hover:bg-primary/90'
                         }
                     `}
-                    onClick={() => setIsOpen(true)}
+                    onPointerDown={handlePointerDown}
                 >
                     <MessageCircle className={`h-7 w-7 ${hasUnread ? 'text-white' : ''}`} />
                     {hasUnread && (

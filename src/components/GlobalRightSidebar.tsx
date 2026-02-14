@@ -34,7 +34,7 @@ export function GlobalRightSidebar() {
 
     return (
         <div className={`
-            sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-20 pb-4 gap-4 z-40 shrink-0 transition-all duration-300
+            sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-20 pb-24 gap-4 z-40 shrink-0 transition-all duration-300
             ${collapsed ? 'w-12' : 'w-48 items-start px-2'}
         `}>
             {/* Toggle */}
@@ -85,8 +85,7 @@ export function GlobalRightSidebar() {
                 {!collapsed && <span>Gallery</span>}
             </Button>
 
-            {/* Separator */}
-            <div className="w-6 h-[1px] bg-zinc-800/50 my-1" />
+            {/* Separator - Removed */}
 
             {/* Quick Access Icons */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
