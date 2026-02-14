@@ -264,15 +264,74 @@ export function GlobalChatWidget() {
         window.addEventListener('pointerup', handlePointerUp);
     };
 
+    // Screen boundary detection for Card alignment
+    const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+    useEffect(() => {
+        const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const getCardStyles = () => {
+        const CARD_WIDTH = 350;
+        const CARD_HEIGHT = 500;
+        const BUTTON_SIZE = 56;
+        const GAP = 8; // gap-2
+        const BOTTOM_OFFSET = 16; // bottom-4
+        const RIGHT_OFFSET = 16;  // right-4
+        
+        // Container Bottom-Right Position relative to window
+        const containerRight = windowSize.width - RIGHT_OFFSET + position.x;
+        const containerBottom = windowSize.height - BOTTOM_OFFSET + position.y;
+
+        let translateX = 0;
+        let translateY = 0;
+
+        // X-Axis Logic
+        // By default, Card extends LEFT from containerRight.
+        // Left Edge = containerRight - CARD_WIDTH
+        if (containerRight - CARD_WIDTH < 10) {
+             // Too close to left edge, flip to align Left with Button Left
+             // Button Left is containerRight - BUTTON_SIZE
+             // We want Card Left = containerRight - BUTTON_SIZE
+             // Shift = (containerRight - BUTTON_SIZE) - (containerRight - CARD_WIDTH)
+             translateX = CARD_WIDTH - BUTTON_SIZE;
+        }
+
+        // Y-Axis Logic
+        // By default, Card extends UP from containerBottom (above the button).
+        // Structure: [Card] -> [Gap] -> [Button] (at containerBottom)
+        // Card Top = containerBottom - BUTTON_SIZE - GAP - CARD_HEIGHT
+        const cardTop = containerBottom - BUTTON_SIZE - GAP - CARD_HEIGHT;
+        
+        if (cardTop < 10) {
+            // Too close to top edge, flip to display BELOW button
+            // Shift down past: Card Height + Original Gap + Button Height + New Gap
+            // = 500 + 8 + 56 + 8 = 572
+            translateY = CARD_HEIGHT + BUTTON_SIZE + (GAP * 2);
+        }
+
+        return {
+            transform: `translate(${translateX}px, ${translateY}px)`
+        };
+    };
+
     return (
         <div 
             className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 font-sans touch-none"
             style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
         >
             {isOpen && (
-                <Card className="w-[350px] h-[500px] flex flex-col shadow-2xl border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <Card 
+                    className="w-[350px] h-[500px] flex flex-col shadow-2xl border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-200"
+                    style={getCardStyles()}
+                >
                     {/* Header */}
-                    <div className="p-4 border-b bg-primary text-primary-foreground rounded-t-lg flex justify-between items-center">
+                    <div 
+                        className="p-4 border-b bg-primary text-primary-foreground rounded-t-lg flex justify-between items-center cursor-move"
+                        onPointerDown={handlePointerDown}
+                    >
                         <div>
                             <h3 className="font-bold flex items-center gap-2"><MessageCircle className="h-5 w-5" /> Chat with Us</h3>
                             <p className="text-xs opacity-90">We will get back to you as soon as possible.</p>
