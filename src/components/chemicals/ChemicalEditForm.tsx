@@ -13,6 +13,7 @@ import { generateTemplate } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supa-data";
 import { ensureAllStorageBuckets } from "@/lib/storage-utils";
+import { ChemicalGalleryModal } from "./ChemicalGalleryModal";
 
 interface ChemicalEditFormProps {
     initialData: Partial<Chemical>;
@@ -26,6 +27,7 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
     const [saving, setSaving] = useState(false);
     const [aiSnapshot, setAiSnapshot] = useState<Partial<Chemical> | null>(null);
     const [viewingDilutionNote, setViewingDilutionNote] = useState<{ method: string; note: string } | null>(null);
+    const [galleryOpen, setGalleryOpen] = useState(false);
 
     // Ensure buckets exist on mount
     useEffect(() => {
@@ -728,12 +730,24 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
 
                     <div className="space-y-2">
                         <Label>Gallery URLs (Comma separated)</Label>
-                        <Input
-                            value={editing?.gallery_image_urls?.join(", ") || ''}
-                            onChange={e => setEditing({ ...editing, gallery_image_urls: e.target.value.split(",").map(s => s.trim()) })}
-                            className="bg-zinc-900 border-zinc-700"
-                            placeholder="https://..., https://..."
-                        />
+                        <div className="flex gap-2">
+                            <Input
+                                value={editing?.gallery_image_urls?.join(", ") || ''}
+                                onChange={e => setEditing({ ...editing, gallery_image_urls: e.target.value.split(",").map(s => s.trim()) })}
+                                className="bg-zinc-900 border-zinc-700 flex-1"
+                                placeholder="https://..., https://..."
+                            />
+                            {editing?.id && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="border-zinc-700 hover:bg-zinc-800"
+                                    onClick={() => setGalleryOpen(true)}
+                                >
+                                    <Plus className="w-4 h-4 mr-2" /> Manage Gallery
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label>Pro Tips (Comma separated)</Label>
@@ -801,6 +815,16 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {editing?.id && (
+                <ChemicalGalleryModal
+                    chemical={editing as Chemical}
+                    open={galleryOpen}
+                    onOpenChange={setGalleryOpen}
+                    isAdmin={true}
+                    onUpdate={onSave}
+                />
+            )}
         </div>
     );
 }

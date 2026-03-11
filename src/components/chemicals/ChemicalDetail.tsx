@@ -25,10 +25,12 @@ import {
     Pencil,
     Download,
     Loader2,
-    BookOpen
+    BookOpen,
+    Images
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ChemicalEditForm } from './ChemicalEditForm';
+import { PhotoGalleryLightbox } from '../gallery/PhotoGalleryLightbox';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -47,6 +49,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     const [isSavingNotes, setIsSavingNotes] = useState(false);
     const [playingVideo, setPlayingVideo] = useState<string | null>(null);
     const [viewingDilutionNote, setViewingDilutionNote] = useState<{ method: string; note: string } | null>(null);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [initialPhotoIndex, setInitialPhotoIndex] = useState(0);
     const { toast } = useToast();
 
     // Helper to extract YouTube ID
@@ -958,6 +962,37 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                 </section>
                             </div>
 
+                            {/* Photo Gallery (New) */}
+                            {(chemical.primary_image_url || (chemical.gallery_image_urls?.length ?? 0) > 0) && (
+                                <section>
+                                    <h3 className="text-lg font-bold text-white mb-4 flex items-center">
+                                        <Images className="w-5 h-5 mr-2 text-purple-400" /> Photo Gallery
+                                    </h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {[
+                                            ...(chemical.primary_image_url ? [{ url: chemical.primary_image_url, label: "Primary" }] : []),
+                                            ...(chemical.gallery_image_urls || []).map(url => ({ url, label: undefined }))
+                                        ].map((img: { url: string; label?: string }, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                className="aspect-square bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 cursor-pointer hover:border-purple-500 transition-all group relative"
+                                                onClick={() => {
+                                                    setInitialPhotoIndex(idx);
+                                                    setLightboxOpen(true);
+                                                }}
+                                            >
+                                                <img src={img.url} alt={`Gallery ${idx}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                {img.label && (
+                                                    <div className="absolute top-2 left-2 bg-purple-600 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shadow-lg">
+                                                        {img.label}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
                             {/* Multimedia */}
                             {chemical.video_urls && chemical.video_urls.length > 0 && (
                                 <section>
@@ -1037,6 +1072,16 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                     </div>
                 </DialogContent>
             </Dialog>
+            {/* Photo Gallery Lightbox */}
+            <PhotoGalleryLightbox
+                photos={[
+                    ...(chemical.primary_image_url ? [{ url: chemical.primary_image_url, label: "Primary" }] : []),
+                    ...(chemical.gallery_image_urls || []).map(url => ({ url }))
+                ]}
+                initialIndex={initialPhotoIndex}
+                open={lightboxOpen}
+                onOpenChange={setLightboxOpen}
+            />
         </Dialog>
     );
 }

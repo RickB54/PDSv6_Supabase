@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from "lucide-react";
@@ -17,12 +17,22 @@ export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenCha
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [zoom, setZoom] = useState(1);
 
-    const handlePrevious = () => {
+    // Sync current index when opened with a specific photo
+    useEffect(() => {
+        if (open) {
+            setCurrentIndex(initialIndex);
+            setZoom(1);
+        }
+    }, [open, initialIndex]);
+
+    const handlePrevious = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
         setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
         setZoom(1);
     };
 
-    const handleNext = () => {
+    const handleNext = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
         setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
         setZoom(1);
     };
@@ -106,16 +116,16 @@ export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenCha
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={handlePrevious}
-                                className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+                                onClick={(e) => { e.stopPropagation(); handlePrevious(e); }}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm z-50"
                             >
                                 <ChevronLeft className="h-8 w-8" />
                             </Button>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={handleNext}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+                                onClick={(e) => { e.stopPropagation(); handleNext(e); }}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm z-50"
                             >
                                 <ChevronRight className="h-8 w-8" />
                             </Button>
