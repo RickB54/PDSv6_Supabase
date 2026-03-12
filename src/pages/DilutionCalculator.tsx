@@ -102,52 +102,46 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg border border-white/10">
                             <Calculator className="w-7 h-7 text-white" />
                         </div>
-                        <div className="flex flex-col items-start leading-none">
-                            <h1 className="text-6xl font-black bg-gradient-to-r from-[#00d2ff] via-[#9d50bb] to-[#ff00c1] bg-clip-text text-transparent italic tracking-tighter">
+                        <div className="flex flex-col items-center leading-none">
+                            <h1 className="text-6xl sm:text-7xl font-black bg-gradient-to-r from-[#00d2ff] via-[#9d50bb] to-[#ff00c1] bg-clip-text text-transparent italic tracking-tighter leading-none">
                                 Prime
                             </h1>
-                            <p className="text-[7px] uppercase tracking-[0.2em] font-black text-zinc-600 mt-1">
-                                Prime Dilution Calculator
-                            </p>
+                            <div className="mt-2 text-center">
+                                <span className="text-[12px] sm:text-[14px] font-black text-white uppercase tracking-[0.2em] bg-blue-600/20 px-3 py-1 rounded-full border border-blue-500/30 whitespace-nowrap block shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                                    PRIME DILUTION CALCULATOR
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex gap-1">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="flex gap-1">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="text-zinc-600 hover:text-white hover:bg-zinc-900" 
-                                        onClick={() => setShowHelp(true)}
-                                        title="Quick Help"
-                                    >
-                                        <Info className="w-5 h-5" />
-                                    </Button>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="text-blue-400 hover:text-white hover:bg-blue-600/20" 
-                                        onClick={() => onHelp ? onHelp() : navigate('/dilution-calculator/help')}
-                                        title="Masterclass"
-                                    >
-                                        <HelpCircle className="w-5 h-5" />
-                                    </Button>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-zinc-900 border-zinc-800 text-xs w-64 p-3 shadow-2xl">
-                                <p className="font-medium text-zinc-300">
-                                    Standard DETAILING dilution ratio entered as <span className="text-blue-400 italic">X:1</span> (X parts water to 1 part product). 
-                                </p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    <Button variant="ghost" size="icon" className="text-zinc-600 hover:text-white hover:bg-zinc-900" onClick={handleReset}>
-                        <RotateCcw className="w-5 h-5" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-emerald-500 hover:text-white hover:bg-emerald-600/20 active:scale-90 transition-transform" 
+                        onClick={() => setShowHelp(true)}
+                        title="Quick Help"
+                    >
+                        <Info className="w-6 h-6" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-blue-400 hover:text-white hover:bg-blue-600/20 active:scale-90 transition-transform" 
+                        onClick={() => onHelp ? onHelp() : navigate('/dilution-calculator/help')}
+                        title="Masterclass"
+                    >
+                        <HelpCircle className="w-6 h-6" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-zinc-600 hover:text-white hover:bg-zinc-800 active:scale-90 transition-transform" 
+                        onClick={handleReset}
+                        title="Reset"
+                    >
+                        <RotateCcw className="w-6 h-6" />
                     </Button>
                 </div>
             </div>
