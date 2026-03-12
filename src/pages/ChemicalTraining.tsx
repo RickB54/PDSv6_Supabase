@@ -774,26 +774,6 @@ export default function ChemicalTraining() {
                                     </div>
                                 )}
 
-                                {/* Current Active Result (Clears when asking new or can be forced clear) */}
-                                {aiResponse && !aiLoading && (
-                                    <div className="bg-purple-900/10 border border-purple-900/40 rounded-2xl p-4 mb-4 relative animate-in fade-in zoom-in-95">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-zinc-900 border border-zinc-800"
-                                            onClick={() => setAiResponse(null)}
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </Button>
-                                        <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                            <Sparkles className="w-3 h-3" /> Latest AI Profile
-                                        </h4>
-                                        <div className="text-sm text-zinc-300 leading-relaxed">
-                                            {aiResponse.answer}
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Search Box */}
                                 <div className="relative group sticky top-0 z-10">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
@@ -815,22 +795,13 @@ export default function ChemicalTraining() {
                                     </div>
                                 </div>
 
-                                {aiResponse ? (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                                        <div className="space-y-3">
-                                            <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                                                <Sparkles className="w-3 h-3 text-purple-400" /> AI Findings
-                                            </h4>
-                                            <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-sm leading-relaxed text-zinc-300">
-                                                {aiResponse.answer}
-                                            </div>
-                                        </div>
-
+                                {aiResponse && !aiLoading ? (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 pt-6">
                                         <div className="space-y-3">
                                             <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                                                 <Beaker className="w-3 h-3 text-green-400" /> Best from your Inventory
                                             </h4>
-                                            <div className="space-y-3">
+                                            <div className="grid gap-3">
                                                 {aiResponse.recommendations.map((rec, i) => (
                                                     <div key={i} className="bg-black border border-zinc-800 rounded-xl p-4">
                                                         <div className="flex justify-between items-start mb-2">
