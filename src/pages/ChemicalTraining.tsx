@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2 } from "lucide-react";
+import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart } from "lucide-react";
 import { Chemical } from "@/types/chemicals";
 import { getChemicals } from "@/lib/chemicals";
 import {
@@ -18,7 +18,8 @@ import {
     getRecommendedCategory,
     getDynamicRatio,
     findSuggestedProducts,
-    ContaminationToChemistry
+    ContaminationToChemistry,
+    PurchaseLinks
 } from "@/lib/chemical-decision";
 import { 
     MessageCircle, 
@@ -60,7 +61,7 @@ export default function ChemicalTraining() {
     const [viewMode, setViewMode] = useState<'chat' | 'history'>('chat');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
-
+    const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
     useEffect(() => {
         (async () => {
             const list = await getChemicals();
@@ -339,9 +340,18 @@ export default function ChemicalTraining() {
                                     </div>
 
                                     {contamination && (
-                                        <div className={`bg-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-900/20 border border-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-500/30 rounded-xl p-4 flex flex-col justify-center animate-in zoom-in-95`}>
+                                        <div className={`bg-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-900/20 border border-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-500/30 rounded-xl p-4 flex flex-col justify-center animate-in zoom-in-95 relative group`}>
                                             <span className={`text-xs font-bold text-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-400 uppercase tracking-widest mb-1`}>Primary Chemistry Required</span>
                                             <div className="text-2xl font-black text-white">{recommendedCategory}</div>
+                                            
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="mt-3 h-8 text-[10px] font-black uppercase border-white/20 hover:bg-white/10"
+                                                onClick={() => setPurchaseModalOpen(true)}
+                                            >
+                                                <ShoppingCart className="w-3.5 h-3.5 mr-2" /> Where to Buy
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
@@ -867,6 +877,49 @@ export default function ChemicalTraining() {
                             <ShieldAlert className="w-3 h-3 text-amber-500" /> Professional Grade AI
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setAiOpen(false)} className="text-xs text-zinc-500 hover:text-white">Close Assistant</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Purchase Options Modal */}
+            <Dialog open={purchaseModalOpen} onOpenChange={setPurchaseModalOpen}>
+                <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ShoppingCart className="w-5 h-5 text-blue-500" />
+                            Purchase Guide: {recommendedCategory}
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            Professional-grade recommendations for {contamination}.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {PurchaseLinks[recommendedCategory] ? (
+                            PurchaseLinks[recommendedCategory].map((item, idx) => (
+                                <div key={idx} className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                                    <h5 className="font-bold text-sm mb-3">{item.product}</h5>
+                                    <div className="flex flex-wrap gap-2">
+                                        {item.links.map((link, lIdx) => (
+                                            <a 
+                                                key={lIdx} 
+                                                href={link.url} 
+                                                target="_blank" 
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black border border-slate-700 hover:border-blue-500 hover:bg-blue-500/10 text-[10px] font-black uppercase transition-all"
+                                            >
+                                                <ExternalLink className="w-3 h-3" />
+                                                {link.store}
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-8 text-center text-slate-500 italic">
+                                Search Amazon or The Rag Company for generic {recommendedCategory}.
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

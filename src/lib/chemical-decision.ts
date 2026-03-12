@@ -80,7 +80,42 @@ export const ContaminationToChemistry: Record<ContaminationType, { keywords: str
     [ContaminationType.Biological]: { keywords: ['enzyme', 'sanitizer', 'disinfectant', 'bio'], category: 'Enzyme Cleaner / Disinfectant', type: 'interior' }
 };
 
-// --- Logic ---
+export const PurchaseLinks: Record<string, { product: string; links: { store: string; url: string }[] }[]> = {
+    'Alkaline Cleaner': [
+        { product: 'Superior Products Road Warrior', links: [{ store: 'O-Reilly', url: 'https://www.oreillyauto.com/detail/c/superior-products/superior-products-1-gallon-degreaser/spr0/c601' }, { store: 'Amazon', url: 'https://amazon.com/s?k=Superior+Products+Road+Warrior' }] },
+        { product: 'P&S Bug Off', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/ps-detail-products-bug-off-insect-remover' }] }
+    ],
+    'Traffic Film Remover (TFR)': [
+        { product: 'Superior Products Dark Fury', links: [{ store: 'O-Reilly', url: 'https://www.oreillyauto.com/detail/c/superior-products/superior-products-dark-fury-cleaner/spr0/f131' }] },
+        { product: 'Bilt Hamber Auto Foam', links: [{ store: 'Amazon', url: 'https://amazon.com/s?k=Bilt+Hamber+Auto+Foam' }] }
+    ],
+    'Solvent / Tar Remover': [
+        { product: 'Gtechniq W7 Tar Remover', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/gtechniq-w7-tar-and-glue-remover' }] },
+        { product: 'TarX', links: [{ store: 'Amazon', url: 'https://amazon.com/s?k=CarPro+TarX' }] }
+    ],
+    'Iron Remover': [
+        { product: 'P&S Iron Buster', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/ps-detail-products-iron-buster-iron-remover' }] },
+        { product: 'CarPro IronX', links: [{ store: 'Amazon', url: 'https://amazon.com/s?k=CarPro+IronX' }] }
+    ],
+    'Acidic Cleaner / Water Spot Remover': [
+        { product: 'Labocosmetica Purifica', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/labocosmetica-purifica' }] },
+        { product: 'Wheel Brightener', links: [{ store: 'Amazon', url: 'https://amazon.com/s?k=Meguiars+Wheel+Brightener' }] }
+    ],
+    'Interior APC / Leather Cleaner': [
+        { product: 'P&S Xpress Interior Cleaner', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/ps-detail-products-xpress-interior-cleaner' }] },
+        { product: 'Superior Products Pink Perfection', links: [{ store: 'O-Reilly', url: 'https://www.oreillyauto.com/detail/c/superior-products/superior-products-1-gallon-cleaner/spr0/c671' }] }
+    ],
+    'Fabric Cleaner / Extractor Solution': [
+        { product: 'P&S Carpet Bomber', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/ps-detail-products-carpet-bomber-carpet-and-upholstery-cleaner' }] },
+        { product: 'Superior Products Zap It', links: [{ store: 'O-Reilly', url: 'https://www.oreillyauto.com/detail/c/superior-products/superior-products-1-gallon-stain-remover/spr0/c281' }] }
+    ],
+    'Carpet Specialist': [
+        { product: 'P&S Carpet Bomber', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/ps-detail-products-carpet-bomber-carpet-and-upholstery-cleaner' }] }
+    ],
+    'Trim Restorer': [
+        { product: 'Solution Finish', links: [{ store: 'The Rag Company', url: 'https://theragcompany.com/products/solution-finish-black-plastic-trim-restorer' }] }
+    ]
+};
 
 /**
  * Filters the ENTIRE chemical inventory to find best matches for a specific contamination type.
