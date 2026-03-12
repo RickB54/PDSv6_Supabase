@@ -13,11 +13,17 @@ export enum ContaminationType {
     Ferrous = "Ferrous (Iron Fallout, Brake Dust)",
     Mineral = "Mineral (Water Spots)",
     Oxidation = "Oxidation / Dull Paint",
+    ExteriorPlastic = "Exterior Plastic (Fading, Oxidation)",
+    GlassContam = "Glass (Water Spots, Wiper Trails)",
     // Interior
-    BodyOils = "Body Oils / Grease",
-    FoodResidue = "Food Residue",
-    BeverageStains = "Beverage Stains",
-    PetHair = "Pet Hair",
+    BodyOils = "Body Oils / Grease (Seat, Steering Wheel)",
+    FoodResidue = "Food / Organic Stains",
+    BeverageStains = "Liquid Stains (Coffee, Soda)",
+    UpholsteryStains = "Upholstery Stains (Fabric/Suede)",
+    RugStains = "Rug / Carpet Stains",
+    FloorMats = "Rubber / Carpet Floor Mats",
+    InteriorPlastics = "Dash, Vents, & Plastics",
+    LeatherGrim = "Leather Grime / Dye Transfer",
     Odors = "Odors (Smoke, Mold, Pet)",
     Biological = "Biological (Vomit, Blood, Mold)"
 }
@@ -50,22 +56,28 @@ export const ConditionDefinitions: Record<VehicleCondition, { visual: string; fe
 };
 
 // Maps Contamination -> Keywords to look for in Chemical "used_for", "description", or "name"
-export const ContaminationToChemistry: Record<ContaminationType, { keywords: string[]; category: string }> = {
+export const ContaminationToChemistry: Record<ContaminationType, { keywords: string[]; category: string; type: 'interior' | 'exterior' }> = {
     // Exterior
-    [ContaminationType.Organic]: { keywords: ['enzyme', 'bug', 'citrus', 'alkaline'], category: 'Alkaline Cleaner' },
-    [ContaminationType.RoadFilm]: { keywords: ['pre-wash', 'traffic film', 'road film', 'degreaser', 'tfr'], category: 'Traffic Film Remover (TFR)' },
-    [ContaminationType.Petroleum]: { keywords: ['tar', 'glue', 'sap', 'solvent', 'adhesive'], category: 'Solvent / Tar Remover' },
-    [ContaminationType.Ferrous]: { keywords: ['iron', 'fallout', 'brake dust', 'purple', 'wheel cleaner'], category: 'Iron Remover' },
-    [ContaminationType.Mineral]: { keywords: ['water spot', 'mineral', 'acid', 'descaler'], category: 'Acidic Cleaner / Water Spot Remover' },
-    [ContaminationType.Oxidation]: { keywords: ['polish', 'compound', 'cut', 'abrasive', 'correction'], category: 'Compound / Polish' },
+    [ContaminationType.Organic]: { keywords: ['enzyme', 'bug', 'citrus', 'alkaline'], category: 'Alkaline Cleaner', type: 'exterior' },
+    [ContaminationType.RoadFilm]: { keywords: ['pre-wash', 'traffic film', 'road film', 'degreaser', 'tfr'], category: 'Traffic Film Remover (TFR)', type: 'exterior' },
+    [ContaminationType.Petroleum]: { keywords: ['tar', 'glue', 'sap', 'solvent', 'adhesive'], category: 'Solvent / Tar Remover', type: 'exterior' },
+    [ContaminationType.Ferrous]: { keywords: ['iron', 'fallout', 'brake dust', 'purple', 'wheel cleaner'], category: 'Iron Remover', type: 'exterior' },
+    [ContaminationType.Mineral]: { keywords: ['water spot', 'mineral', 'acid', 'descaler'], category: 'Acidic Cleaner / Water Spot Remover', type: 'exterior' },
+    [ContaminationType.Oxidation]: { keywords: ['polish', 'compound', 'cut', 'abrasive', 'correction'], category: 'Compound / Polish', type: 'exterior' },
+    [ContaminationType.ExteriorPlastic]: { keywords: ['trim', 'plastic', 'restore', 'ceramic', 'dressing'], category: 'Trim Restorer', type: 'exterior' },
+    [ContaminationType.GlassContam]: { keywords: ['glass', 'clarity', 'streak', 'cleaner'], category: 'Glass Cleaner', type: 'exterior' },
 
     // Interior
-    [ContaminationType.BodyOils]: { keywords: ['interior cleaner', 'apc', 'degreaser', 'leather cleaner'], category: 'Interior APC / Leather Cleaner' },
-    [ContaminationType.FoodResidue]: { keywords: ['interior', 'crumb', 'all purpose'], category: 'Interior Detailer' },
-    [ContaminationType.BeverageStains]: { keywords: ['fabric', 'carpet', 'stain', 'shampoo', 'enzyme'], category: 'Fabric Cleaner / Extractor Solution' },
-    [ContaminationType.PetHair]: { keywords: ['static', 'rubber', 'brush'], category: 'Physical Tool (Not Chemical)' }, // Special handling likely needed
-    [ContaminationType.Odors]: { keywords: ['odor', 'ozone', 'neutralizer', 'enzyme', 'scent'], category: 'Odor Neutralizer / Chlorine Dioxide' },
-    [ContaminationType.Biological]: { keywords: ['enzyme', 'sanitizer', 'disinfectant', 'bio'], category: 'Enzyme Cleaner / Disinfectant' }
+    [ContaminationType.BodyOils]: { keywords: ['interior cleaner', 'apc', 'degreaser', 'leather cleaner'], category: 'Interior APC / Leather Cleaner', type: 'interior' },
+    [ContaminationType.FoodResidue]: { keywords: ['interior', 'crumb', 'all purpose', 'organic'], category: 'Interior Detailer', type: 'interior' },
+    [ContaminationType.BeverageStains]: { keywords: ['fabric', 'carpet', 'stain', 'shampoo', 'enzyme', 'bomber'], category: 'Fabric Cleaner / Extractor Solution', type: 'interior' },
+    [ContaminationType.UpholsteryStains]: { keywords: ['fabric', 'stain', 'shampoo', 'upholstery', 'extraction'], category: 'Stain Remover', type: 'interior' },
+    [ContaminationType.RugStains]: { keywords: ['carpet', 'rug', 'spotter', 'bomber', 'shampoo'], category: 'Carpet Specialist', type: 'interior' },
+    [ContaminationType.FloorMats]: { keywords: ['mat', 'rubber', 'apc', 'degreaser'], category: 'Heavy Duty Cleaner', type: 'interior' },
+    [ContaminationType.InteriorPlastics]: { keywords: ['dash', 'vent', 'plastic', 'matte', 'satin', 'uv'], category: 'Interior Utility Cleaner', type: 'interior' },
+    [ContaminationType.LeatherGrim]: { keywords: ['leather', 'conditioner', 'dye', 'ph-neutral'], category: 'Leather Treatment', type: 'interior' },
+    [ContaminationType.Odors]: { keywords: ['odor', 'ozone', 'neutralizer', 'enzyme', 'scent'], category: 'Odor Neutralizer', type: 'interior' },
+    [ContaminationType.Biological]: { keywords: ['enzyme', 'sanitizer', 'disinfectant', 'bio'], category: 'Enzyme Cleaner / Disinfectant', type: 'interior' }
 };
 
 // --- Logic ---

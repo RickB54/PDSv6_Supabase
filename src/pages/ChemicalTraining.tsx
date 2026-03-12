@@ -17,7 +17,8 @@ import {
     findProductForContamination,
     getRecommendedCategory,
     getDynamicRatio,
-    findSuggestedProducts
+    findSuggestedProducts,
+    ContaminationToChemistry
 } from "@/lib/chemical-decision";
 import { 
     MessageCircle, 
@@ -45,6 +46,7 @@ export default function ChemicalTraining() {
 
     // Decision State
     const [condition, setCondition] = useState<VehicleCondition | "">("");
+    const [contaminationZone, setContaminationZone] = useState<'exterior' | 'interior'>('exterior');
     const [contamination, setContamination] = useState<ContaminationType | "">("");
     const [selectedProduct, setSelectedProduct] = useState<Chemical | null>(null);
     
@@ -296,29 +298,53 @@ export default function ChemicalTraining() {
                                 Step 2: Identify Contamination
                             </h3>
 
-                            <div className="grid md:grid-cols-2 gap-8">
-                                <div>
-                                    <label className="text-sm font-bold text-slate-400 mb-2 block uppercase">Select Contamination Type</label>
-                                    <Select value={contamination} onValueChange={(v) => { setContamination(v as ContaminationType); setSelectedProduct(null); }}>
-                                        <SelectTrigger className="bg-black border-slate-700 h-12 text-lg">
-                                            <SelectValue placeholder="What are you removing?" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 text-white border-slate-800">
-                                            {Object.values(ContaminationType).map((t) => (
-                                                <SelectItem key={t} value={t} className="focus:bg-slate-800 focus:text-white cursor-pointer py-3">
-                                                    {t}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                            <div className="space-y-6">
+                                <div className="flex gap-2 p-1 bg-black/40 rounded-lg w-fit">
+                                    <Button 
+                                        variant={contaminationZone === 'exterior' ? 'default' : 'ghost'} 
+                                        size="sm"
+                                        onClick={() => { setContaminationZone('exterior'); setContamination(""); }}
+                                        className={`h-8 text-[10px] font-black uppercase ${contaminationZone === 'exterior' ? 'bg-blue-600' : 'text-zinc-500'}`}
+                                    >
+                                        Exterior
+                                    </Button>
+                                    <Button 
+                                        variant={contaminationZone === 'interior' ? 'default' : 'ghost'} 
+                                        size="sm"
+                                        onClick={() => { setContaminationZone('interior'); setContamination(""); }}
+                                        className={`h-8 text-[10px] font-black uppercase ${contaminationZone === 'interior' ? 'bg-purple-600' : 'text-zinc-500'}`}
+                                    >
+                                        Interior
+                                    </Button>
                                 </div>
 
-                                {contamination && (
-                                    <div className="bg-purple-900/20 border border-purple-500/30 rounded-xl p-4 flex flex-col justify-center">
-                                        <span className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-1">Required Chemistry</span>
-                                        <div className="text-2xl font-black text-white">{recommendedCategory}</div>
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    <div>
+                                        <label className="text-sm font-bold text-slate-400 mb-2 block uppercase">Select {contaminationZone} Type</label>
+                                        <Select value={contamination} onValueChange={(v) => { setContamination(v as ContaminationType); setSelectedProduct(null); }}>
+                                            <SelectTrigger className="bg-black border-slate-700 h-12 text-lg">
+                                                <SelectValue placeholder={`What ${contaminationZone} issue?`} />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-slate-900 text-white border-slate-800">
+                                                {Object.values(ContaminationType)
+                                                    .filter(t => ContaminationToChemistry[t as ContaminationType]?.type === contaminationZone)
+                                                    .map((t) => (
+                                                        <SelectItem key={t} value={t} className="focus:bg-slate-800 focus:text-white cursor-pointer py-3">
+                                                            {t}
+                                                        </SelectItem>
+                                                    ))
+                                                }
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                )}
+
+                                    {contamination && (
+                                        <div className={`bg-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-900/20 border border-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-500/30 rounded-xl p-4 flex flex-col justify-center animate-in zoom-in-95`}>
+                                            <span className={`text-xs font-bold text-${contaminationZone === 'exterior' ? 'blue' : 'purple'}-400 uppercase tracking-widest mb-1`}>Primary Chemistry Required</span>
+                                            <div className="text-2xl font-black text-white">{recommendedCategory}</div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     )}
