@@ -553,18 +553,22 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         if (!printWindow) return;
 
         const baseStyle = `
-            body { margin: 0; padding: 10mm; background: white; font-family: sans-serif; }
+            body { margin: 0; padding: 5mm; background: white; font-family: sans-serif; }
             .batch-page { 
-                width: 210mm; height: 297mm; display: grid; 
-                grid-template-columns: 102mm 102mm; 
-                grid-template-rows: 145mm 145mm; 
-                gap: 2mm; page-break-after: always;
+                width: 200mm; 
+                height: 265mm; 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                grid-template-rows: 1fr 1fr; 
+                gap: 4mm; 
+                page-break-after: always;
+                margin: 0 auto;
             }
             .label-item { 
-                border: 2px solid #000; padding: 4mm; display: flex; flex-direction: column; overflow: hidden;
-                background: white; color: black; box-sizing: border-box; height: 100%;
+                border: 2px solid #000; padding: 3mm; display: flex; flex-direction: column; overflow: hidden;
+                background: white; color: black; box-sizing: border-box; height: 100%; position: relative;
             }
-            .chem-img { max-height: 35mm; width: 100%; object-fit: contain; margin-bottom: 3mm; border: 1px solid #eee; padding: 2mm; border-radius: 4px; }
+            .chem-img { max-height: 30mm; width: 100%; object-fit: contain; margin-bottom: 2mm; border: 1px solid #eee; padding: 1mm; border-radius: 4px; }
             .badge { display: inline-block; background: #eee; padding: 1mm 2mm; border-radius: 4px; font-size: 7pt; font-weight: 900; }
             @page { margin: 0; size: auto; }
         `;
@@ -1039,7 +1043,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                             { label: "Brand", key: "showBrand" },
                                             { label: "Summary", key: "showDescription" },
                                             { label: "Table", key: "showDilutionTable" },
-                                            { label: "Instr", key: "showInstructions" },
+                                            { label: "Instructions", key: "showInstructions" },
                                             { label: "Ratio", key: "showPrimaryRatio" },
                                             { label: "Alert", key: "showWarnings" },
                                             { label: "Bold", key: "boldMode" },
@@ -1109,38 +1113,65 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
 
                                 {/* Saved List */}
                                 <div className="space-y-3 px-1">
-                                    <h4 className="text-[11px] uppercase font-bold text-zinc-400 flex items-center gap-2">
-                                        <Layout className="w-3.5 h-3.5 text-blue-400" />
-                                        Saved Templates
-                                    </h4>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[11px] uppercase font-bold text-zinc-400 flex items-center gap-2">
+                                            <Layout className="w-3.5 h-3.5 text-blue-400" />
+                                            Saved Templates
+                                        </h4>
+                                        {savedTemplates.length > 0 && (
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-5 px-2 text-[9px] text-zinc-500 hover:text-white"
+                                                onClick={() => {
+                                                    if (selectedForBatch.length === savedTemplates.length) setSelectedForBatch([]);
+                                                    else setSelectedForBatch(savedTemplates.map(t => t.id));
+                                                }}
+                                            >
+                                                {selectedForBatch.length === savedTemplates.length ? 'Deselect All' : 'Select All'}
+                                            </Button>
+                                        )}
+                                    </div>
                                     
                                     {savedTemplates.length === 0 ? (
                                         <div className="text-[10px] text-zinc-600 italic px-2">No designs saved.</div>
                                     ) : (
                                         <div className="space-y-1 max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
                                             {savedTemplates.map((template) => (
-                                                <div key={template.id} className="group flex items-center gap-2 p-2 rounded bg-zinc-950 border border-zinc-900 hover:border-zinc-700 transition-colors">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={selectedForBatch.includes(template.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) setSelectedForBatch(prev => [...prev, template.id]);
-                                                            else setSelectedForBatch(prev => prev.filter(id => id !== template.id));
-                                                        }}
-                                                        className="w-3.5 h-3.5 accent-purple-500 rounded border-zinc-800"
-                                                    />
-                                                    <div className="flex-1 cursor-pointer truncate" onClick={() => handleLoadTemplate(template)}>
+                                                <div 
+                                                    key={template.id} 
+                                                    className={`group flex items-center gap-3 p-2 rounded border transition-all cursor-pointer ${selectedForBatch.includes(template.id) ? 'bg-blue-500/10 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'bg-zinc-950 border-zinc-900 hover:border-zinc-800'}`}
+                                                    onClick={() => {
+                                                        const isSelected = selectedForBatch.includes(template.id);
+                                                        if (isSelected) setSelectedForBatch(prev => prev.filter(id => id !== template.id));
+                                                        else setSelectedForBatch(prev => [...prev, template.id]);
+                                                    }}
+                                                >
+                                                    <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${selectedForBatch.includes(template.id) ? 'bg-blue-500 border-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'border-zinc-800 bg-zinc-900 group-hover:border-zinc-600'}`}>
+                                                        {selectedForBatch.includes(template.id) && <div className="w-1.5 h-1.5 bg-white rounded-full scale-75" />}
+                                                    </div>
+                                                    <div className="flex-1 truncate">
                                                         <div className="text-[10px] font-black text-zinc-300">{template.templateName}</div>
                                                         <div className="text-[8px] text-zinc-600 uppercase font-bold">{template.content.name || 'Untitled'}</div>
                                                     </div>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
-                                                        className="h-7 w-7 p-0 text-zinc-700 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-full"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </Button>
+                                                    <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            onClick={(e) => { e.stopPropagation(); handleLoadTemplate(template); }}
+                                                            className="h-7 px-2 text-[8px] text-zinc-500 hover:text-white hover:bg-zinc-800 uppercase font-bold"
+                                                        >
+                                                            Load
+                                                        </Button>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
+                                                            className="h-7 w-7 p-0 text-zinc-700 hover:text-red-500 hover:bg-red-500/10 rounded-full"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1318,13 +1349,13 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                 <DialogFooter className="px-6 py-4 border-t border-zinc-800 bg-zinc-950 flex items-center justify-end gap-2 shrink-0">
                     <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zinc-800 bg-zinc-900 text-zinc-400 h-9 text-xs">Cancel</Button>
                     
-                    {selectedForBatch.length >= 2 && (
+                    {selectedForBatch.length > 0 && (
                         <Button 
-                            className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs font-black shadow-lg animate-in fade-in slide-in-from-right-4" 
+                            className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs font-black shadow-[0_0_15px_rgba(37,99,235,0.3)] animate-in fade-in slide-in-from-right-4" 
                             onClick={handleBatchPrint}
                         >
                             <Printer className="w-4 h-4 mr-2" />
-                            PRINT BATCH ({selectedForBatch.length})
+                            PRINT GRID ({selectedForBatch.length})
                         </Button>
                     )}
 
