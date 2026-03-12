@@ -15,27 +15,20 @@ import {
     ChevronRight,
     CheckCircle2
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
 
 const DilutionCalculatorHelp = () => {
     const navigate = useNavigate();
 
     return (
         <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-blue-600">
+            <PageHeader title="Dilution Masterclass" />
+            
             {/* Hero Header */}
             <div className="relative h-64 bg-zinc-950 border-b border-zinc-900 flex items-center justify-center overflow-hidden">
-                <div className="absolute top-6 left-6 z-30">
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-zinc-500 hover:text-white hover:bg-zinc-900/50 rounded-full"
-                        onClick={() => navigate(-1)}
-                    >
-                        <ArrowLeft className="w-6 h-6" />
-                    </Button>
-                </div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
                 <div className="relative z-10 text-center space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-[0.2em] mb-4">
@@ -49,18 +42,6 @@ const DilutionCalculatorHelp = () => {
                         Professional Detailing Chemistry & Calculations
                     </p>
                 </div>
-            </div>
-
-            {/* Back Button */}
-            <div className="max-w-4xl mx-auto px-6 -mt-8 relative z-20">
-                <Button 
-                    variant="outline" 
-                    onClick={() => navigate(-1)}
-                    className="bg-blue-600 border-blue-500 text-white hover:bg-blue-500 hover:border-blue-400 rounded-full px-8 h-14 shadow-[0_10px_30px_rgba(37,99,235,0.4)] group transition-all font-black uppercase tracking-widest"
-                >
-                    <ArrowLeft className="w-5 h-5 mr-3 transition-transform group-hover:-translate-x-1" />
-                    Back to Calculator
-                </Button>
             </div>
 
             <main className="max-w-4xl mx-auto px-6 py-12 space-y-20 pb-32">
