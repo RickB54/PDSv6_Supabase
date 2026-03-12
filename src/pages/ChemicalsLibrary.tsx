@@ -1,12 +1,13 @@
 import { PageHeader } from "@/components/PageHeader";
 import { ChemicalCard } from "@/components/chemicals/ChemicalCard";
 import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
+import { ChemicalLabelMaker } from "@/components/chemicals/ChemicalLabelMaker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getChemicals, deleteChemical } from "@/lib/chemicals";
 import { Chemical } from "@/types/chemicals";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Tag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
@@ -20,6 +21,7 @@ export default function ChemicalsLibrary() {
     const [detailOpen, setDetailOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("All");
+    const [labelMakerOpen, setLabelMakerOpen] = useState(false);
 
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -88,9 +90,14 @@ export default function ChemicalsLibrary() {
                         <p className="text-zinc-400">Master every product in our arsenal.</p>
                     </div>
                     {isAdmin && (
-                        <Button onClick={() => navigate('/admin/chemicals')} className="bg-purple-600 hover:bg-purple-700">
-                            <Plus className="w-4 h-4 mr-2" /> Add Chemical
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setLabelMakerOpen(true)} className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-purple-400">
+                                <Tag className="w-4 h-4 mr-2" /> Create Bottle Label
+                            </Button>
+                            <Button onClick={() => navigate('/admin/chemicals')} className="bg-purple-600 hover:bg-purple-700 text-white">
+                                <Plus className="w-4 h-4 mr-2" /> Add Chemical
+                            </Button>
+                        </div>
                     )}
                 </div>
 
@@ -147,6 +154,12 @@ export default function ChemicalsLibrary() {
                 onOpenChange={setDetailOpen}
                 isAdmin={isAdmin}
                 onUpdate={handleChemicalUpdate}
+            />
+
+            <ChemicalLabelMaker
+                open={labelMakerOpen}
+                onOpenChange={setLabelMakerOpen}
+                initialChemical={selectedChemical}
             />
         </div>
     );

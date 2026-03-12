@@ -1,0 +1,1315 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription,
+    DialogFooter
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+    Tag, 
+    Printer, 
+    Download, 
+    Sparkles, 
+    Type, 
+    Droplets, 
+    AlertTriangle, 
+    Settings2,
+    Loader2,
+    Sun,
+    Moon,
+    HelpCircle,
+    Layout,
+    Trash2,
+    Wand2,
+    Save,
+    Plus
+} from 'lucide-react';
+import { Chemical } from '@/types/chemicals';
+import { getChemicals } from '@/lib/chemicals';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { toast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import HelpModal from '@/components/help/HelpModal';
+
+interface ChemicalLabelMakerProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    initialChemical?: Chemical | null;
+}
+
+type LabelSize = 'Small (4oz)' | 'Mini (8oz)' | 'Medium (16oz)' | 'Large (24oz)' | 'X-Large (32oz)' | 'Sticker (4x3)';
+
+interface SavedLabelTemplate {
+    id: string;
+    templateName: string;
+    chemicalId: string;
+    content: {
+        name: string;
+        brand: string;
+        description: string;
+        instructions: string;
+        dilutionRatio: string;
+        safetyWarning: string;
+        imageUrl: string;
+        freeformText: string;
+    };
+    style: {
+        size: LabelSize;
+        fontSize: 'Small' | 'Medium' | 'Large' | 'Extra Large' | 'XL';
+        themeColor: string;
+        showImage: boolean;
+        showWarnings: boolean;
+        showBrand: boolean;
+        showDescription: boolean;
+        showDilutionTable: boolean;
+        boldMode: boolean;
+        splitRatios: boolean;
+        showFreeform: boolean;
+        showBlankForm: boolean;
+        showInstructions: boolean;
+        showPrimaryRatio: boolean;
+        showInterior: boolean;
+        showExterior: boolean;
+        showHeavy: boolean;
+        showLight: boolean;
+        printTheme: 'Dark' | 'Light';
+    };
+    createdAt: string;
+}
+
+export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: ChemicalLabelMakerProps) {
+    const [chemicals, setChemicals] = useState<Chemical[]>([]);
+    const [selectedChemical, setSelectedChemical] = useState<Chemical | null>(initialChemical || null);
+    const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState('edit');
+    const [showHelp, setShowHelp] = useState(false);
+    const [savedTemplates, setSavedTemplates] = useState<SavedLabelTemplate[]>([]);
+    const [newTemplateName, setNewTemplateName] = useState('');
+
+    // Label Content State
+    const [labelContent, setLabelContent] = useState({
+        name: '',
+        brand: '',
+        description: '',
+        instructions: '',
+        dilutionRatio: '',
+        safetyWarning: '',
+        imageUrl: '',
+        freeformText: '',
+    });
+
+    // Label Style State
+    const [labelStyle, setLabelStyle] = useState({
+        size: 'Medium (16oz)' as LabelSize,
+        fontSize: 'Medium' as 'Small' | 'Medium' | 'Large' | 'Extra Large' | 'XL',
+        themeColor: '#8b5cf6',
+        showImage: true,
+        showWarnings: true,
+        showBrand: true,
+        showDescription: true,
+        showDilutionTable: true,
+        boldMode: true,
+        splitRatios: false, 
+        showFreeform: true,
+        showBlankForm: true,
+        showInstructions: true,
+        showPrimaryRatio: true,
+        showInterior: true,
+        showExterior: true,
+        showHeavy: true,
+        showLight: true,
+        printTheme: 'Light' as 'Dark' | 'Light',
+    });
+
+    const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+    const [hasChanges, setHasChanges] = useState(false);
+
+    const previewRef = useRef<HTMLDivElement>(null);
+
+    // Track changes for the "Save Changes" button
+    useEffect(() => {
+        if (!activeTemplateId) {
+            setHasChanges(false);
+            return;
+        }
+        const active = savedTemplates.find(t => t.id === activeTemplateId);
+        if (active) {
+            const isDirty = JSON.stringify(active.content) !== JSON.stringify(labelContent) || 
+                            JSON.stringify(active.style) !== JSON.stringify(labelStyle);
+            setHasChanges(isDirty);
+        }
+    }, [labelContent, labelStyle, activeTemplateId, savedTemplates]);
+
+    useEffect(() => {
+        if (open) {
+            loadChemicals();
+            const saved = localStorage.getItem('chemical_label_templates');
+            if (saved) setSavedTemplates(JSON.parse(saved));
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (selectedChemical) {
+            setLabelContent({
+                name: selectedChemical.name,
+                brand: selectedChemical.brand || '',
+                description: selectedChemical.description,
+                instructions: selectedChemical.application_guide?.notes || 'Apply following standard procedures.',
+                dilutionRatio: selectedChemical.dilution_ratios?.[0]?.ratio || 'RTU',
+                safetyWarning: selectedChemical.warnings?.risks?.[0] || 'No specific hazard warnings.',
+                imageUrl: selectedChemical.primary_image_url || '',
+                freeformText: '',
+            });
+            setLabelStyle(prev => ({
+                ...prev,
+                themeColor: selectedChemical.theme_color || '#8b5cf6',
+            }));
+        }
+    }, [selectedChemical]);
+
+    const loadChemicals = async () => {
+        setLoading(true);
+        try {
+            const data = await getChemicals();
+            setChemicals(data);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAiGenerate = () => {
+        if (!selectedChemical) return;
+        
+        const condensedDesc = `${selectedChemical.name} is a professional ${selectedChemical.category.toLowerCase()} detailing solution. Optimized for ${(selectedChemical.used_for || []).slice(0, 3).join(', ')}.`;
+        
+        let condensedInst = selectedChemical.application_guide?.notes || 'Apply following standard procedures.';
+        
+        if (selectedChemical.dilution_ratios && selectedChemical.dilution_ratios.length > 0) {
+            const ratios = selectedChemical.dilution_ratios;
+            
+            const taskRatios = {
+                interior: ratios.filter(r => r.soil_level?.toLowerCase().includes('interior') || r.method?.toLowerCase().includes('interior')),
+                wheels: ratios.filter(r => r.soil_level?.toLowerCase().includes('wheel') || r.soil_level?.toLowerCase().includes('tire')),
+                bugs: ratios.filter(r => r.soil_level?.toLowerCase().includes('bug') || r.soil_level?.toLowerCase().includes('sap')),
+                heavy: ratios.filter(r => r.soil_level?.toLowerCase().includes('heavy') || r.soil_level?.toLowerCase().includes('grime')),
+                general: ratios.filter(r => !r.soil_level?.toLowerCase().match(/interior|wheel|tire|bug|sap|heavy/))
+            };
+
+            let ratioText = "\n\nREQUIRED MIXING RATIOS:";
+            if (taskRatios.interior.length) ratioText += `\n🛋️ INTERIOR: ${taskRatios.interior[0].ratio}`;
+            if (taskRatios.general.length) ratioText += `\n🚗 EXTERIOR: ${taskRatios.general[0].ratio}`;
+            if (taskRatios.wheels.length) ratioText += `\n🛞 WHEELS/TIRES: ${taskRatios.wheels[0].ratio}`;
+            if (taskRatios.bugs.length) ratioText += `\n🪲 BUG REMOVAL: ${taskRatios.bugs[0].ratio}`;
+            if (taskRatios.heavy.length) ratioText += `\n💪 HEAVY GRIME: ${taskRatios.heavy[0].ratio}`;
+
+            condensedInst = `${condensedInst}${ratioText}`;
+        }
+        
+        setLabelContent(prev => ({
+            ...prev,
+            description: condensedDesc,
+            instructions: condensedInst
+        }));
+
+        toast({
+            title: "AI Optimized",
+            description: "Full dilution guide and instructions extracted.",
+            className: "bg-purple-900 border-purple-800 text-white"
+        });
+    };
+
+    const handleSaveTemplate = () => {
+        if (!newTemplateName.trim()) {
+            if (activeTemplateId) {
+                const confirmed = window.confirm("No name entered. Would you like to UPDATE the current label instead?");
+                if (confirmed) {
+                    handleUpdateTemplate();
+                    return;
+                }
+            }
+            toast({ title: "Name Required", description: "Please name your design before saving.", variant: "destructive" });
+            return;
+        }
+
+        const newTemplate: SavedLabelTemplate = {
+            id: Date.now().toString(),
+            templateName: newTemplateName,
+            chemicalId: selectedChemical?.id || 'manual',
+            content: { ...labelContent },
+            style: { ...labelStyle },
+            createdAt: new Date().toISOString()
+        };
+
+        const updated = [newTemplate, ...savedTemplates];
+        setSavedTemplates(updated);
+        localStorage.setItem('chemical_label_templates', JSON.stringify(updated));
+        setNewTemplateName('');
+        setActiveTemplateId(newTemplate.id);
+        setHasChanges(false);
+        
+        toast({ title: "Design Saved", description: `"${newTemplateName}" is now in your collection.` });
+    };
+
+    const handleLoadTemplate = (template: SavedLabelTemplate) => {
+        setLabelContent(template.content);
+        setLabelStyle(template.style);
+        setActiveTemplateId(template.id);
+        if (template.chemicalId !== 'manual') {
+            const chem = chemicals.find(c => c.id === template.chemicalId);
+            if (chem) setSelectedChemical(chem);
+        }
+        toast({ title: "Design Loaded", description: `Restored '${template.templateName}' settings.` });
+    };
+
+    const handleUpdateTemplate = () => {
+        if (!activeTemplateId) return;
+        
+        const updated = savedTemplates.map(t => {
+            if (t.id === activeTemplateId) {
+                return {
+                    ...t,
+                    content: { ...labelContent },
+                    style: { ...labelStyle }
+                };
+            }
+            return t;
+        });
+        
+        setSavedTemplates(updated);
+        localStorage.setItem('chemical_label_templates', JSON.stringify(updated));
+        setHasChanges(false);
+        toast({ title: "Template Updated", description: "Permanent changes saved to design." });
+    };
+
+    const handleDeleteTemplate = (id: string) => {
+        const updated = savedTemplates.filter(t => t.id !== id);
+        setSavedTemplates(updated);
+        localStorage.setItem('chemical_label_templates', JSON.stringify(updated));
+        toast({ title: "Design Removed" });
+    };
+
+    const convertImagesToBase64 = async (container: HTMLElement) => {
+        const images = container.getElementsByTagName('img');
+        const promises = Array.from(images).map(async (img) => {
+            try {
+                const response = await fetch(img.src, { mode: 'cors' });
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        img.src = reader.result as string;
+                        resolve(true);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.warn("Failed to convert image to base64 for PDF", e);
+                return Promise.resolve(false);
+            }
+        });
+        await Promise.all(promises);
+    };
+
+    const processLabel = async (element: HTMLElement, pdf: jsPDF) => {
+        if (labelStyle.printTheme === 'Light') {
+            const allTexts = element.querySelectorAll('*');
+            allTexts.forEach((el: any) => {
+                el.style.color = '#000000';
+                el.style.opacity = '1';
+                // REmoved text-stroke as it ruins PDF quality - html2canvas prefers clean fonts
+            });
+            const ratioBox = element.querySelector('.ratio-box');
+            if (ratioBox) (ratioBox as HTMLElement).style.backgroundColor = '#ffffff';
+        }
+
+        await convertImagesToBase64(element);
+
+        const canvas = await html2canvas(element, {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: labelStyle.printTheme === 'Dark' ? '#18181b' : '#ffffff',
+            logging: false,
+        });
+
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        
+        const sizeMap: Record<string, [number, number]> = {
+            '4oz': [2.5, 3.5],
+            '8oz': [2.75, 4],
+            '16oz': [3, 4.4],
+            '24oz': [3.5, 5],
+            '32oz': [4, 6],
+            'Sticker': [4, 3]
+        };
+        
+        const matchedSize = Object.keys(sizeMap).find(k => labelStyle.size.includes(k));
+        const [labelWidth, labelHeight] = sizeMap[matchedSize || '16oz'];
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const x = (pageWidth - labelWidth) / 2;
+        const y = (pageHeight - labelHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, labelWidth, labelHeight, undefined, 'FAST');
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!previewRef.current) return;
+        
+        try {
+            setLoading(true);
+            toast({ title: "Optimizing PDF...", description: "Converting assets for secure download." });
+            
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'in',
+                format: [8.5, 11]
+            });
+
+            const clone = previewRef.current.cloneNode(true) as HTMLElement;
+            clone.style.position = 'fixed';
+            clone.style.left = '-9999px';
+            clone.style.top = '0';
+            clone.style.width = '800px'; // Force a stable width for generation
+            clone.style.transform = 'none';
+            clone.style.scale = '1';
+            document.body.appendChild(clone);
+
+            const labelBlocks = clone.querySelectorAll('.print-label-block');
+            
+            if (labelBlocks.length === 0) {
+                await processLabel(clone, pdf);
+            } else {
+                for (let i = 0; i < labelBlocks.length; i++) {
+                    const block = labelBlocks[i] as HTMLElement;
+                    block.style.display = 'flex';
+                    block.style.marginBottom = '0';
+                    block.style.position = 'relative';
+                    block.style.left = '0';
+                    block.style.top = '0';
+                    
+                    if (i > 0) pdf.addPage();
+                    await processLabel(block, pdf);
+                }
+            }
+
+            pdf.save(`${labelContent.name.replace(/\s+/g, '_')}_Label.pdf`);
+            document.body.removeChild(clone);
+            toast({ title: "Success!", description: "PDF has been downloaded." });
+        } catch (error: any) {
+            console.error("PDF Export Error:", error);
+            toast({ 
+                title: "PDF Error", 
+                description: "There was an issue creating the PDF.", 
+                variant: "destructive" 
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDirectPrint = async () => {
+        if (!previewRef.current) return;
+
+        try {
+            toast({ title: "Opening Print Context...", description: "Optimizing for " + labelStyle.printTheme + " mode." });
+            
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) throw new Error("Popup blocked");
+
+            const labelWidth = labelStyle.size.includes('4oz') ? '2.5in' : labelStyle.size.includes('8oz') ? '2.75in' : labelStyle.size.includes('16oz') ? '3in' : labelStyle.size.includes('24oz') ? '3.5in' : labelStyle.size.includes('32oz') ? '4in' : '4in';
+            const labelHeight = labelStyle.size.includes('4oz') ? '3.5in' : labelStyle.size.includes('8oz') ? '4in' : labelStyle.size.includes('16oz') ? '4.4in' : labelStyle.size.includes('24oz') ? '5in' : labelStyle.size.includes('32oz') ? '6in' : '3in';
+
+            const baseStyle = `
+                body { margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; background: white; font-family: -apple-system, sans-serif; }
+                .label-wrapper { margin-bottom: 40px; page-break-after: always; display: flex; justify-content: center; width: 100%; }
+                .label-container { 
+                    width: ${labelWidth};
+                    height: ${labelHeight};
+                    border: 2px solid #000; 
+                    background: ${labelStyle.printTheme === 'Dark' ? '#18181b' : '#ffffff'}; 
+                    color: ${labelStyle.printTheme === 'Dark' ? '#ffffff' : '#000000'}; 
+                    display: flex; flex-direction: column; 
+                    overflow: hidden;
+                    box-sizing: border-box;
+                    print-color-adjust: exact;
+                }
+                @page { size: auto; margin: 0mm; }
+                .label-container * { color: inherit !important; box-sizing: border-box; min-width: 0; min-height: 0; }
+                .label-container b, .label-container strong { font-weight: 900 !important; }
+                
+                ${labelStyle.printTheme === 'Light' ? `
+                    * { color: #000000 !important; opacity: 1 !important; print-color-adjust: exact !important; }
+                    .label-container { color: #000000 !important; background: #ffffff !important; border: 3px solid #000 !important; }
+                    .font-black, .font-bold { color: #000000 !important; }
+                ` : ''}
+            `;
+
+            const generateLabelHtml = (elements: string, isSplitPage?: boolean) => `
+                <div class="label-wrapper">
+                    <div class="label-container" style="display: flex; flex-direction: column;">
+                        <div class="h-2.5 shrink-0" style="background-color: ${labelStyle.themeColor}"></div>
+                        <div class="flex-1 p-4 flex flex-col min-h-0 overflow-hidden">
+                            ${elements}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const headerPart = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; width: 100%; flex-shrink: 0; gap: 12px;">
+                    <div style="flex: 1; min-width: 0;">
+                        ${labelStyle.showBrand && labelContent.brand ? `<div class="text-[9px] uppercase font-black mb-0.5 tracking-tighter" style="line-height: 1; opacity: 0.7;">${labelContent.brand}</div>` : ''}
+                        <div class="font-black uppercase" style="font-size: ${labelStyle.fontSize === 'Small' ? '1.1rem' : labelStyle.fontSize === 'Medium' ? '1.5rem' : labelStyle.fontSize === 'Large' ? '2.1rem' : '2.6rem'}; line-height: 0.95; letter-spacing: -0.04em; white-space: normal; word-break: normal; overflow-wrap: normal;">${labelContent.name || 'Product'}</div>
+                    </div>
+                    ${labelStyle.showPrimaryRatio ? `
+                    <div class="border-2 border-black p-1.5 rounded-lg flex flex-col items-center justify-center min-w-[80px] shrink-0 bg-white ml-3 shadow-sm">
+                        <div class="text-[7px] uppercase font-black mb-0.5 opacity-60">Ratio</div>
+                        <div class="text-[11px] font-black">${labelContent.dilutionRatio}</div>
+                    </div>` : ''}
+                </div>
+            `;
+
+            const imgPart = labelStyle.showImage && labelContent.imageUrl ? `
+                <div class="w-full ${labelStyle.splitRatios ? 'flex-1' : 'h-[100px]'} min-h-0 rounded-md border flex items-center justify-center p-2 mb-3 overflow-hidden bg-white shrink-0">
+                    <img src="${labelContent.imageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+                </div>
+            ` : '';
+
+            const descPart = labelStyle.showDescription ? `
+                <div class="leading-tight italic mb-2 border-l-4 pl-3 shrink-0 font-bold" style="font-size: ${labelStyle.fontSize === 'Small' ? '9px' : labelStyle.fontSize === 'Medium' ? '10px' : labelStyle.fontSize === 'Large' ? '12px' : '15px'}; max-height: ${labelStyle.splitRatios ? 'none' : '50px'}; overflow: hidden;">
+                    ${labelContent.description || 'Professional Formula.'}
+                </div>
+            ` : '';
+
+            const mapScenarioLabel = (val: string) => {
+                const s = (val || '').toLowerCase();
+                if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "VERY DIRTY";
+                if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) return "SLIGHTLY DIRTY";
+                if (s.match(/interior|cabin|seats|carpet|dash|upholstery|leather|inside/)) return "INTERIOR";
+                if (s.match(/exterior|outside|paint|body|wash|soap|foam/)) return "EXTERIOR";
+                return (val || '').toUpperCase();
+            };
+
+            const findBestRatio = (type: string) => {
+                const ratios = selectedChemical?.dilution_ratios || [];
+                if (ratios.length === 0) return labelContent.dilutionRatio || 'RTU';
+                
+                // 1. Keyword match
+                const match = ratios.find(r => {
+                    const l = ((r.soil_level || '') + ' ' + (r.method || '')).toLowerCase();
+                    if (type === 'Interior') return l.match(/interior|cabin|inside|seats|carpet|dash|upholstery|leather|vinyl/);
+                    if (type === 'Exterior') return l.match(/exterior|outside|paint|body|wash|foam|soap/);
+                    if (type === 'Very Dirty') return l.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|engine/);
+                    if (type === 'Slightly Dirty') return l.match(/light|standard|daily|maintenance|slightly dirty|fair|quick|rinse/);
+                    return false;
+                });
+                
+                if (match) return match.ratio;
+                
+                // 2. Logic-based hierarchy fallback
+                if (ratios.length >= 2) {
+                    if (type === 'Very Dirty') return ratios[0].ratio; // Strongest
+                    if (type === 'Slightly Dirty') return ratios[ratios.length - 1].ratio; // Mildest
+                    if (type === 'Interior' && ratios.length >= 3) return ratios[1].ratio; // Usually mid-tier
+                }
+                
+                return ratios[0].ratio;
+            };
+
+            const activeFiltersCount = [labelStyle.showInterior, labelStyle.showExterior, labelStyle.showHeavy, labelStyle.showLight].filter(Boolean).length;
+            let displayRatios: {label: string, ratio: string}[] = [];
+            if (activeFiltersCount === 0) {
+                displayRatios = (selectedChemical?.dilution_ratios || []).map(r => ({
+                    label: mapScenarioLabel(r.soil_level || r.method || 'General'),
+                    ratio: r.ratio
+                }));
+            } else {
+                if (labelStyle.showInterior) displayRatios.push({ label: 'INTERIOR', ratio: findBestRatio('Interior') });
+                if (labelStyle.showExterior) displayRatios.push({ label: 'EXTERIOR', ratio: findBestRatio('Exterior') });
+                if (labelStyle.showHeavy) displayRatios.push({ label: 'VERY DIRTY', ratio: findBestRatio('Very Dirty') });
+                if (labelStyle.showLight) displayRatios.push({ label: 'SLIGHTLY DIRTY', ratio: findBestRatio('Slightly Dirty') });
+            }
+
+            const mainRatiosPart = labelStyle.showDilutionTable && displayRatios.length > 0 ? `
+                <div class="mb-2 border-2 border-black rounded-md overflow-hidden bg-gray-50 shrink-0">
+                    <div class="bg-gray-200 border-b-2 border-black grid grid-cols-2 p-1.5 font-black uppercase text-[7px]">
+                        <div>Scenario</div>
+                        <div class="text-right">Mix Ratio</div>
+                    </div>
+                    ${displayRatios.slice(0, 4).map((r: any) => `
+                        <div class="grid grid-cols-2 p-1.5 border-b border-black text-[9px] font-bold uppercase last:border-0">
+                            <div class="truncate pr-1">${r.label}</div>
+                            <div class="text-right font-black">${r.ratio}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+
+            const dangerPart = labelStyle.showWarnings ? `
+                <div class="mt-auto pt-2 border-t-2 shrink-0 border-black">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-red-600 text-white text-[7px] font-black px-1 rounded-sm">DANGER</span>
+                        <span class="text-[8px] font-black text-red-500 uppercase truncate">
+                            ${labelContent.safetyWarning}
+                        </span>
+                    </div>
+                </div>
+            ` : '';
+
+            const instructionsPart = labelStyle.showInstructions ? `
+                <div class="${labelStyle.splitRatios ? 'flex-1' : 'shrink'} overflow-hidden">
+                    <div class="text-[7px] uppercase font-black mb-1 opacity-60">Usage Guide</div>
+                    <div style="font-size: ${labelStyle.fontSize === 'Small' ? '9px' : labelStyle.fontSize === 'Medium' ? '11px' : labelStyle.fontSize === 'Large' ? '13px' : '16px'}; white-space: pre-wrap; line-height: 1.1;" class="font-bold">
+                        ${labelContent.instructions}
+                    </div>
+                </div>
+            ` : '';
+
+            const freeformPart = labelStyle.showFreeform ? `
+                <div class="mt-2 p-2 border-2 border-black border-dashed min-h-[40px] font-bold shrink-0" style="font-size: ${labelStyle.fontSize === 'Small' ? '9px' : '11px'};">
+                    ${labelContent.freeformText || ''}
+                </div>
+            ` : '';
+
+            const blankPart = labelStyle.showBlankForm ? `
+                <div class="mt-2 p-2 border-2 border-black border-dotted min-h-[60px] flex flex-col justify-end shrink-0">
+                    <div class="border-b-2 border-black w-full mb-3"></div>
+                    <div class="border-b-2 border-black w-full mb-3"></div>
+                </div>
+            ` : '';
+
+            let finalHtmlSteps = "";
+            if (labelStyle.splitRatios) {
+                finalHtmlSteps += generateLabelHtml(headerPart + imgPart + descPart + freeformPart + blankPart);
+                finalHtmlSteps += generateLabelHtml(headerPart + mainRatiosPart + instructionsPart + dangerPart);
+            } else {
+                // SINGLE LABEL LAYOUT ORDER:
+                // Header (fixed)
+                // Content Scroll (img, desc, instruc - flex-1)
+                // Footer (ratios, freeform, blank, danger - shrink-0)
+                finalHtmlSteps += generateLabelHtml(
+                    headerPart + 
+                    `<div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        ${imgPart}
+                        ${descPart}
+                        ${instructionsPart}
+                    </div>` + 
+                    `<div class="shrink-0 mt-3">
+                        ${mainRatiosPart}
+                        ${freeformPart}
+                        ${blankPart}
+                        ${dangerPart}
+                    </div>`
+                );
+            }
+
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print Labels</title>
+                        <script src="https://cdn.tailwindcss.com"></script>
+                        <style>${baseStyle}</style>
+                    </head>
+                    <body>
+                        ${finalHtmlSteps}
+                        <script>
+                            window.onload = () => {
+                                setTimeout(() => { window.print(); window.close(); }, 800);
+                            };
+                        </script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+
+        } catch (error) {
+            console.error("Print Error:", error);
+            toast({ title: "Print Failed", variant: "destructive" });
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-none md:max-w-none lg:max-w-none xl:max-w-[1700px] w-[96vw] h-[92vh] max-h-[92vh] bg-zinc-950 border-zinc-800 text-white p-0 flex flex-col overflow-hidden sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <DialogHeader className="px-8 py-5 border-b border-zinc-800 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-purple-600/20 rounded-xl">
+                            <Tag className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <DialogTitle className="text-xl font-bold">Chemical Label Maker</DialogTitle>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-zinc-500 hover:text-purple-400"
+                                    onClick={() => setShowHelp(true)}
+                                >
+                                    <HelpCircle className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <DialogDescription className="text-zinc-500">
+                                Design professional labels for your bottles and stickers.
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+
+                <HelpModal 
+                    open={showHelp} 
+                    onOpenChange={setShowHelp} 
+                    role="admin"
+                    initialTopicId="chemical-label-maker"
+                />
+
+                {/* Mobile Tabs Switcher */}
+                <div className="lg:hidden shrink-0 border-b border-zinc-800 bg-zinc-950 px-6 pt-2">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 bg-zinc-900">
+                            <TabsTrigger value="edit">Edit Content</TabsTrigger>
+                            <TabsTrigger value="preview">Preview Label</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
+
+                <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-zinc-950">
+                    {/* Sidebar: Controls */}
+                    <div className={`${activeTab === 'preview' ? 'hidden lg:flex' : 'flex'} w-full lg:w-[380px] 2xl:w-[460px] border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-900/30 flex-col shrink-0`}>
+                        <ScrollArea className="flex-1">
+                            <div className="p-4 space-y-6">
+                                {/* Chemical Selection */}
+                                <div className="space-y-2">
+                                    <Label className="text-zinc-500 uppercase text-[10px] font-bold tracking-wider">Select Chemical</Label>
+                                    <Select 
+                                        value={selectedChemical?.id || ""} 
+                                        onValueChange={(val) => setSelectedChemical(chemicals.find(c => c.id === val) || null)}
+                                    >
+                                        <SelectTrigger className="bg-zinc-900 border-zinc-800 h-9">
+                                            <SelectValue placeholder="Choose a chemical..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                            {chemicals.map(c => (
+                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Design Config */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[14px] uppercase font-bold text-zinc-400 flex items-center gap-2">
+                                        <Settings2 className="w-4 h-4 text-purple-400" />
+                                        Design Configuration
+                                    </h4>
+
+                                    <div className="space-y-3 bg-zinc-900/50 p-3 rounded-lg border border-zinc-800/50 shadow-inner">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] uppercase text-zinc-500 font-bold px-1">Design Management</Label>
+                                                {activeTemplateId && hasChanges && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        onClick={handleUpdateTemplate}
+                                                        className="h-5 px-2 text-[9px] bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black font-black border border-yellow-500/30 animate-pulse"
+                                                    >
+                                                        SAVE CHANGES?
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Input 
+                                                    placeholder="Design Name..." 
+                                                    value={newTemplateName}
+                                                    onChange={(e) => setNewTemplateName(e.target.value)}
+                                                    className="bg-zinc-950 border-zinc-800 h-8 text-xs font-bold"
+                                                />
+                                                <Button 
+                                                    onClick={handleSaveTemplate}
+                                                    className="bg-purple-600 hover:bg-purple-500 h-8 px-3 text-[10px] font-bold shadow-lg shrink-0"
+                                                >
+                                                    <Plus className="w-3.5 h-3.5 mr-1" />
+                                                    SAVE NEW
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <Separator className="bg-zinc-800/30 my-2" />
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-zinc-500 text-[10px] uppercase font-bold">Size</Label>
+                                                <Select 
+                                                    value={labelStyle.size} 
+                                                    onValueChange={(val) => setLabelStyle(prev => ({ ...prev, size: val as any }))}
+                                                >
+                                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 h-8 text-[11px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                        <SelectItem value="4oz">4oz Bottle</SelectItem>
+                                                        <SelectItem value="8oz">8oz Bottle</SelectItem>
+                                                        <SelectItem value="16oz">16oz Bottle</SelectItem>
+                                                        <SelectItem value="24oz">24oz Bottle</SelectItem>
+                                                        <SelectItem value="32oz">32oz Bottle</SelectItem>
+                                                        <SelectItem value="Sticker">Custom Sticker</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-zinc-500 text-[10px] uppercase font-bold">Font</Label>
+                                                <Select 
+                                                    value={labelStyle.fontSize} 
+                                                    onValueChange={(val) => setLabelStyle(prev => ({ ...prev, fontSize: val as any }))}
+                                                >
+                                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 h-8 text-[11px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                        <SelectItem value="Small">Small</SelectItem>
+                                                        <SelectItem value="Medium">Medium</SelectItem>
+                                                        <SelectItem value="Large">Large</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label className="text-zinc-500 text-[10px] uppercase font-bold">Print Theme</Label>
+                                            <div className="flex gap-1 p-1 bg-zinc-950 rounded border border-zinc-800">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={`flex-1 h-7 text-[9px] font-bold ${labelStyle.printTheme === 'Light' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
+                                                    onClick={() => setLabelStyle(prev => ({ ...prev, printTheme: 'Light' }))}
+                                                >
+                                                    <Sun className="w-3 h-3 mr-1.5" /> Light
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={`flex-1 h-7 text-[9px] font-bold ${labelStyle.printTheme === 'Dark' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
+                                                    onClick={() => setLabelStyle(prev => ({ ...prev, printTheme: 'Dark' }))}
+                                                >
+                                                    <Moon className="w-3 h-3 mr-1.5" /> Dark
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider px-1">Component Toggles</Label>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-5 px-2 text-[9px] text-zinc-400 hover:text-white"
+                                            onClick={() => {
+                                                const keys = ["showImage", "showBrand", "showDescription", "showDilutionTable", "showInstructions", "showPrimaryRatio", "showWarnings", "showFreeform", "showBlankForm", "boldMode", "splitRatios"];
+                                                const allOn = keys.every(k => (labelStyle as any)[k]);
+                                                const newState = { ...labelStyle };
+                                                keys.forEach(k => (newState as any)[k] = !allOn);
+                                                setLabelStyle(newState);
+                                            }}
+                                        >
+                                            All / None
+                                        </Button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { label: "Pic", key: "showImage" },
+                                            { label: "Brand", key: "showBrand" },
+                                            { label: "Summ", key: "showDescription" },
+                                            { label: "Table", key: "showDilutionTable" },
+                                            { label: "Instr", key: "showInstructions" },
+                                            { label: "Ratio", key: "showPrimaryRatio" },
+                                            { label: "Alert", key: "showWarnings" },
+                                            { label: "Bold", key: "boldMode" },
+                                            { label: "Split", key: "splitRatios" },
+                                            { label: "Note", key: "showFreeform" },
+                                            { label: "Blank", key: "showBlankForm" }
+                                        ].map((toggle) => (
+                                            <Button 
+                                                key={toggle.key} 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => setLabelStyle(prev => ({ ...prev, [toggle.key]: !(prev as any)[toggle.key] }))}
+                                                className={`h-8 text-[9px] font-bold border transition-all ${labelStyle[toggle.key as keyof typeof labelStyle] ? 'text-green-500 border-green-500/30 bg-green-500/10 shadow-[0_0_10px_rgba(34,197,94,0.05)]' : 'text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}
+                                            >
+                                                {toggle.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Scenario Filters */}
+                                <div className="space-y-3 pt-1 text-left px-1">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h4 className="text-[12px] uppercase font-black text-zinc-400 flex items-center gap-2">
+                                            <Wand2 className="w-3.5 h-3.5 text-blue-400" />
+                                            Scenario Filters
+                                        </h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { label: "Interior", key: "showInterior" },
+                                            { label: "Exterior", key: "showExterior" },
+                                            { label: "Very Dirty", key: "showHeavy" },
+                                            { label: "Slightly Dirty", key: "showLight" }
+                                        ].map((toggle) => (
+                                            <Button 
+                                                key={toggle.key} 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => setLabelStyle(prev => ({ ...prev, [toggle.key]: !(prev as any)[toggle.key] }))}
+                                                className={`h-9 text-[10px] font-black border transition-all ${labelStyle[toggle.key as keyof typeof labelStyle] ? 'text-blue-500 border-blue-500/30 bg-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}
+                                            >
+                                                {toggle.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[9px] text-zinc-600 leading-tight italic">
+                                        Only selected scenarios show in dilution table.
+                                    </p>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Saved List */}
+                                <div className="space-y-3 px-1">
+                                    <h4 className="text-[11px] uppercase font-bold text-zinc-400 flex items-center gap-2">
+                                        <Layout className="w-3.5 h-3.5 text-blue-400" />
+                                        Saved Templates
+                                    </h4>
+                                    
+                                    {savedTemplates.length === 0 ? (
+                                        <div className="text-[10px] text-zinc-600 italic px-2">No designs saved.</div>
+                                    ) : (
+                                        <div className="space-y-1 max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
+                                            {savedTemplates.map((template) => (
+                                                <div key={template.id} className="group flex items-center justify-between p-2 rounded bg-zinc-950 border border-zinc-900 hover:border-zinc-700 transition-colors">
+                                                    <div className="flex-1 cursor-pointer truncate" onClick={() => handleLoadTemplate(template)}>
+                                                        <div className="text-[10px] font-black text-zinc-300">{template.templateName}</div>
+                                                        <div className="text-[8px] text-zinc-600 uppercase font-bold">{template.content.name || 'Untitled'}</div>
+                                                    </div>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
+                                                        className="h-7 w-7 p-0 text-zinc-700 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-full"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+                                
+                                {selectedChemical && (
+                                    <Button 
+                                        onClick={handleAiGenerate}
+                                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg text-[11px] h-9 font-bold"
+                                    >
+                                        <Sparkles className="w-3.5 h-3.5 mr-2" />
+                                        AUTO-FIX WITH AI
+                                    </Button>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </div>
+
+                    {/* Main Content: Editor & Preview */}
+                    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-zinc-950">
+                        {/* Editor Forms */}
+                        <div className={`${activeTab === 'preview' ? 'hidden xl:flex' : 'flex'} flex-[1.6] border-r border-zinc-800 flex-col min-w-0`}>
+                            <ScrollArea className="flex-1">
+                                <div className="p-8 sm:p-12 space-y-10">
+                                    <div className="flex flex-col sm:flex-row gap-8">
+                                        <div className="space-y-3">
+                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Product Name</Label>
+                                            <Input 
+                                                value={labelContent.name} 
+                                                onChange={(e) => setLabelContent(prev => ({ ...prev, name: e.target.value }))}
+                                                className="bg-zinc-900 border-zinc-800 h-9"
+                                            />
+                                        </div>
+                                        {labelStyle.showBrand && (
+                                            <div className="space-y-3">
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Brand / Series</Label>
+                                                <Input 
+                                                    value={labelContent.brand} 
+                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, brand: e.target.value }))}
+                                                    className="bg-zinc-900 border-zinc-800 h-9"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {labelStyle.showDescription && (
+                                        <div className="space-y-3">
+                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Summary Description</Label>
+                                            <Textarea 
+                                                value={labelContent.description} 
+                                                onChange={(e) => setLabelContent(prev => ({ ...prev, description: e.target.value }))}
+                                                className="bg-zinc-900 border-zinc-800 min-h-[140px] text-sm"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {labelStyle.showPrimaryRatio && (
+                                        <div className="flex flex-col sm:flex-row gap-8">
+                                            <div className="flex-1 space-y-3">
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Primary Label Ratio</Label>
+                                                <Select 
+                                                    value={labelContent.dilutionRatio} 
+                                                    onValueChange={(val) => setLabelContent(prev => ({ ...prev, dilutionRatio: val }))}
+                                                >
+                                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 h-9">
+                                                        <SelectValue placeholder="Select ratio" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                        <SelectItem value="RTU">RTU (Ready to Use)</SelectItem>
+                                                        {selectedChemical?.dilution_ratios?.map((d, i) => (
+                                                            <SelectItem key={i} value={d.ratio}>{d.ratio} ({d.method})</SelectItem>
+                                                        ))}
+                                                        <SelectItem value="Custom">Manual Entry...</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            {labelContent.dilutionRatio === 'Custom' && (
+                                                <div className="space-y-3">
+                                                     <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Manual Ratio</Label>
+                                                     <Input 
+                                                         placeholder="e.g. 1:15"
+                                                         className="bg-zinc-900 border-zinc-800 h-9"
+                                                         onChange={(e) => setLabelContent(prev => ({ ...prev, dilutionRatio: e.target.value }))}
+                                                     />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {labelStyle.showInstructions && (
+                                        <div className="space-y-3">
+                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Usage Instructions</Label>
+                                            <Textarea 
+                                                value={labelContent.instructions} 
+                                                onChange={(e) => setLabelContent(prev => ({ ...prev, instructions: e.target.value }))}
+                                                className="bg-zinc-900 border-zinc-800 min-h-[250px] text-sm"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {labelStyle.showWarnings && (
+                                        <div className="space-y-3">
+                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                                <AlertTriangle className="w-3 h-3 text-red-500" />
+                                                Safety Alert
+                                            </Label>
+                                            <Input 
+                                                value={labelContent.safetyWarning} 
+                                                onChange={(e) => setLabelContent(prev => ({ ...prev, safetyWarning: e.target.value }))}
+                                                className="bg-zinc-900 border-zinc-800 h-9 text-sm text-red-200"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {labelStyle.showFreeform && (
+                                        <div className="space-y-3">
+                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Freeform Custom Text</Label>
+                                            <Textarea 
+                                                value={labelContent.freeformText} 
+                                                onChange={(e) => setLabelContent(prev => ({ ...prev, freeformText: e.target.value }))}
+                                                placeholder="Type custom text here..."
+                                                className="bg-zinc-900 border-zinc-800 min-h-[80px] text-sm"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Image Selection */}
+                                    {labelStyle.showImage && selectedChemical?.gallery_image_urls && selectedChemical.gallery_image_urls.length > 0 && (
+                                        <div className="space-y-4">
+                                            <Label className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Choose Photo</Label>
+                                            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                                                <button 
+                                                    onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: selectedChemical.primary_image_url || '' }))}
+                                                    className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === selectedChemical.primary_image_url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
+                                                >
+                                                    <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover rounded-lg" />
+                                                </button>
+                                                {selectedChemical.gallery_image_urls.map((url, i) => (
+                                                    <button 
+                                                        key={i}
+                                                        onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: url }))}
+                                                        className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
+                                                    >
+                                                        <img src={url} className="w-full h-full object-cover rounded-lg" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </div>
+
+                        <div className={`${activeTab === 'edit' ? 'hidden xl:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent)] pointer-events-none" />
+                            <div ref={previewRef} className="flex flex-col items-center gap-12 w-fit min-w-[300px] pt-10 pb-60 origin-top transition-all duration-500">
+                                {labelStyle.splitRatios ? (
+                                    <>
+                                        <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">Label 1: Primary</div>
+                                        <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="primary" />
+                                        <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">Label 2: Technical</div>
+                                        <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="ratios" />
+                                    </>
+                                ) : (
+                                    <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="all" />
+                                )}
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <DialogFooter className="px-6 py-4 border-t border-zinc-800 bg-zinc-950 flex items-center justify-end gap-2 shrink-0">
+                    <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zinc-800 bg-zinc-900 text-zinc-400 h-9 text-xs">Cancel</Button>
+                    <Button 
+                        variant="secondary" 
+                        className="bg-zinc-800 hover:bg-zinc-700 text-white h-9 text-xs font-bold" 
+                        onClick={handleDownloadPdf} 
+                        disabled={loading}
+                    >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2 ml-2" /> : <Download className="w-4 h-4 mr-2" />}
+                        SAVE PDF
+                    </Button>
+                    <Button 
+                        className="bg-purple-600 hover:bg-purple-700 text-white h-9 text-xs font-bold shadow-lg" 
+                        onClick={handleDirectPrint} 
+                        disabled={loading}
+                    >
+                        <Printer className="w-4 h-4 mr-2" />
+                        PRINT LABEL
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function LabelBlock({ labelStyle, labelContent, selectedChemical, mode }: any) {
+    const isLight = labelStyle.printTheme === 'Light';
+    const s = labelStyle.size;
+    const w = s.includes('4oz') ? '360px' : s.includes('8oz') ? '398px' : s.includes('16oz') ? '435px' : s.includes('24oz') ? '510px' : s.includes('32oz') ? '570px' : '600px';
+    const h = s.includes('4oz') ? '510px' : s.includes('8oz') ? '570px' : s.includes('16oz') ? '645px' : s.includes('24oz') ? '735px' : s.includes('32oz') ? '840px' : '450px';
+
+    const activeFiltersCount = [labelStyle.showInterior, labelStyle.showExterior, labelStyle.showHeavy, labelStyle.showLight].filter(Boolean).length;
+
+    const mapScenarioLabel = (val: string) => {
+        const s = (val || '').toLowerCase();
+        if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "VERY DIRTY";
+        if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) return "SLIGHTLY DIRTY";
+        if (s.match(/interior|cabin|seats|carpet|dash|upholstery|leather|inside/)) return "INTERIOR";
+        if (s.match(/exterior|outside|paint|body|wash|soap|foam/)) return "EXTERIOR";
+        return (val || '').toUpperCase();
+    };
+
+    const findBestRatio = (type: string) => {
+        const ratios = selectedChemical?.dilution_ratios || [];
+        if (ratios.length === 0) return labelContent.dilutionRatio || 'RTU';
+
+        // 1. Keyword search (most accurate)
+        const match = ratios.find(r => {
+            const l = ((r.soil_level || '') + ' ' + (r.method || '')).toLowerCase();
+            if (type === 'Interior') return l.match(/interior|cabin|inside|seats|carpet|dash|upholstery|leather|vinyl/);
+            if (type === 'Exterior') return l.match(/exterior|outside|paint|body|wash|foam|soap/);
+            if (type === 'Very Dirty') return l.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|engine/);
+            if (type === 'Slightly Dirty') return l.match(/light|standard|daily|maintenance|slightly dirty|fair|quick|rinse/);
+            return false;
+        });
+
+        if (match) return match.ratio;
+
+        // 2. Logic-based hierarchy fallback: [0] is strongest, [last] is mildest
+        if (ratios.length >= 2) {
+            if (type === 'Very Dirty') return ratios[0].ratio;
+            if (type === 'Slightly Dirty') return ratios[ratios.length - 1].ratio;
+            if (type === 'Interior' && ratios.length >= 3) return ratios[1].ratio;
+        }
+
+        return ratios[0].ratio;
+    };
+
+    let displayRatios: {label: string, ratio: string}[] = [];
+    if (activeFiltersCount === 0) {
+        // Show everything available if no specific task filters are toggled
+        displayRatios = (selectedChemical?.dilution_ratios || []).map(r => ({
+            label: mapScenarioLabel(r.soil_level || r.method || 'General'),
+            ratio: r.ratio
+        }));
+    } else {
+        // Build the list precisely based on user-selected toggles
+        if (labelStyle.showInterior) displayRatios.push({ label: 'Interior', ratio: findBestRatio('Interior') });
+        if (labelStyle.showExterior) displayRatios.push({ label: 'Exterior', ratio: findBestRatio('Exterior') });
+        if (labelStyle.showHeavy) displayRatios.push({ label: 'Very Dirty', ratio: findBestRatio('Very Dirty') });
+        if (labelStyle.showLight) displayRatios.push({ label: 'Slightly Dirty', ratio: findBestRatio('Slightly Dirty') });
+    }
+
+
+    return (
+        <div 
+            className={`print-label-block border-2 shadow-2xl overflow-hidden flex flex-col relative shrink-0 transition-colors duration-500 ${isLight ? 'bg-white border-zinc-300' : 'bg-zinc-900 border-zinc-800'}`} 
+            style={{ width: w, height: h }}
+        >
+            <div className="h-2.5 shrink-0" style={{ backgroundColor: labelStyle.themeColor }} />
+            <div className={`flex-1 p-4 flex flex-col min-h-0 ${isLight ? 'text-black' : 'text-zinc-100'}`}>
+                <div className="flex justify-between items-center mb-4 shrink-0 w-full gap-3">
+                    <div className="flex-1 min-w-0">
+                        {labelStyle.showBrand && labelContent.brand && (
+                            <div className={`text-[9px] uppercase font-black tracking-tighter mb-0.5 ${isLight ? 'text-black opacity-70' : 'text-zinc-500'}`}>
+                                {labelContent.brand}
+                            </div>
+                        )}
+                        <h1 
+                            className={`font-black uppercase leading-[0.95] tracking-[-0.04em] ${labelStyle.boldMode ? 'italic' : ''}`}
+                            style={{ 
+                                fontSize: labelStyle.fontSize === 'Small' ? '1.1rem' : 
+                                         labelStyle.fontSize === 'Medium' ? '1.5rem' : 
+                                         labelStyle.fontSize === 'Large' ? '2.1rem' : '2.6rem',
+                                wordBreak: 'normal',
+                                whiteSpace: 'normal',
+                                overflowWrap: 'normal'
+                            }}
+                        >
+                            {labelContent.name || 'Product'}
+                        </h1>
+                    </div>
+                    {labelStyle.showPrimaryRatio && (
+                        <div className={`ratio-box p-1.5 rounded-lg border-2 flex flex-col items-center justify-center min-w-[75px] shrink-0 ${isLight ? 'bg-white border-black text-black' : 'bg-black/50 border-zinc-800 text-white shadow-inner'}`}>
+                            <div className="text-[7px] uppercase font-black opacity-60">Ratio</div>
+                            <div className="text-[11px] font-black">{labelContent.dilutionRatio}</div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Content Area - Uses flex-1 to push footer down */}
+                <div className="flex-1 flex flex-col min-h-0 container-content">
+                    {/* Primary Mode Details */}
+                    {(mode === 'all' || mode === 'primary') && (
+                        <>
+                            {labelStyle.showImage && labelContent.imageUrl && (
+                                <div className={`w-full ${mode === 'all' ? 'h-[110px]' : 'flex-1'} min-h-0 rounded-xl overflow-hidden mb-3 border flex items-center justify-center p-2 bg-white shrink-0 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                                    <img src={labelContent.imageUrl} crossOrigin="anonymous" className="max-w-full max-h-full object-contain" />
+                                </div>
+                            )}
+                            {labelStyle.showDescription && (
+                                <div 
+                                    className={`leading-tight italic mb-3 border-l-4 pr-3 py-1 shrink-0 ${isLight ? 'border-black text-black' : 'border-zinc-700 text-zinc-400'} ${labelStyle.boldMode ? 'font-black' : 'font-medium'}`}
+                                    style={{ 
+                                        fontSize: labelStyle.fontSize === 'Small' ? '9px' : '10px',
+                                        maxHeight: mode === 'all' ? '60px' : 'none',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    {labelContent.description || 'Professional detailing formula.'}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* technical Mode Details */}
+                    {(mode === 'all' || mode === 'ratios') && (
+                        <div className="flex-1 flex flex-col min-h-0">
+                            {labelStyle.showDilutionTable && displayRatios.length > 0 && (
+                            <div className={`mb-3 border-2 rounded-lg overflow-hidden shrink-0 ${isLight ? 'border-black bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                                <div className={`grid grid-cols-2 text-[7px] font-black uppercase p-1.5 border-b-2 ${isLight ? 'border-black bg-zinc-200' : 'border-zinc-800 bg-white/5'}`}>
+                                    <div>USAGE SCENARIO</div>
+                                    <div className="text-right">MIX RATIO</div>
+                                </div>
+                                {displayRatios.map((r: any, i: number) => (
+                                    <div key={i} className={`grid grid-cols-2 text-[8.5px] p-1.5 font-bold ${i > 0 ? 'border-t' : ''} ${isLight ? 'border-black text-black' : 'border-zinc-800 text-zinc-300'}`}>
+                                        <div className="truncate pr-1 uppercase group-hover:text-clip">{r.label}</div>
+                                        <div className="text-right font-black tracking-tight">{r.ratio}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {labelStyle.showFreeform && (
+                            <div 
+                                className={`mt-2 p-2.5 border-2 border-dashed rounded-lg mb-3 shrink-0 ${isLight ? 'border-black text-black font-black' : 'border-zinc-700 text-zinc-300'}`}
+                                style={{ fontSize: labelStyle.fontSize === 'Small' ? '9px' : '11px' }}
+                            >
+                                {labelContent.freeformText || 'Custom handwritten notes block...'}
+                            </div>
+                        )}
+
+                            {labelStyle.showBlankForm && (
+                                <div className={`mt-1 p-2 border-2 border-dotted rounded-lg min-h-[50px] shrink flex flex-col justify-end mb-2 ${isLight ? 'border-black' : 'border-zinc-700'}`}>
+                                    <div className={`border-b-2 w-full mb-2 ${isLight ? 'border-black' : 'border-zinc-800/50'}`} />
+                                    <div className={`border-b-2 w-full mb-0.5 ${isLight ? 'border-black' : 'border-zinc-800/50'}`} />
+                                    <div className="text-[5.5px] uppercase font-black text-right opacity-40">Notes</div>
+                                </div>
+                            )}
+
+                            {/* Usage Guide */}
+                            {labelStyle.showInstructions && (
+                                <div className="flex-1 min-h-0 overflow-hidden">
+                                    <div className={`text-[7.5px] uppercase font-black tracking-widest mb-1 ${isLight ? 'text-black' : 'text-zinc-500'}`}>
+                                        Usage Guide & Instructions
+                                    </div>
+                                    <div 
+                                        className={`leading-[1.12] overflow-hidden whitespace-pre-wrap ${isLight ? 'text-black' : 'text-zinc-300'} ${labelStyle.boldMode ? 'font-black' : 'font-bold'}`}
+                                        style={{ 
+                                            fontSize: labelStyle.fontSize === 'Small' ? '9.5px' : 
+                                                     labelStyle.fontSize === 'Medium' ? '11px' : '13px',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        {labelContent.instructions}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer Danger - Always at the very bottom */}
+                {labelStyle.showWarnings && (
+                    <div className={`mt-auto pt-2 border-t-2 shrink-0 ${isLight ? 'border-black' : 'border-zinc-800'}`}>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-red-600 text-white text-[7px] font-black px-1 rounded-sm">DANGER</span>
+                            <span className="text-[8px] font-black text-red-500 uppercase truncate">
+                                {labelContent.safetyWarning}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

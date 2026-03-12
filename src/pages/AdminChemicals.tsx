@@ -141,15 +141,12 @@ export default function AdminChemicals() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {chemicals.map(c => (
                             <div key={c.id} className="relative group">
-                                <ChemicalCard chemical={c} onClick={() => handleEdit(c)} />
-                                <Button
-                                    size="icon"
-                                    variant="destructive"
-                                    className="absolute top-2 right-2 opacity-100 z-50 shadow-sm"
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <ChemicalCard 
+                                    chemical={c} 
+                                    onClick={() => handleEdit(c)} 
+                                    isAdmin={true}
+                                    onDelete={handleDelete}
+                                />
                             </div>
                         ))}
                     </div>

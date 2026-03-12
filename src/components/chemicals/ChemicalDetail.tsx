@@ -31,6 +31,16 @@ import {
 import { useState, useEffect } from 'react';
 import { ChemicalEditForm } from './ChemicalEditForm';
 import { PhotoGalleryLightbox } from '../gallery/PhotoGalleryLightbox';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -51,6 +61,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     const [viewingDilutionNote, setViewingDilutionNote] = useState<{ method: string; note: string } | null>(null);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [initialPhotoIndex, setInitialPhotoIndex] = useState(0);
+    const [confirmDelete, setConfirmDelete] = useState<{ url: string; isPrimary: boolean } | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     // Helper to extract YouTube ID
@@ -128,6 +140,64 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
         } catch (error: any) {
             console.error("Library Add Error:", error);
             toast({ title: "Failed", description: "Could not add to library.", variant: "destructive" });
+        }
+    };
+    
+    // Gallery management handlers
+    const filteredGallery = (chemical?.gallery_image_urls || []).filter(url => url !== chemical?.primary_image_url);
+    const allImages = chemical ? [
+        ...(chemical.primary_image_url ? [{ url: chemical.primary_image_url, isPrimary: true }] : []),
+        ...filteredGallery.map(url => ({ url, isPrimary: false }))
+    ] : [];
+
+    const handleSetPrimary = async (imageUrl: string) => {
+        if (!isAdmin || !chemical || !imageUrl) return;
+        setIsSaving(true);
+        try {
+            const oldPrimary = chemical.primary_image_url;
+            const newGallery = filteredGallery.filter(url => url !== imageUrl);
+            if (oldPrimary) newGallery.push(oldPrimary);
+
+            const { error } = await updateChemicalPartial(chemical.id, {
+                primary_image_url: imageUrl,
+                gallery_image_urls: newGallery
+            });
+            if (error) throw error;
+            toast({ title: "Primary Image Updated" });
+            if (onUpdate) onUpdate();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!isAdmin || !chemical || !confirmDelete) return;
+        const { url: imageUrl, isPrimary } = confirmDelete;
+        setIsSaving(true);
+        try {
+            let updates: Partial<Chemical> = {};
+            if (isPrimary) {
+                if (filteredGallery.length > 0) {
+                    updates.primary_image_url = filteredGallery[0];
+                    updates.gallery_image_urls = filteredGallery.slice(1);
+                } else {
+                    updates.primary_image_url = "";
+                }
+            } else {
+                updates.gallery_image_urls = filteredGallery.filter(url => url !== imageUrl);
+            }
+
+            const { error } = await updateChemicalPartial(chemical.id, updates);
+            if (error) throw error;
+            toast({ title: "Image Deleted" });
+            if (onUpdate) onUpdate();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+            setConfirmDelete(null);
         }
     };
 
@@ -963,16 +1033,13 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                             </div>
 
                             {/* Photo Gallery (New) */}
-                            {(chemical.primary_image_url || (chemical.gallery_image_urls?.length ?? 0) > 0) && (
+                            {allImages.length > 0 && (
                                 <section>
                                     <h3 className="text-lg font-bold text-white mb-4 flex items-center">
                                         <Images className="w-5 h-5 mr-2 text-purple-400" /> Photo Gallery
                                     </h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        {[
-                                            ...(chemical.primary_image_url ? [{ url: chemical.primary_image_url, label: "Primary" }] : []),
-                                            ...(chemical.gallery_image_urls || []).map(url => ({ url, label: undefined }))
-                                        ].map((img: { url: string; label?: string }, idx) => (
+                                        {allImages.map((img, idx) => (
                                             <div 
                                                 key={idx} 
                                                 className="aspect-square bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 cursor-pointer hover:border-purple-500 transition-all group relative"
@@ -982,9 +1049,9 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                                 }}
                                             >
                                                 <img src={img.url} alt={`Gallery ${idx}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                                {img.label && (
+                                                {img.isPrimary && (
                                                     <div className="absolute top-2 left-2 bg-purple-600 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shadow-lg">
-                                                        {img.label}
+                                                        Primary
                                                     </div>
                                                 )}
                                             </div>
@@ -1074,14 +1141,53 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             </Dialog>
             {/* Photo Gallery Lightbox */}
             <PhotoGalleryLightbox
-                photos={[
-                    ...(chemical.primary_image_url ? [{ url: chemical.primary_image_url, label: "Primary" }] : []),
-                    ...(chemical.gallery_image_urls || []).map(url => ({ url }))
-                ]}
+                photos={allImages.map(img => ({ url: img.url, label: img.isPrimary ? "Primary" : undefined }))}
                 initialIndex={initialPhotoIndex}
                 open={lightboxOpen}
                 onOpenChange={setLightboxOpen}
+                isAdmin={isAdmin}
+                onSetPrimary={(index) => {
+                    const img = allImages[index];
+                    if (img) handleSetPrimary(img.url);
+                }}
+                onDelete={(index) => {
+                    const img = allImages[index];
+                    if (img) {
+                        setConfirmDelete({ url: img.url, isPrimary: img.isPrimary });
+                        setLightboxOpen(false);
+                    }
+                }}
             />
+
+            {/* Delete Confirmation */}
+            <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+                <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-red-500" />
+                            Delete Photo?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            Are you sure you want to remove this photo? This action cannot be undone.
+                            {confirmDelete?.isPrimary && (
+                                <span className="block mt-2 text-yellow-500/80 font-medium">
+                                    Note: This is the primary image. The next available photo will become primary.
+                                </span>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-white">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            disabled={isSaving}
+                        >
+                            {isSaving ? "Deleting..." : "Delete Photo"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 }

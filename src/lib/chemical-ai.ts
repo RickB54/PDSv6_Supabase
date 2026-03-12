@@ -1,4 +1,4 @@
-import { Chemical, ChemicalCategory } from "@/types/chemicals";
+import { Chemical, ChemicalCategory, DilutionRatio } from "@/types/chemicals";
 import { StepChemicalMapping } from "@/lib/chemicals";
 
 // Helper for generating smart templates
@@ -159,4 +159,39 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
     const alternatives = results.filter(r => r.chem.is_on_hand === false);
 
     return { onHand, alternatives };
+};
+
+// --- VISION / OCR SIMULATION ---
+
+export interface ScannedLabelData {
+    name?: string;
+    brand?: string;
+    description?: string;
+    dilution_instructions?: string;
+    safety_warnings?: string[];
+    ratios?: DilutionRatio[];
+}
+
+/**
+ * MOCK Vision Analysis
+ * In a real app, this would send an image URL/base64 to a Vision model (GPT-4o / Claude 3.5 Sonnet)
+ * with a prompt to extract specific chemical label details.
+ */
+export const analyzeLabelFromImage = async (imageUrl: string, chemicalName?: string): Promise<ScannedLabelData> => {
+    // Artificial delay to simulate AI processing
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Mock extraction logic based on the image name or hypothetical label patterns
+    // We'll return localized data that looks like it came from the instructions
+    return {
+        name: chemicalName || "Identified Product",
+        brand: "Extracted Brand",
+        description: "Surface safe professional cleaner identified from label scan.",
+        dilution_instructions: "Mix 1 part product with 10 parts water for standard cleaning. Use 1:4 for heavy grease.",
+        safety_warnings: ["Eye Irritant", "Wear Gloves", "Do not ingest"],
+        ratios: [
+            { method: "Identified (Scan)", ratio: "1:10", soil_level: "Medium", notes: "Extracted from label text" },
+            { method: "Identified (Scan)", ratio: "1:4", soil_level: "Heavy", notes: "Aggressive cleaning" }
+        ]
+    };
 };

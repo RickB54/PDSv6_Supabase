@@ -11,13 +11,25 @@ type HelpModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   role: 'admin' | 'employee' | 'customer';
+  initialTopicId?: string;
 };
 
-export default function HelpModal({ open, onOpenChange, role }: HelpModalProps) {
+export default function HelpModal({ open, onOpenChange, role, initialTopicId }: HelpModalProps) {
   const [query, setQuery] = useState('');
   const toc = useMemo(() => makeToc(role), [role]);
   const [index, setIndex] = useState(0);
   const [accordionValue, setAccordionValue] = useState<string>(""); // Default closed
+
+  // Handle direct navigation to topic
+  useEffect(() => {
+    if (open && initialTopicId) {
+      const topicIndex = toc.findIndex(t => t.id === initialTopicId);
+      if (topicIndex !== -1) {
+        setIndex(topicIndex);
+        setAccordionValue(""); // Ensure menu is closed to show content
+      }
+    }
+  }, [open, initialTopicId, toc]);
 
   const filteredToc = useMemo(() => {
     const q = query.trim().toLowerCase();

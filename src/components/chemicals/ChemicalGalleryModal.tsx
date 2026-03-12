@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Chemical } from "@/types/chemicals";
-import { Upload, Trash2, Star, Loader2, X, Plus, Images, AlertTriangle } from "lucide-react";
+import { Upload, Trash2, Star, Loader2, X, Plus, Images, AlertTriangle, Download } from "lucide-react";
 import { supabase } from "@/lib/supa-data";
 import { updateChemicalPartial } from "@/lib/chemicals";
 import { toast } from "@/hooks/use-toast";
@@ -34,10 +34,11 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
     const [confirmDelete, setConfirmDelete] = useState<{ url: string, isPrimary: boolean } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const galleryImages = chemical.gallery_image_urls || [];
+    // Ensure primary image is not duplicated in the gallery array
+    const filteredGallery = (chemical.gallery_image_urls || []).filter(url => url !== chemical.primary_image_url);
     const allImages = [
         ...(chemical.primary_image_url ? [{ url: chemical.primary_image_url, isPrimary: true }] : []),
-        ...galleryImages.map(url => ({ url, isPrimary: false }))
+        ...filteredGallery.map(url => ({ url, isPrimary: false }))
     ];
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +67,7 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                 newUrls.push(data.publicUrl);
             }
 
-            const updatedGallery = [...galleryImages, ...newUrls];
+            const updatedGallery = [...filteredGallery, ...newUrls];
             
             // If there's no primary image, set the first uploaded one as primary
             let updates: Partial<Chemical> = { gallery_image_urls: updatedGallery };
@@ -98,14 +99,14 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
             let updates: Partial<Chemical> = {};
             if (isPrimary) {
                 // If primary is deleted, take first from gallery if exists
-                if (galleryImages.length > 0) {
-                    updates.primary_image_url = galleryImages[0];
-                    updates.gallery_image_urls = galleryImages.slice(1);
+                if (filteredGallery.length > 0) {
+                    updates.primary_image_url = filteredGallery[0];
+                    updates.gallery_image_urls = filteredGallery.slice(1);
                 } else {
                     updates.primary_image_url = "";
                 }
             } else {
-                updates.gallery_image_urls = galleryImages.filter(url => url !== imageUrl);
+                updates.gallery_image_urls = filteredGallery.filter(url => url !== imageUrl);
             }
 
             const { error } = await updateChemicalPartial(chemical.id, updates);
@@ -127,7 +128,7 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
         setSaving(true);
         try {
             const oldPrimary = chemical.primary_image_url;
-            const newGallery = galleryImages.filter(url => url !== imageUrl);
+            const newGallery = filteredGallery.filter(url => url !== imageUrl);
             if (oldPrimary) newGallery.push(oldPrimary);
 
             const { error } = await updateChemicalPartial(chemical.id, {
@@ -193,7 +194,7 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {allImages.map((img, idx) => (
                                 <div 
-                                    key={idx} 
+                                    key={img.url} 
                                     className="relative group aspect-square bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-purple-500/50 transition-all cursor-pointer"
                                     onClick={() => {
                                         setInitialPhotoIndex(idx);
@@ -207,18 +208,18 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                                     />
                                     
                                     {img.isPrimary && (
-                                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-purple-600 text-[10px] font-bold uppercase rounded shadow-lg">
+                                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-purple-600 text-[10px] font-bold uppercase rounded shadow-lg z-10">
                                             Primary
                                         </div>
                                     )}
 
                                     {isAdmin && (
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-2 z-30">
                                             {!img.isPrimary && (
                                                 <Button
                                                     size="icon"
                                                     variant="secondary"
-                                                    className="h-8 w-8 bg-zinc-800 hover:bg-purple-600 text-white border-0"
+                                                    className="h-9 w-9 bg-zinc-900/90 hover:bg-purple-600 text-white border-zinc-700 shadow-xl"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleSetPrimary(img.url);
@@ -226,22 +227,48 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                                                     title="Set as Primary"
                                                     disabled={saving}
                                                 >
-                                                    <Star className="w-4 h-4" />
+                                                    <Star className="w-5 h-5" />
                                                 </Button>
                                             )}
-                                            <Button
-                                                size="icon"
-                                                variant="destructive"
-                                                className="h-8 w-8 bg-zinc-800 hover:bg-red-600 text-white border-0"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setConfirmDelete({ url: img.url, isPrimary: img.isPrimary });
-                                                }}
-                                                title="Delete Image"
-                                                disabled={saving}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="secondary"
+                                                    className="h-9 w-9 bg-zinc-900/90 hover:bg-blue-600 text-white border-zinc-700 shadow-xl"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            const response = await fetch(img.url);
+                                                            const blob = await response.blob();
+                                                            const url = window.URL.createObjectURL(blob);
+                                                            const link = document.createElement("a");
+                                                            link.href = url;
+                                                            link.download = `chemical-${idx}.jpg`;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            window.URL.revokeObjectURL(url);
+                                                        } catch (err) {
+                                                            window.open(img.url, "_blank");
+                                                        }
+                                                    }}
+                                                    title="Download"
+                                                    disabled={saving}
+                                                >
+                                                    <Download className="w-5 h-5" />
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="destructive"
+                                                    className="h-9 w-9 bg-zinc-900/90 hover:bg-red-600 text-white border-zinc-700 shadow-xl"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDelete({ url: img.url, isPrimary: img.isPrimary });
+                                                    }}
+                                                    title="Delete Image"
+                                                    disabled={saving}
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </Button>
                                         </div>
                                     )}
                                 </div>
@@ -265,6 +292,18 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                 initialIndex={initialPhotoIndex}
                 open={lightboxOpen}
                 onOpenChange={setLightboxOpen}
+                isAdmin={isAdmin}
+                onSetPrimary={(index) => {
+                    const img = allImages[index];
+                    if (img) handleSetPrimary(img.url);
+                }}
+                onDelete={(index) => {
+                    const img = allImages[index];
+                    if (img) {
+                        setConfirmDelete({ url: img.url, isPrimary: img.isPrimary });
+                        setLightboxOpen(false); // Close lightbox to show confirmation
+                    }
+                }}
             />
 
             {/* Delete Confirmation */}

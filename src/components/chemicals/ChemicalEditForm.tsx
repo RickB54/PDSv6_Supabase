@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chemical, DilutionRatio } from "@/types/chemicals";
-import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle } from 'lucide-react';
+import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images } from 'lucide-react';
 import { upsertChemical } from "@/lib/chemicals";
-import { generateTemplate } from "@/lib/chemical-ai";
+import { generateTemplate, analyzeLabelFromImage } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supa-data";
 import { ensureAllStorageBuckets } from "@/lib/storage-utils";
@@ -28,6 +28,8 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
     const [aiSnapshot, setAiSnapshot] = useState<Partial<Chemical> | null>(null);
     const [viewingDilutionNote, setViewingDilutionNote] = useState<{ method: string; note: string } | null>(null);
     const [galleryOpen, setGalleryOpen] = useState(false);
+    const [showUrlInput, setShowUrlInput] = useState(false);
+    const [scanLoading, setScanLoading] = useState(false);
 
     // Ensure buckets exist on mount
     useEffect(() => {
@@ -66,6 +68,40 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleScanLabel = async () => {
+        if (!editing?.primary_image_url) {
+            return toast({ title: "No Image", description: "Upload or set a primary image first to scan it.", variant: "destructive" });
+        }
+        
+        setScanLoading(true);
+        try {
+            toast({ title: "AI Vision Analysis", description: "Extracting instructions and ratios from label photo..." });
+            const data = await analyzeLabelFromImage(editing.primary_image_url, editing.name);
+            
+            setEditing(prev => ({
+                ...prev,
+                brand: prev.brand || data.brand,
+                description: prev.description || data.description,
+                application_guide: {
+                    ...prev.application_guide!,
+                    notes: (prev.application_guide?.notes ? prev.application_guide.notes + "\n" : "") + (data.dilution_instructions || "")
+                },
+                warnings: {
+                    ...prev.warnings!,
+                    risks: Array.from(new Set([...(prev.warnings?.risks || []), ...(data.safety_warnings || [])]))
+                },
+                dilution_ratios: [...(prev.dilution_ratios || []), ...(data.ratios || [])],
+                manually_modified: true
+            }));
+            
+            toast({ title: "Extraction Complete", description: "Instructions and ratios added to card.", className: "bg-green-900 border-green-800" });
+        } catch (error: any) {
+            toast({ title: "Scan Failed", description: error.message, variant: "destructive" });
+        } finally {
+            setScanLoading(false);
         }
     };
 
@@ -656,15 +692,59 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                 {/* SECTION 7: MULTIMEDIA */}
                 <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-2">Media & Content</h3>
-                    <div className="space-y-2">
-                        <Label>Primary Image URL</Label>
-                        <div className="flex gap-2">
-                            <Input
-                                value={editing?.primary_image_url || ''}
-                                onChange={e => setEditing({ ...editing, primary_image_url: e.target.value })}
-                                className="bg-zinc-900 border-zinc-700 flex-1"
-                                placeholder="https://..."
-                            />
+                    <div className="space-y-4">
+                        <Label className="text-zinc-400">Primary Image</Label>
+                        <div className="relative group aspect-video bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center p-4">
+                            {editing?.primary_image_url ? (
+                                <>
+                                    <img src={editing.primary_image_url} alt="Primary" className="max-w-full max-h-full object-contain" />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={handleScanLabel}
+                                            disabled={scanLoading || uploading}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            {scanLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                            Scan Label AI
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploading}
+                                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                                        >
+                                            <Upload className="w-4 h-4 mr-2" /> Change
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="h-9 w-9"
+                                            onClick={() => setEditing({ ...editing, primary_image_url: "" })}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-center space-y-4">
+                                    <div className="mx-auto w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-500">
+                                        <Images className="w-8 h-8" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploading}
+                                            className="bg-purple-600 hover:bg-purple-700"
+                                        >
+                                            {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                                            Upload from PC
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -672,17 +752,31 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                                 className="hidden"
                                 accept="image/*"
                             />
+                        </div>
+
+                        <div className="flex justify-end">
                             <Button
-                                variant="outline"
-                                size="icon"
-                                className="border-zinc-700 hover:bg-zinc-800"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                title="Upload from Device"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowUrlInput(!showUrlInput)}
+                                className="text-zinc-500 text-[10px] uppercase font-bold hover:text-white"
                             >
-                                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                {showUrlInput ? "Hide Developer URL Field" : "Use External URL Instead"}
                             </Button>
                         </div>
+
+                        {showUrlInput && (
+                            <div className="space-y-2 bg-black/40 p-4 rounded-lg border border-zinc-800">
+                                <Label className="text-xs text-zinc-500">Manual Image URL Path</Label>
+                                <Input
+                                    value={editing?.primary_image_url || ''}
+                                    onChange={e => setEditing({ ...editing, primary_image_url: e.target.value })}
+                                    className="bg-zinc-950 border-zinc-800 h-8 text-[11px] font-mono"
+                                    placeholder="https://external-image-source.com/image.jpg"
+                                />
+                                <p className="text-[10px] text-zinc-600 italic">Caution: Direct URL links may break if external source changes.</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -822,7 +916,22 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                     open={galleryOpen}
                     onOpenChange={setGalleryOpen}
                     isAdmin={true}
-                    onUpdate={onSave}
+                    onUpdate={() => {
+                        // When gallery updates, we need to refresh the local editing state
+                        // so the gallery modal (which uses 'editing') shows the new changes.
+                        onSave(); // Still notify parent
+                        
+                        // We also need to re-fetch the fresh data for the form itself
+                        const refreshData = async () => {
+                            const { data } = await supabase
+                                .from('chemicals')
+                                .select('*')
+                                .eq('id', editing.id)
+                                .single();
+                            if (data) setEditing(data);
+                        };
+                        refreshData();
+                    }}
                 />
             )}
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Star, Trash2 } from "lucide-react";
 
 interface PhotoGalleryProps {
     photos: {
@@ -11,9 +11,20 @@ interface PhotoGalleryProps {
     initialIndex?: number;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    isAdmin?: boolean;
+    onSetPrimary?: (index: number) => void;
+    onDelete?: (index: number) => void;
 }
 
-export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenChange }: PhotoGalleryProps) => {
+export const PhotoGalleryLightbox = ({ 
+    photos, 
+    initialIndex = 0, 
+    open, 
+    onOpenChange,
+    isAdmin = false,
+    onSetPrimary,
+    onDelete
+}: PhotoGalleryProps) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [zoom, setZoom] = useState(1);
 
@@ -27,23 +38,38 @@ export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenCha
 
     const handlePrevious = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+        if (photos.length === 0) return;
+        setCurrentIndex((prev) => (prev <= 0 ? photos.length - 1 : prev - 1));
         setZoom(1);
     };
 
     const handleNext = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+        if (photos.length === 0) return;
+        setCurrentIndex((prev) => (prev >= photos.length - 1 ? 0 : prev + 1));
         setZoom(1);
     };
 
-    const handleDownload = () => {
-        const link = document.createElement("a");
-        link.href = photos[currentIndex].url;
-        link.download = `photo-${currentIndex + 1}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleDownload = async () => {
+        const photo = photos[currentIndex];
+        if (!photo?.url) return;
+        
+        try {
+            const response = await fetch(photo.url);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `photo-${currentIndex + 1}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Download failed:", error);
+            // Fallback for CORS issues
+            window.open(photo.url, "_blank");
+        }
     };
 
     const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
@@ -80,6 +106,17 @@ export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenCha
                             >
                                 <ZoomIn className="h-5 w-5" />
                             </Button>
+                            {isAdmin && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onSetPrimary?.(currentIndex)}
+                                    className="text-white hover:bg-purple-600/50"
+                                    title="Set as Primary"
+                                >
+                                    <Star className={`h-5 w-5 ${photos[currentIndex]?.label === "Primary" ? "fill-purple-500 text-purple-500" : ""}`} />
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -89,6 +126,17 @@ export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenCha
                             >
                                 <Download className="h-5 w-5" />
                             </Button>
+                            {isAdmin && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onDelete?.(currentIndex)}
+                                    className="text-white hover:bg-red-600/50"
+                                    title="Delete Image"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -102,12 +150,16 @@ export const PhotoGalleryLightbox = ({ photos, initialIndex = 0, open, onOpenCha
 
                     {/* Main Image */}
                     <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
-                        <img
-                            src={photos[currentIndex].url}
-                            alt={photos[currentIndex].label || `Photo ${currentIndex + 1}`}
-                            className="max-w-full max-h-full object-contain transition-transform duration-200"
-                            style={{ transform: `scale(${zoom})` }}
-                        />
+                        {photos[currentIndex] ? (
+                            <img
+                                src={photos[currentIndex].url}
+                                alt={photos[currentIndex].label || `Photo ${currentIndex + 1}`}
+                                className="max-w-full max-h-full object-contain transition-transform duration-200"
+                                style={{ transform: `scale(${zoom})` }}
+                            />
+                        ) : (
+                            <div className="text-zinc-500">Image not available</div>
+                        )}
                     </div>
 
                     {/* Navigation Arrows */}
