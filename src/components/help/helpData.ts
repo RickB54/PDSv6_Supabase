@@ -5,7 +5,7 @@ export type HelpTopic = {
   content: string[];
   blockable?: boolean; // If true, topic can be hidden from employees unless granted
   route?: string;
-  section?: 'menu' | 'dashboard';
+  section?: 'menu' | 'dashboard' | 'chemicals';
 };
 
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
@@ -42,7 +42,7 @@ export const adminMenuTopics: HelpTopic[] = [
       '🎯 **Why this matters**: Consistent labeling prevents cross-contamination, ensures surface safety, and maintains a professional laboratory-grade presentation for clients.',
     ],
     route: '/chemicals',
-    section: 'menu',
+    section: 'chemicals',
   },
   {
     id: 'ai-chemical-assistant',
@@ -77,7 +77,7 @@ export const adminMenuTopics: HelpTopic[] = [
       '🎯 **Important Logic Tip**: The AI is 80% chemistry and 20% mechanical. If your query is vague (e.g. "hi"), it will remind you of this primary rule. To get the best results, always include the **Substrate** (Paint, Leather, Metal) and the **Contamination** (Sap, Grime, Grease).',
     ],
     route: '/chemical-training',
-    section: 'menu',
+    section: 'chemicals',
   },
   {
     id: 'chemical-label-maker',
@@ -113,7 +113,7 @@ export const adminMenuTopics: HelpTopic[] = [
       '• **Print Label**: Opens the system print dialog. Ensure you select "Light Mode" for ink saving.',
     ],
     route: '/inventory-control',
-    section: 'menu',
+    section: 'chemicals',
   },
   {
     id: 'prime-dilution-calculator',
@@ -141,7 +141,39 @@ export const adminMenuTopics: HelpTopic[] = [
       '💡 **Pro Tip**: Always add water first, then chemical, to prevent excessive foaming in your spray bottles or foaming equipment.',
     ],
     route: '/dilution-calculator',
-    section: 'menu',
+    section: 'chemicals',
+  },
+  {
+    id: 'prime-dilution-masterclass',
+    title: 'Prime Dilution Masterclass',
+    summary: 'The ultimate guide to detailing chemistry, mix ratios, and laboratory-grade precision.',
+    content: [
+      '**Chemistry Over Elbow Grease**: Detailing is as much about chemistry as it is about effort. Using too much product wastes money and can damage surfaces. Using too little results in poor cleaning performance.',
+      '',
+      '🧪 **The Golden Rule**: Always add water first, then your chemical. This prevents excessive foaming and ensuring accurate volume measurement.',
+      '',
+      '📏 **Technical Ratio Mode (X:1)**:',
+      'This is the standard detailing method. A ratio like **4:1** means **4 parts water** to **1 part product**. To use it, simply enter your total container size and the ratio number.',
+      '',
+      '🔢 **Understanding Percentage Mode (%)**:',
+      'Some manufacturers provide instructions in percentages (e.g., a "20% solution"). Our tool automatically converts that 20% into the equivalent technical ratio of 4:1 so you don’t have to do the mental gymnastics.',
+      '',
+      '🔄 **The Swap Trick (Power User Maneuver)**:',
+      'Ever had just a little bit of product left? Hit the **Swap** icon. Instead of Container Size, you enter the **Product Amount** you have, and the tool tells you exactly how much water is needed to finish the mix perfectly.',
+      '',
+      '®️ **Reverse Mixing (Audit Logic)**:',
+      'Need to check a pre-mixed bottle? The **Reverse** icon flips the ratio logic instantly, allowing you to audit your inventory or verify unusual manufacturer specs against existing liquid levels.',
+      '',
+      '📋 **Standard Detailing References**:',
+      '• **APC (Heavy Duty)**: 4:1 — For engine bays, wheel wells, and heavy degreasing.',
+      '• **APC (Medium/Daily)**: 10:1 — The safe standard for interiors, leather, and carpets.',
+      '• **Glass Cleaner**: 5:1 — Optimized for clarity without streaks or tint damage.',
+      '• **Drying Aid / Clay Lube**: 20:1 — High lubricity for paint safety with minimal residue.',
+      '',
+      '🎯 **Professional Standards**: Using this calculator ensures that your costs are controlled and that every surface you touch is treated with the exact chemical balance required for safety and performance.',
+    ],
+    route: '/dilution-calculator/help',
+    section: 'chemicals',
   },
 
   {

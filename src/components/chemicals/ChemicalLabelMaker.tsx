@@ -1219,7 +1219,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                         isModal={true} 
                                         onBack={() => setViewMode('editor')} 
                                         onHelp={() => {
-                                            setHelpTopicId('prime-dilution-calculator');
+                                            setHelpTopicId('prime-dilution-masterclass');
                                             setShowHelp(true);
                                         }}
                                     />

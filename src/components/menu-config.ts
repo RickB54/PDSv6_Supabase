@@ -129,7 +129,7 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker },
-                { title: "Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator },
+                { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
                 { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },

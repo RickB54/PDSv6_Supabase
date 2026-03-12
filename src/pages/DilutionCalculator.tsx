@@ -8,7 +8,9 @@ import {
     ChevronLeft,
     Percent as PercentIcon,
     ArrowLeftRight,
-    ArrowRight
+    ArrowRight,
+    HelpCircle,
+    BookOpen
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -19,9 +21,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom';
+import HelpModal from '@/components/help/HelpModal';
 
 const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boolean, onBack?: () => void, onHelp?: () => void }) => {
     const navigate = useNavigate();
+    const [showHelp, setShowHelp] = useState(false);
     const [containerSize, setContainerSize] = useState<number>(32);
     const [ratio, setRatio] = useState<number>(4);
     const [unit, setUnit] = useState<'oz' | 'ml'>('oz');
@@ -103,7 +107,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                                 Prime
                             </h1>
                             <p className="text-[7px] uppercase tracking-[0.2em] font-black text-zinc-600 mt-1">
-                                Professional Dilution Hub
+                                Prime Dilution Calculator
                             </p>
                         </div>
                     </div>
@@ -113,14 +117,26 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="text-zinc-600 hover:text-white hover:bg-zinc-900" 
-                                    onClick={() => onHelp ? onHelp() : navigate('/dilution-calculator/help')}
-                                >
-                                    <Info className="w-5 h-5" />
-                                </Button>
+                                <div className="flex gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="text-zinc-600 hover:text-white hover:bg-zinc-900" 
+                                        onClick={() => setShowHelp(true)}
+                                        title="Quick Help"
+                                    >
+                                        <Info className="w-5 h-5" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="text-blue-400 hover:text-white hover:bg-blue-600/20" 
+                                        onClick={() => onHelp ? onHelp() : navigate('/dilution-calculator/help')}
+                                        title="Masterclass"
+                                    >
+                                        <HelpCircle className="w-5 h-5" />
+                                    </Button>
+                                </div>
                             </TooltipTrigger>
                             <TooltipContent className="bg-zinc-900 border-zinc-800 text-xs w-64 p-3 shadow-2xl">
                                 <p className="font-medium text-zinc-300">
@@ -299,6 +315,12 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     Prime Detailing Pro System
                 </div>
             )}
+            <HelpModal 
+                open={showHelp} 
+                onOpenChange={setShowHelp} 
+                role="admin"
+                initialTopicId="prime-dilution-masterclass"
+            />
         </div>
     );
 };

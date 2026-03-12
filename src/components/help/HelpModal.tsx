@@ -56,6 +56,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
   const groups = useMemo(() => {
     if (role !== 'employee') return { 'All Topics': filteredToc };
     return {
+      'Chemical Management': filteredToc.filter(t => t.section === 'chemicals'),
       'Menu Items': filteredToc.filter(t => t.section === 'menu'),
       'Dashboard': filteredToc.filter(t => t.section === 'dashboard')
     };
