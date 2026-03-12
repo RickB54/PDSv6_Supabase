@@ -107,3 +107,44 @@ export function findProductForContamination(
 export function getRecommendedCategory(contamination: ContaminationType): string {
     return ContaminationToChemistry[contamination]?.category || "General Cleaner";
 }
+
+/**
+ * Calculates a dynamic dilution ratio based on the base ratio and vehicle severity.
+ * e.g. If base is 1:10 (Light), it might become 1:4 (Heavy).
+ */
+export function getDynamicRatio(baseRatio: string, condition: VehicleCondition): string {
+    if (!baseRatio || baseRatio === 'RTU') return baseRatio;
+    
+    // Parse ratio (e.g. "1:10" or "10:1")
+    const parts = baseRatio.split(':');
+    if (parts.length !== 2) return baseRatio;
+    
+    let part1 = parseFloat(parts[0]);
+    let part2 = parseFloat(parts[1]);
+    
+    // Safety check
+    if (isNaN(part1) || isNaN(part2)) return baseRatio;
+
+    // Logic: "1:X" where X is the water part. 
+    // For Heavy/Severe, we want LESS water (smaller X).
+    
+    // We assume the baseRatio provided in the chemical data is for "Standard/Moderate" use
+    // If it's 1:10 (Moderate):
+    // Light -> 1:15 (More water)
+    // Heavy -> 1:5 (Less water)
+    // Severe -> 1:2 (Much less water)
+    
+    const multipliers: Record<VehicleCondition, number> = {
+        'Light': 1.5,
+        'Moderate': 1.0,
+        'Heavy': 0.5,
+        'Severe': 0.25
+    };
+
+    const multiplier = multipliers[condition] || 1.0;
+    
+    // Round to nearest integer for clean display
+    const newWaterPart = Math.max(1, Math.round(part2 * multiplier));
+    
+    return `${part1}:${newWaterPart}`;
+}

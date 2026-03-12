@@ -59,6 +59,12 @@ export function GlobalRightSidebar() {
                 {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
             </Button>
 
+            {/* Pricing Scenario Shortcut - MOVED TO TOP */}
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Calculator className="w-5 h-5 text-red-500" />
+                {!collapsed && <span>Scenario Builder</span>}
+            </Button>
+
             {/* Availability Manager - Admin Only */}
             <Button
                 variant="ghost"
@@ -114,12 +120,6 @@ export function GlobalRightSidebar() {
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <FlaskConical className="w-5 h-5 text-teal-400" />
                 {!collapsed && <span>Chemicals</span>}
-            </Button>
-
-            {/* Pricing Scenario Shortcut */}
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <Calculator className="w-5 h-5 text-red-500" />
-                {!collapsed && <span>Scenario Builder</span>}
             </Button>
 
         </div>
