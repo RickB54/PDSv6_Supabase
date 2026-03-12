@@ -140,13 +140,18 @@ export default function ChemicalTraining() {
             else if (lowerQuery.includes("assess") || lowerQuery.includes("severity") || lowerQuery.includes("condition")) {
                 answer = "To assess vehicle severity accurately: 1. Visual Inspection (Check for 'Traffic Film' - the grey haze that doesn't come off with water). 2. Surface Feel (Use the 'Baggie Test' to check for embedded contaminants). 3. Substrate Check (Identify if the panel is plastic, aluminum, or painted). 'Severe' conditions require low-Ph followed by high-Ph (Dual Stage) washing to reset the surface.";
             }
-            // 5. Specific Contamination Logic
+            // 5. Specific Contamination Logic (Interior focused)
+            else if (lowerQuery.includes("carpet") || lowerQuery.includes("food") || lowerQuery.includes("stain") || lowerQuery.includes("interior") || lowerQuery.includes("upholstery")) {
+                answer = "Interior Technical Logic: Cleaning carpets or upholstery with food stains requires an enzyme-based surfactant or a dedicated carpet shampoo (like Carpet Bomber). Since you're dealing with organic matter, the goal is to break the protein bonds. Do not use high-alkaline wheel cleaners (like Dark Fury) on fabric as it can leave a high-Ph residue that causes skin irritation or fiber browning. Use a drill brush for agitation followed by a hot water extraction for best results.";
+            }
+            // 6. Specific Contamination Logic (Exterior focused)
             else if (lowerQuery.includes("sap") || lowerQuery.includes("tar") || lowerQuery.includes("bugs")) {
                 answer = `Removing ${lowerQuery.includes("sap") ? "Tree Sap" : "Organic Matter"} requires a solvent-based approach. Alcohol-based cleaners break the resin bonds, while alkaline pre-washes soften the exterior shell. Do not scrub; let the chemistry do the work to avoid marring the finish.`;
             }
-            // 6. Fallback (Improved)
+            // 7. Fallback (Improved)
             else {
-                answer = `Technical Analysis for "${query}": For detailing scenarios involving ${contamination || 'unknown'} contamination at ${condition || 'Moderate'} severity, you must prioritize the Ph-Balance of the solution. If the substrate is painted clear coat, ensure the chemical does not exceed a Ph of 12.0 for more than 5 minutes of dwell time. I've highlighted the most compatible items from your list below.`;
+                const stateContext = lowerQuery.includes(String(contamination).toLowerCase()) ? `involving ${contamination}` : "involving your current scenario";
+                answer = `Technical Analysis for "${query}": For detailing scenarios ${stateContext} at ${condition || 'Moderate'} severity, you must prioritize the Ph-Balance of the solution relative to the substrate. If you are working on paint, ensure the chemical does not exceed a Ph of 12.0 for more than 5 minutes. If working on sensitive metals, stay near Ph-Neutral (7.0). I've highlighted the most compatible items from your list below.`;
             }
 
             const results = {
@@ -212,11 +217,11 @@ export default function ChemicalTraining() {
             />
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 mb-8">
-                    <TabsTrigger value="decision">Universal Decision System</TabsTrigger>
-                    <TabsTrigger value="workflow">Setup Workflow (Training)</TabsTrigger>
-                    <TabsTrigger value="library">Condition Library</TabsTrigger>
-                    <TabsTrigger value="guides">Service Packages</TabsTrigger>
+                <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto gap-2 bg-transparent p-0 mb-8">
+                    <TabsTrigger value="decision" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Universal Decision System</TabsTrigger>
+                    <TabsTrigger value="workflow" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Setup Workflow (Training)</TabsTrigger>
+                    <TabsTrigger value="library" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Condition Library</TabsTrigger>
+                    <TabsTrigger value="guides" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Service Packages</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="decision" className="space-y-8 animate-fade-in relative">
