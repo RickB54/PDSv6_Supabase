@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/hooks/use-toast";
+import { Beaker } from "lucide-react";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
@@ -85,7 +86,7 @@ export default function ChemicalsLibrary() {
             <main className="container mx-auto px-4 py-8 max-w-7xl">
                 {/* Header Actions */}
                 <div className="flex flex-row flex-wrap justify-between items-start md:items-center gap-4 mb-8">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <div>
                             <h1 className="text-3xl font-bold text-white mb-2">Chemical Knowledge Base</h1>
                             <p className="text-zinc-400">Master every product in our arsenal.</p>
@@ -94,14 +95,21 @@ export default function ChemicalsLibrary() {
                             variant="ghost"
                             size="icon"
                             onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin', topicId: 'chemical-workflow' } }))}
-                            className="text-zinc-500 hover:text-blue-400 hover:bg-blue-400/10 h-10 w-10 mt-1"
-                            title="Chemical Workflow Guide"
+                            className="text-zinc-500 hover:text-blue-400 h-10 w-10 mt-1"
+                            title="Help Guide"
                         >
                             <HelpCircle className="w-6 h-6" />
                         </Button>
                     </div>
                     {isAdmin && (
                         <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => navigate('/chemical-training')} 
+                                className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border font-bold"
+                            >
+                                <Beaker className="w-4 h-4 mr-2" /> Decision System
+                            </Button>
                             <Button variant="outline" onClick={() => setLabelMakerOpen(true)} className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-purple-400">
                                 <Tag className="w-4 h-4 mr-2" /> Create Bottle Label
                             </Button>
