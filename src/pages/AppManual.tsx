@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Printer, FileText, ChevronRight, BookOpen } from "lucide-react";
+import { Printer, FileText, ChevronRight, BookOpen, Sparkles, Info } from "lucide-react";
 
 export default function AppManual() {
     const contentRef = useRef<HTMLDivElement>(null);
@@ -44,6 +44,7 @@ export default function AppManual() {
                                     { id: "scenario-payroll", label: "Scenario: Payroll & Paychecks" },
                                     { id: "scenario-estimate", label: "Scenario: Creating Estimates" },
                                     { id: "scenario-employee", label: "Scenario: Employee Training" },
+                                    { id: "ai-assistant", label: "Scenario: Chemical AI Consultant" },
                                     { id: "admin-workflow", label: "Admin Workflows" },
                                     { id: "tips", label: "Best Practices" },
                                 ].map((item) => (
@@ -83,6 +84,7 @@ export default function AppManual() {
                                     { id: "scenario-payroll", label: "Payroll" },
                                     { id: "scenario-estimate", label: "Estimates" },
                                     { id: "scenario-employee", label: "Training" },
+                                    { id: "ai-assistant", label: "AI Consultant" },
                                     { id: "admin-workflow", label: "Admin" },
                                     { id: "tips", label: "Tips" },
                                 ].map((item) => (
@@ -228,9 +230,30 @@ export default function AppManual() {
                         </Card>
                     </section>
 
+                    <section id="ai-assistant" className="scroll-mt-20">
+                        <h2 className="text-2xl font-bold text-purple-400 mb-4 flex items-center gap-2">
+                            <Sparkles className="h-6 w-6" /> 7. Scenario: Chemical AI Consultant
+                        </h2>
+                        <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
+                            <p className="mb-4 text-zinc-300 print:text-black">
+                                The Chemical AI is more than a chatbot; it is a logic engine that understands substrate chemistry and surfactant profiles. It is designed to act as a technical guide during complex cleaning tasks.
+                            </p>
+                            <h3 className="text-xl font-semibold text-white mb-2 print:text-black">Technical Query Patterns:</h3>
+                            <ul className="list-disc pl-5 space-y-2 text-zinc-300 mb-6 print:text-black">
+                                <li><strong>Comparisons:</strong> "Can I use [X] instead of [Y] for [Task]?" (Analyzes Ph-levels and safety).</li>
+                                <li><strong>Safety:</strong> "Is it safe to use [Product] on [Paint/Metal/Leather]?" (Triggers substrate-specific warnings).</li>
+                                <li><strong>Assessment:</strong> "Explain how to assess [Severity]?" (Teaches the Baggie Test and Traffic Film diagnostics).</li>
+                                <li><strong>Direct Mapping:</strong> "Show me the best chemical from my stock for [Contaminant]." (Returns instant inventory matches).</li>
+                            </ul>
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase border-t border-zinc-800 pt-4">
+                                <Info className="h-3 w-3 text-purple-400" /> Pattern Tip: Always mention the Substrate and Contaminant for 100% accurate reasoning.
+                            </div>
+                        </Card>
+                    </section>
+
                     <section id="admin-workflow" className="scroll-mt-20">
                         <h2 className="text-2xl font-bold text-red-400 mb-4 flex items-center gap-2">
-                            <FileText className="h-6 w-6" /> 7. Admin Workflows
+                            <FileText className="h-6 w-6" /> 8. Admin Workflows
                         </h2>
                         <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
                             <h3 className="text-xl font-semibold text-white mb-2 print:text-black">Danger Zone & Settings</h3>
@@ -244,7 +267,7 @@ export default function AppManual() {
 
                     <section id="tips" className="scroll-mt-20">
                         <h2 className="text-2xl font-bold text-pink-400 mb-4 flex items-center gap-2">
-                            <FileText className="h-6 w-6" /> 8. Best Practices
+                            <FileText className="h-6 w-6" /> 9. Best Practices
                         </h2>
                         <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
                             <ul className="list-disc pl-5 space-y-2 text-zinc-300 print:text-black">
