@@ -82,7 +82,7 @@ export function findProductForContamination(
     if (!matchCriteria) return [];
 
     // Filter for IN-STOCK items only
-    const inStock = inventory.filter(c => c.is_on_hand !== false); // Default to true if undefined
+    const inStock = inventory.filter(c => c.is_on_hand !== false);
 
     return inStock.filter(chem => {
         const textToSearch = [
@@ -96,9 +96,34 @@ export function findProductForContamination(
         // Check if ANY keyword matches
         return matchCriteria.keywords.some(keyword => textToSearch.includes(keyword.toLowerCase()));
     }).sort((a, b) => {
-        // Optional: Sort logic could go here (e.g. prioritize "Specialty" over "APC" if more specific match?)
         return a.name.localeCompare(b.name);
     });
+}
+
+/**
+ * Finds matching products that are NOT currently in stock.
+ */
+export function findSuggestedProducts(
+    contamination: ContaminationType,
+    allChemicals: Chemical[]
+): Chemical[] {
+    const matchCriteria = ContaminationToChemistry[contamination];
+    if (!matchCriteria) return [];
+
+    // Filter for OUT-OF-STOCK items only
+    const outOfStock = allChemicals.filter(c => c.is_on_hand === false);
+
+    return outOfStock.filter(chem => {
+        const textToSearch = [
+            chem.name,
+            chem.description,
+            ...(chem.used_for || []),
+            chem.primary_uses,
+            chem.why_to_use
+        ].join(' ').toLowerCase();
+
+        return matchCriteria.keywords.some(keyword => textToSearch.includes(keyword.toLowerCase()));
+    }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**

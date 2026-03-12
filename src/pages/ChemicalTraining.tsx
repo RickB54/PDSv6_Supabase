@@ -16,7 +16,8 @@ import {
     ConditionDefinitions,
     findProductForContamination,
     getRecommendedCategory,
-    getDynamicRatio
+    getDynamicRatio,
+    findSuggestedProducts
 } from "@/lib/chemical-decision";
 import { 
     MessageCircle, 
@@ -60,6 +61,7 @@ export default function ChemicalTraining() {
     }
 
     const matches = contamination ? findProductForContamination(contamination as ContaminationType, chemicals) : [];
+    const suggestions = contamination ? findSuggestedProducts(contamination as ContaminationType, chemicals) : [];
     const recommendedCategory = contamination ? getRecommendedCategory(contamination as ContaminationType) : "";
 
     const handleAiAsk = async (queryInput?: string) => {
@@ -107,34 +109,24 @@ export default function ChemicalTraining() {
                     <TabsTrigger value="guides">Service Packages</TabsTrigger>
                 </TabsList>
 
-                        <TabsContent value="decision" className="space-y-8 animate-fade-in relative">
-                            
-                            {/* Floating AI Assistant Trigger */}
-                            <div className="fixed bottom-8 right-20 z-50">
-                                <Button 
-                                    onClick={() => setAiOpen(true)}
-                                    className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-bounce"
-                                >
-                                    <MessageCircle className="w-6 h-6 text-white" />
-                                </Button>
-                            </div>
-
-                            {/* 1. Condition Assessment */}
-                            <Card className="p-6 border-l-4 border-l-blue-500 bg-slate-900/50">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                        <ThermometerSun className="w-5 h-5 text-blue-400" />
-                                        Step 1: Vehicle Severity Assessment
-                                    </h3>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-8 text-[10px] uppercase font-black border-blue-500/30 text-blue-400 bg-blue-500/5"
-                                        onClick={() => handleAiAsk(`How to assess ${condition || 'vehicle'} severity for detailing?`)}
-                                    >
-                                        <Globe className="w-3 h-3 mr-1.5" /> AI Methodology
-                                    </Button>
-                                </div>
+                <TabsContent value="decision" className="space-y-8 animate-fade-in relative">
+                    
+                    {/* 1. Condition Assessment */}
+                    <Card className="p-6 border-l-4 border-l-blue-500 bg-slate-900/50">
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <ThermometerSun className="w-5 h-5 text-blue-400" />
+                                Step 1: Vehicle Severity Assessment
+                            </h3>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-[10px] uppercase font-black border-blue-500/30 text-blue-400 bg-blue-500/5"
+                                onClick={() => handleAiAsk(`How to assess ${condition || 'vehicle'} severity for detailing?`)}
+                            >
+                                <Sparkles className="w-3 h-3 mr-1.5" /> AI Consultant
+                            </Button>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {(Object.keys(ConditionDefinitions) as VehicleCondition[]).map((cond) => (
                                 <button
@@ -219,100 +211,162 @@ export default function ChemicalTraining() {
                     {/* 3. Product Selection */}
                     {contamination && (
                         <Card className="p-6 border-l-4 border-l-green-500 bg-slate-900/50 animate-in fade-in slide-in-from-bottom-4">
-                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                <Beaker className="w-5 h-5 text-green-400" />
-                                Step 3: Inventory Selection
-                            </h3>
+                            <div className="flex justify-between items-start mb-6">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <Beaker className="w-5 h-5 text-green-400" />
+                                    Step 3: Inventory Selection
+                                </h3>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-8 text-[10px] uppercase font-black border-purple-500/30 text-purple-400 bg-purple-500/5"
+                                    onClick={() => setAiOpen(true)}
+                                >
+                                    <Sparkles className="w-3 h-3 mr-1.5" /> Chemical AI
+                                </Button>
+                            </div>
 
-                            {matches.length > 0 ? (
-                                <div className="space-y-6">
-                                    {/* AI Reasoning Banner for Top Match */}
-                                    <div className="bg-blue-600/10 border border-blue-600/20 rounded-xl p-4 flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
-                                            <Sparkles className="w-5 h-5 text-white" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-bold text-blue-400">AI Recommendation Engine</h4>
-                                            <p className="text-xs text-slate-300">
-                                                Based on <span className="text-white font-bold">{condition || 'Moderate'}</span> severity and <span className="text-white font-bold">{contamination}</span>, 
-                                                I recommend <span className="text-green-400 font-bold">{matches[0].name}</span> due to its specific surfactant profile.
-                                            </p>
-                                        </div>
-                                        <Button variant="ghost" size="sm" className="text-blue-500 text-xs" onClick={() => handleAiAsk(`Why use ${matches[0].name} for ${contamination}?`)}>
-                                            View Analysis
-                                        </Button>
+                            <div className="space-y-10">
+                                {/* SECTION A: IN INVENTORY */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-xs font-black uppercase text-slate-500 tracking-widest pl-1">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        On-Hand Inventory Matches
                                     </div>
-
-                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {matches.map((chem, idx) => (
-                                            <div
-                                                key={chem.id}
-                                                onClick={() => setSelectedProduct(chem)}
-                                                className={`
-                                                    cursor-pointer rounded-xl border-2 p-4 transition-all hover:scale-[1.02] relative
-                                                    ${selectedProduct?.id === chem.id
-                                                                    ? 'border-green-500 bg-green-900/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]'
-                                                                    : 'border-slate-800 bg-black hover:border-slate-600'}
-                                                `}
-                                            >
-                                                {idx === 0 && (
-                                                    <div className="absolute -top-3 left-4 px-2 py-0.5 bg-green-600 text-white text-[9px] font-black uppercase rounded-sm flex items-center gap-1 shadow-lg z-10">
-                                                        <Flame className="w-2.5 h-2.5" /> Best Match
-                                                    </div>
-                                                )}
-                                                
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400 uppercase font-black">Verified Stock</Badge>
-                                                    <div
-                                                        className="h-3 w-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]"
-                                                        style={{ backgroundColor: chem.theme_color || '#fff' }}
-                                                    />
+                                    
+                                    {matches.length > 0 ? (
+                                        <div className="space-y-6">
+                                            {/* AI Reasoning Banner for Top Match */}
+                                            <div className="bg-blue-600/10 border border-blue-600/20 rounded-xl p-4 flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                                                    <Sparkles className="w-5 h-5 text-white" />
                                                 </div>
-                                                <h4 className="text-lg font-bold text-white mb-1 leading-tight">{chem.name}</h4>
-                                                
-                                                <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-500">Target Ratio:</span>
-                                                        <span className="font-mono text-green-400 font-bold text-lg">
-                                                            {getDynamicRatio(chem.dilution_ratios?.[0]?.ratio || "1:10", (condition || 'Moderate') as VehicleCondition)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-[10px] text-slate-500 italic">
-                                                        <Info className="w-3 h-3" />
-                                                        Adjusted for {condition || 'Moderate'} severity
-                                                    </div>
-                                                    
-                                                    {selectedProduct?.id === chem.id && (
-                                                        <div className="pt-2 animate-in fade-in slide-in-from-top-1">
-                                                            <div className="flex justify-between text-sm mb-2">
-                                                                <span className="text-slate-500">Method:</span>
-                                                                <span className="text-white">
-                                                                    {chem.application_guide?.method || "Spray"}
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-bold text-blue-400">Inventory Recommendation</h4>
+                                                    <p className="text-xs text-slate-300">
+                                                        Based on <span className="text-white font-bold">{condition || 'Moderate'}</span> severity and <span className="text-white font-bold">{contamination}</span>, 
+                                                        I recommend <span className="text-green-400 font-bold">{matches[0].name}</span> due to its specific surfactant profile.
+                                                    </p>
+                                                </div>
+                                                <Button variant="ghost" size="sm" className="text-blue-500 text-xs" onClick={() => handleAiAsk(`Why use ${matches[0].name} for ${contamination}?`)}>
+                                                    View Analysis
+                                                </Button>
+                                            </div>
+
+                                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {matches.map((chem, idx) => (
+                                                    <div
+                                                        key={chem.id}
+                                                        onClick={() => setSelectedProduct(chem)}
+                                                        className={`
+                                                            cursor-pointer rounded-xl border-2 p-4 transition-all hover:scale-[1.02] relative
+                                                            ${selectedProduct?.id === chem.id
+                                                                            ? 'border-green-500 bg-green-900/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]'
+                                                                            : 'border-slate-800 bg-black hover:border-slate-600'}
+                                                        `}
+                                                    >
+                                                        {idx === 0 && (
+                                                            <div className="absolute -top-3 left-4 px-2 py-0.5 bg-green-600 text-white text-[9px] font-black uppercase rounded-sm flex items-center gap-1 shadow-lg z-10">
+                                                                <Flame className="w-2.5 h-2.5" /> Best Match
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400 uppercase font-black">Verified Stock</Badge>
+                                                            <div
+                                                                className="h-3 w-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]"
+                                                                style={{ backgroundColor: chem.theme_color || '#fff' }}
+                                                            />
+                                                        </div>
+                                                        <h4 className="text-lg font-bold text-white mb-1 leading-tight">{chem.name}</h4>
+                                                        
+                                                        <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-slate-500">Target Ratio:</span>
+                                                                <span className="font-mono text-green-400 font-bold text-lg">
+                                                                    {getDynamicRatio(chem.dilution_ratios?.[0]?.ratio || "1:10", (condition || 'Moderate') as VehicleCondition)}
                                                                 </span>
                                                             </div>
-                                                            {chem.warnings?.damage_risk === 'High' && (
-                                                                <div className="bg-red-900/30 text-red-400 text-[10px] p-2 rounded border border-red-900/50 mt-2 flex gap-2">
-                                                                    <ShieldAlert className="w-4 h-4 shrink-0" />
-                                                                    {chem.warnings.risks?.[0] || "Handle with care."}
+                                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 italic">
+                                                                <Info className="w-3 h-3" />
+                                                                Adjusted for {condition || 'Moderate'} severity
+                                                            </div>
+                                                            
+                                                            {selectedProduct?.id === chem.id && (
+                                                                <div className="pt-2 animate-in fade-in slide-in-from-top-1">
+                                                                    <div className="flex justify-between text-sm mb-2">
+                                                                        <span className="text-slate-500">Method:</span>
+                                                                        <span className="text-white">
+                                                                            {chem.application_guide?.method || "Spray"}
+                                                                        </span>
+                                                                    </div>
+                                                                    {chem.warnings?.damage_risk === 'High' && (
+                                                                        <div className="bg-red-900/30 text-red-400 text-[10px] p-2 rounded border border-red-900/50 mt-2 flex gap-2">
+                                                                            <ShieldAlert className="w-4 h-4 shrink-0" />
+                                                                            {chem.warnings.risks?.[0] || "Handle with care."}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 bg-black/40 rounded-xl border border-dashed border-slate-800">
+                                            <XCircle className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+                                            <h4 className="text-slate-400 font-bold text-sm">No Matches in Inventory</h4>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* SECTION B: SUGGESTIONS */}
+                                {(suggestions.length > 0 || matches.length === 0) && (
+                                    <div className="space-y-4 pt-6 border-t border-slate-800/50">
+                                        <div className="flex items-center gap-2 text-xs font-black uppercase text-slate-500 tracking-widest pl-1">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                            Professional Catalog Additions (Not in Stock)
+                                        </div>
+                                        
+                                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                                            {suggestions.map((chem) => (
+                                                <div
+                                                    key={chem.id}
+                                                    className="rounded-xl border border-dashed border-slate-700 bg-zinc-900/30 p-4 relative overflow-hidden flex flex-col justify-between min-h-[140px]"
+                                                >
+                                                    <div>
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <Badge variant="outline" className="text-[9px] border-amber-900/50 text-amber-600/80 uppercase font-black">Out of Stock</Badge>
+                                                            <div
+                                                                className="h-3 w-3 rounded-full opacity-30"
+                                                                style={{ backgroundColor: chem.theme_color || '#fff' }}
+                                                            />
+                                                        </div>
+                                                        <h4 className="text-md font-bold text-slate-300 mb-1 leading-tight">{chem.name}</h4>
+                                                        <p className="text-[10px] text-slate-500 line-clamp-2 italic mb-3">Target: {recommendedCategory}</p>
+                                                    </div>
+                                                    
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        className="h-7 text-[10px] border-slate-700 bg-slate-800/20 text-slate-500 hover:text-white"
+                                                        onClick={() => handleAiAsk(`Tell me about ${chem.name} and why it's good for ${contamination}`)}
+                                                    >
+                                                        AI Comparison
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            
+                                            {suggestions.length === 0 && (
+                                                <div className="col-span-full py-6 text-center text-xs text-slate-600 italic">
+                                                    No additional suggestions found in the full catalog.
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 bg-black rounded-xl border border-dashed border-slate-800">
-                                    <XCircle className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-                                    <h4 className="text-white font-bold">No Exact Match in Inventory</h4>
-                                    <p className="text-slate-500 text-sm max-w-md mx-auto mt-2">
-                                        We couldn't find a product in your active inventory tagged for <span className="text-purple-400">{contamination}</span>.
-                                        Check "Chemicals Library" to see if you have products that need to be marked as "On Hand".
-                                    </p>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </Card>
                     )}
 
@@ -449,14 +503,14 @@ export default function ChemicalTraining() {
             {/* AI CHEMICAL ASSISTANT MODAL */}
             <Dialog open={aiOpen} onOpenChange={setAiOpen}>
                 <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                    <DialogHeader className="p-6 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border-b border-zinc-800">
+                    <DialogHeader className="p-6 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border-b border-zinc-800">
                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center">
                                 <Sparkles className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <DialogTitle className="text-xl font-black">AI Chemical Assistant</DialogTitle>
-                                <DialogDescription className="text-blue-300/60 font-medium">Real-time Web Analysis & Inventory Logic</DialogDescription>
+                                <DialogTitle className="text-xl font-black">Chemical AI Consultant</DialogTitle>
+                                <DialogDescription className="text-purple-300/60 font-medium">Real-time Web Analysis & Inventory Logic</DialogDescription>
                             </div>
                         </div>
                     </DialogHeader>
@@ -464,7 +518,7 @@ export default function ChemicalTraining() {
                     <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                         {/* Search Box */}
                         <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+                            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
                             <div className="relative flex gap-2">
                                 <Input 
                                     placeholder="Ask about a specific situation (e.g. Tree sap on white paint)..."
@@ -476,7 +530,7 @@ export default function ChemicalTraining() {
                                 <Button 
                                     onClick={() => handleAiAsk()} 
                                     disabled={aiLoading}
-                                    className="h-12 w-12 bg-blue-600 hover:bg-blue-500 shrink-0"
+                                    className="h-12 w-12 bg-purple-600 hover:bg-purple-500 shrink-0"
                                 >
                                     {aiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
                                 </Button>
@@ -487,7 +541,7 @@ export default function ChemicalTraining() {
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                                 <div className="space-y-3">
                                     <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Sparkles className="w-3 h-3 text-blue-400" /> AI Findings
+                                        <Sparkles className="w-3 h-3 text-purple-400" /> AI Findings
                                     </h4>
                                     <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-sm leading-relaxed text-zinc-300">
                                         {aiResponse.answer}
@@ -507,7 +561,7 @@ export default function ChemicalTraining() {
                                                         {i === 0 ? "Best Match" : "Alternative"}
                                                     </Badge>
                                                 </div>
-                                                <p className="text-xs text-blue-400 font-medium mb-3">{rec.reasoning}</p>
+                                                <p className="text-xs text-purple-400 font-medium mb-3">{rec.reasoning}</p>
                                                 <div className="flex justify-between items-center pt-3 border-t border-zinc-900">
                                                     <span className="text-[10px] text-zinc-500 uppercase font-black">Target Ratio</span>
                                                     <span className="font-mono text-green-400 font-black">
@@ -535,8 +589,8 @@ export default function ChemicalTraining() {
                         ) : aiLoading ? (
                             <div className="py-20 text-center space-y-4">
                                 <div className="relative inline-block">
-                                    <div className="h-16 w-16 rounded-full border-4 border-blue-600/10 border-t-blue-600 animate-spin"></div>
-                                    <Globe className="w-6 h-6 text-blue-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                                    <div className="h-16 w-16 rounded-full border-4 border-purple-600/10 border-t-purple-600 animate-spin"></div>
+                                    <Globe className="w-6 h-6 text-purple-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                                 </div>
                                 <p className="text-zinc-500 text-sm font-medium">Scouring professional detailing records...</p>
                             </div>
