@@ -26,6 +26,16 @@ const DilutionCalculatorHelp = () => {
         <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-blue-600">
             {/* Hero Header */}
             <div className="relative h-64 bg-zinc-950 border-b border-zinc-900 flex items-center justify-center overflow-hidden">
+                <div className="absolute top-6 left-6 z-30">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-zinc-500 hover:text-white hover:bg-zinc-900/50 rounded-full"
+                        onClick={() => navigate(-1)}
+                    >
+                        <ArrowLeft className="w-6 h-6" />
+                    </Button>
+                </div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
                 <div className="relative z-10 text-center space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-[0.2em] mb-4">
@@ -35,7 +45,7 @@ const DilutionCalculatorHelp = () => {
                     <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
                         Prime Dilution <span className="text-blue-500">Masterclass</span>
                     </h1>
-                    <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest leading-none">
+                    <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest leading-none text-center">
                         Professional Detailing Chemistry & Calculations
                     </p>
                 </div>
@@ -46,9 +56,9 @@ const DilutionCalculatorHelp = () => {
                 <Button 
                     variant="outline" 
                     onClick={() => navigate(-1)}
-                    className="bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 rounded-full px-6 h-12 shadow-2xl group transition-all"
+                    className="bg-blue-600 border-blue-500 text-white hover:bg-blue-500 hover:border-blue-400 rounded-full px-8 h-14 shadow-[0_10px_30px_rgba(37,99,235,0.4)] group transition-all font-black uppercase tracking-widest"
                 >
-                    <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                    <ArrowLeft className="w-5 h-5 mr-3 transition-transform group-hover:-translate-x-1" />
                     Back to Calculator
                 </Button>
             </div>
