@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { makeToc, HelpTopic } from './helpData';
-import { Search, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, ChevronRight, Zap } from 'lucide-react';
 
 type HelpModalProps = {
   open: boolean;
@@ -15,6 +16,7 @@ type HelpModalProps = {
 };
 
 export default function HelpModal({ open, onOpenChange, role, initialTopicId }: HelpModalProps) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const toc = useMemo(() => makeToc(role), [role]);
   const [index, setIndex] = useState(0);
@@ -143,7 +145,22 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
               <div className="flex items-start justify-between mb-6 pb-4 border-b border-slate-800/60 shrink-0">
                 <div>
                   <h2 className="text-3xl font-bold text-white mb-2">{topic.title}</h2>
-                  {topic.route && (<div className="text-xs font-mono text-cyan-400/70 bg-cyan-950/30 px-2 py-1 rounded inline-block border border-cyan-900/30 tracking-wide">Route: {topic.route}</div>)}
+                  <div className="flex items-center gap-2">
+                    {topic.route && (<div className="text-xs font-mono text-cyan-400/70 bg-cyan-950/30 px-2 py-1 rounded inline-block border border-cyan-900/30 tracking-wide">Route: {topic.route}</div>)}
+                    {topic.route && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => {
+                          onOpenChange(false);
+                          navigate(topic.route);
+                        }}
+                        className="h-6 px-2 text-[10px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white"
+                      >
+                         <Zap className="w-3 h-3 mr-1" /> Launch Masterclass
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 bg-slate-900/80 rounded-lg p-1 border border-slate-800 shrink-0 self-start">
                   <Button variant="ghost" size="icon" onClick={goPrev} disabled={index === 0} className="h-9 w-9 text-slate-400 hover:text-emerald-400 hover:bg-slate-800" title="Previous Topic">
