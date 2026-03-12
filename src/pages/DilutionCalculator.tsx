@@ -90,20 +90,20 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="text-zinc-600 hover:text-white hover:bg-zinc-900"
+                    className="text-zinc-600 hover:text-white hover:bg-zinc-900 relative z-10"
                     onClick={() => onBack ? onBack() : navigate(-1)}
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
 
                 <div className="text-center group transition-all relative">
-                    <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg border border-white/10">
                             <Calculator className="w-7 h-7 text-white" />
                         </div>
                         <div className="flex flex-col items-center leading-none">
-                            <h1 className="text-6xl sm:text-7xl font-black bg-gradient-to-r from-[#00d2ff] via-[#9d50bb] to-[#ff00c1] bg-clip-text text-transparent italic tracking-tighter leading-none">
+                            <h1 className="text-5xl sm:text-7xl font-black bg-gradient-to-r from-[#00d2ff] via-[#9d50bb] to-[#ff00c1] bg-clip-text text-transparent italic tracking-tighter leading-none">
                                 Prime
                             </h1>
                             <div className="mt-2 text-center">
@@ -115,12 +115,15 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 relative z-10">
                     <Button 
                         variant="ghost" 
                         size="icon" 
                         className="text-emerald-500 hover:text-white hover:bg-emerald-600/20 active:scale-90 transition-transform" 
-                        onClick={() => setShowHelp(true)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowHelp(true);
+                        }}
                         title="Quick Help"
                     >
                         <Info className="w-6 h-6" />
@@ -129,7 +132,10 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                         variant="ghost" 
                         size="icon" 
                         className="text-blue-400 hover:text-white hover:bg-blue-600/20 active:scale-90 transition-transform" 
-                        onClick={() => onHelp ? onHelp() : navigate('/dilution-calculator/help')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onHelp ? onHelp() : navigate('/dilution-calculator/help');
+                        }}
                         title="Masterclass"
                     >
                         <HelpCircle className="w-6 h-6" />
