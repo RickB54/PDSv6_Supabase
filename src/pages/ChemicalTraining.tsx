@@ -83,16 +83,30 @@ export default function ChemicalTraining() {
             let sources = ["https://superiorproducts.com/technical-brief", "https://detailingwiki.org/chemistry/ph-scale"];
             
             const lowerQuery = query.toLowerCase();
+            const hasMatches = matches.length > 0;
+            const topMatch = matches[0];
             
-            // 1. Comparison/Substitution Logic
-            if (lowerQuery.includes("instead of") || lowerQuery.includes("vs") || lowerQuery.includes("better than") || lowerQuery.includes("alternative")) {
+            // 0. Memory/Frustration Awareness
+            if (lowerQuery.includes("repeat") || lowerQuery.includes("stop") || lowerQuery.includes("already said")) {
+                answer = `Understood. I'll skip the intro. For your ${contamination || 'current'} task, the specific chemical logic is focused on ${hasMatches ? topMatch.name : 'alkaline-heavy'} surfactants. You need to verify the substrate's heat threshold before application. Let's look at the shelf list below for the exact concentration rates.`;
+            }
+            // 1. "Show Me" / Direct Recommendation requests
+            else if (lowerQuery.includes("show me") || lowerQuery.includes("what chemical") || lowerQuery.includes("suggest") || lowerQuery.includes("give me")) {
+                if (hasMatches) {
+                    answer = `Direct Stock Match: Based on your inventory, **${topMatch.name}** is the primary solution. It has the correct surface tension for ${contamination || 'this contamination'}. ${topMatch.is_on_hand ? 'It is currently on your shelf.' : 'Note: This is an out-of-stock suggestion from the catalog.'}`;
+                } else {
+                    answer = `Consultant Analysis: I don't see an exact Ph-match in your current stock for ${contamination || 'this'}. I recommend looking for a high-alkaline pre-wash in the suggested catalog below. For this specific job, look for a dilution capability of at least 1:10.`;
+                }
+            }
+            // 2. Comparison/Substitution Logic
+            else if (lowerQuery.includes("instead of") || lowerQuery.includes("vs") || lowerQuery.includes("better than") || lowerQuery.includes("alternative")) {
                 if (lowerQuery.includes("dirt buster") && lowerQuery.includes("dark fury")) {
                     answer = "Technical Substitution Warning: Dirt Buster is a Ph-Neutral safe cleaner designed for interiors and light maintenance. Using it instead of Dark Fury for heavy contamination (like road film or wheels) will fail because it lacks the inorganic chelating agents needed to break mineral bonds. Dark Fury's high-alkaline profile is required to emulsify traffic film effectively.";
                 } else {
                     answer = "When choosing an alternative, prioritize the Ph-Level compatibility. Substituting a neutral cleaner for an alkaline-requirement scene will result in traffic film remaining on the surface, which blocks your sealants from bonding correctly.";
                 }
             } 
-            // 2. Damage/Safety Analysis (Address the user's "hard compound" question)
+            // 3. Damage/Safety Analysis
             else if (lowerQuery.includes("damage") || lowerQuery.includes("safe") || lowerQuery.includes("risk") || lowerQuery.includes("paint")) {
                 if (lowerQuery.includes("compound") || lowerQuery.includes("polish")) {
                     answer = "Paint Safety Alert: Using a hard compound carries a severe risk of depletion of the clear coat if not measured with a depth gauge. Hard compounds are abrasive; if you generate too much heat or stay in one spot too long, you can 'strike through' the clear coat. Always start with the least aggressive method (Test Spot) before moving to a hard compound.";
@@ -103,17 +117,17 @@ export default function ChemicalTraining() {
                     answer = "Surface safety depends on substrate temperature and chemical Ph. Always verify if the surface is cool to the touch. Most damage in detailing comes from using the wrong Ph-level for sensitive metals (like raw aluminum) or letting chemicals dry on the paint.";
                 }
             }
-            // 3. Assessment / Severity Guidance
+            // 4. Assessment / Severity Guidance
             else if (lowerQuery.includes("assess") || lowerQuery.includes("severity") || lowerQuery.includes("condition")) {
                 answer = "To assess vehicle severity accurately: 1. Visual Inspection (Check for 'Traffic Film' - the grey haze that doesn't come off with water). 2. Surface Feel (Use the 'Baggie Test' to check for embedded contaminants). 3. Substrate Check (Identify if the panel is plastic, aluminum, or painted). 'Severe' conditions require low-Ph followed by high-Ph (Dual Stage) washing to reset the surface.";
             }
-            // 4. Specific Contamination Logic
+            // 5. Specific Contamination Logic
             else if (lowerQuery.includes("sap") || lowerQuery.includes("tar") || lowerQuery.includes("bugs")) {
                 answer = `Removing ${lowerQuery.includes("sap") ? "Tree Sap" : "Organic Matter"} requires a solvent-based approach. Alcohol-based cleaners break the resin bonds, while alkaline pre-washes soften the exterior shell. Do not scrub; let the chemistry do the work to avoid marring the finish.`;
             }
-            // 5. Fallback with context
+            // 6. Fallback (Improved)
             else {
-                answer = `Regarding "${query}": Detailing success is 80% chemistry and 20% mechanical action. For your current ${contamination || 'detailing'} scenario with ${condition || 'Moderate'} severity, you should prioritize a chemical that has high 'Wetting Ability' to penetrate the pores of the surface. I've analyzed your shelf below for the best chemical match.`;
+                answer = `Technical Analysis for "${query}": For detailing scenarios involving ${contamination || 'unknown'} contamination at ${condition || 'Moderate'} severity, you must prioritize the Ph-Balance of the solution. If the substrate is painted clear coat, ensure the chemical does not exceed a Ph of 12.0 for more than 5 minutes of dwell time. I've highlighted the most compatible items from your list below.`;
             }
 
             const results = {
@@ -549,14 +563,28 @@ export default function ChemicalTraining() {
             <Dialog open={aiOpen} onOpenChange={setAiOpen}>
                 <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                     <DialogHeader className="p-6 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border-b border-zinc-800">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center">
-                                <Sparkles className="w-5 h-5 text-white" />
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center">
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-xl font-black">Chemical AI Consultant</DialogTitle>
+                                    <DialogDescription className="text-purple-300/60 font-medium">Real-time Web Analysis & Inventory Logic</DialogDescription>
+                                </div>
                             </div>
-                            <div>
-                                <DialogTitle className="text-xl font-black">Chemical AI Consultant</DialogTitle>
-                                <DialogDescription className="text-purple-300/60 font-medium">Real-time Web Analysis & Inventory Logic</DialogDescription>
-                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-zinc-500 hover:text-purple-400 hover:bg-purple-900/20"
+                                title="How to use the AI Agent"
+                                onClick={() => {
+                                    // Trigger global help with the AI topic
+                                    window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'ai-chemical-assistant' } }));
+                                }}
+                            >
+                                <Info className="w-5 h-5" />
+                            </Button>
                         </div>
                     </DialogHeader>
 
