@@ -94,9 +94,9 @@ export default function ChemicalTraining() {
         setAiOpen(true);
         setAiQuery(""); // Clear input
         
-        // Update local chat history
+        // Update local chat history (Clear previous and show only current)
         const newUserMessage = { role: 'user' as const, content: query };
-        setChatMessages(prev => [...prev, newUserMessage]);
+        setChatMessages([newUserMessage]);
         
         // Simulating Web Search + Inventory Analysis
         setTimeout(() => {
@@ -746,6 +746,10 @@ export default function ChemicalTraining() {
 
                                                     <Button size="sm" variant="outline" className="h-7 border-zinc-800 text-[10px] ml-2" onClick={() => {
                                                         setAiResponse({ answer: item.answer, sources: item.sources, recommendations: item.recommendations });
+                                                        setChatMessages([
+                                                            { role: 'user', content: item.query },
+                                                            { role: 'assistant', content: item.answer }
+                                                        ]);
                                                         setViewMode('chat');
                                                     }}>Review</Button>
                                                 </div>
