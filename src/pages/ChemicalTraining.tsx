@@ -46,6 +46,7 @@ export default function ChemicalTraining() {
     const [aiQuery, setAiQuery] = useState("");
     const [aiResponse, setAiResponse] = useState<{answer: string; sources: string[]; recommendations: any[]} | null>(null);
     const [aiLoading, setAiLoading] = useState(false);
+    const [chatMessages, setChatMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
 
     useEffect(() => {
         (async () => {
@@ -70,22 +71,54 @@ export default function ChemicalTraining() {
         
         setAiLoading(true);
         setAiOpen(true);
+        setAiQuery(""); // Clear input
+        
+        // Update local chat history
+        const newUserMessage = { role: 'user' as const, content: query };
+        setChatMessages(prev => [...prev, newUserMessage]);
         
         // Simulating Web Search + Inventory Analysis
         setTimeout(() => {
+            let answer = "";
+            let sources = ["https://superiorproducts.com/technical-brief", "https://detailingwiki.org/chemistry/ph-scale"];
+            
+            const lowerQuery = query.toLowerCase();
+            
+            // 1. Comparison Logic ("Instead of", "Vs", "Better than")
+            if (lowerQuery.includes("instead of") || lowerQuery.includes("vs") || lowerQuery.includes("better than")) {
+                const targetMatch = chemicals.find(c => lowerQuery.includes(c.name.toLowerCase()));
+                if (lowerQuery.includes("dirt buster") && lowerQuery.includes("dark fury")) {
+                    answer = "Great question! Dirt Buster is a Ph-Neutral safe cleaner designed primarily for interiors and light exterior maintenance. Using it 'instead of' Dark Fury for heavy contamination would be ineffective because Dark Fury is an alkaline-heavy surfactant that specifically targets road film and brake dust. Dirt Buster doesn't have the chelating agents required to break down ionic bonds on wheels and lower body panels.";
+                } else if (targetMatch) {
+                    answer = `Comparing products: ${targetMatch.name} is classified as ${targetMatch.primary_uses}. For your current ${contamination || 'detailing'} scenario, this might not be optimal compared to a dedicated surfactant. Pro-tip: Always check the Ph-scale compatibility before substituting chemicals.`;
+                } else {
+                    answer = "Substituting chemicals in detailing depends on the Ph-level and surface tension requirements. Using a less aggressive chemical for high-contamination areas often results in 'incomplete cleaning', leaving a traffic film behind that traps waxes and sealants.";
+                }
+            } 
+            // 2. Specific "Why" reasoning
+            else if (lowerQuery.includes("why") || lowerQuery.includes("explain")) {
+                answer = `The technical reason involves surface tension and chemical dwell time. For ${contamination || 'this contamination'}, the chemical needs to stay 'wet' on the surface to emulsify the dirt. If you use the wrong product, it may flash too fast or etch the surface if it's too acidic/alkaline for that substrate.`;
+            }
+            // 3. General Guidance
+            else {
+                answer = `Based on verified detailing standards for "${query}", the primary chemical requirement is an alkaline-based surfactant with high chelating properties. For ${condition || 'standard'} conditions, you need a product that can break down protein bonds without etching the substrate. I've highlighted the best matches from your shelf below.`;
+            }
+
             const results = {
-                answer: `Based on verified detailing standards for "${query}", the primary chemical requirement is an alkaline-based surfactant with high chelating properties. For ${condition || 'standard'} conditions, you need a product that can break down protein bonds without etching the substrate.`,
-                sources: ["https://superiorproducts.com/technical-brief", "https://detailingwiki.org/chemistry/ph-scale"],
+                answer,
+                sources,
                 recommendations: matches.slice(0, 2).map((m, i) => ({
                     ...m,
                     reasoning: i === 0 
-                        ? "BEST CHOICE: Highest concentration of active surfactants in your current inventory. Superior wetting ability for this specific contaminate." 
-                        : "ALTERNATIVE: Good for sensitive surfaces but requires more agitation time."
+                        ? "TOP TIER: Matches the exact chemical profile needed for this specific contaminate." 
+                        : "BACKUP OPTION: Safe alternative but may require 20% more product or physical agitation."
                 }))
             };
+            
+            setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
             setAiResponse(results);
             setAiLoading(false);
-        }, 2000);
+        }, 1500);
     };
 
     return (
@@ -516,8 +549,26 @@ export default function ChemicalTraining() {
                     </DialogHeader>
 
                     <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        {/* Conversation History */}
+                        {chatMessages.length > 0 && (
+                            <div className="space-y-4 mb-6">
+                                {chatMessages.map((msg, i) => (
+                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`
+                                            max-w-[85%] rounded-2xl px-4 py-3 text-sm
+                                            ${msg.role === 'user' 
+                                                ? 'bg-purple-600 text-white rounded-tr-none' 
+                                                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-tl-none'}
+                                        `}>
+                                            {msg.content}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         {/* Search Box */}
-                        <div className="relative group">
+                        <div className="relative group sticky top-0 z-10">
                             <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
                             <div className="relative flex gap-2">
                                 <Input 
