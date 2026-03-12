@@ -70,9 +70,9 @@ export const ContaminationToChemistry: Record<ContaminationType, { keywords: str
     // Interior
     [ContaminationType.BodyOils]: { keywords: ['interior cleaner', 'apc', 'degreaser', 'leather cleaner'], category: 'Interior APC / Leather Cleaner', type: 'interior' },
     [ContaminationType.FoodResidue]: { keywords: ['interior', 'crumb', 'all purpose', 'organic'], category: 'Interior Detailer', type: 'interior' },
-    [ContaminationType.BeverageStains]: { keywords: ['fabric', 'carpet', 'stain', 'shampoo', 'enzyme', 'bomber'], category: 'Fabric Cleaner / Extractor Solution', type: 'interior' },
-    [ContaminationType.UpholsteryStains]: { keywords: ['fabric', 'stain', 'shampoo', 'upholstery', 'extraction'], category: 'Stain Remover', type: 'interior' },
-    [ContaminationType.RugStains]: { keywords: ['carpet', 'rug', 'spotter', 'bomber', 'shampoo'], category: 'Carpet Specialist', type: 'interior' },
+    [ContaminationType.BeverageStains]: { keywords: ['fabric', 'carpet', 'stain', 'shampoo', 'enzyme', 'bomber', 'liquid'], category: 'Fabric Cleaner / Extractor Solution', type: 'interior' },
+    [ContaminationType.UpholsteryStains]: { keywords: ['fabric', 'stain', 'shampoo', 'upholstery', 'extraction', 'seat'], category: 'Stain Remover', type: 'interior' },
+    [ContaminationType.RugStains]: { keywords: ['carpet', 'rug', 'spotter', 'bomber', 'shampoo', 'extractor'], category: 'Carpet Specialist', type: 'interior' },
     [ContaminationType.FloorMats]: { keywords: ['mat', 'rubber', 'apc', 'degreaser'], category: 'Heavy Duty Cleaner', type: 'interior' },
     [ContaminationType.InteriorPlastics]: { keywords: ['dash', 'vent', 'plastic', 'matte', 'satin', 'uv'], category: 'Interior Utility Cleaner', type: 'interior' },
     [ContaminationType.LeatherGrim]: { keywords: ['leather', 'conditioner', 'dye', 'ph-neutral'], category: 'Leather Treatment', type: 'interior' },
@@ -97,10 +97,14 @@ export function findProductForContamination(
     const inStock = inventory.filter(c => c.is_on_hand !== false);
 
     return inStock.filter(chem => {
+        const usedForStr = Array.isArray(chem.used_for) 
+            ? chem.used_for.join(' ') 
+            : (typeof chem.used_for === 'string' ? chem.used_for : '');
+
         const textToSearch = [
             chem.name,
             chem.description,
-            ...(chem.used_for || []),
+            usedForStr,
             chem.primary_uses,
             chem.why_to_use
         ].join(' ').toLowerCase();
@@ -126,10 +130,14 @@ export function findSuggestedProducts(
     const outOfStock = allChemicals.filter(c => c.is_on_hand === false);
 
     return outOfStock.filter(chem => {
+        const usedForStr = Array.isArray(chem.used_for) 
+            ? chem.used_for.join(' ') 
+            : (typeof chem.used_for === 'string' ? chem.used_for : '');
+
         const textToSearch = [
             chem.name,
             chem.description,
-            ...(chem.used_for || []),
+            usedForStr,
             chem.primary_uses,
             chem.why_to_use
         ].join(' ').toLowerCase();
