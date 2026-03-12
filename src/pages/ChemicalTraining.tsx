@@ -25,11 +25,18 @@ import {
     Search, 
     Globe, 
     Flame,
-    History
+    History,
+    Edit2,
+    Archive,
+    Trash2,
+    RotateCcw,
+    X
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export default function ChemicalTraining() {
     const [activeTab, setActiveTab] = useState("decision");
@@ -47,15 +54,27 @@ export default function ChemicalTraining() {
     const [aiResponse, setAiResponse] = useState<{answer: string; sources: string[]; recommendations: any[]} | null>(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [chatMessages, setChatMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
+    const [aiHistory, setAiHistory] = useState<any[]>([]);
+    const [viewMode, setViewMode] = useState<'chat' | 'history'>('chat');
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState("");
 
     useEffect(() => {
         (async () => {
             const list = await getChemicals();
             setChemicals(list);
             setLoading(false);
+            
+            // Load History
+            const saved = localStorage.getItem('chemical_ai_history');
+            if (saved) setAiHistory(JSON.parse(saved));
         })();
     }, []);
 
+    const saveHistory = (items: any[]) => {
+        setAiHistory(items);
+        localStorage.setItem('chemical_ai_history', JSON.stringify(items));
+    };
     const resetDecision = () => {
         setContamination("");
         setSelectedProduct(null);
@@ -95,7 +114,7 @@ export default function ChemicalTraining() {
                 if (hasMatches) {
                     answer = `Direct Stock Match: Based on your inventory, **${topMatch.name}** is the primary solution. It has the correct surface tension for ${contamination || 'this contamination'}. ${topMatch.is_on_hand ? 'It is currently on your shelf.' : 'Note: This is an out-of-stock suggestion from the catalog.'}`;
                 } else {
-                    answer = `Consultant Analysis: I don't see an exact Ph-match in your current stock for ${contamination || 'this'}. I recommend looking for a high-alkaline pre-wash in the suggested catalog below. For this specific job, look for a dilution capability of at least 1:10.`;
+                    answer = "Consultant Analysis: I don't see an exact Ph-match in your current stock for ${contamination || 'this'}. I recommend looking for a high-alkaline pre-wash in the suggested catalog below. For this specific job, look for a dilution capability of at least 1:10.";
                 }
             }
             // 2. Comparison/Substitution Logic
@@ -141,10 +160,42 @@ export default function ChemicalTraining() {
                 }))
             };
             
+            const newHistoryItem = {
+                id: Math.random().toString(36).substr(2, 9),
+                timestamp: new Date().toISOString(),
+                query,
+                answer,
+                sources,
+                recommendations: results.recommendations,
+                archived: false
+            };
+            
+            saveHistory([newHistoryItem, ...aiHistory]);
             setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
             setAiResponse(results);
             setAiLoading(false);
+            
+            toast.success("Response saved to history");
         }, 1500);
+    };
+
+    const deleteHistoryItem = (id: string) => {
+        const updated = aiHistory.filter(item => item.id !== id);
+        saveHistory(updated);
+        toast.info("Conversation deleted");
+    };
+
+    const archiveHistoryItem = (id: string) => {
+        const updated = aiHistory.map(item => item.id === id ? { ...item, archived: !item.archived } : item);
+        saveHistory(updated);
+        toast.info(updated.find(i => i.id === id).archived ? "Archived" : "Restored");
+    };
+
+    const updateHistoryItem = (id: string, newQuery: string) => {
+        const updated = aiHistory.map(item => item.id === id ? { ...item, query: newQuery } : item);
+        saveHistory(updated);
+        setEditingId(null);
+        toast.success("Updated");
     };
 
     return (
@@ -573,128 +624,235 @@ export default function ChemicalTraining() {
                                     <DialogDescription className="text-purple-300/60 font-medium">Real-time Web Analysis & Inventory Logic</DialogDescription>
                                 </div>
                             </div>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-zinc-500 hover:text-purple-400 hover:bg-purple-900/20"
-                                title="How to use the AI Agent"
-                                onClick={() => {
-                                    // Trigger global help with the AI topic
-                                    window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'ai-chemical-assistant' } }));
-                                }}
-                            >
-                                <Info className="w-5 h-5" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                {(chatMessages.length > 0 || aiResponse) && (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => {
+                                            setChatMessages([]);
+                                            setAiResponse(null);
+                                            setAiQuery("");
+                                        }}
+                                        className="text-[10px] font-black uppercase tracking-tighter text-red-400/60 hover:text-red-400 hover:bg-red-500/10"
+                                    >
+                                        <XCircle className="w-3 h-3 mr-1" /> Clear Chat
+                                    </Button>
+                                )}
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setViewMode(viewMode === 'chat' ? 'history' : 'chat')}
+                                    className={`text-[10px] font-black uppercase tracking-tighter ${viewMode === 'history' ? 'bg-purple-900/40 text-purple-400' : 'text-zinc-500'}`}
+                                >
+                                    <History className="w-3 h-3 mr-1" /> {viewMode === 'history' ? "Back to Chat" : `History (${aiHistory.length})`}
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-zinc-500 hover:text-purple-400 hover:bg-purple-900/20"
+                                    title="How to use the AI Agent"
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'ai-chemical-assistant' } }));
+                                    }}
+                                >
+                                    <Info className="w-5 h-5" />
+                                </Button>
+                            </div>
                         </div>
                     </DialogHeader>
 
                     <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                        {/* Conversation History */}
-                        {chatMessages.length > 0 && (
-                            <div className="space-y-4 mb-6">
-                                {chatMessages.map((msg, i) => (
-                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`
-                                            max-w-[85%] rounded-2xl px-4 py-3 text-sm
-                                            ${msg.role === 'user' 
-                                                ? 'bg-purple-600 text-white rounded-tr-none' 
-                                                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-tl-none'}
-                                        `}>
-                                            {msg.content}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Search Box */}
-                        <div className="relative group sticky top-0 z-10">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-                            <div className="relative flex gap-2">
-                                <Input 
-                                    placeholder="Ask about a specific situation (e.g. Tree sap on white paint)..."
-                                    className="bg-black border-zinc-800 h-12 text-white placeholder:text-zinc-600"
-                                    value={aiQuery}
-                                    onChange={(e) => setAiQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAiAsk()}
-                                />
-                                <Button 
-                                    onClick={() => handleAiAsk()} 
-                                    disabled={aiLoading}
-                                    className="h-12 w-12 bg-purple-600 hover:bg-purple-500 shrink-0"
-                                >
-                                    {aiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {aiResponse ? (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                                <div className="space-y-3">
-                                    <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Sparkles className="w-3 h-3 text-purple-400" /> AI Findings
-                                    </h4>
-                                    <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-sm leading-relaxed text-zinc-300">
-                                        {aiResponse.answer}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Beaker className="w-3 h-3 text-green-400" /> Best from your Inventory
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {aiResponse.recommendations.map((rec, i) => (
-                                            <div key={i} className="bg-black border border-zinc-800 rounded-xl p-4">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-white font-bold">{rec.name}</span>
-                                                    <Badge className={i === 0 ? "bg-green-600" : "bg-zinc-800 text-zinc-400"}>
-                                                        {i === 0 ? "Best Match" : "Alternative"}
-                                                    </Badge>
+                        {viewMode === 'history' ? (
+                            <div className="space-y-4">
+                                {aiHistory.length === 0 ? (
+                                    <div className="py-20 text-center text-zinc-600 italic">No saved conversations yet.</div>
+                                ) : (
+                                    aiHistory.map((item) => (
+                                        <div key={item.id} className={`bg-zinc-900/50 border rounded-xl overflow-hidden transition-all ${item.archived ? 'border-zinc-800 opacity-60' : 'border-zinc-800 hover:border-purple-900/50'}`}>
+                                            <div className="p-4 flex items-start justify-between gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    {editingId === item.id ? (
+                                                        <div className="flex gap-2">
+                                                            <Input 
+                                                                value={editValue} 
+                                                                onChange={(e) => setEditValue(e.target.value)}
+                                                                className="bg-black border-zinc-700 h-8 text-xs"
+                                                            />
+                                                            <Button size="sm" className="h-8 bg-purple-600" onClick={() => updateHistoryItem(item.id, editValue)}>Save</Button>
+                                                        </div>
+                                                    ) : (
+                                                        <h5 className="text-sm font-bold text-white truncate">{item.query}</h5>
+                                                    )}
+                                                    <p className="text-[10px] text-zinc-500 mt-1 uppercase font-black">{new Date(item.timestamp).toLocaleDateString()} @ {new Date(item.timestamp).toLocaleTimeString()}</p>
                                                 </div>
-                                                <p className="text-xs text-purple-400 font-medium mb-3">{rec.reasoning}</p>
-                                                <div className="flex justify-between items-center pt-3 border-t border-zinc-900">
-                                                    <span className="text-[10px] text-zinc-500 uppercase font-black">Target Ratio</span>
-                                                    <span className="font-mono text-green-400 font-black">
-                                                        {getDynamicRatio(rec.dilution_ratios?.[0]?.ratio || "1:10", (condition || 'Moderate') as VehicleCondition)}
-                                                    </span>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => {
+                                                        setEditingId(item.id);
+                                                        setEditValue(item.query);
+                                                    }}><Edit2 className="w-3.5 h-3.5" /></Button>
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-purple-400" onClick={() => archiveHistoryItem(item.id)}>
+                                                        {item.archived ? <RotateCcw className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                                                    </Button>
+                                                    
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
+                                                                <AlertDialogDescription className="text-zinc-500">
+                                                                    This will permanently remove this response from your technical history. This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel className="bg-zinc-900 border-zinc-800">Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction className="bg-red-600 hover:bg-red-700 border-none" onClick={() => deleteHistoryItem(item.id)}>Delete Permanently</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+
+                                                    <Button size="sm" variant="outline" className="h-7 border-zinc-800 text-[10px] ml-2" onClick={() => {
+                                                        setAiResponse({ answer: item.answer, sources: item.sources, recommendations: item.recommendations });
+                                                        setViewMode('chat');
+                                                    }}>Review</Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ) : (
+                            <>
+                                {/* Conversation History */}
+                                {chatMessages.length > 0 && (
+                                    <div className="space-y-4 mb-6">
+                                        {chatMessages.map((msg, i) => (
+                                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`
+                                                    max-w-[85%] rounded-2xl px-4 py-3 text-sm
+                                                    ${msg.role === 'user' 
+                                                        ? 'bg-purple-600 text-white rounded-tr-none' 
+                                                        : 'bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-tl-none'}
+                                                `}>
+                                                    {msg.content}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                )}
 
-                                <div className="space-y-3">
-                                    <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Globe className="w-3 h-3 text-cyan-400" /> Technical Sources
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {aiResponse.sources.map((s, i) => (
-                                            <a key={i} href={s} target="_blank" rel="noreferrer" className="text-[10px] bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 rounded-full border border-zinc-800 flex items-center gap-2 text-zinc-400">
-                                                <ExternalLink className="w-2.5 h-2.5" /> {new URL(s).hostname}
-                                            </a>
-                                        ))}
+                                {/* Current Active Result (Clears when asking new or can be forced clear) */}
+                                {aiResponse && !aiLoading && (
+                                    <div className="bg-purple-900/10 border border-purple-900/40 rounded-2xl p-4 mb-4 relative animate-in fade-in zoom-in-95">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-zinc-900 border border-zinc-800"
+                                            onClick={() => setAiResponse(null)}
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </Button>
+                                        <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                            <Sparkles className="w-3 h-3" /> Latest AI Profile
+                                        </h4>
+                                        <div className="text-sm text-zinc-300 leading-relaxed">
+                                            {aiResponse.answer}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Search Box */}
+                                <div className="relative group sticky top-0 z-10">
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+                                    <div className="relative flex gap-2">
+                                        <Input 
+                                            placeholder="Ask about a specific situation (e.g. Tree sap on white paint)..."
+                                            className="bg-black border-zinc-800 h-12 text-white placeholder:text-zinc-600"
+                                            value={aiQuery}
+                                            onChange={(e) => setAiQuery(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAiAsk()}
+                                        />
+                                        <Button 
+                                            onClick={() => handleAiAsk()} 
+                                            disabled={aiLoading}
+                                            className="h-12 w-12 bg-purple-600 hover:bg-purple-500 shrink-0"
+                                        >
+                                            {aiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                                        </Button>
                                     </div>
                                 </div>
-                            </div>
-                        ) : aiLoading ? (
-                            <div className="py-20 text-center space-y-4">
-                                <div className="relative inline-block">
-                                    <div className="h-16 w-16 rounded-full border-4 border-purple-600/10 border-t-purple-600 animate-spin"></div>
-                                    <Globe className="w-6 h-6 text-purple-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                                </div>
-                                <p className="text-zinc-500 text-sm font-medium">Scouring professional detailing records...</p>
-                            </div>
-                        ) : (
-                            <div className="py-12 text-center space-y-3 border-2 border-dashed border-zinc-900 rounded-2xl">
-                                <MessageCircle className="w-10 h-10 text-zinc-800 mx-auto" />
-                                <h5 className="text-zinc-500 font-bold uppercase text-xs tracking-widest">Awaiting your scenario</h5>
-                                <div className="flex flex-wrap justify-center gap-2 pt-2">
-                                    <button onClick={() => setAiQuery("Tree sap removal from ceramic coating")} className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-800">Tree sap?</button>
-                                    <button onClick={() => setAiQuery("Best way to clean neglected white leather")} className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-800">Dirty leather?</button>
-                                    <button onClick={() => setAiQuery("Water spots on windshield")} className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-800">Water spots?</button>
-                                </div>
-                            </div>
+
+                                {aiResponse ? (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                                <Sparkles className="w-3 h-3 text-purple-400" /> AI Findings
+                                            </h4>
+                                            <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-sm leading-relaxed text-zinc-300">
+                                                {aiResponse.answer}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                                <Beaker className="w-3 h-3 text-green-400" /> Best from your Inventory
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {aiResponse.recommendations.map((rec, i) => (
+                                                    <div key={i} className="bg-black border border-zinc-800 rounded-xl p-4">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <span className="text-white font-bold">{rec.name}</span>
+                                                            <Badge className={i === 0 ? "bg-green-600" : "bg-zinc-800 text-zinc-400"}>
+                                                                {i === 0 ? "Best Match" : "Alternative"}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-purple-400 font-medium mb-3">{rec.reasoning}</p>
+                                                        <div className="flex justify-between items-center pt-3 border-t border-zinc-900">
+                                                            <span className="text-[10px] text-zinc-500 uppercase font-black">Target Ratio</span>
+                                                            <span className="font-mono text-green-400 font-black">
+                                                                {getDynamicRatio(rec.dilution_ratios?.[0]?.ratio || "1:10", (condition || 'Moderate') as VehicleCondition)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                                <Globe className="w-3 h-3 text-cyan-400" /> Technical Sources
+                                            </h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {aiResponse.sources.map((s, i) => (
+                                                    <a key={i} href={s} target="_blank" rel="noreferrer" className="text-[10px] bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 rounded-full border border-zinc-800 flex items-center gap-2 text-zinc-400">
+                                                        <ExternalLink className="w-2.5 h-2.5" /> {new URL(s).hostname}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : aiLoading ? (
+                                    <div className="py-20 text-center space-y-4">
+                                        <div className="relative inline-block">
+                                            <div className="h-16 w-16 rounded-full border-4 border-purple-600/10 border-t-purple-600 animate-spin"></div>
+                                            <Globe className="w-6 h-6 text-purple-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                                        </div>
+                                        <p className="text-zinc-500 text-sm font-medium">Scouring professional detailing records...</p>
+                                    </div>
+                                ) : (
+                                    <div className="py-12 text-center space-y-3 border-2 border-dashed border-zinc-900 rounded-2xl">
+                                        <MessageCircle className="w-10 h-10 text-zinc-800 mx-auto" />
+                                        <h5 className="text-zinc-500 font-bold uppercase text-xs tracking-widest">Awaiting your scenario</h5>
+                                        <div className="flex flex-wrap justify-center gap-2 pt-2">
+                                            <button onClick={() => setAiQuery("Tree sap removal from ceramic coating")} className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-800">Tree sap?</button>
+                                            <button onClick={() => setAiQuery("Best way to clean neglected white leather")} className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-800">Dirty leather?</button>
+                                            <button onClick={() => setAiQuery("Water spots on windshield")} className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-800">Water spots?</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 
