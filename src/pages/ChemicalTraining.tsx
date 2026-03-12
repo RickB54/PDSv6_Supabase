@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle } from "lucide-react";
+import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2 } from "lucide-react";
 import { Chemical } from "@/types/chemicals";
 import { getChemicals } from "@/lib/chemicals";
 import {
@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function ChemicalTraining() {
     const [activeTab, setActiveTab] = useState("decision");
