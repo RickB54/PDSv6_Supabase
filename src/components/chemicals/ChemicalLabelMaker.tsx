@@ -36,7 +36,8 @@ import {
     Trash2,
     Wand2,
     Save,
-    Plus
+    Plus,
+    RotateCcw
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
 import { getChemicals } from '@/lib/chemicals';
@@ -46,6 +47,41 @@ import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import HelpModal from '@/components/help/HelpModal';
+
+const mapScenarioLabel = (val: string) => {
+    const s = (val || '').toLowerCase();
+    if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "VERY DIRTY";
+    if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) return "SLIGHTLY DIRTY";
+    if (s.match(/interior|cabin|seats|carpet|dash|upholstery|leather|inside/)) return "INTERIOR";
+    if (s.match(/exterior|outside|paint|body|wash|soap|foam/)) return "EXTERIOR";
+    return (val || '').toUpperCase();
+};
+
+const findBestRatio = (type: string, chem: Chemical | null, fallbackRatio: string = '') => {
+    const ratios = chem?.dilution_ratios || [];
+    if (ratios.length === 0) return fallbackRatio;
+
+    // 1. Keyword search (most accurate)
+    const match = ratios.find(r => {
+        const l = ((r.soil_level || '') + ' ' + (r.method || '')).toLowerCase();
+        if (type === 'Interior') return l.match(/interior|cabin|inside|seats|carpet|dash|upholstery|leather|vinyl/);
+        if (type === 'Exterior') return l.match(/exterior|outside|paint|body|wash|foam|soap/);
+        if (type === 'Very Dirty') return l.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|engine/);
+        if (type === 'Slightly Dirty') return l.match(/light|standard|daily|maintenance|slightly dirty|fair|quick|rinse/);
+        return false;
+    });
+
+    if (match) return match.ratio;
+
+    // 2. Logic-based hierarchy fallback: [0] is strongest, [last] is mildest
+    if (ratios.length >= 2) {
+        if (type === 'Very Dirty') return ratios[0].ratio;
+        if (type === 'Slightly Dirty') return ratios[ratios.length - 1].ratio;
+        if (type === 'Interior' && ratios.length >= 3) return ratios[1].ratio;
+    }
+
+    return ratios[0].ratio;
+};
 
 interface ChemicalLabelMakerProps {
     open: boolean;
@@ -68,6 +104,12 @@ interface SavedLabelTemplate {
         safetyWarning: string;
         imageUrl: string;
         freeformText: string;
+        scenarioRatios: {
+            interior: string;
+            exterior: string;
+            heavy: string;
+            light: string;
+        };
     };
     style: {
         size: LabelSize;
@@ -112,6 +154,12 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         safetyWarning: '',
         imageUrl: '',
         freeformText: '',
+        scenarioRatios: {
+            interior: '',
+            exterior: '',
+            heavy: '',
+            light: ''
+        }
     });
 
     // Label Style State
@@ -139,8 +187,11 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
 
     const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
+    const [selectedForBatch, setSelectedForBatch] = useState<string[]>([]);
+    const skipDefaultApplicator = useRef(false);
 
     const previewRef = useRef<HTMLDivElement>(null);
+
 
     // Track changes for the "Save Changes" button
     useEffect(() => {
@@ -166,15 +217,26 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
 
     useEffect(() => {
         if (selectedChemical) {
+            if (skipDefaultApplicator.current) {
+                skipDefaultApplicator.current = false;
+                return;
+            }
+
             setLabelContent({
                 name: selectedChemical.name,
                 brand: selectedChemical.brand || '',
                 description: selectedChemical.description,
                 instructions: selectedChemical.application_guide?.notes || 'Apply following standard procedures.',
-                dilutionRatio: selectedChemical.dilution_ratios?.[0]?.ratio || 'RTU',
+                dilutionRatio: selectedChemical.dilution_ratios?.[0]?.ratio || '',
                 safetyWarning: selectedChemical.warnings?.risks?.[0] || 'No specific hazard warnings.',
                 imageUrl: selectedChemical.primary_image_url || '',
                 freeformText: '',
+                scenarioRatios: {
+                    interior: findBestRatio('Interior', selectedChemical, ''),
+                    exterior: findBestRatio('Exterior', selectedChemical, ''),
+                    heavy: findBestRatio('Very Dirty', selectedChemical, ''),
+                    light: findBestRatio('Slightly Dirty', selectedChemical, '')
+                }
             });
             setLabelStyle(prev => ({
                 ...prev,
@@ -224,7 +286,13 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         setLabelContent(prev => ({
             ...prev,
             description: condensedDesc,
-            instructions: condensedInst
+            instructions: condensedInst,
+            scenarioRatios: {
+                interior: findBestRatio('Interior', selectedChemical, ''),
+                exterior: findBestRatio('Exterior', selectedChemical, ''),
+                heavy: findBestRatio('Very Dirty', selectedChemical, ''),
+                light: findBestRatio('Slightly Dirty', selectedChemical, '')
+            }
         }));
 
         toast({
@@ -233,17 +301,47 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
             className: "bg-purple-900 border-purple-800 text-white"
         });
     };
+    const handleResetContent = () => {
+        if (!selectedChemical) return;
+        setLabelContent({
+            name: selectedChemical.name,
+            brand: selectedChemical.brand || '',
+            description: selectedChemical.description,
+            instructions: selectedChemical.application_guide?.notes || 'Apply following standard procedures.',
+            dilutionRatio: selectedChemical.dilution_ratios?.[0]?.ratio || '',
+            safetyWarning: selectedChemical.warnings?.risks?.[0] || 'No specific hazard warnings.',
+            imageUrl: selectedChemical.primary_image_url || '',
+            freeformText: '',
+            scenarioRatios: {
+                interior: findBestRatio('Interior', selectedChemical, ''),
+                exterior: findBestRatio('Exterior', selectedChemical, ''),
+                heavy: findBestRatio('Very Dirty', selectedChemical, ''),
+                light: findBestRatio('Slightly Dirty', selectedChemical, '')
+            }
+        });
+        toast({ title: "Content Reset", description: "Labels restored to original chemical specs." });
+    };
 
     const handleSaveTemplate = () => {
+        if (!selectedChemical) {
+            toast({ title: "Selection Required", description: "You must choose a chemical before you can save a design.", variant: "destructive" });
+            return;
+        }
+
+        if (!labelContent.name.trim()) {
+            toast({ title: "Product Name Missing", description: "Label must have a name to be saved.", variant: "destructive" });
+            return;
+        }
+
         if (!newTemplateName.trim()) {
             if (activeTemplateId) {
-                const confirmed = window.confirm("No name entered. Would you like to UPDATE the current label instead?");
+                const confirmed = window.confirm("Design name is empty. Would you like to UPDATE the current saved label with these changes instead?");
                 if (confirmed) {
                     handleUpdateTemplate();
                     return;
                 }
             }
-            toast({ title: "Name Required", description: "Please name your design before saving.", variant: "destructive" });
+            toast({ title: "Name Required", description: "Please enter a design name to save this as a new template.", variant: "destructive" });
             return;
         }
 
@@ -267,18 +365,41 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     };
 
     const handleLoadTemplate = (template: SavedLabelTemplate) => {
-        setLabelContent(template.content);
+        if (hasChanges) {
+            const saveFirst = window.confirm("You have unsaved changes on your current label. Would you like to SAVE them before switching? (Select 'Cancel' to Discard and switch)");
+            if (saveFirst) {
+                handleUpdateTemplate();
+            }
+        }
+
+        skipDefaultApplicator.current = true;
+        setLabelContent({
+            ...labelContent,
+            ...template.content,
+            scenarioRatios: template.content.scenarioRatios || {
+                interior: '',
+                exterior: '',
+                heavy: '',
+                light: ''
+            }
+        });
         setLabelStyle(template.style);
         setActiveTemplateId(template.id);
         if (template.chemicalId !== 'manual') {
             const chem = chemicals.find(c => c.id === template.chemicalId);
             if (chem) setSelectedChemical(chem);
         }
+        setHasChanges(false);
         toast({ title: "Design Loaded", description: `Restored '${template.templateName}' settings.` });
     };
 
     const handleUpdateTemplate = () => {
         if (!activeTemplateId) return;
+        
+        if (!labelContent.name.trim()) {
+            toast({ title: "Update Failed", description: "Cannot save a label with an empty name.", variant: "destructive" });
+            return;
+        }
         
         const updated = savedTemplates.map(t => {
             if (t.id === activeTemplateId) {
@@ -424,6 +545,88 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         }
     };
 
+    const handleBatchPrint = async () => {
+        const templatesToPrint = savedTemplates.filter(t => selectedForBatch.includes(t.id));
+        if (templatesToPrint.length === 0) return;
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const baseStyle = `
+            body { margin: 0; padding: 10mm; background: white; font-family: sans-serif; }
+            .batch-page { 
+                width: 210mm; height: 297mm; display: grid; 
+                grid-template-columns: 102mm 102mm; 
+                grid-template-rows: 145mm 145mm; 
+                gap: 2mm; page-break-after: always;
+            }
+            .label-item { 
+                border: 2px solid #000; padding: 4mm; display: flex; flex-direction: column; overflow: hidden;
+                background: white; color: black; box-sizing: border-box; height: 100%;
+            }
+            .chem-img { max-height: 35mm; width: 100%; object-fit: contain; margin-bottom: 3mm; border: 1px solid #eee; padding: 2mm; border-radius: 4px; }
+            .badge { display: inline-block; background: #eee; padding: 1mm 2mm; border-radius: 4px; font-size: 7pt; font-weight: 900; }
+            @page { margin: 0; size: auto; }
+        `;
+
+        // Flatten templates into "slots" (Split = 2 slots, Single = 1 slot)
+        const slots: any[] = [];
+        templatesToPrint.forEach(t => {
+            if (t.style.splitRatios) {
+                slots.push({ mode: 'primary', t });
+                slots.push({ mode: 'technical', t });
+            } else {
+                slots.push({ mode: 'all', t });
+            }
+        });
+
+        let content = '';
+        for (let i = 0; i < slots.length; i += 4) {
+            content += '<div class="batch-page">';
+            const pageSlots = slots.slice(i, i + 4);
+            pageSlots.forEach(slot => {
+                const { mode, t } = slot;
+                content += `
+                    <div class="label-item">
+                        <div style="height: 2mm; background: ${t.style.themeColor || '#8b5cf6'}; margin-bottom: 2mm;"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2mm;">
+                            <div style="font-weight: 900; text-transform: uppercase; font-size: 13pt; line-height: 1; min-width: 0;">${t.content.name}</div>
+                            ${mode !== 'technical' ? `<div style="border: 1px solid #000; padding: 1mm; font-size: 8pt; font-weight: 900;">${t.content.dilutionRatio}</div>` : ''}
+                        </div>
+                        
+                        ${mode === 'primary' || mode === 'all' ? `
+                            ${t.style.showImage ? `<img class="chem-img" src="${t.content.imageUrl}" />` : ''}
+                            <div style="font-size: 8pt; font-style: italic; opacity: 0.7; overflow: hidden; max-height: 20mm;">${t.content.description}</div>
+                        ` : ''}
+
+                        ${mode === 'technical' || mode === 'all' ? `
+                            <div style="margin-top: 3mm; border-top: 1px solid #000; pt: 2mm;">
+                                <div style="font-size: 7pt; font-weight: 900; opacity: 0.5; margin-bottom: 1mm;">USAGE GUIDE</div>
+                                <div style="font-size: 8pt; white-space: pre-wrap;">${t.content.instructions}</div>
+                            </div>
+                        ` : ''}
+
+                        ${mode === 'primary' && t.style.showBlankForm ? `
+                             <div style="margin-top: auto; border: 1px dashed #ccc; height: 15mm;"></div>
+                        ` : ''}
+                        
+                        ${mode === 'technical' && t.style.showWarnings ? `
+                            <div style="margin-top: auto; display: flex; align-items: center; gap: 4px; border-top: 1px solid #000; padding-top: 1mm;">
+                                <span style="background: red; color: white; border-radius: 2px; px: 1mm; font-size: 6pt; font-weight: 900;">DANGER</span>
+                                <span style="font-size: 7pt; font-weight: 900; color: red;">${t.content.safetyWarning}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            content += '</div>';
+        }
+
+        printWindow.document.write(`<html><head><script src="https://cdn.tailwindcss.com"></script><style>${baseStyle}</style></head><body>${content}</body></html>`);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 1000);
+    };
+
     const handleDirectPrint = async () => {
         if (!previewRef.current) return;
 
@@ -498,40 +701,6 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                 </div>
             ` : '';
 
-            const mapScenarioLabel = (val: string) => {
-                const s = (val || '').toLowerCase();
-                if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "VERY DIRTY";
-                if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) return "SLIGHTLY DIRTY";
-                if (s.match(/interior|cabin|seats|carpet|dash|upholstery|leather|inside/)) return "INTERIOR";
-                if (s.match(/exterior|outside|paint|body|wash|soap|foam/)) return "EXTERIOR";
-                return (val || '').toUpperCase();
-            };
-
-            const findBestRatio = (type: string) => {
-                const ratios = selectedChemical?.dilution_ratios || [];
-                if (ratios.length === 0) return labelContent.dilutionRatio || 'RTU';
-                
-                // 1. Keyword match
-                const match = ratios.find(r => {
-                    const l = ((r.soil_level || '') + ' ' + (r.method || '')).toLowerCase();
-                    if (type === 'Interior') return l.match(/interior|cabin|inside|seats|carpet|dash|upholstery|leather|vinyl/);
-                    if (type === 'Exterior') return l.match(/exterior|outside|paint|body|wash|foam|soap/);
-                    if (type === 'Very Dirty') return l.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|engine/);
-                    if (type === 'Slightly Dirty') return l.match(/light|standard|daily|maintenance|slightly dirty|fair|quick|rinse/);
-                    return false;
-                });
-                
-                if (match) return match.ratio;
-                
-                // 2. Logic-based hierarchy fallback
-                if (ratios.length >= 2) {
-                    if (type === 'Very Dirty') return ratios[0].ratio; // Strongest
-                    if (type === 'Slightly Dirty') return ratios[ratios.length - 1].ratio; // Mildest
-                    if (type === 'Interior' && ratios.length >= 3) return ratios[1].ratio; // Usually mid-tier
-                }
-                
-                return ratios[0].ratio;
-            };
 
             const activeFiltersCount = [labelStyle.showInterior, labelStyle.showExterior, labelStyle.showHeavy, labelStyle.showLight].filter(Boolean).length;
             let displayRatios: {label: string, ratio: string}[] = [];
@@ -541,10 +710,10 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                     ratio: r.ratio
                 }));
             } else {
-                if (labelStyle.showInterior) displayRatios.push({ label: 'INTERIOR', ratio: findBestRatio('Interior') });
-                if (labelStyle.showExterior) displayRatios.push({ label: 'EXTERIOR', ratio: findBestRatio('Exterior') });
-                if (labelStyle.showHeavy) displayRatios.push({ label: 'VERY DIRTY', ratio: findBestRatio('Very Dirty') });
-                if (labelStyle.showLight) displayRatios.push({ label: 'SLIGHTLY DIRTY', ratio: findBestRatio('Slightly Dirty') });
+                if (labelStyle.showInterior) displayRatios.push({ label: 'INTERIOR', ratio: labelContent.scenarioRatios.interior });
+                if (labelStyle.showExterior) displayRatios.push({ label: 'EXTERIOR', ratio: labelContent.scenarioRatios.exterior });
+                if (labelStyle.showHeavy) displayRatios.push({ label: 'VERY DIRTY', ratio: labelContent.scenarioRatios.heavy });
+                if (labelStyle.showLight) displayRatios.push({ label: 'SLIGHTLY DIRTY', ratio: labelContent.scenarioRatios.light });
             }
 
             const mainRatiosPart = labelStyle.showDilutionTable && displayRatios.length > 0 ? `
@@ -725,12 +894,12 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] uppercase text-zinc-500 font-bold px-1">Design Management</Label>
-                                                {activeTemplateId && hasChanges && (
+                                                {selectedChemical && activeTemplateId && hasChanges && labelContent.name.trim() && (
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
                                                         onClick={handleUpdateTemplate}
-                                                        className="h-5 px-2 text-[9px] bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black font-black border border-yellow-500/30 animate-pulse"
+                                                        className="h-5 px-2 text-[9px] bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black font-black border border-yellow-500/30 animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.2)]"
                                                     >
                                                         SAVE CHANGES?
                                                     </Button>
@@ -745,7 +914,8 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                 />
                                                 <Button 
                                                     onClick={handleSaveTemplate}
-                                                    className="bg-purple-600 hover:bg-purple-500 h-8 px-3 text-[10px] font-bold shadow-lg shrink-0"
+                                                    disabled={!selectedChemical}
+                                                    className="bg-purple-600 hover:bg-purple-500 h-8 px-3 text-[10px] font-bold shadow-lg shrink-0 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                                 >
                                                     <Plus className="w-3.5 h-3.5 mr-1" />
                                                     SAVE NEW
@@ -818,6 +988,34 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                 </div>
 
                                 <div className="space-y-2">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex-1">
+                                            <h4 className="text-[12px] uppercase font-black text-zinc-400 flex items-center gap-2">
+                                                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                                Content Tools
+                                            </h4>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={handleAiGenerate}
+                                                className="h-7 px-2 text-[9px] bg-purple-500/10 text-purple-400 hover:bg-purple-500 hover:text-white font-black border border-purple-500/20"
+                                            >
+                                                AI FIX
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={handleResetContent}
+                                                title="Reset to Original"
+                                                className="h-7 w-7 p-0 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white font-black border border-red-500/20"
+                                            >
+                                                <RotateCcw className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
                                     <div className="flex items-center justify-between mb-2">
                                         <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider px-1">Component Toggles</Label>
                                         <Button 
@@ -839,7 +1037,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                         {[
                                             { label: "Pic", key: "showImage" },
                                             { label: "Brand", key: "showBrand" },
-                                            { label: "Summ", key: "showDescription" },
+                                            { label: "Summary", key: "showDescription" },
                                             { label: "Table", key: "showDilutionTable" },
                                             { label: "Instr", key: "showInstructions" },
                                             { label: "Ratio", key: "showPrimaryRatio" },
@@ -872,22 +1070,34 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                             Scenario Filters
                                         </h4>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 gap-2">
                                         {[
-                                            { label: "Interior", key: "showInterior" },
-                                            { label: "Exterior", key: "showExterior" },
-                                            { label: "Very Dirty", key: "showHeavy" },
-                                            { label: "Slightly Dirty", key: "showLight" }
+                                            { label: "Interior", key: "showInterior", contentKey: "interior" },
+                                            { label: "Exterior", key: "showExterior", contentKey: "exterior" },
+                                            { label: "Very Dirty", key: "showHeavy", contentKey: "heavy" },
+                                            { label: "Slightly Dirty", key: "showLight", contentKey: "light" }
                                         ].map((toggle) => (
-                                            <Button 
-                                                key={toggle.key} 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                onClick={() => setLabelStyle(prev => ({ ...prev, [toggle.key]: !(prev as any)[toggle.key] }))}
-                                                className={`h-9 text-[10px] font-black border transition-all ${labelStyle[toggle.key as keyof typeof labelStyle] ? 'text-blue-500 border-blue-500/30 bg-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}
-                                            >
-                                                {toggle.label}
-                                            </Button>
+                                            <div key={toggle.key} className="flex gap-2 items-center">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => setLabelStyle(prev => ({ ...prev, [toggle.key]: !(prev as any)[toggle.key] }))}
+                                                    className={`h-8 flex-1 text-[10px] font-black border transition-all ${labelStyle[toggle.key as keyof typeof labelStyle] ? 'text-blue-500 border-blue-500/30 bg-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}
+                                                >
+                                                    {toggle.label}
+                                                </Button>
+                                                {labelStyle[toggle.key as keyof typeof labelStyle] && (
+                                                    <Input 
+                                                        placeholder="Manual Ratio (20 chars max)"
+                                                        value={labelContent.scenarioRatios[toggle.contentKey as keyof typeof labelContent.scenarioRatios]}
+                                                        onChange={(e) => setLabelContent(prev => ({
+                                                            ...prev,
+                                                            scenarioRatios: { ...prev.scenarioRatios, [toggle.contentKey]: e.target.value }
+                                                        }))}
+                                                        className="h-8 w-48 text-[10px] bg-zinc-950 border-zinc-800 tracking-wider font-mono bold px-2"
+                                                    />
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                     <p className="text-[9px] text-zinc-600 leading-tight italic">
@@ -909,7 +1119,16 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                     ) : (
                                         <div className="space-y-1 max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
                                             {savedTemplates.map((template) => (
-                                                <div key={template.id} className="group flex items-center justify-between p-2 rounded bg-zinc-950 border border-zinc-900 hover:border-zinc-700 transition-colors">
+                                                <div key={template.id} className="group flex items-center gap-2 p-2 rounded bg-zinc-950 border border-zinc-900 hover:border-zinc-700 transition-colors">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedForBatch.includes(template.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedForBatch(prev => [...prev, template.id]);
+                                                            else setSelectedForBatch(prev => prev.filter(id => id !== template.id));
+                                                        }}
+                                                        className="w-3.5 h-3.5 accent-purple-500 rounded border-zinc-800"
+                                                    />
                                                     <div className="flex-1 cursor-pointer truncate" onClick={() => handleLoadTemplate(template)}>
                                                         <div className="text-[10px] font-black text-zinc-300">{template.templateName}</div>
                                                         <div className="text-[8px] text-zinc-600 uppercase font-bold">{template.content.name || 'Untitled'}</div>
@@ -1098,6 +1317,17 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
 
                 <DialogFooter className="px-6 py-4 border-t border-zinc-800 bg-zinc-950 flex items-center justify-end gap-2 shrink-0">
                     <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zinc-800 bg-zinc-900 text-zinc-400 h-9 text-xs">Cancel</Button>
+                    
+                    {selectedForBatch.length >= 2 && (
+                        <Button 
+                            className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs font-black shadow-lg animate-in fade-in slide-in-from-right-4" 
+                            onClick={handleBatchPrint}
+                        >
+                            <Printer className="w-4 h-4 mr-2" />
+                            PRINT BATCH ({selectedForBatch.length})
+                        </Button>
+                    )}
+
                     <Button 
                         variant="secondary" 
                         className="bg-zinc-800 hover:bg-zinc-700 text-white h-9 text-xs font-bold" 
@@ -1129,41 +1359,6 @@ function LabelBlock({ labelStyle, labelContent, selectedChemical, mode }: any) {
 
     const activeFiltersCount = [labelStyle.showInterior, labelStyle.showExterior, labelStyle.showHeavy, labelStyle.showLight].filter(Boolean).length;
 
-    const mapScenarioLabel = (val: string) => {
-        const s = (val || '').toLowerCase();
-        if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "VERY DIRTY";
-        if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) return "SLIGHTLY DIRTY";
-        if (s.match(/interior|cabin|seats|carpet|dash|upholstery|leather|inside/)) return "INTERIOR";
-        if (s.match(/exterior|outside|paint|body|wash|soap|foam/)) return "EXTERIOR";
-        return (val || '').toUpperCase();
-    };
-
-    const findBestRatio = (type: string) => {
-        const ratios = selectedChemical?.dilution_ratios || [];
-        if (ratios.length === 0) return labelContent.dilutionRatio || 'RTU';
-
-        // 1. Keyword search (most accurate)
-        const match = ratios.find(r => {
-            const l = ((r.soil_level || '') + ' ' + (r.method || '')).toLowerCase();
-            if (type === 'Interior') return l.match(/interior|cabin|inside|seats|carpet|dash|upholstery|leather|vinyl/);
-            if (type === 'Exterior') return l.match(/exterior|outside|paint|body|wash|foam|soap/);
-            if (type === 'Very Dirty') return l.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|engine/);
-            if (type === 'Slightly Dirty') return l.match(/light|standard|daily|maintenance|slightly dirty|fair|quick|rinse/);
-            return false;
-        });
-
-        if (match) return match.ratio;
-
-        // 2. Logic-based hierarchy fallback: [0] is strongest, [last] is mildest
-        if (ratios.length >= 2) {
-            if (type === 'Very Dirty') return ratios[0].ratio;
-            if (type === 'Slightly Dirty') return ratios[ratios.length - 1].ratio;
-            if (type === 'Interior' && ratios.length >= 3) return ratios[1].ratio;
-        }
-
-        return ratios[0].ratio;
-    };
-
     let displayRatios: {label: string, ratio: string}[] = [];
     if (activeFiltersCount === 0) {
         // Show everything available if no specific task filters are toggled
@@ -1173,10 +1368,12 @@ function LabelBlock({ labelStyle, labelContent, selectedChemical, mode }: any) {
         }));
     } else {
         // Build the list precisely based on user-selected toggles
-        if (labelStyle.showInterior) displayRatios.push({ label: 'Interior', ratio: findBestRatio('Interior') });
-        if (labelStyle.showExterior) displayRatios.push({ label: 'Exterior', ratio: findBestRatio('Exterior') });
-        if (labelStyle.showHeavy) displayRatios.push({ label: 'Very Dirty', ratio: findBestRatio('Very Dirty') });
-        if (labelStyle.showLight) displayRatios.push({ label: 'Slightly Dirty', ratio: findBestRatio('Slightly Dirty') });
+        const ratios = labelContent.scenarioRatios || { interior: '', exterior: '', heavy: '', light: '' };
+        
+        if (labelStyle.showInterior) displayRatios.push({ label: 'INTERIOR', ratio: ratios.interior });
+        if (labelStyle.showExterior) displayRatios.push({ label: 'EXTERIOR', ratio: ratios.exterior });
+        if (labelStyle.showHeavy) displayRatios.push({ label: 'VERY DIRTY', ratio: ratios.heavy });
+        if (labelStyle.showLight) displayRatios.push({ label: 'SLIGHTLY DIRTY', ratio: ratios.light });
     }
 
 
@@ -1218,33 +1415,55 @@ function LabelBlock({ labelStyle, labelContent, selectedChemical, mode }: any) {
 
                 {/* Content Area - Uses flex-1 to push footer down */}
                 <div className="flex-1 flex flex-col min-h-0 container-content">
-                    {/* Primary Mode Details */}
-                    {(mode === 'all' || mode === 'primary') && (
-                        <>
-                            {labelStyle.showImage && labelContent.imageUrl && (
-                                <div className={`w-full ${mode === 'all' ? 'h-[110px]' : 'flex-1'} min-h-0 rounded-xl overflow-hidden mb-3 border flex items-center justify-center p-2 bg-white shrink-0 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                                    <img src={labelContent.imageUrl} crossOrigin="anonymous" className="max-w-full max-h-full object-contain" />
+                    {/* TOP AREA: Primary content and Instructions (in single mode) */}
+                    <div className={`flex flex-col min-h-0 ${mode === 'all' ? '' : 'flex-1'}`}>
+                        {/* 1. Primary Block (Image & Desc) */}
+                        {(mode === 'all' || mode === 'primary') && (
+                            <>
+                                {labelStyle.showImage && labelContent.imageUrl && (
+                                    <div className={`w-full ${mode === 'all' ? 'h-[110px]' : 'flex-1'} min-h-0 rounded-xl overflow-hidden mb-3 border flex items-center justify-center p-2 bg-white shrink-0 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                                        <img src={labelContent.imageUrl} crossOrigin="anonymous" className="max-w-full max-h-full object-contain" />
+                                    </div>
+                                )}
+                                {labelStyle.showDescription && (
+                                    <div 
+                                        className={`leading-tight italic mb-3 border-l-4 pr-3 py-1 shrink-0 ${isLight ? 'border-black text-black' : 'border-zinc-700 text-zinc-400'} ${labelStyle.boldMode ? 'font-black' : 'font-medium'}`}
+                                        style={{ 
+                                            fontSize: labelStyle.fontSize === 'Small' ? '9px' : '10px',
+                                            maxHeight: mode === 'all' ? '60px' : 'none',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
+                                        {labelContent.description || 'Professional detailing formula.'}
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* 2. Usage Guide (Always in technical split, or following desc in single) */}
+                        {(mode === 'all' || mode === 'ratios') && labelStyle.showInstructions && (
+                            <div className={`min-h-0 overflow-hidden ${mode === 'ratios' ? 'flex-1 mb-2' : 'mb-3'}`}>
+                                <div className={`text-[7.5px] uppercase font-black tracking-widest mb-1 ${isLight ? 'text-black' : 'text-zinc-500'}`}>
+                                    Usage Guide & Instructions
                                 </div>
-                            )}
-                            {labelStyle.showDescription && (
                                 <div 
-                                    className={`leading-tight italic mb-3 border-l-4 pr-3 py-1 shrink-0 ${isLight ? 'border-black text-black' : 'border-zinc-700 text-zinc-400'} ${labelStyle.boldMode ? 'font-black' : 'font-medium'}`}
+                                    className={`leading-[1.12] overflow-hidden whitespace-pre-wrap ${isLight ? 'text-black' : 'text-zinc-300'} ${labelStyle.boldMode ? 'font-black' : 'font-bold'}`}
                                     style={{ 
-                                        fontSize: labelStyle.fontSize === 'Small' ? '9px' : '10px',
-                                        maxHeight: mode === 'all' ? '60px' : 'none',
-                                        overflow: 'hidden'
+                                        fontSize: labelStyle.fontSize === 'Small' ? '9.5px' : 
+                                                 labelStyle.fontSize === 'Medium' ? '11px' : '13px',
+                                        flexShrink: 0
                                     }}
                                 >
-                                    {labelContent.description || 'Professional detailing formula.'}
+                                    {labelContent.instructions}
                                 </div>
-                            )}
-                        </>
-                    )}
+                            </div>
+                        )}
+                    </div>
 
-                    {/* technical Mode Details */}
-                    {(mode === 'all' || mode === 'ratios') && (
-                        <div className="flex-1 flex flex-col min-h-0">
-                            {labelStyle.showDilutionTable && displayRatios.length > 0 && (
+                    {/* BOTTOM AREA: Ratios, Freeform, and Blank Form */}
+                    <div className="shrink-0 mt-3">
+                        {/* 3. Dilution Table (Always in technical split, or footer in single) */}
+                        {(mode === 'all' || mode === 'ratios') && labelStyle.showDilutionTable && displayRatios.length > 0 && (
                             <div className={`mb-3 border-2 rounded-lg overflow-hidden shrink-0 ${isLight ? 'border-black bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
                                 <div className={`grid grid-cols-2 text-[7px] font-black uppercase p-1.5 border-b-2 ${isLight ? 'border-black bg-zinc-200' : 'border-zinc-800 bg-white/5'}`}>
                                     <div>USAGE SCENARIO</div>
@@ -1252,54 +1471,39 @@ function LabelBlock({ labelStyle, labelContent, selectedChemical, mode }: any) {
                                 </div>
                                 {displayRatios.map((r: any, i: number) => (
                                     <div key={i} className={`grid grid-cols-2 text-[8.5px] p-1.5 font-bold ${i > 0 ? 'border-t' : ''} ${isLight ? 'border-black text-black' : 'border-zinc-800 text-zinc-300'}`}>
-                                        <div className="truncate pr-1 uppercase group-hover:text-clip">{r.label}</div>
+                                        <div className="truncate pr-1 uppercase">{r.label}</div>
                                         <div className="text-right font-black tracking-tight">{r.ratio}</div>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {labelStyle.showFreeform && (
-                            <div 
-                                className={`mt-2 p-2.5 border-2 border-dashed rounded-lg mb-3 shrink-0 ${isLight ? 'border-black text-black font-black' : 'border-zinc-700 text-zinc-300'}`}
-                                style={{ fontSize: labelStyle.fontSize === 'Small' ? '9px' : '11px' }}
-                            >
-                                {labelContent.freeformText || 'Custom handwritten notes block...'}
-                            </div>
-                        )}
-
-                            {labelStyle.showBlankForm && (
-                                <div className={`mt-1 p-2 border-2 border-dotted rounded-lg min-h-[50px] shrink flex flex-col justify-end mb-2 ${isLight ? 'border-black' : 'border-zinc-700'}`}>
-                                    <div className={`border-b-2 w-full mb-2 ${isLight ? 'border-black' : 'border-zinc-800/50'}`} />
-                                    <div className={`border-b-2 w-full mb-0.5 ${isLight ? 'border-black' : 'border-zinc-800/50'}`} />
-                                    <div className="text-[5.5px] uppercase font-black text-right opacity-40">Notes</div>
-                                </div>
-                            )}
-
-                            {/* Usage Guide */}
-                            {labelStyle.showInstructions && (
-                                <div className="flex-1 min-h-0 overflow-hidden">
-                                    <div className={`text-[7.5px] uppercase font-black tracking-widest mb-1 ${isLight ? 'text-black' : 'text-zinc-500'}`}>
-                                        Usage Guide & Instructions
-                                    </div>
+                        {/* 4. Notes & Forms (Always in primary split, or footer in single) */}
+                        {(mode === 'all' || mode === 'primary') && (
+                            <>
+                                {labelStyle.showFreeform && (
                                     <div 
-                                        className={`leading-[1.12] overflow-hidden whitespace-pre-wrap ${isLight ? 'text-black' : 'text-zinc-300'} ${labelStyle.boldMode ? 'font-black' : 'font-bold'}`}
-                                        style={{ 
-                                            fontSize: labelStyle.fontSize === 'Small' ? '9.5px' : 
-                                                     labelStyle.fontSize === 'Medium' ? '11px' : '13px',
-                                            flexShrink: 0
-                                        }}
+                                        className={`mt-2 p-2.5 border-2 border-dashed rounded-lg mb-3 shrink-0 ${isLight ? 'border-black text-black font-black' : 'border-zinc-700 text-zinc-300'}`}
+                                        style={{ fontSize: labelStyle.fontSize === 'Small' ? '9px' : '11px' }}
                                     >
-                                        {labelContent.instructions}
+                                        {labelContent.freeformText || 'Custom handwritten notes block...'}
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                )}
+
+                                {labelStyle.showBlankForm && (
+                                    <div className={`mt-1 p-2 border-2 border-dotted rounded-lg min-h-[50px] shrink flex flex-col justify-end mb-2 ${isLight ? 'border-black' : 'border-zinc-700'}`}>
+                                        <div className={`border-b-2 w-full mb-2 ${isLight ? 'border-black' : 'border-zinc-800/50'}`} />
+                                        <div className={`border-b-2 w-full mb-0.5 ${isLight ? 'border-black' : 'border-zinc-800/50'}`} />
+                                        <div className="text-[5.5px] uppercase font-black text-right opacity-40">Notes</div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Footer Danger - Always at the very bottom */}
-                {labelStyle.showWarnings && (
+                {labelStyle.showWarnings && mode !== 'primary' && (
                     <div className={`mt-auto pt-2 border-t-2 shrink-0 ${isLight ? 'border-black' : 'border-zinc-800'}`}>
                         <div className="flex items-center gap-2">
                             <span className="bg-red-600 text-white text-[7px] font-black px-1 rounded-sm">DANGER</span>
