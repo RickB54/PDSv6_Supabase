@@ -84,24 +84,36 @@ export default function ChemicalTraining() {
             
             const lowerQuery = query.toLowerCase();
             
-            // 1. Comparison Logic ("Instead of", "Vs", "Better than")
-            if (lowerQuery.includes("instead of") || lowerQuery.includes("vs") || lowerQuery.includes("better than")) {
-                const targetMatch = chemicals.find(c => lowerQuery.includes(c.name.toLowerCase()));
+            // 1. Comparison/Substitution Logic
+            if (lowerQuery.includes("instead of") || lowerQuery.includes("vs") || lowerQuery.includes("better than") || lowerQuery.includes("alternative")) {
                 if (lowerQuery.includes("dirt buster") && lowerQuery.includes("dark fury")) {
-                    answer = "Great question! Dirt Buster is a Ph-Neutral safe cleaner designed primarily for interiors and light exterior maintenance. Using it 'instead of' Dark Fury for heavy contamination would be ineffective because Dark Fury is an alkaline-heavy surfactant that specifically targets road film and brake dust. Dirt Buster doesn't have the chelating agents required to break down ionic bonds on wheels and lower body panels.";
-                } else if (targetMatch) {
-                    answer = `Comparing products: ${targetMatch.name} is classified as ${targetMatch.primary_uses}. For your current ${contamination || 'detailing'} scenario, this might not be optimal compared to a dedicated surfactant. Pro-tip: Always check the Ph-scale compatibility before substituting chemicals.`;
+                    answer = "Technical Substitution Warning: Dirt Buster is a Ph-Neutral safe cleaner designed for interiors and light maintenance. Using it instead of Dark Fury for heavy contamination (like road film or wheels) will fail because it lacks the inorganic chelating agents needed to break mineral bonds. Dark Fury's high-alkaline profile is required to emulsify traffic film effectively.";
                 } else {
-                    answer = "Substituting chemicals in detailing depends on the Ph-level and surface tension requirements. Using a less aggressive chemical for high-contamination areas often results in 'incomplete cleaning', leaving a traffic film behind that traps waxes and sealants.";
+                    answer = "When choosing an alternative, prioritize the Ph-Level compatibility. Substituting a neutral cleaner for an alkaline-requirement scene will result in traffic film remaining on the surface, which blocks your sealants from bonding correctly.";
                 }
             } 
-            // 2. Specific "Why" reasoning
-            else if (lowerQuery.includes("why") || lowerQuery.includes("explain")) {
-                answer = `The technical reason involves surface tension and chemical dwell time. For ${contamination || 'this contamination'}, the chemical needs to stay 'wet' on the surface to emulsify the dirt. If you use the wrong product, it may flash too fast or etch the surface if it's too acidic/alkaline for that substrate.`;
+            // 2. Damage/Safety Analysis (Address the user's "hard compound" question)
+            else if (lowerQuery.includes("damage") || lowerQuery.includes("safe") || lowerQuery.includes("risk") || lowerQuery.includes("paint")) {
+                if (lowerQuery.includes("compound") || lowerQuery.includes("polish")) {
+                    answer = "Paint Safety Alert: Using a hard compound carries a severe risk of depletion of the clear coat if not measured with a depth gauge. Hard compounds are abrasive; if you generate too much heat or stay in one spot too long, you can 'strike through' the clear coat. Always start with the least aggressive method (Test Spot) before moving to a hard compound.";
+                    sources.push("https://detailingwiki.org/paint-correction/clear-coat-thickness");
+                } else if (lowerQuery.includes("etch") || lowerQuery.includes("burn")) {
+                    answer = "Chemical etching usually occurs when high-Ph chemicals (like APC or Wheel Cleaners) dry on a hot surface. This creates a permanent mark in the clear coat that usually requires machine polishing to level. Pro-tip: Never work in direct sunlight on hot panels.";
+                } else {
+                    answer = "Surface safety depends on substrate temperature and chemical Ph. Always verify if the surface is cool to the touch. Most damage in detailing comes from using the wrong Ph-level for sensitive metals (like raw aluminum) or letting chemicals dry on the paint.";
+                }
             }
-            // 3. General Guidance
+            // 3. Assessment / Severity Guidance
+            else if (lowerQuery.includes("assess") || lowerQuery.includes("severity") || lowerQuery.includes("condition")) {
+                answer = "To assess vehicle severity accurately: 1. Visual Inspection (Check for 'Traffic Film' - the grey haze that doesn't come off with water). 2. Surface Feel (Use the 'Baggie Test' to check for embedded contaminants). 3. Substrate Check (Identify if the panel is plastic, aluminum, or painted). 'Severe' conditions require low-Ph followed by high-Ph (Dual Stage) washing to reset the surface.";
+            }
+            // 4. Specific Contamination Logic
+            else if (lowerQuery.includes("sap") || lowerQuery.includes("tar") || lowerQuery.includes("bugs")) {
+                answer = `Removing ${lowerQuery.includes("sap") ? "Tree Sap" : "Organic Matter"} requires a solvent-based approach. Alcohol-based cleaners break the resin bonds, while alkaline pre-washes soften the exterior shell. Do not scrub; let the chemistry do the work to avoid marring the finish.`;
+            }
+            // 5. Fallback with context
             else {
-                answer = `Based on verified detailing standards for "${query}", the primary chemical requirement is an alkaline-based surfactant with high chelating properties. For ${condition || 'standard'} conditions, you need a product that can break down protein bonds without etching the substrate. I've highlighted the best matches from your shelf below.`;
+                answer = `Regarding "${query}": Detailing success is 80% chemistry and 20% mechanical action. For your current ${contamination || 'detailing'} scenario with ${condition || 'Moderate'} severity, you should prioritize a chemical that has high 'Wetting Ability' to penetrate the pores of the surface. I've analyzed your shelf below for the best chemical match.`;
             }
 
             const results = {
