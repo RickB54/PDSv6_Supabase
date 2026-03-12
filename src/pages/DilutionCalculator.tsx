@@ -86,19 +86,20 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
     return (
         <div className={`flex flex-col items-center ${isModal ? 'bg-zinc-950 p-4 w-full h-full overflow-y-auto' : 'min-h-screen bg-[#05050a] text-white p-6 md:p-12'}`}>
             {/* Header Area */}
-            <div className="w-full max-w-md flex justify-between items-center mb-10 shrink-0">
+            <div className="w-full max-w-md relative flex flex-col items-center mb-10 shrink-0">
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="text-zinc-600 hover:text-white hover:bg-zinc-900 relative z-10"
+                    className="absolute left-0 top-1 text-zinc-600 hover:text-white hover:bg-zinc-900 z-10"
                     onClick={() => onBack ? onBack() : navigate(-1)}
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
 
-                <div className="text-center group transition-all relative">
+                <div className="flex flex-col items-center group transition-all relative">
                     <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    <div className="flex items-center gap-3">
+                    
+                    <div className="flex items-center gap-3 mb-4">
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg border border-white/10">
                             <Calculator className="w-7 h-7 text-white" />
                         </div>
@@ -113,42 +114,42 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="flex items-center gap-1 sm:gap-2 relative z-10">
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-emerald-500 hover:text-white hover:bg-emerald-600/20 active:scale-90 transition-transform" 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowHelp(true);
-                        }}
-                        title="Quick Help"
-                    >
-                        <Info className="w-6 h-6" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-blue-400 hover:text-white hover:bg-blue-600/20 active:scale-90 transition-transform" 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onHelp ? onHelp() : navigate('/dilution-calculator/help');
-                        }}
-                        title="Masterclass"
-                    >
-                        <HelpCircle className="w-6 h-6" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-zinc-600 hover:text-white hover:bg-zinc-800 active:scale-90 transition-transform" 
-                        onClick={handleReset}
-                        title="Reset"
-                    >
-                        <RotateCcw className="w-6 h-6" />
-                    </Button>
+                    <div className="flex items-center gap-4 sm:gap-6 relative z-10 bg-zinc-950/40 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/5 shadow-xl">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-emerald-500 hover:text-white hover:bg-emerald-600/20 active:scale-90 transition-transform" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowHelp(true);
+                            }}
+                            title="Quick Help"
+                        >
+                            <Info className="w-6 h-6" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-blue-400 hover:text-white hover:bg-blue-600/20 active:scale-90 transition-transform" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onHelp ? onHelp() : navigate('/dilution-calculator/help');
+                            }}
+                            title="Masterclass"
+                        >
+                            <HelpCircle className="w-6 h-6" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-zinc-600 hover:text-white hover:bg-zinc-800 active:scale-90 transition-transform" 
+                            onClick={handleReset}
+                            title="Reset"
+                        >
+                            <RotateCcw className="w-6 h-6" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
