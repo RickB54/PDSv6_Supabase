@@ -88,7 +88,15 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                         <Input
                           placeholder="Filter topics..."
                           value={query}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onKeyDown={(e) => {
+                            // Prevent accordion/dialog from closing on Enter if preferred, 
+                            // or just ensure focus stays
+                            e.stopPropagation();
+                          }}
                           onChange={(e) => setQuery(e.target.value)}
                           className="pl-9 h-9 bg-[#0c1220] border-slate-700 text-white focus-visible:ring-emerald-500 w-full"
                         />
@@ -103,7 +111,11 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                             {topics.map((t) => (
                               <button
                                 key={t.id}
-                                onClick={() => handleTopicClick(filteredToc.indexOf(t))}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleTopicClick(filteredToc.indexOf(t));
+                                }}
                                 className={`text-left text-sm px-3 py-2 rounded-md transition-colors flex items-center justify-between group ${filteredToc.indexOf(t) === index ? 'bg-emerald-900/30 text-emerald-100 border border-emerald-500/20' : 'hover:bg-slate-800 text-slate-300 hover:text-white'}`}
                               >
                                 {t.title}

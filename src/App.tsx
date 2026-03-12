@@ -128,6 +128,7 @@ const App = () => {
   const [user, setUser] = useState(getCurrentUser());
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpId, setHelpId] = useState<string | undefined>(undefined);
   const [helpRole, setHelpRole] = useState<'admin' | 'employee' | 'customer' | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -180,11 +181,13 @@ const App = () => {
 
     const onOpenHelp = (e: any) => {
       const role = e.detail?.role || user?.role;
+      const topicId = e.detail?.topicId;
       if (role === 'admin' || role === 'employee' || role === 'customer') {
         setHelpRole(role);
       } else {
         setHelpRole('customer');
       }
+      setHelpId(topicId);
       setHelpOpen(true);
     };
     window.addEventListener('open-help', onOpenHelp);
@@ -337,7 +340,7 @@ const App = () => {
               )}
             </ErrorBoundary>
             <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
-            {user && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || user.role as 'admin' | 'employee' | 'customer'} />}
+            {user && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || user.role as 'admin' | 'employee' | 'customer'} initialTopicId={helpId} />}
           </BrowserRouter>
         </SidebarProvider>
       </TooltipProvider>

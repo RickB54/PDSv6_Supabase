@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getChemicals, deleteChemical } from "@/lib/chemicals";
 import { Chemical } from "@/types/chemicals";
-import { Plus, Search, Tag } from "lucide-react";
+import { Plus, Search, Tag, HelpCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
@@ -85,9 +85,20 @@ export default function ChemicalsLibrary() {
             <main className="container mx-auto px-4 py-8 max-w-7xl">
                 {/* Header Actions */}
                 <div className="flex flex-row flex-wrap justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Chemical Knowledge Base</h1>
-                        <p className="text-zinc-400">Master every product in our arsenal.</p>
+                    <div className="flex items-center gap-3">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white mb-2">Chemical Knowledge Base</h1>
+                            <p className="text-zinc-400">Master every product in our arsenal.</p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin', topicId: 'chemical-workflow' } }))}
+                            className="text-zinc-500 hover:text-blue-400 hover:bg-blue-400/10 h-10 w-10 mt-1"
+                            title="Chemical Workflow Guide"
+                        >
+                            <HelpCircle className="w-6 h-6" />
+                        </Button>
                     </div>
                     {isAdmin && (
                         <div className="flex gap-2">
