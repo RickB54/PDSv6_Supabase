@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,7 @@ function buildAddOnServices(): DisplayService[] {
 const ServiceChecklist = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
@@ -1346,7 +1347,18 @@ const ServiceChecklist = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} />
+      <PageHeader 
+        title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
+        action={
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/dilution-calculator')} 
+            className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold"
+          >
+            <Scale className="w-4 h-4 mr-2" /> Dilution Calc
+          </Button>
+        }
+      />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
         {/* Premium Header Block */}

@@ -18,6 +18,7 @@ import {
     Phone,
     Package,
     Calculator,
+    Beaker,
     CalendarDays // Added for Staff Schedule
 } from "lucide-react";
 
@@ -34,7 +35,7 @@ export function GlobalRightSidebar() {
 
     return (
         <div className={`
-            sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-20 pb-24 gap-4 z-40 shrink-0 transition-all duration-300
+            sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-20 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300
             ${collapsed ? 'w-12' : 'w-48 items-start px-2'}
         `}>
             {/* Toggle */}
@@ -120,6 +121,12 @@ export function GlobalRightSidebar() {
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <FlaskConical className="w-5 h-5 text-teal-400" />
                 {!collapsed && <span>Chemicals</span>}
+            </Button>
+
+            {/* Dilution Calculator Shortcut */}
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/dilution-calculator')} title="Dilution Calculator" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Beaker className="w-5 h-5 text-green-400" />
+                {!collapsed && <span>Calc</span>}
             </Button>
 
         </div>

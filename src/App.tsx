@@ -82,6 +82,8 @@ import BlogReorder from "./pages/BlogReorder";
 import ChemicalsLibrary from "./pages/ChemicalsLibrary";
 import ChemicalTraining from "./pages/ChemicalTraining";
 import AdminChemicals from "@/pages/AdminChemicals";
+import DilutionCalculator from "./pages/DilutionCalculator";
+import DilutionCalculatorHelp from "./pages/DilutionCalculatorHelp";
 import VehicleGallery from "./pages/VehicleGallery";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
@@ -259,8 +261,10 @@ const App = () => {
                       <Route path="/training-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
                       <Route path="/chemical-training" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
                       <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
-                      <Route path="/chemicals" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
-                      <Route path="/admin/chemicals" element={<ProtectedRoute allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />
+                       <Route path="/chemicals" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
+                       <Route path="/dilution-calculator" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><DilutionCalculator /></ProtectedRoute>} />
+                       <Route path="/dilution-calculator/help" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><DilutionCalculatorHelp /></ProtectedRoute>} />
+                       <Route path="/admin/chemicals" element={<ProtectedRoute allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />
                       <Route path="/orientation" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Orientation /></ProtectedRoute>} />
                       <Route path="/staff-schedule" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
                       <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />

@@ -37,7 +37,8 @@ import {
     Wand2,
     Save,
     Plus,
-    RotateCcw
+    RotateCcw,
+    Calculator
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
 import { getChemicals } from '@/lib/chemicals';
@@ -47,6 +48,7 @@ import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import HelpModal from '@/components/help/HelpModal';
+import { DilutionCalculator } from '@/pages/DilutionCalculator';
 
 const mapScenarioLabel = (val: string) => {
     const s = (val || '').toLowerCase();
@@ -141,6 +143,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('edit');
     const [showHelp, setShowHelp] = useState(false);
+    const [helpTopicId, setHelpTopicId] = useState('chemical-label-maker');
     const [savedTemplates, setSavedTemplates] = useState<SavedLabelTemplate[]>([]);
     const [newTemplateName, setNewTemplateName] = useState('');
 
@@ -186,6 +189,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     });
 
     const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'editor' | 'calculator'>('editor');
     const [hasChanges, setHasChanges] = useState(false);
     const [selectedForBatch, setSelectedForBatch] = useState<string[]>([]);
     const skipDefaultApplicator = useRef(false);
@@ -832,8 +836,11 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
+                                    onClick={() => {
+                                        setHelpTopicId('chemical-label-maker');
+                                        setShowHelp(true);
+                                    }}
                                     className="h-6 w-6 text-zinc-500 hover:text-purple-400"
-                                    onClick={() => setShowHelp(true)}
                                 >
                                     <HelpCircle className="w-4 h-4" />
                                 </Button>
@@ -849,7 +856,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                     open={showHelp} 
                     onOpenChange={setShowHelp} 
                     role="admin"
-                    initialTopicId="chemical-label-maker"
+                    initialTopicId={helpTopicId}
                 />
 
                 {/* Mobile Tabs Switcher */}
@@ -1073,6 +1080,15 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                             <Wand2 className="w-3.5 h-3.5 text-blue-400" />
                                             Scenario Filters
                                         </h4>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => setViewMode('calculator')}
+                                            className="h-7 px-3 text-[10px] bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white font-black border border-blue-500/20 shadow-lg"
+                                        >
+                                            <Calculator className="w-3.5 h-3.5 mr-2" />
+                                            DILUTION CALC
+                                        </Button>
                                     </div>
                                     <div className="grid grid-cols-1 gap-2">
                                         {[
@@ -1197,135 +1213,148 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                     <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-zinc-950">
                         {/* Editor Forms */}
                         <div className={`${activeTab === 'preview' ? 'hidden xl:flex' : 'flex'} flex-[1.6] border-r border-zinc-800 flex-col min-w-0`}>
-                            <ScrollArea className="flex-1">
-                                <div className="p-8 sm:p-12 space-y-10">
-                                    <div className="flex flex-col sm:flex-row gap-8">
-                                        <div className="space-y-3">
-                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Product Name</Label>
-                                            <Input 
-                                                value={labelContent.name} 
-                                                onChange={(e) => setLabelContent(prev => ({ ...prev, name: e.target.value }))}
-                                                className="bg-zinc-900 border-zinc-800 h-9"
-                                            />
-                                        </div>
-                                        {labelStyle.showBrand && (
+                            {viewMode === 'calculator' ? (
+                                <div className="flex-1 bg-zinc-950 flex flex-col">
+                                    <DilutionCalculator 
+                                        isModal={true} 
+                                        onBack={() => setViewMode('editor')} 
+                                        onHelp={() => {
+                                            setHelpTopicId('prime-dilution-calculator');
+                                            setShowHelp(true);
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <ScrollArea className="flex-1">
+                                    <div className="p-8 sm:p-12 space-y-10">
+                                        <div className="flex flex-col sm:flex-row gap-8">
                                             <div className="space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Brand / Series</Label>
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Product Name</Label>
                                                 <Input 
-                                                    value={labelContent.brand} 
-                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, brand: e.target.value }))}
+                                                    value={labelContent.name} 
+                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, name: e.target.value }))}
                                                     className="bg-zinc-900 border-zinc-800 h-9"
                                                 />
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {labelStyle.showDescription && (
-                                        <div className="space-y-3">
-                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Summary Description</Label>
-                                            <Textarea 
-                                                value={labelContent.description} 
-                                                onChange={(e) => setLabelContent(prev => ({ ...prev, description: e.target.value }))}
-                                                className="bg-zinc-900 border-zinc-800 min-h-[140px] text-sm"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {labelStyle.showPrimaryRatio && (
-                                        <div className="flex flex-col sm:flex-row gap-8">
-                                            <div className="flex-1 space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Primary Label Ratio</Label>
-                                                <Select 
-                                                    value={labelContent.dilutionRatio} 
-                                                    onValueChange={(val) => setLabelContent(prev => ({ ...prev, dilutionRatio: val }))}
-                                                >
-                                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 h-9">
-                                                        <SelectValue placeholder="Select ratio" />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                        <SelectItem value="RTU">RTU (Ready to Use)</SelectItem>
-                                                        {selectedChemical?.dilution_ratios?.map((d, i) => (
-                                                            <SelectItem key={i} value={d.ratio}>{d.ratio} ({d.method})</SelectItem>
-                                                        ))}
-                                                        <SelectItem value="Custom">Manual Entry...</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            {labelContent.dilutionRatio === 'Custom' && (
+                                            {labelStyle.showBrand && (
                                                 <div className="space-y-3">
-                                                     <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Manual Ratio</Label>
-                                                     <Input 
-                                                         placeholder="e.g. 1:15"
-                                                         className="bg-zinc-900 border-zinc-800 h-9"
-                                                         onChange={(e) => setLabelContent(prev => ({ ...prev, dilutionRatio: e.target.value }))}
-                                                     />
+                                                    <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Brand / Series</Label>
+                                                    <Input 
+                                                        value={labelContent.brand} 
+                                                        onChange={(e) => setLabelContent(prev => ({ ...prev, brand: e.target.value }))}
+                                                        className="bg-zinc-900 border-zinc-800 h-9"
+                                                    />
                                                 </div>
                                             )}
                                         </div>
-                                    )}
 
-                                    {labelStyle.showInstructions && (
-                                        <div className="space-y-3">
-                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Usage Instructions</Label>
-                                            <Textarea 
-                                                value={labelContent.instructions} 
-                                                onChange={(e) => setLabelContent(prev => ({ ...prev, instructions: e.target.value }))}
-                                                className="bg-zinc-900 border-zinc-800 min-h-[250px] text-sm"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {labelStyle.showWarnings && (
-                                        <div className="space-y-3">
-                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                                <AlertTriangle className="w-3 h-3 text-red-500" />
-                                                Safety Alert
-                                            </Label>
-                                            <Input 
-                                                value={labelContent.safetyWarning} 
-                                                onChange={(e) => setLabelContent(prev => ({ ...prev, safetyWarning: e.target.value }))}
-                                                className="bg-zinc-900 border-zinc-800 h-9 text-sm text-red-200"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {labelStyle.showFreeform && (
-                                        <div className="space-y-3">
-                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Freeform Custom Text</Label>
-                                            <Textarea 
-                                                value={labelContent.freeformText} 
-                                                onChange={(e) => setLabelContent(prev => ({ ...prev, freeformText: e.target.value }))}
-                                                placeholder="Type custom text here..."
-                                                className="bg-zinc-900 border-zinc-800 min-h-[80px] text-sm"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Image Selection */}
-                                    {labelStyle.showImage && selectedChemical?.gallery_image_urls && selectedChemical.gallery_image_urls.length > 0 && (
-                                        <div className="space-y-4">
-                                            <Label className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Choose Photo</Label>
-                                            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-                                                <button 
-                                                    onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: selectedChemical.primary_image_url || '' }))}
-                                                    className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === selectedChemical.primary_image_url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
-                                                >
-                                                    <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover rounded-lg" />
-                                                </button>
-                                                {selectedChemical.gallery_image_urls.map((url, i) => (
-                                                    <button 
-                                                        key={i}
-                                                        onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: url }))}
-                                                        className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
-                                                    >
-                                                        <img src={url} className="w-full h-full object-cover rounded-lg" />
-                                                    </button>
-                                                ))}
+                                        {labelStyle.showDescription && (
+                                            <div className="space-y-3">
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Summary Description</Label>
+                                                <Textarea 
+                                                    value={labelContent.description} 
+                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, description: e.target.value }))}
+                                                    className="bg-zinc-900 border-zinc-800 min-h-[140px] text-sm"
+                                                />
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </ScrollArea>
+                                        )}
+
+                                        {labelStyle.showPrimaryRatio && (
+                                            <div className="flex flex-col sm:flex-row gap-8">
+                                                <div className="flex-1 space-y-3">
+                                                    <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Primary Label Ratio</Label>
+                                                    <Select 
+                                                        value={labelContent.dilutionRatio} 
+                                                        onValueChange={(val) => setLabelContent(prev => ({ ...prev, dilutionRatio: val }))}
+                                                    >
+                                                        <SelectTrigger className="bg-zinc-900 border-zinc-800 h-9">
+                                                            <SelectValue placeholder="Select ratio" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                            <SelectItem value="RTU">RTU (Ready to Use)</SelectItem>
+                                                            {selectedChemical?.dilution_ratios?.map((d, i) => (
+                                                                <SelectItem key={i} value={d.ratio}>{d.ratio} ({d.method})</SelectItem>
+                                                            ))}
+                                                            <SelectItem value="Custom">Manual Entry...</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                {labelContent.dilutionRatio === 'Custom' && (
+                                                    <div className="space-y-3">
+                                                         <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Manual Ratio</Label>
+                                                         <Input 
+                                                             placeholder="e.g. 1:15"
+                                                             className="bg-zinc-900 border-zinc-800 h-9"
+                                                             onChange={(e) => setLabelContent(prev => ({ ...prev, dilutionRatio: e.target.value }))}
+                                                         />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {labelStyle.showInstructions && (
+                                            <div className="space-y-3">
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Usage Instructions</Label>
+                                                <Textarea 
+                                                    value={labelContent.instructions} 
+                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, instructions: e.target.value }))}
+                                                    className="bg-zinc-900 border-zinc-800 min-h-[250px] text-sm"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {labelStyle.showWarnings && (
+                                            <div className="space-y-3">
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                                    <AlertTriangle className="w-3 h-3 text-red-500" />
+                                                    Safety Alert
+                                                </Label>
+                                                <Input 
+                                                    value={labelContent.safetyWarning} 
+                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, safetyWarning: e.target.value }))}
+                                                    className="bg-zinc-900 border-zinc-800 h-9 text-sm text-red-200"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {labelStyle.showFreeform && (
+                                            <div className="space-y-3">
+                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Freeform Custom Text</Label>
+                                                <Textarea 
+                                                    value={labelContent.freeformText} 
+                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, freeformText: e.target.value }))}
+                                                    placeholder="Type custom text here..."
+                                                    className="bg-zinc-900 border-zinc-800 min-h-[80px] text-sm"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Image Selection */}
+                                        {labelStyle.showImage && selectedChemical?.gallery_image_urls && selectedChemical.gallery_image_urls.length > 0 && (
+                                            <div className="space-y-4">
+                                                <Label className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Choose Photo</Label>
+                                                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                                                    <button 
+                                                        onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: selectedChemical.primary_image_url || '' }))}
+                                                        className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === selectedChemical.primary_image_url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
+                                                    >
+                                                        <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover rounded-lg" />
+                                                    </button>
+                                                    {selectedChemical.gallery_image_urls.map((url, i) => (
+                                                        <button 
+                                                            key={i}
+                                                            onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: url }))}
+                                                            className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
+                                                        >
+                                                            <img src={url} className="w-full h-full object-cover rounded-lg" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            )}
                         </div>
 
                         <div className={`${activeTab === 'edit' ? 'hidden xl:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>

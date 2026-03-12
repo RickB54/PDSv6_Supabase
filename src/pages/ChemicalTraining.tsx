@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart } from "lucide-react";
+import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart, Calculator } from "lucide-react";
 import { Chemical } from "@/types/chemicals";
 import { getChemicals } from "@/lib/chemicals";
+import { useNavigate } from "react-router-dom";
 import {
     VehicleCondition,
     ContaminationType,
@@ -41,6 +42,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 
 export default function ChemicalTraining() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("decision");
     const [chemicals, setChemicals] = useState<Chemical[]>([]);
     const [loading, setLoading] = useState(true);
@@ -208,16 +210,35 @@ export default function ChemicalTraining() {
 
     return (
         <div className="space-y-6 pb-20">
-            <PageHeader
-                title="Chemical Decision System"
-                subtitle="Internal Training & Operational Logic"
-                action={
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => setActiveTab("library")}>Learning Library</Button>
-                        <Button onClick={() => setActiveTab("decision")}>Decision System</Button>
+            <div className="container mx-auto px-4 py-6 max-w-7xl">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800 shadow-2xl">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-600/20 rounded-xl border border-blue-500/30">
+                            <Beaker className="w-8 h-8 text-blue-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-black text-white tracking-tight italic">CHEMICAL DECISION SYSTEM</h1>
+                            <p className="text-zinc-400 text-sm font-medium">Precision chemistry for a perfect finish.</p>
+                        </div>
                     </div>
-                }
-            />
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => navigate('/dilution-calculator')} 
+                            className="bg-green-600/10 border-green-500/30 text-green-400 hover:bg-green-600 hover:text-white font-black italic tracking-tighter"
+                        >
+                            <Calculator className="w-4 h-4 mr-2" /> DILUTION CALCULATOR
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => resetPage()}
+                            className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 font-bold"
+                        >
+                            <RotateCcw className="w-4 h-4 mr-2" /> Reset System
+                        </Button>
+                    </div>
+                </div>
+            </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto gap-2 bg-transparent p-0 mb-8">

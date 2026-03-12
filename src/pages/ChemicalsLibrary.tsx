@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/hooks/use-toast";
-import { Beaker } from "lucide-react";
+import { Beaker, Calculator } from "lucide-react";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
@@ -101,23 +101,32 @@ export default function ChemicalsLibrary() {
                             <HelpCircle className="w-6 h-6" />
                         </Button>
                     </div>
-                    {isAdmin && (
-                        <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
-                                onClick={() => navigate('/chemical-training')} 
-                                className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border font-bold"
-                            >
-                                <Beaker className="w-4 h-4 mr-2" /> Decision System
-                            </Button>
-                            <Button variant="outline" onClick={() => setLabelMakerOpen(true)} className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-purple-400">
-                                <Tag className="w-4 h-4 mr-2" /> Create Bottle Label
-                            </Button>
-                            <Button onClick={() => navigate('/admin/chemicals')} className="bg-purple-600 hover:bg-purple-700 text-white">
-                                <Plus className="w-4 h-4 mr-2" /> Add Chemical
-                            </Button>
-                        </div>
-                    )}
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => navigate('/dilution-calculator')} 
+                            className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 border font-bold"
+                        >
+                            <Calculator className="w-4 h-4 mr-2" /> Dilution Calc
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => navigate('/chemical-training')} 
+                            className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border font-bold"
+                        >
+                            <Beaker className="w-4 h-4 mr-2" /> Decision System
+                        </Button>
+                        {isAdmin && (
+                            <>
+                                <Button variant="outline" onClick={() => setLabelMakerOpen(true)} className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-purple-400 font-bold">
+                                    <Tag className="w-4 h-4 mr-2" /> Bottle Label
+                                </Button>
+                                <Button onClick={() => navigate('/admin/chemicals')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold">
+                                    <Plus className="w-4 h-4 mr-2" /> Add 
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Filters */}

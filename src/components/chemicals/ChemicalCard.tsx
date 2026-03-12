@@ -13,13 +13,14 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Chemical } from "@/types/chemicals";
-import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil, PlusCircle, Package, Check, Images } from "lucide-react";
+import { AlertTriangle, Droplet, Info, ShieldAlert, Trash2, Sparkles, Pencil, PlusCircle, Package, Check, Images, Calculator } from "lucide-react";
 import { ChemicalGalleryModal } from "./ChemicalGalleryModal";
 import { useMemo, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateChemicalPartial } from "@/lib/chemicals";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface ChemicalCardProps {
     chemical: Chemical;
@@ -31,6 +32,7 @@ interface ChemicalCardProps {
 
 export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }: ChemicalCardProps) {
     const { toast } = useToast();
+    const navigate = useNavigate();
     const initialConfig = useMemo(() => {
         try {
             return chemical.user_notes ? JSON.parse(chemical.user_notes) : {};
@@ -44,7 +46,6 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
     const [isAdding, setIsAdding] = useState(false);
     const [galleryOpen, setGalleryOpen] = useState(false);
 
-    // Sync state with props (e.g. after save or refresh)
     useEffect(() => {
         setCost(initialConfig.cost?.toString() || "");
         setSize(initialConfig.size || "");
@@ -53,11 +54,7 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
     const handleAddToInventory = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!cost || !size) {
-            toast({
-                title: "Missing Info",
-                description: "Please enter both cost and size.",
-                variant: "destructive"
-            });
+            toast({ title: "Missing Info", description: "Please enter cost and size.", variant: "destructive" });
             return;
         }
 
@@ -70,32 +67,19 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                 lastUpdated: new Date().toISOString()
             });
 
-            const { error } = await updateChemicalPartial(chemical.id, {
-                user_notes: updatedNotes
-            });
-
+            const { error } = await updateChemicalPartial(chemical.id, { user_notes: updatedNotes });
             if (error) throw error;
 
-            toast({
-                title: "Added to Inventory",
-                description: `${chemical.name} has been configured in your inventory.`
-            });
+            toast({ title: "Added to Inventory" });
             if (onUpdate) onUpdate();
         } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message,
-                variant: "destructive"
-            });
+            toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             setIsAdding(false);
         }
     };
 
-    const sideColor = useMemo(() => {
-        return chemical.theme_color || "#3b82f6";
-    }, [chemical.theme_color]);
-
+    const sideColor = chemical.theme_color || "#3b82f6";
     const riskLevel = chemical.warnings?.damage_risk;
 
     return (
@@ -105,14 +89,9 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                 style={{ borderLeft: `4px solid ${sideColor}` }}
                 onClick={onClick}
             >
-                {/* Image Area */}
                 <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
                     {chemical.primary_image_url ? (
-                        <img
-                            src={chemical.primary_image_url}
-                            alt={chemical.name}
-                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                        />
+                        <img src={chemical.primary_image_url} alt={chemical.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-zinc-700">
                             <Droplet className="w-12 h-12 mb-2 opacity-20" />
@@ -120,85 +99,47 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                         </div>
                     )}
 
-                    {/* Configured Badge (Top Left) */}
-                    {(initialConfig.cost !== undefined || initialConfig.size !== undefined || (cost && size)) && (
+                    {(initialConfig.cost !== undefined || (cost && size)) && (
                         <div className="absolute top-2 left-2 z-10">
                             <Badge className="bg-emerald-600 border-emerald-500 text-white font-bold shadow-lg shadow-black/50 text-[10px] px-1.5 py-0.5 flex items-center gap-1 hover:bg-emerald-500">
-                                <Check className="w-3 h-3 text-white stroke-2" />
-                                Configured
+                                <Check className="w-3 h-3 text-white stroke-2" /> Configured
                             </Badge>
                         </div>
                     )}
 
-                    {/* Category Badge */}
                     <div className="absolute top-2 right-2 flex flex-col gap-1 items-end z-10">
-                        <Badge
-                            variant="outline"
-                            className="bg-black/80 backdrop-blur border-zinc-700 text-white font-bold"
-                        >
+                        <Badge variant="outline" className="bg-black/80 backdrop-blur border-zinc-700 text-white font-bold">
                             {chemical.category}
                         </Badge>
-
-                        {/* AI Tracking Badge */}
-                        {chemical.ai_generated && !chemical.manually_modified && (
+                        {chemical.ai_generated && (
                             <Badge className="bg-purple-900/80 backdrop-blur border-purple-700 text-purple-200 text-[10px] px-1.5 py-0.5">
-                                <Sparkles className="w-2.5 h-2.5 mr-1" />
-                                AI
-                            </Badge>
-                        )}
-                        {chemical.ai_generated && chemical.manually_modified && (
-                            <Badge className="bg-blue-900/80 backdrop-blur border-blue-700 text-blue-200 text-[10px] px-1.5 py-0.5">
-                                <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                                AI +
-                                <Pencil className="w-2.5 h-2.5 mx-0.5" />
-                                Manual
-                            </Badge>
-                        )}
-                        {!chemical.ai_generated && (
-                            <Badge className="bg-green-900/80 backdrop-blur border-green-700 text-green-200 text-[10px] px-1.5 py-0.5">
-                                <Pencil className="w-2.5 h-2.5 mr-1" />
-                                Manual
+                                <Sparkles className="w-2.5 h-2.5 mr-1" /> AI {chemical.manually_modified && "+ Manual"}
                             </Badge>
                         )}
                     </div>
 
-                    {/* Risk Indicator if High */}
                     {riskLevel === 'High' && (
                         <div className="absolute bottom-2 left-2 bg-red-900/90 text-red-200 text-[10px] px-2 py-0.5 rounded font-bold uppercase flex items-center border border-red-700/50">
-                            <ShieldAlert className="w-3 h-3 mr-1" />
-                            High Risk
+                            <ShieldAlert className="w-3 h-3 mr-1" /> High Risk
                         </div>
                     )}
 
-                    {/* Gallery Button Overlay */}
                     <div className="absolute bottom-2 right-2 z-10">
                         <Button
                             size="icon"
                             variant="secondary"
                             className="h-8 w-8 bg-black/60 hover:bg-purple-600 text-white border-zinc-700/50 backdrop-blur-sm"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setGalleryOpen(true);
-                            }}
-                            title="View Gallery"
+                            onClick={(e) => { e.stopPropagation(); setGalleryOpen(true); }}
                         >
                             <Images className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">
-                        {chemical.name}
-                    </h3>
-                    {chemical.brand && (
-                        <p className="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-3">
-                            {chemical.brand}
-                        </p>
-                    )}
+                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{chemical.name}</h3>
+                    {chemical.brand && <p className="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-3">{chemical.brand}</p>}
 
-                    {/* Mandatory "Used For" List */}
                     <div className="mb-4 flex-1">
                         <p className="text-[10px] text-zinc-400 uppercase font-bold mb-1 flex items-center">
                             <Info className="w-3 h-3 mr-1" /> Used For
@@ -206,99 +147,45 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                         <ul className="space-y-1">
                             {(chemical.used_for || []).slice(0, 3).map((use, idx) => (
                                 <li key={idx} className="text-sm text-zinc-300 flex items-start">
-                                    <span className="mr-2 text-zinc-600">•</span>
-                                    {use}
+                                    <span className="mr-2 text-zinc-600">•</span> {use}
                                 </li>
                             ))}
-                            {(chemical.used_for?.length || 0) > 3 && (
-                                <li className="text-xs text-zinc-500 pl-3">
-                                    + {(chemical.used_for?.length || 0) - 3} more...
-                                </li>
-                            )}
                         </ul>
                     </div>
 
-                    {/* Inventory Quick Actions (Admins Only) */}
                     {isAdmin && (
-                        <div className="px-4 py-3 bg-zinc-950/50 border-t border-zinc-800 space-y-3" onClick={e => e.stopPropagation()}>
+                        <div className="px-4 py-3 bg-zinc-950/50 border-t border-zinc-800 space-y-3 mt-2" onClick={e => e.stopPropagation()}>
                             <div className="flex gap-2">
                                 <div className="flex-1">
                                     <Label className="text-[10px] uppercase text-zinc-500 font-bold">Cost ($)</Label>
-                                    <Input
-                                        value={cost}
-                                        onChange={e => setCost(e.target.value)}
-                                        className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
-                                        placeholder="0.00"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                    />
+                                    <Input value={cost} onChange={e => setCost(e.target.value)} className="h-7 text-xs bg-black border-zinc-800" placeholder="0.00" type="number" />
                                 </div>
                                 <div className="flex-1">
                                     <Label className="text-[10px] uppercase text-zinc-500 font-bold">Size</Label>
-                                    <Input
-                                        value={size}
-                                        onChange={e => setSize(e.target.value)}
-                                        className="h-7 text-xs bg-black border-zinc-800 focus:border-purple-500"
-                                        placeholder="e.g. 16oz"
-                                    />
+                                    <Input value={size} onChange={e => setSize(e.target.value)} className="h-7 text-xs bg-black border-zinc-800" placeholder="e.g. 16oz" />
                                 </div>
                             </div>
-                            <Button
-                                onClick={handleAddToInventory}
-                                disabled={isAdding}
-                                size="sm"
-                                className="w-full h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700"
-                            >
-                                {isAdding ? (
-                                    <span className="animate-pulse">Adding...</span>
-                                ) : (
-                                    <>
-                                        <PlusCircle className="w-3.5 h-3.5 mr-2 text-emerald-500" />
-                                        Add to Inventory
-                                    </>
-                                )}
+                            <Button onClick={handleAddToInventory} disabled={isAdding} size="sm" className="w-full h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-300">
+                                {isAdding ? "Adding..." : "Add to Inventory"}
                             </Button>
                         </div>
                     )}
 
-                    {/* Footer Actions */}
                     <div className="mt-auto pt-3 border-t border-zinc-800/50 flex justify-between items-center text-xs text-zinc-500">
                         <div className="flex items-center gap-2">
                             {isAdmin && onDelete && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-600 hover:text-red-500 hover:bg-red-900/10"
-                                            onClick={(e) => e.stopPropagation()} // Prevent card click
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-600 hover:text-red-500" onClick={e => e.stopPropagation()}><Trash2 className="w-3.5 h-3.5" /></Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-red-500 flex items-center gap-2">
-                                                <ShieldAlert className="w-5 h-5" />
-                                                Delete Chemical?
-                                            </AlertDialogTitle>
-                                            <AlertDialogDescription className="text-zinc-400">
-                                                Are you sure you want to delete <strong>{chemical.name}</strong>?
-                                                <br />This action cannot be undone.
-                                            </AlertDialogDescription>
+                                            <AlertDialogTitle className="text-red-500">Delete Chemical?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-zinc-400">Are you sure you want to delete <strong>{chemical.name}</strong>?</AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                            <AlertDialogCancel className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 hover:text-white">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onDelete(chemical.id);
-                                                }}
-                                                className="bg-red-600 hover:bg-red-700 text-white border-0"
-                                            >
-                                                Delete Forever
-                                            </AlertDialogAction>
+                                            <AlertDialogCancel className="bg-zinc-900 border-zinc-800 text-white">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={(e) => { e.stopPropagation(); onDelete(chemical.id); }} className="bg-red-600 hover:bg-red-700">Delete Forever</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -307,14 +194,23 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                                 {chemical.dilution_ratios?.length ? 'Has Dilution Data' : 'Ready to Use'}
                             </span>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-6 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 p-0 px-2">
-                            View Card &rarr;
-                        </Button>
+                        <div className="flex items-center gap-1">
+                            {chemical.dilution_ratios?.length ? (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 text-green-400 hover:text-green-300 hover:bg-green-900/20 p-0 px-2 flex items-center gap-1"
+                                    onClick={(e) => { e.stopPropagation(); navigate('/dilution-calculator'); }}
+                                >
+                                    <Calculator className="w-3 h-3" /> Calc
+                                </Button>
+                            ) : null}
+                            <Button variant="ghost" size="sm" className="h-6 text-blue-400 hover:text-blue-300 p-0 px-2">View Card &rarr;</Button>
+                        </div>
                     </div>
                 </div>
             </Card>
 
-            {/* Move Gallery Modal outside of Card React tree to prevent event bubbling */}
             <ChemicalGalleryModal
                 chemical={chemical}
                 open={galleryOpen}

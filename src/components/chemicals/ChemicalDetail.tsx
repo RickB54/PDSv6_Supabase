@@ -26,9 +26,11 @@ import {
     Download,
     Loader2,
     BookOpen,
-    Images
+    Images,
+    Calculator
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { ChemicalEditForm } from './ChemicalEditForm';
 import { PhotoGalleryLightbox } from '../gallery/PhotoGalleryLightbox';
 import {
@@ -64,6 +66,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     const [confirmDelete, setConfirmDelete] = useState<{ url: string; isPrimary: boolean } | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     // Helper to extract YouTube ID
     const getYouTubeId = (url: string) => {
@@ -743,6 +746,15 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                             </div>
                         )}
                         <div className="flex gap-1 print:hidden">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => navigate('/dilution-calculator')} 
+                                className="text-zinc-400 hover:text-green-400" 
+                                title="Prime Dilution Calculator"
+                            >
+                                <Calculator className="w-5 h-5" />
+                            </Button>
                             {isAdmin && (
                                 <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white" title="Edit Card">
                                     <Pencil className="w-5 h-5" />

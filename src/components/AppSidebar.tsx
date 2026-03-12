@@ -35,7 +35,7 @@ import localforage from "localforage"; // Using localforage for payroll check
 import { useBookingsStore } from "@/store/bookings";
 
 export function AppSidebar({ user: userProp }: { user?: any }) {
-  const { open, setOpenMobile, setOpen } = useSidebar();
+  const { open, openMobile, setOpenMobile, setOpen } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(userProp || getCurrentUser());
@@ -124,6 +124,44 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   // Auto-close mobile menu on route change
   useEffect(() => { setOpenMobile(false); }, [location.pathname, setOpenMobile]);
+
+  // Mobile Swipe-to-Open Logic
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = Math.abs(touchEndY - touchStartY);
+
+      // Condition: Start near left edge (20px to 80px to avoid bevel but catch intent)
+      // Condition: Swipe right significantly (at least 60px)
+      // Condition: Mostly horizontal movement
+      if (
+        touchStartX >= 20 && touchStartX <= 80 && 
+        deltaX > 60 && 
+        deltaY < 50 && 
+        !openMobile // Only if currently closed
+      ) {
+        setOpenMobile(true);
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart);
+    window.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [openMobile, setOpenMobile]);
 
   // Counts
   const fileCount = useMemo(() => {
