@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet } from "lucide-react";
+import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet, Clipboard, Copy } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { saveChemical, saveTool, saveMaterial, getChemicals, getTools, getMaterials } from "@/lib/inventory-data";
 import { DETAILING_CHEMICALS } from "@/data/detailingChemicals";
 import { DETAILING_TOOLS } from "@/data/detailingTools";
@@ -42,10 +43,12 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const [parsedItems, setParsedItems] = useState<any[]>([]);
     const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
     const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
-    const [step, setStep] = useState<"upload" | "preview" | "ai_results">("upload");
+    const [step, setStep] = useState<"upload" | "preview" | "ai_results" | "manual_entry">("upload");
+    const [manualRows, setManualRows] = useState<any[]>([{ name: "", field2: "", field3: "", field4: "" }]);
     const [aiQuery, setAiQuery] = useState("");
     const [aiResults, setAiResults] = useState<SearchResult[]>([]);
     const [isAiSearching, setIsAiSearching] = useState(false);
+    const [quickPasteText, setQuickPasteText] = useState("");
 
     // Load existing items when tab changes to check for duplicates
     useEffect(() => {
@@ -334,6 +337,92 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         }
     };
 
+    const handleQuickPaste = (textToParse?: string) => {
+        const text = textToParse || quickPasteText;
+        if (!text.trim()) {
+            toast.error("Please paste some text first.");
+            return;
+        }
+
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length === 0) {
+            toast.error("No valid lines found.");
+            return;
+        }
+
+        const data: any[] = lines.map(line => {
+            // Split by comma first, then try to handle bullet points or other separators
+            let parts = line.split(',').map(p => p.trim());
+            
+            // If comma split didn't work (just one part), try to handle common bullet formats
+            if (parts.length === 1) {
+                // Remove leading bullets/dashes/numbers
+                const cleanLine = line.replace(/^[•\-\*\d\.]+\s*/, "").trim();
+                // Try splitting by common separators if no comma
+                const altParts = cleanLine.split(/[:\-]/).map(p => p.trim());
+                if (altParts.length > 1) parts = altParts;
+                else parts = [cleanLine];
+            }
+
+            const row: any = {};
+            if (activeTab === "chemicals") {
+                // Name, Size, Stock/Notes
+                row.name = parts[0] || "New Chemical";
+                row.bottleSize = parts[1] || "16 oz";
+                // If part 2 is a number, treat as stock, otherwise treat as notes
+                const p2 = parts[2] || "";
+                if (p2 && !isNaN(Number(p2.replace(/[$,]/g, '')))) {
+                    row.currentStock = Number(p2.replace(/[$,]/g, ''));
+                } else if (p2) {
+                    row.description = p2;
+                }
+                if (parts[3]) row.description = (row.description ? row.description + " - " : "") + parts[3];
+                row.brand = "";
+                row.costPerBottle = 0;
+                row.threshold = 1;
+            } else if (activeTab === "equipment") {
+                // Name, Price, Notes
+                row.name = parts[0] || "New Equipment";
+                const priceMatch = (parts[1] || "").replace(/[$,]/g, '');
+                row.price = isNaN(Number(priceMatch)) ? 0 : Number(priceMatch);
+                row.notes = parts[2] || "";
+                row.purchaseDate = new Date().toISOString().split('T')[0];
+            } else if (activeTab === "supplies") {
+                // Name, Category, Quantity
+                row.name = parts[0] || "New Supply";
+                row.category = parts[1] || "General";
+                const qtyMatch = (parts[2] || "").replace(/[$,]/g, '');
+                row.quantity = isNaN(Number(qtyMatch)) ? 0 : Number(qtyMatch);
+                row.lowThreshold = 1;
+                row.costPerItem = 0;
+            }
+
+            return { ...row, importSource: 'Quick Paste' };
+        });
+
+        setParsedItems(data);
+        const newSelection = new Set<number>();
+        data.forEach((_, i) => newSelection.add(i));
+        setSelectedIndices(newSelection);
+        setStep("preview");
+        setQuickPasteText(""); // Clear for next time
+        toast.success(`Parsed ${data.length} items from text.`);
+    };
+
+    const pasteFromClipboard = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                setQuickPasteText(text);
+                toast.success("Text pasted from clipboard");
+            } else {
+                toast.info("Clipboard is empty");
+            }
+        } catch (err) {
+            toast.error("Could not access clipboard. Please paste manually.");
+        }
+    };
+
     const toggleSelection = (index: number) => {
         const newSet = new Set(selectedIndices);
         if (newSet.has(index)) newSet.delete(index);
@@ -391,7 +480,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     };
 
     const handleAISearch = async (e?: React.FormEvent) => {
-        e?.preventDefault();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         if (!aiQuery.trim()) return;
 
         setIsAiSearching(true);
@@ -405,6 +497,57 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 toast.info("AI couldn't find any perfectly matching new items. Try broader terms.");
             }
         }, 800);
+    };
+
+    const addManualRow = () => {
+        setManualRows([...manualRows, { name: "", field2: "", field3: "", field4: "" }]);
+    };
+
+    const updateManualRow = (index: number, field: string, value: string) => {
+        const newRows = [...manualRows];
+        newRows[index] = { ...newRows[index], [field]: value };
+        setManualRows(newRows);
+    };
+
+    const removeManualRow = (index: number) => {
+        if (manualRows.length <= 1) return;
+        setManualRows(manualRows.filter((_, i) => i !== index));
+    };
+
+    const handleManualSubmit = () => {
+        const validRows = manualRows.filter(r => r.name.trim());
+        if (validRows.length === 0) {
+            toast.error("Please enter at least one product name.");
+            return;
+        }
+
+        const data: any[] = validRows.map(row => {
+            const item: any = { name: row.name, importSource: 'Manual Entry' };
+            if (activeTab === "chemicals") {
+                item.bottleSize = row.field2 || "16 oz";
+                item.currentStock = Number(row.field3.replace(/[$,]/g, '')) || 0;
+                item.description = row.field4;
+                item.brand = "";
+                item.costPerBottle = 0;
+            } else if (activeTab === "equipment") {
+                item.price = Number(row.field2.replace(/[$,]/g, '')) || 0;
+                item.notes = row.field3;
+                item.purchaseDate = new Date().toISOString().split('T')[0];
+            } else if (activeTab === "supplies") {
+                item.category = row.field2 || "General";
+                item.quantity = Number(row.field3.replace(/[$,]/g, '')) || 0;
+                item.notes = row.field4;
+            }
+            return item;
+        });
+
+        setParsedItems(data);
+        const newSelection = new Set<number>();
+        data.forEach((_, i) => newSelection.add(i));
+        setSelectedIndices(newSelection);
+        setStep("preview");
+        setManualRows([{ name: "", field2: "", field3: "", field4: "" }]);
+        toast.success(`Converted ${data.length} manual entries to import list.`);
     };
 
     const addAiItem = (result: SearchResult) => {
@@ -573,70 +716,218 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     </div>
 
                     {step === "upload" ? (
-                        <div className="py-8 space-y-8 flex-1">
-                            <div className="bg-blue-50/50 dark:bg-zinc-900 border border-blue-200 dark:border-zinc-800 p-6 rounded-lg space-y-4">
-                                <h3 className="font-semibold flex items-center gap-2 text-lg text-blue-700 dark:text-blue-400">
-                                    <BookOpen className="w-5 h-5" /> Quick Start: Use Standard Catalog
+                        <div className="py-6 space-y-6 flex-1 overflow-y-auto">
+                            {/* NEW: Quick Manual Entry Button */}
+                            <div className="bg-gradient-to-br from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 p-6 rounded-xl shadow-xl shadow-indigo-950/20">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div className="space-y-1">
+                                        <h3 className="font-bold flex items-center gap-2 text-xl text-white">
+                                            <Plus className="w-6 h-6 text-indigo-400" /> Enter Stock Directly
+                                        </h3>
+                                        <p className="text-sm text-indigo-200/70">
+                                            Super fast for truck inventory! Tap and type items one-by-one.
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        onClick={() => setStep("manual_entry")} 
+                                        className="w-full sm:w-auto bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-8 py-6 rounded-lg text-lg transition-transform active:scale-95"
+                                    >
+                                        Start Quick Entry
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/80 border border-zinc-700 p-6 rounded-xl space-y-4">
+                                <h3 className="font-bold flex items-center gap-2 text-lg text-white">
+                                    <BookOpen className="w-5 h-5 text-blue-400" /> Use Standard Catalog
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Load our pre-filled list of common {activeTab} with recommended prices and descriptions. Perfect for setting up a new inventory.
+                                <p className="text-sm text-zinc-400">
+                                    Load our pre-filled list of common {activeTab} with recommended prices.
                                 </p>
-                                <Button onClick={loadStandardCatalog} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
-                                    Browse & Select Standard Items
+                                <Button onClick={loadStandardCatalog} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                                    Browse Standard Catalog
                                 </Button>
                             </div>
 
-                            <div className="relative">
+                            <div className="relative py-2">
                                 <div className="absolute inset-0 flex items-center">
-                                    <span className="w-full border-t" />
+                                    <span className="w-full border-t border-zinc-800" />
                                 </div>
-                                <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-background px-2 text-muted-foreground">Or import from file</span>
+                                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
+                                    <span className="bg-zinc-900 px-3 text-zinc-500">Other Import Methods</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-950/60 border border-zinc-800 p-6 rounded-xl space-y-4 shadow-inner">
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <h3 className="font-bold flex items-center gap-2 text-lg text-purple-400">
+                                            <Clipboard className="w-5 h-5 text-purple-400" /> Quick Import from Google Keep
+                                        </h3>
+                                        <p className="text-xs text-zinc-400 font-medium">
+                                            Paste your notes directly from your phone!
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        onClick={pasteFromClipboard} 
+                                        className="h-9 text-xs bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700 font-bold shadow-md"
+                                    >
+                                        <Copy className="w-4 h-4 mr-2" /> Paste Text
+                                    </Button>
+                                </div>
+                                <div className="space-y-3">
+                                    <Textarea
+                                        value={quickPasteText}
+                                        onChange={(e) => setQuickPasteText(e.target.value)}
+                                        placeholder="One item per line (e.g. ONR, 32 oz, half full)"
+                                        className="min-h-[100px] bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600 focus:border-purple-500/50"
+                                    />
+                                    <Button 
+                                        onClick={() => handleQuickPaste()} 
+                                        disabled={!quickPasteText.trim()}
+                                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold h-12"
+                                    >
+                                        Parse & Import
+                                    </Button>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-4 p-6 border border-dashed rounded-lg border-muted-foreground/25 bg-muted/10 opacity-75 hover:opacity-100 transition-opacity">
-                                    <h3 className="font-semibold flex items-center gap-2 text-lg">
-                                        <Upload className="w-5 h-5 text-green-500" /> Upload JSON File
+                                <div className="p-6 border border-dashed rounded-xl border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60 transition-colors">
+                                    <h3 className="font-bold flex items-center gap-2 text-white mb-4">
+                                        <Upload className="w-5 h-5 text-green-500" /> JSON File
                                     </h3>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="json-file">Select your filled JSON file</Label>
-                                        <Input
-                                            id="json-file"
-                                            type="file"
-                                            accept=".json"
-                                            onChange={(e) => handleFileChange(e, 'json')}
-                                            className="cursor-pointer file:cursor-pointer h-9 text-xs"
-                                        />
-                                    </div>
-                                    <div className="pt-2">
-                                        <Button variant="outline" size="sm" onClick={() => downloadTemplate('json')} className="text-[10px] h-7">
-                                            <Download className="w-3 h-3 mr-2" /> Download JSON Template
-                                        </Button>
-                                    </div>
+                                    <Input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={(e) => handleFileChange(e, 'json')}
+                                        className="cursor-pointer bg-zinc-950 border-zinc-800 text-white mb-4"
+                                    />
+                                    <Button variant="ghost" size="sm" onClick={() => downloadTemplate('json')} className="text-zinc-400 hover:text-white hover:bg-zinc-800">
+                                        <Download className="w-4 h-4 mr-2" /> Template
+                                    </Button>
                                 </div>
 
-                                <div className="space-y-4 p-6 border border-dashed rounded-lg border-muted-foreground/25 bg-muted/10 opacity-75 hover:opacity-100 transition-opacity">
-                                    <h3 className="font-semibold flex items-center gap-2 text-lg">
-                                        <FileSpreadsheet className="w-5 h-5 text-blue-500" /> Upload CSV File
+                                <div className="p-6 border border-dashed rounded-xl border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60 transition-colors">
+                                    <h3 className="font-bold flex items-center gap-2 text-white mb-4">
+                                        <FileSpreadsheet className="w-5 h-5 text-blue-500" /> CSV File
                                     </h3>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="csv-file">Select your filled CSV file</Label>
-                                        <Input
-                                            id="csv-file"
-                                            type="file"
-                                            accept=".csv"
-                                            onChange={(e) => handleFileChange(e, 'csv')}
-                                            className="cursor-pointer file:cursor-pointer h-9 text-xs"
-                                        />
-                                    </div>
-                                    <div className="pt-2">
-                                        <Button variant="outline" size="sm" onClick={() => downloadTemplate('csv')} className="text-[10px] h-7">
-                                            <Download className="w-3 h-3 mr-2" /> Download CSV Template
-                                        </Button>
-                                    </div>
+                                    <Input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={(e) => handleFileChange(e, 'csv')}
+                                        className="cursor-pointer bg-zinc-950 border-zinc-800 text-white mb-4"
+                                    />
+                                    <Button variant="ghost" size="sm" onClick={() => downloadTemplate('csv')} className="text-zinc-400 hover:text-white hover:bg-zinc-800">
+                                        <Download className="w-4 h-4 mr-2" /> Template
+                                    </Button>
                                 </div>
+                            </div>
+                        </div>
+                    ) : step === "manual_entry" ? (
+                        <div className="flex flex-col flex-1 min-h-0">
+                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-zinc-800">
+                                <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="text-zinc-100 hover:text-white font-bold bg-zinc-800 px-4">
+                                    <ArrowLeft className="w-5 h-5 mr-2" /> EXIT & BACK
+                                </Button>
+                                <h3 className="font-black text-white uppercase tracking-widest text-lg">Quick Manual Entry</h3>
+                                <div className="w-[80px]" /> {/* Spacer */}
+                            </div>
+
+                            <div className="bg-indigo-600 border-2 border-indigo-400 p-4 rounded-xl mb-6 shadow-lg shadow-indigo-900/40">
+                                <p className="text-sm font-bold text-white flex items-center gap-2">
+                                    <AlertCircle className="w-5 h-5 shrink-0" />
+                                    TAP FIELDS BELOW TO ENTER STOCK — SUPER FAST FOR MOBILE!
+                                </p>
+                            </div>
+
+                            <ScrollArea className="flex-1 -mx-2 px-2">
+                                <div className="space-y-6 pb-20">
+                                    <div className="grid grid-cols-12 gap-2 text-[11px] font-black uppercase tracking-widest text-zinc-400 px-1">
+                                        <div className="col-span-12 md:col-span-5 mb-1 px-1">Product Name / Brand</div>
+                                        <div className="hidden md:block md:col-span-3 mb-1 px-1">{activeTab === 'chemicals' ? 'Size' : activeTab === 'equipment' ? 'Price' : 'Category'}</div>
+                                        <div className="hidden md:block md:col-span-2 mb-1 px-1">{activeTab === 'supplies' ? 'Qty' : 'Stock'}</div>
+                                    </div>
+                                    
+                                    {manualRows.map((row, idx) => (
+                                        <div key={idx} className="space-y-2 bg-zinc-950 p-4 rounded-xl border-2 border-zinc-800 shadow-xl">
+                                            <div className="grid grid-cols-12 gap-2 items-center">
+                                                <div className="col-span-10 md:col-span-5">
+                                                    <Label className="md:hidden text-[10px] text-zinc-500 font-bold mb-1 block uppercase">Name</Label>
+                                                    <Input 
+                                                        value={row.name}
+                                                        onChange={(e) => updateManualRow(idx, 'name', e.target.value)}
+                                                        placeholder="Product Name..."
+                                                        className="bg-zinc-900 border-zinc-700 h-12 text-white text-base font-bold placeholder:text-zinc-500 focus:border-indigo-500"
+                                                    />
+                                                </div>
+                                                <div className="col-span-6 md:col-span-3">
+                                                    <Label className="md:hidden text-[10px] text-zinc-500 font-bold mb-1 block uppercase">{activeTab === 'chemicals' ? 'Size' : activeTab === 'equipment' ? 'Price' : 'Category'}</Label>
+                                                    <Input 
+                                                        value={row.field2}
+                                                        onChange={(e) => updateManualRow(idx, 'field2', e.target.value)}
+                                                        placeholder={activeTab === 'chemicals' ? 'Size' : activeTab === 'equipment' ? 'Price' : 'Cat'}
+                                                        className="bg-zinc-900 border-zinc-700 h-12 text-white text-base font-medium placeholder:text-zinc-600 focus:border-indigo-500"
+                                                    />
+                                                </div>
+                                                <div className="col-span-4 md:col-span-2">
+                                                    <Label className="md:hidden text-[10px] text-zinc-500 font-bold mb-1 block uppercase">Stock</Label>
+                                                    <Input 
+                                                        type="text"
+                                                        value={row.field3}
+                                                        onChange={(e) => updateManualRow(idx, 'field3', e.target.value)}
+                                                        placeholder="0"
+                                                        className="bg-zinc-900 border-zinc-700 h-12 text-white text-lg font-bold placeholder:text-zinc-600 text-center focus:border-indigo-500"
+                                                    />
+                                                </div>
+                                                <div className="col-span-2 md:col-span-2 flex justify-end">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => removeManualRow(idx)}
+                                                        className="h-12 w-12 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 pt-1 border-t border-zinc-900 mt-1">
+                                                <Input 
+                                                    value={row.field4}
+                                                    onChange={(e) => updateManualRow(idx, 'field4', e.target.value)}
+                                                    placeholder="Notes (Status, location, etc...)"
+                                                    className="bg-zinc-900/50 border-none h-9 text-xs text-white placeholder:text-zinc-500 italic"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <Button 
+                                        onClick={addManualRow} 
+                                        variant="outline" 
+                                        className="w-full h-16 border-2 border-dashed border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900/50 font-black text-lg bg-zinc-950"
+                                    >
+                                        <Plus className="w-6 h-6 mr-3" /> ADD ANOTHER ITEM
+                                    </Button>
+                                </div>
+                            </ScrollArea>
+
+                            <div className="pt-6 border-t border-zinc-800 flex flex-col md:flex-row gap-3">
+                                <Button 
+                                    onClick={() => setStep("upload")} 
+                                    variant="outline" 
+                                    className="w-full md:w-1/3 bg-zinc-900 border-zinc-700 text-white font-bold h-14 text-lg"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    onClick={handleManualSubmit} 
+                                    className="w-full md:flex-1 bg-green-600 hover:bg-green-500 text-white font-black h-14 text-xl shadow-lg shadow-green-900/20"
+                                >
+                                    SAVE & IMPORT ALL
+                                </Button>
                             </div>
                         </div>
                     ) : step === "ai_results" ? (
@@ -714,7 +1005,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                         <div className="flex items-center gap-2">
                                                             {source === 'Manual Import' ? <FileSpreadsheet className="w-3 h-3 text-blue-500" /> : 
                                                              source === 'Catalog' ? <BookOpen className="w-3 h-3 text-purple-500" /> :
-                                                             source === 'AI Suggestion' ? <Sparkles className="w-3 h-3 text-amber-500" /> :
+                                                             source === 'AI Suggestion' ? <Sparkles className="w-3 h-3 text-emerald-500" /> :
+                                                             source === 'Quick Paste' ? <Clipboard className="w-3 h-3 text-purple-400" /> :
                                                              <FileText className="w-3 h-3 text-zinc-500" />}
                                                             {source} Section
                                                         </div>
@@ -877,25 +1169,30 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 </DialogFooter>
 
                 {/* AI Search Bar - Persistent Footer */}
-                <div className="mt-2 pt-4 border-t border-zinc-700/50 flex flex-col gap-2">
-                    <form onSubmit={handleAISearch} className="relative">
-                        <Sparkles className={`absolute left-3 top-3 w-4 h-4 ${isAiSearching ? 'text-purple-400 animate-pulse' : 'text-purple-500'}`} />
+                <div className="mt-4 pt-4 border-t-2 border-zinc-800 flex flex-col gap-2">
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        handleAISearch(e);
+                    }} className="relative group">
+                        <Sparkles className={`absolute left-3 top-4 w-5 h-5 ${isAiSearching ? 'text-purple-400 animate-pulse' : 'text-purple-500'}`} />
                         <Input
                             value={aiQuery}
                             onChange={(e) => setAiQuery(e.target.value)}
-                            placeholder={isAiSearching ? "AI is thinking..." : "Ask AI to find items (e.g., 'chemicals for leather cleaning')"}
-                            className="pl-9 pr-12 bg-zinc-900/50 border-purple-500/30 focus-visible:ring-purple-500/50"
+                            placeholder={isAiSearching ? "AI is thinking..." : "ASK AI: 'find leather cleaners' or 'show tools'"}
+                            className="h-12 pl-10 pr-24 bg-zinc-950 border-2 border-zinc-800 text-white text-base font-black placeholder:text-zinc-400 focus:border-purple-500 focus:ring-purple-500/20 shadow-lg"
                         />
                         <Button
                             type="submit"
-                            size="icon"
-                            variant="ghost"
-                            className="absolute right-1 top-1 h-8 w-8 hover:bg-purple-500/20 text-purple-400"
+                            size="sm"
+                            className="absolute right-1 top-1 h-10 px-6 bg-purple-600 hover:bg-purple-500 text-white font-black shadow-lg border-l border-purple-400"
                             disabled={isAiSearching || !aiQuery.trim()}
                         >
-                            <Search className="w-4 h-4" />
+                            <Search className="w-5 h-5 mr-2" /> FIND ITEMS
                         </Button>
                     </form>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center">
+                        AI-Powered Inventory Search
+                    </p>
                 </div>
             </DialogContent>
         </Dialog >
