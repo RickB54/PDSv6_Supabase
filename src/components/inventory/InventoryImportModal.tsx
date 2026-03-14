@@ -690,7 +690,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col p-6">
+            <DialogContent className="w-full sm:max-w-[800px] h-[95vh] sm:h-auto sm:max-h-[85vh] flex flex-col p-2 sm:p-6 bg-zinc-950 border-zinc-800">
                 <DialogHeader>
                     <DialogTitle>Import {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</DialogTitle>
                 </DialogHeader>
@@ -709,15 +709,17 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                             </TabsTrigger>
                         </TabsList>
                         {step === "preview" && (
-                            <Button size="sm" onClick={addItem} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
+                            <Button size="sm" onClick={() => addItem()} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
                                 <Plus className="w-4 h-4" /> Add Item
                             </Button>
                         )}
                     </div>
 
-                    <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto p-1">
-                        {step === "upload" ? (
-                        <div className="py-6 space-y-6 flex-1">
+                    <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-zinc-950/20 rounded-lg overflow-hidden">
+                        <ScrollArea className="flex-1">
+                            <div className="p-4">
+                                {step === "upload" ? (
+                                    <div className="space-y-6">
                             {/* NEW: Quick Manual Entry Button */}
                             <div className="bg-gradient-to-br from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 p-6 rounded-xl shadow-xl shadow-indigo-950/20">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -833,7 +835,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                 <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="text-zinc-100 hover:text-white font-bold bg-zinc-800 px-4">
                                     <ArrowLeft className="w-5 h-5 mr-2" /> EXIT & BACK
                                 </Button>
-                                <h3 className="font-black text-white uppercase tracking-tighter text-2xl">Stock Entry</h3>
+                                <h3 className="font-black text-white uppercase tracking-tighter text-2xl">ULTRA-V6 DIRECT ENTRY</h3>
                                 <div className="w-[80px]" /> {/* Spacer */}
                             </div>
 
@@ -908,26 +910,26 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                     <Button 
                                         onClick={addManualRow} 
                                         variant="outline" 
-                                        className="w-full h-16 border-2 border-dashed border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900/50 font-black text-lg bg-zinc-950"
+                                        className="w-full h-16 border-2 border-dashed border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900/50 font-black text-lg bg-zinc-950 mb-10"
                                     >
                                         <Plus className="w-6 h-6 mr-3" /> ADD ANOTHER ITEM
                                     </Button>
                                 </div>
                             </ScrollArea>
 
-                            <div className="pt-6 border-t border-zinc-800 flex flex-col md:flex-row gap-3">
+                            <div className="pt-6 border-t border-zinc-800 flex flex-col md:flex-row gap-3 bg-zinc-950 p-2">
                                 <Button 
                                     onClick={() => setStep("upload")} 
                                     variant="outline" 
-                                    className="w-full md:w-1/3 bg-zinc-900 border-zinc-700 text-white font-bold h-14 text-lg"
+                                    className="w-full md:w-1/3 bg-zinc-800 border-zinc-700 text-white font-black h-14 text-lg"
                                 >
-                                    Cancel
+                                    CANCEL
                                 </Button>
                                 <Button 
                                     onClick={handleManualSubmit} 
-                                    className="w-full md:flex-1 bg-green-600 hover:bg-green-500 text-white font-black h-14 text-xl shadow-lg shadow-green-900/20"
+                                    className="w-full md:flex-1 bg-green-600 hover:bg-green-500 text-white font-black h-14 text-xl shadow-lg"
                                 >
-                                    SAVE & IMPORT ALL
+                                    SAVE & IMPORT NOW
                                 </Button>
                             </div>
                         </div>
@@ -1153,8 +1155,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                             </div>
                         </div>
                     )}
-                    </div>
-                </Tabs>
+                </div>
+            </ScrollArea>
+        </div>
+    </Tabs>
 
                 <DialogFooter className="mt-6 sm:justify-between sticky bottom-0">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -1170,31 +1174,30 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     )}
                 </DialogFooter>
 
-                {/* AI Search Bar - Persistent Footer */}
-                <div className="mt-4 pt-4 border-t-2 border-zinc-800 flex flex-col gap-2">
+                {/* AI Search Bar - Fixed Footer Area */}
+                <div className="mt-2 pt-2 border-t border-zinc-900 bg-zinc-950 shrink-0">
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         handleAISearch(e);
-                    }} className="flex flex-col sm:flex-row items-stretch gap-2">
-                        <div className="relative flex-1">
+                    }} className="flex flex-col gap-1 p-1">
+                        <div className="relative">
                             <Sparkles className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isAiSearching ? 'text-purple-400 animate-pulse' : 'text-purple-500'}`} />
                             <Input
                                 value={aiQuery}
                                 onChange={(e) => setAiQuery(e.target.value)}
-                                placeholder={isAiSearching ? "AI IS THINKING..." : "TYPE: 'leather cleaners'"}
-                                className="h-14 pl-10 pr-4 bg-black border-2 border-indigo-500 text-white text-lg font-black placeholder:text-zinc-400 focus:ring-indigo-500/50 shadow-2xl w-full"
+                                placeholder={isAiSearching ? "AI IS THINKING..." : "QUICK FIND: 'sprayers'"}
+                                className="h-14 pl-10 pr-4 bg-black border-2 border-indigo-500 text-white text-lg font-black placeholder:text-zinc-500 focus:ring-indigo-500/50 w-full"
                             />
                         </div>
                         <Button
                             type="submit"
-                            size="lg"
-                            className="h-14 px-8 bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-lg border-2 border-indigo-400 shrink-0 uppercase tracking-widest text-lg"
+                            className="h-14 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black border-2 border-indigo-400 uppercase tracking-widest text-lg"
                             disabled={isAiSearching || !aiQuery.trim()}
                         >
                             <Search className="w-6 h-6 mr-2" /> Find Items
                         </Button>
                     </form>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center py-1">
                         AI-Powered Inventory Search
                     </p>
                 </div>
