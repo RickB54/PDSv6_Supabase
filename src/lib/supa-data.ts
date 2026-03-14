@@ -1746,13 +1746,9 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
                 addons: Array.isArray(b.add_ons) ? b.add_ons : [],
                 price: b.service_price || b.price || meta.price,
-                assignedEmployee: b.assigned_employee || meta.assigned_employee,
-                bookedBy: b.booked_by || meta.booked_by,
                 createdAt: b.created_at || meta.created_at,
 
-                reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
-                hasReminder: b.has_reminder || meta.has_reminder,
-                isArchived: b.is_archived || meta.is_archived
+                hasReminder: b.has_reminder || meta.has_reminder
             };
         });
     } catch (err) {
@@ -1763,39 +1759,23 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
 export const upsertSupabaseBooking = async (booking: any) => {
     try {
-        // PREPARE PAYLOAD FOR NEW SCHEMA
-        // Mapping frontend booking object to Supabase columns
+        // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
         const payload: any = {
-            id: booking.id,
-
-            // Core Relations
             customer_id: booking.customerId || booking.customer_id || null,
             vehicle_id: booking.vehicleId || booking.vehicle_id || null,
-
-            // Scheduling
-            scheduled_at: booking.date || booking.scheduled_at, // Fix: Align with schema
-            date: booking.date, // Fallback
-            end_time: booking.endTime,
-
-            // Details
-            service_package: booking.title || booking.service_package, // Fix: Align with schema
-            title: booking.title, // Fallback
+            scheduled_at: booking.date || booking.scheduled_at,
+            service_package: booking.title || booking.service_package,
             status: booking.status || 'confirmed',
             notes: booking.notes,
-            service_price: booking.price || booking.service_price, // Fix: Align with schema
-            price: booking.price, // Fallback
-
-            // Meta / Admin
-            assigned_employee: booking.assignedEmployee,
-            booked_by: booking.bookedBy,
-            is_archived: booking.isArchived || false,
-
-            // JSONB fields (stay as JSONB if schema uses it for arrays)
+            service_price: Number(booking.price || booking.service_price || 0),
             add_ons: booking.addons || [],
-
-            // Timestamps
+            booking_vehicle: booking.vehicle_info || booking.booking_vehicle || null,
             created_at: booking.createdAt || new Date().toISOString()
         };
+
+        if (booking.id) {
+            payload.id = booking.id;
+        }
 
         const { data, error } = await supabase
             .from('bookings')

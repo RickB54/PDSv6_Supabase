@@ -118,9 +118,29 @@ export default function ChemicalTraining() {
             const lowerQuery = query.toLowerCase();
             const hasMatches = matches.length > 0;
             const topMatch = matches[0];
-            
+
+            // --- DATA-DRIVEN AI LOGIC ---
+            // If the query is about a specific chemical, pull its real data
+            const mentionedChemical = chemicals.find(c => lowerQuery.includes(c.name.toLowerCase()));
+            const targetChem = mentionedChemical || (lowerQuery.includes("this") || lowerQuery.includes("it") ? topMatch : null);
+
+            if (targetChem && (lowerQuery.includes("why") || lowerQuery.includes("tell me") || lowerQuery.includes("how to use") || lowerQuery.includes(targetChem.name.toLowerCase()))) {
+                const ratio = getDynamicRatio(targetChem.dilution_ratios?.[0]?.ratio || "RTU", (condition || 'Moderate') as VehicleCondition);
+                answer = `Technical analysis for **${targetChem.name}**: ${targetChem.why_to_use || targetChem.description} 
+
+**Usage Strategy:** For ${contamination || 'detailing'} at ${condition || 'Moderate'} severity, I recommend a **${ratio}** dilution ratio. 
+${targetChem.application_guide?.method ? `**Application:** Apply via ${targetChem.application_guide.method}. ` : ''}
+${targetChem.application_guide?.agitation ? `Agitate with ${targetChem.application_guide.agitation}. ` : ''}
+
+**Safety Warning:** ${targetChem.warnings?.risks?.[0] || 'Ensure surface is cool to the touch.'} 
+${targetChem.surface_compatibility?.avoid?.length ? `**Avoid:** ${targetChem.surface_compatibility.avoid.join(', ')}.` : ''}
+
+**Pro-Tip:** ${targetChem.pro_tips?.[0] || 'Start with a test spot in an inconspicuous area.'}`;
+                
+                if (targetChem.brand === 'Superior Products') sources.push("https://superiorproducts.com/product/" + targetChem.name.toLowerCase().replace(/\s+/g, '-'));
+            }
             // 0. Memory/Frustration Awareness
-            if (lowerQuery.includes("repeat") || lowerQuery.includes("stop") || lowerQuery.includes("already said")) {
+            else if (lowerQuery.includes("repeat") || lowerQuery.includes("stop") || lowerQuery.includes("already said")) {
                 answer = `Understood. I'll skip the intro. For your ${contamination || 'current'} task, the specific chemical logic is focused on ${hasMatches ? topMatch.name : 'alkaline-heavy'} surfactants. You need to verify the substrate's heat threshold before application. Let's look at the shelf list below for the exact concentration rates.`;
             }
             // 1. "Show Me" / Direct Recommendation requests
@@ -133,7 +153,16 @@ export default function ChemicalTraining() {
             }
             // 2. Comparison/Substitution Logic
             else if (lowerQuery.includes("instead of") || lowerQuery.includes("vs") || lowerQuery.includes("better than") || lowerQuery.includes("alternative")) {
-                if (lowerQuery.includes("dirt buster") && lowerQuery.includes("dark fury")) {
+                // If comparing two chemicals we know
+                const mentioned = chemicals.filter(c => lowerQuery.includes(c.name.toLowerCase()));
+                if (mentioned.length >= 2) {
+                    const c1 = mentioned[0];
+                    const c2 = mentioned[1];
+                    answer = `Technical Comparison: **${c1.name}** vs **${c2.name}**. 
+                    \n- **${c1.name}**: ${c1.description.split('.')[0]}. Best for: ${c1.used_for?.[0] || 'N/A'}. 
+                    \n- **${c2.name}**: ${c2.description.split('.')[0]}. Best for: ${c2.used_for?.[0] || 'N/A'}. 
+                    \n\nSubstitution Result: ${c1.category === c2.category ? 'These are compatible substitutes.' : `Careful: ${c1.name} is ${c1.category} while ${c2.name} is ${c2.category}. They serve different roles.`}`;
+                } else if (lowerQuery.includes("dirt buster") && lowerQuery.includes("dark fury")) {
                     answer = "Technical Substitution Warning: Dirt Buster is a Ph-Neutral safe cleaner designed for interiors and light maintenance. Using it instead of Dark Fury for heavy contamination (like road film or wheels) will fail because it lacks the inorganic chelating agents needed to break mineral bonds. Dark Fury's high-alkaline profile is required to emulsify traffic film effectively.";
                 } else {
                     answer = "When choosing an alternative, prioritize the Ph-Level compatibility. Substituting a neutral cleaner for an alkaline-requirement scene will result in traffic film remaining on the surface, which blocks your sealants from bonding correctly.";
@@ -417,7 +446,13 @@ export default function ChemicalTraining() {
                                     variant="outline" 
                                     size="sm" 
                                     className="h-8 text-[10px] uppercase font-black border-purple-500/30 text-purple-400 bg-purple-500/5"
-                                    onClick={() => setAiOpen(true)}
+                                    onClick={() => {
+                                        if (matches.length > 0) {
+                                            handleAiAsk(`Why use ${matches[0].name} for ${contamination}?`);
+                                        } else {
+                                            setAiOpen(true);
+                                        }
+                                    }}
                                 >
                                     <Sparkles className="w-3 h-3 mr-1.5" /> Chemical AI
                                 </Button>

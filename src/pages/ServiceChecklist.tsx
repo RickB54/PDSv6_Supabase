@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 import localforage from "localforage";
@@ -108,6 +109,7 @@ const ServiceChecklist = () => {
   const [employeesLoading, setEmployeesLoading] = useState(true);
   const [checklistId, setChecklistId] = useState<string>("");
   const [customerSearch, setCustomerSearch] = useState<string>("");
+  const [genericCustomerName, setGenericCustomerName] = useState<string>("");
   const [customerSearchResults, setCustomerSearchResults] = useState<CustomerType[]>([]);
   const [vehicleTypeOther, setVehicleTypeOther] = useState<string>("");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
@@ -138,6 +140,7 @@ const ServiceChecklist = () => {
 
   /* Accordion states for Materials Used & Discount */
   const [materialsAccordion, setMaterialsAccordion] = useState({ chemicals: false, materials: false, tools: false });
+  const [materialsSectionExpanded, setMaterialsSectionExpanded] = useState(false);
   const [discountExpanded, setDiscountExpanded] = useState(false);
   const [destinationExpanded, setDestinationExpanded] = useState(false);
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
@@ -414,9 +417,18 @@ const ServiceChecklist = () => {
         if (last?.services?.length) {
           const all = [...buildCoreServices(), ...buildAddOnServices(), { id: 'destination-fee', name: 'Destination Fee', kind: 'special' as const }];
           const ids = last.services
-            .map((s: any) => all.find(x => x.name === s.name)?.id)
+            .map((s: any) => {
+              const matched = all.find(x => x.name === s.name);
+              // Only auto-preselect packages, NOT add-ons (per user request)
+              if (matched && matched.kind === 'package') return matched.id;
+              return null;
+            })
             .filter(Boolean) as string[];
-          if (ids.length) setSelectedServices(ids);
+          
+          if (ids.length) {
+            // Only set if we don't already have a selection (e.g. from URL)
+            setSelectedPackage(prev => prev || ids[0]);
+          }
         }
       })();
     }
@@ -762,8 +774,12 @@ const ServiceChecklist = () => {
   // Save generic checklist progress
   // Save generic checklist progress
   const saveGenericChecklist = async (status: 'in-progress' | 'completed' = 'in-progress'): Promise<string | undefined> => {
-    if (!selectedPackage || !vehicleType) {
-      toast({ title: 'Select package and vehicle', description: 'Choose a package and vehicle type first.', variant: 'destructive' });
+    if (!selectedPackage) {
+      toast({ title: 'Package Required', description: 'Please select a service package first.', variant: 'destructive' });
+      return undefined;
+    }
+    if (!vehicleType) {
+      toast({ title: 'Vehicle Required', description: 'Please select a vehicle type first.', variant: 'destructive' });
       return undefined;
     }
 
@@ -794,6 +810,28 @@ const ServiceChecklist = () => {
       }
     }
 
+    // 0.5 Ensure we have a customer ID if history requires it
+    let targetCustomerId = selectedCustomer;
+    if (!targetCustomerId) {
+        // Try to find a "Generic Customer" in existing list
+        const generic = customers.find(c => c.name.toLowerCase().includes('generic'));
+        if (generic) {
+          targetCustomerId = generic.id!;
+        } else {
+          try {
+            // Create a "Generic Customer" one-time record if it doesn't exist
+            const newGeneric = await upsertSupabaseCustomer({ 
+              name: genericCustomerName || 'Generic Customer',
+              notes: 'System generated for non-linked jobs'
+            });
+            targetCustomerId = newGeneric.id!;
+            // Reloading customers would be good here, but for now we just use the ID
+          } catch (err) {
+            console.error("Failed to create generic customer record", err);
+          }
+        }
+    }
+
     // 1. Save to Supabase Bookings (Job History)
     const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package';
 
@@ -808,7 +846,7 @@ const ServiceChecklist = () => {
     const bookingPayload = {
       id: checklistId || undefined, // Use existing ID if we have it
       title: pkgName,
-      customerId: selectedCustomer, // Might be empty if generic
+      customerId: targetCustomerId || null,
       date: new Date().toISOString(),
       status: status,
       vehicle_info: { type: vehicleType, other: vehicleType === 'Other' ? vehicleTypeOther : undefined },
@@ -817,27 +855,35 @@ const ServiceChecklist = () => {
       addons: selectedAddOns
     };
 
-    let newId = checklistId;
     try {
       const savedBooking = await upsertSupabaseBooking(bookingPayload);
-      if (savedBooking && savedBooking.id) {
-        newId = savedBooking.id;
-        setChecklistId(newId);
+      if (!savedBooking || !savedBooking.id) {
+        throw new Error("Database returned no record ID.");
       }
-    } catch (err) {
-      console.error("Failed to save Supabase Booking", err);
-    }
-
-    // Legacy Local Save (Optional, but kept for compatibility if needed or removed)
-    // We'll trust Supabase primary now.
-
-    if (newId) {
+      
+      const newId = savedBooking.id;
+      setChecklistId(newId);
+      
       toast({ title: 'Progress Saved', description: 'Checklist saved to Job History.' });
-      // Post materials usage on save (no subtract)
-      await postChecklistMaterials(newId, false);
+      
+      try {
+        // Post materials usage on save (no subtract)
+        await postChecklistMaterials(newId, false);
+      } catch (err) {
+        console.warn("Materials Sync Delayed:", err);
+      }
+      
       return newId;
-    } else {
-      toast({ title: 'Save Failed', description: 'Could not save checklist.', variant: 'destructive' });
+    } catch (err: any) {
+      console.error("Failed to save Supabase Booking", err);
+      const errorMsg = err.message || 'The checklist could not be saved to your job history.';
+      toast({ 
+        title: 'Database Save Failed', 
+        description: errorMsg, 
+        variant: 'destructive' 
+      });
+      // Rethrow if we are in 'completed' mode so finishJob knows it failed
+      if (status === 'completed') throw err;
       return undefined;
     }
   };
@@ -886,7 +932,7 @@ const ServiceChecklist = () => {
   const archiveChecklistPDF = (finalize: boolean, recordId?: string) => {
     try {
       const customer = customers.find(c => c.id === selectedCustomer);
-      const customerName = customer?.name || 'Unknown';
+      const customerName = customer?.name || genericCustomerName || 'Generic Customer';
       const doc = new jsPDF();
       const title = finalize ? 'Service Checklist — Job Completed' : 'Service Checklist — Progress Saved';
       doc.setFontSize(18);
@@ -1117,33 +1163,26 @@ const ServiceChecklist = () => {
   // Orchestrate finish job: ensure saved, post materials, alert and archive
   const handleCreateInvoiceGeneric = async () => {
     try {
-      if (!selectedCustomer) {
-        toast({ title: 'Select Customer', description: 'Please select a customer first.', variant: 'destructive' });
-        return;
-      }
-
       // 1. Sync Customer (Auth -> CRM)
       const customer = customers.find(c => c.id === selectedCustomer);
-      if (customer) {
-        try {
-          // Ensure they exist in 'customers' table before invoice creation
-          await upsertSupabaseCustomer({
-            id: customer.id,
-            name: customer.name,
-            email: customer.email,
-            phone: customer.phone,
-            address: customer.address,
-            vehicle_info: {
-              make: customer.vehicle?.split(' ')[1] || '',
-              model: customer.model,
-              year: customer.year
-            },
-            howFound: customer.howFound,
-            howFoundOther: customer.howFoundOther
-          });
-        } catch (err) {
-          console.error("Customer Sync Warning:", err);
-        }
+      const customerName = customer?.name || genericCustomerName || 'Generic Customer';
+      
+      let targetCustomerId = selectedCustomer;
+      if (!targetCustomerId) {
+          const generic = customers.find(c => c.name.toLowerCase().includes('generic'));
+          if (generic) {
+            targetCustomerId = generic.id!;
+          } else {
+            try {
+              const newGeneric = await upsertSupabaseCustomer({ 
+                name: genericCustomerName || 'Generic Customer',
+                notes: 'System generated for invoice'
+              });
+              targetCustomerId = newGeneric.id!;
+            } catch (err) {
+              console.warn("Could not create/find generic customer for invoice", err);
+            }
+          }
       }
 
       const vkeyBuiltIn = toBuiltInVehKey(vehicleType);
@@ -1174,9 +1213,13 @@ const ServiceChecklist = () => {
       });
 
       const now = new Date();
+      // Generate a numeric invoice number (integer) from timestamp if we don't have a better one
+      const generatedInvoiceNum = Math.floor(now.getTime() / 1000) % 2147483647;
+
       const invoice: any = {
-        customerId: selectedCustomer, // Use ID directly
-        customerName: customer?.name || 'Generic Job',
+        invoiceNumber: generatedInvoiceNum,
+        customerId: targetCustomerId || null, // Ensure ID is provided
+        customerName: customerName,
         vehicle_id: selectedVehicleId || selectedVehicle?.id,
         vehicle: selectedVehicle ? `${selectedVehicle.year || ""} ${selectedVehicle.make || ""} ${selectedVehicle.model || ""}`.trim() : (customer ? `${customer.year || ""} ${customer.vehicle || ""} ${customer.model || ""}`.trim() : ''),
         contact: { address: customer?.address || '', phone: customer?.phone || '', email: customer?.email || '' },
@@ -1244,9 +1287,17 @@ const ServiceChecklist = () => {
 
     let step = 'start';
     try {
+      // 1. Double check state before proceeding
+      if (!selectedPackage) {
+        throw new Error('Please select a service package first.');
+      }
+      if (!vehicleType) {
+        throw new Error('Please select a vehicle type first.');
+      }
+
       const idToUse = await saveGenericChecklist('completed');
       if (!idToUse) {
-        throw new Error('Checklist not saved (select package and vehicle).');
+        throw new Error('Persistence Error: Checklist could not be saved to history. Check your connection.');
       }
 
       // Handle Mileage Logging
@@ -1276,7 +1327,7 @@ const ServiceChecklist = () => {
       archiveChecklistPDF(true, idToUse);
       step = 'push_alert';
       const customer = customers.find(c => c.id === selectedCustomer);
-      const customerName = customer?.name || 'Unknown';
+      const customerName = customer?.name || genericCustomerName || 'Generic Customer';
       pushAdminAlert('job_completed', `Job completed for ${customerName}`, 'system', { checklistId: idToUse, customerId: selectedCustomer });
       toast({ title: 'Job Finished', description: 'Materials posted and completion archived.' });
     } catch (e: any) {
@@ -1349,29 +1400,39 @@ const ServiceChecklist = () => {
     <div className="min-h-screen bg-background">
       <PageHeader 
         title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
-        action={
+      >
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/chemical-training')} 
+            className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 font-bold h-9 px-3"
+          >
+            <Beaker className="w-4 h-4 md:mr-2" /> 
+            <span className="hidden md:inline">Chemical Decision</span>
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => navigate('/dilution-calculator')} 
-            className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold"
+            className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold h-9 px-3"
           >
-            <Scale className="w-4 h-4 mr-2" /> Dilution Calc
+            <Scale className="w-4 h-4 md:mr-2" /> 
+            <span className="hidden md:inline">Dilution Calc</span>
           </Button>
-        }
-      />
+        </div>
+      </PageHeader>
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
+      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-6 md:space-y-8">
         {/* Premium Header Block */}
-        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
             <div>
-              <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Service Checklist</h1>
-              <p className="text-zinc-400 max-w-xl">Track job progress, manage materials, and generate estimates for your customers.</p>
+              <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight mb-2">Service Checklist</h1>
+              <p className="text-zinc-400 text-sm md:text-base max-w-xl">Track job progress, manage materials, and generate estimates.</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-row items-center gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
               <div className="text-right">
-                <div className="text-2xl font-bold text-white mb-1">{progressPercent}%</div>
-                <div className="text-xs text-zinc-500 uppercase tracking-wider">Completion</div>
+                <div className="text-xl md:text-2xl font-bold text-white mb-0.5">{progressPercent}%</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Completion</div>
               </div>
             </div>
           </div>
@@ -1384,18 +1445,31 @@ const ServiceChecklist = () => {
           <Card className="p-6 bg-gradient-card border-border">
             <h2 className="text-2xl font-bold text-foreground mb-4">Job Setup</h2>
             {/* Customer selection restored — includes Generic option */}
-            <div className="mb-4">
-              <Label>Customer</Label>
-              <select
-                value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm"
-              >
-                <option value="">Generic Customer (No Link)</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id!}>{c.name}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label>Customer Link</Label>
+                <select
+                  value={selectedCustomer}
+                  onChange={(e) => setSelectedCustomer(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm"
+                >
+                  <option value="">-- Generic / New Customer --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id!}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {!selectedCustomer && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-left-2">
+                  <Label>Generic Customer Name</Label>
+                  <Input 
+                    placeholder="Enter customer name..." 
+                    value={genericCustomerName} 
+                    onChange={(e) => setGenericCustomerName(e.target.value)}
+                    className="h-10 border-blue-500/20 bg-black text-white focus:border-blue-500/50"
+                  />
+                </div>
+              )}
             </div>
 
             {selectedCustomer && (customers.find(c => c.id === selectedCustomer)?.vehicles?.length || 0) > 0 && (
@@ -1509,41 +1583,76 @@ const ServiceChecklist = () => {
 
           {/* Checklist - dynamic from package and add-ons */}
           <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-foreground">Checklist</h2>
-                <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-7 text-xs">
-                  Rick's Tips
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-7 text-xs ml-2">
-                  <FlaskConical className="w-3 h-3 mr-1" /> Prep Chemicals
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-7 text-xs ml-2">
-                  <Sparkles className="w-3 h-3 mr-1" /> Decision Helper
+                <h2 className="text-xl md:text-2xl font-bold text-white">Checklist</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to clear this checklist? All progress, selection, and materials logged will be reset.")) {
+                      setSelectedPackage("");
+                      setSelectedAddOns([]);
+                      setNotes("");
+                      setChecklistId("");
+                      setChemRows([]);
+                      setMatRows([]);
+                      setToolRows([]);
+                      setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
+                      localStorage.removeItem('service_checklist_draft');
+                      toast({ title: 'Checklist Reset', description: 'Started a fresh job.' });
+                    }
+                  }}
+                  className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                  title="Clear Checklist"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={() => {
-                  const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
-                  const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
-                  setExpandedHelp(next);
-                }}>
-                  {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse All</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand All</span>}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => {
-                  const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
-                  setChecklistSteps(prev => prev.map(s => ({ ...s, checked: !all })));
-                }}>
-                  {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
-                </Button>
-                <Progress value={progressPercent} className="w-40 hidden sm:block" />
-                <span className="text-sm hidden sm:inline">{progressPercent}%</span>
-                {jobStartTime && (
-                  <div className="flex items-center gap-1.5 ml-2 px-2 py-1 bg-red-900/30 border border-red-500/30 rounded text-xs font-mono text-red-200">
-                    <Clock className="h-3 w-3 animate-pulse" />
-                    {elapsedTime}
-                  </div>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/5">
+                {/* Section 1: Chemical & Decision Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-8 text-[10px] md:text-xs font-bold px-2 md:px-3">
+                    Rick's Tips
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-8 text-[10px] md:text-xs px-2 md:px-3">
+                    <FlaskConical className="w-3 h-3 mr-1" /> Prep
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-8 text-[10px] md:text-xs px-2 md:px-3">
+                    <Sparkles className="w-3 h-3 mr-1" /> Decision
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate('/chemical-training')} 
+                    className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 h-8 text-[10px] md:text-xs px-2 md:px-3 font-bold"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" /> Training
+                  </Button>
+                </div>
+                
+                {/* Section 2: View Controls (Expand/Check All) */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
+                    const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
+                    const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
+                    setExpandedHelp(next);
+                  }}>
+                    {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs h-8 flex-1 sm:flex-none" onClick={() => {
+                    const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
+                    setChecklistSteps(prev => prev.map(s => ({ ...s, checked: !all })));
+                  }}>
+                    {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
+                  </Button>
+                </div>
+                
+                {/* Section 3: Static Progress Bar */}
+                <div className="flex items-center justify-end gap-2 bg-zinc-900/50 px-3 py-1 rounded-full border border-white/5 w-full sm:w-auto">
+                  <Progress value={progressPercent} className="w-20 md:w-32 h-2" />
+                  <span className="text-[10px] md:text-sm font-bold text-white">{progressPercent}%</span>
+                </div>
               </div>
             </div>
             {(!selectedPackage || !vehicleType) && (
@@ -1579,12 +1688,12 @@ const ServiceChecklist = () => {
                                     {step.name}
                                   </span>
                                 </label>
-
-                                <div className="flex items-center">
+                                
+                                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 ml-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
@@ -1597,7 +1706,7 @@ const ServiceChecklist = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 px-2 ml-1 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                    className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
@@ -1605,13 +1714,12 @@ const ServiceChecklist = () => {
                                     }}
                                     title="Chemical Reference"
                                   >
-                                    <FlaskConical className="h-4 w-4 mr-1.5" />
-                                    <span className="text-xs font-bold">Chem</span>
+                                    <FlaskConical className="h-4 w-4 mr-1 sm:mr-1.5" />
+                                    <span className="text-[10px] sm:text-xs font-bold">Chem</span>
                                   </Button>
                                 </div>
                               </div>
 
-                              {/* Accordion Content rendering below the flex row */}
                               {expandedHelp[step.id] && (
                                 <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
                                   <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
@@ -1632,74 +1740,75 @@ const ServiceChecklist = () => {
                 ))}
               </div>
             )}
-            <div className="mt-4">
-              <Label>Notes</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add notes..." className="mt-2 min-h-[100px]" />
-            </div>
-            {/* Save moved below Materials Used section */}
-          </Card>
-
-          {/* Destination Fee (optional) */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <Label>Destination Fee (optional)</Label>
-            <Input
-              type="number"
-              placeholder="Enter fee amount"
-              value={destinationFee || ''}
-              onChange={(e) => {
-                let num = parseFloat(e.target.value);
-                if (isNaN(num)) num = 0;
-                num = Math.max(0, Math.min(9999, num));
-                setDestinationFee(Math.round(num));
-              }}
-              className="mt-2 max-w-xs"
-            />
+            {/* Notes and Destination Fee removed from here - moved to Totals section for cleaner flow */}
           </Card>
 
           {/* Materials Used */}
           <Card className="p-6 bg-gradient-card border-border space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white pb-2 border-b border-red-600">Materials Used</h2>
-              <Button variant="outline" className="h-9" onClick={() => setMaterialsModalOpen(true)}>Material Updates</Button>
+            <div 
+              className="flex items-center justify-between cursor-pointer group"
+              onClick={() => setMaterialsSectionExpanded(!materialsSectionExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-white pb-1 border-b-2 border-red-600">Materials Used</h2>
+                <div className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-mono">
+                  {chemRows.length + matRows.length + toolRows.length} items logged
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 border-zinc-800 text-zinc-400 hover:text-white"
+                  onClick={(e) => { e.stopPropagation(); setMaterialsModalOpen(true); }}
+                >
+                  Quick Updates
+                </Button>
+                <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+                  {materialsSectionExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-6 w-6 text-zinc-500" />}
+                </div>
+              </div>
             </div>
 
-            {/* Quick add */}
-            <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg">
-              <Label className="mb-2 block text-zinc-400">Quick Add from Inventory (Auto-expands section)</Label>
-              <select
-                value=""
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (!val) return;
-                  const chem = chemicalsList.find(c => String(c.id) === String(val));
-                  const mat = materialsList.find(m => String(m.id) === String(val));
-                  if (chem) {
-                    setChemRows(prev => ([...prev, { chemicalId: String(chem.id), fraction: '', notes: '' }]));
-                    setMaterialsAccordion(prev => ({ ...prev, chemicals: true }));
-                  } else if (mat) {
-                    setMatRows(prev => ([...prev, { materialId: String(mat.id), quantityNote: '' }]));
-                    setMaterialsAccordion(prev => ({ ...prev, materials: true }));
-                  } else {
-                    const tool = toolsList.find(t => String(t.id) === String(val));
-                    if (tool) setToolRows(prev => ([...prev, { toolId: String(tool.id), notes: '' }]));
-                    setMaterialsAccordion(prev => ({ ...prev, tools: true }));
-                  }
-                  e.currentTarget.selectedIndex = 0;
-                }}
-                className="flex h-10 w-full rounded-md border border-red-600 bg-black text-white px-3 py-2 text-sm"
-              >
-                <option value="">Select item to add...</option>
-                <optgroup label="Chemicals">
-                  {chemicalsList.map(it => (<option key={`chem-${it.id}`} value={it.id}>{it.name}</option>))}
-                </optgroup>
-                <optgroup label="Materials">
-                  {materialsList.map(it => (<option key={`mat-${it.id}`} value={it.id}>{it.name}</option>))}
-                </optgroup>
-                <optgroup label="Tools">
-                  {toolsList.map(it => (<option key={`tool-${it.id}`} value={it.id}>{it.name}</option>))}
-                </optgroup>
-              </select>
-            </div>
+            {materialsSectionExpanded && (
+              <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
+                {/* Quick add */}
+                <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+                  <Label className="mb-2 block text-zinc-400">Quick Add from Inventory (Auto-expands section)</Label>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) return;
+                      const chem = chemicalsList.find(c => String(c.id) === String(val));
+                      const mat = materialsList.find(m => String(m.id) === String(val));
+                      if (chem) {
+                        setChemRows(prev => ([...prev, { chemicalId: String(chem.id), fraction: '', notes: '' }]));
+                        setMaterialsAccordion(prev => ({ ...prev, chemicals: true }));
+                      } else if (mat) {
+                        setMatRows(prev => ([...prev, { materialId: String(mat.id), quantityNote: '' }]));
+                        setMaterialsAccordion(prev => ({ ...prev, materials: true }));
+                      } else {
+                        const tool = toolsList.find(t => String(t.id) === String(val));
+                        if (tool) setToolRows(prev => ([...prev, { toolId: String(tool.id), notes: '' }]));
+                        setMaterialsAccordion(prev => ({ ...prev, tools: true }));
+                      }
+                      e.currentTarget.selectedIndex = 0;
+                    }}
+                    className="flex h-10 w-full rounded-md border border-red-600 bg-black text-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Select item to add...</option>
+                    <optgroup label="Chemicals">
+                      {chemicalsList.map(it => (<option key={`chem-${it.id}`} value={it.id}>{it.name}</option>))}
+                    </optgroup>
+                    <optgroup label="Materials">
+                      {materialsList.map(it => (<option key={`mat-${it.id}`} value={it.id}>{it.name}</option>))}
+                    </optgroup>
+                    <optgroup label="Tools">
+                      {toolsList.map(it => (<option key={`tool-${it.id}`} value={it.id}>{it.name}</option>))}
+                    </optgroup>
+                  </select>
+                </div>
 
             {/* Chemicals Accordion (Yellow) */}
             <div className="border border-yellow-500/30 rounded-xl overflow-hidden bg-zinc-900/50">
@@ -1867,7 +1976,9 @@ const ServiceChecklist = () => {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
+        )}
+      </Card>
 
           {/* Materials Used Modal */}
           <MaterialsUsedModal
@@ -1932,15 +2043,7 @@ const ServiceChecklist = () => {
             )}
           </Card>
 
-          {/* Complete & Save controls */}
-
-          <div className="flex items-center gap-3">
-            <Button onClick={finishJob} className="bg-red-600 text-white">
-              <Save className="h-4 w-4 mr-2" />Finish Job
-            </Button>
-            <Button onClick={async () => { const savedId = await saveGenericChecklist(); archiveChecklistPDF(false, savedId || checklistId || undefined); const customer = customers.find(c => c.id === selectedCustomer); const customerName = customer?.name || 'Unknown'; pushAdminAlert('job_progress', `Progress saved for ${customerName}`, 'system', { checklistId: savedId || checklistId, customerId: selectedCustomer }); }} className="bg-gradient-hero"><Save className="h-4 w-4 mr-2" />Save Progress</Button>
-            {checklistId && <span className="text-sm text-muted-foreground flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />Saved</span>}
-          </div>
+          {/* Complete & Save controls moved to bottom Actions */}
 
           {/* Discount & Total */}
           <Card className="p-6 bg-gradient-card border-border">
@@ -2027,27 +2130,57 @@ const ServiceChecklist = () => {
             </div>
           </Card>
 
-          {/* Notes */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <Label>Additional Notes</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any special instructions or notes..."
-              className="mt-2 min-h-[100px]"
-            />
-          </Card>
+          {/* Actions & Completion */}
+          <div className="flex flex-col gap-6">
+            <Card className="p-4 md:p-6 bg-gradient-card border-border space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h2 className="text-xl md:text-2xl font-bold text-white">Final Steps</h2>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    onClick={async () => { 
+                      const savedId = await saveGenericChecklist(); 
+                      archiveChecklistPDF(false, savedId || checklistId || undefined); 
+                      const customer = customers.find(c => c.id === selectedCustomer); 
+                      const customerName = customer?.name || 'Unknown'; 
+                      pushAdminAlert('job_progress', `Progress saved for ${customerName}`, 'system', { checklistId: savedId || checklistId, customerId: selectedCustomer }); 
+                    }} 
+                    className="bg-black border border-white/10 hover:bg-zinc-900 text-white px-6"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Progress
+                  </Button>
+                  {checklistId && <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/10 px-3 py-1">Saved</Badge>}
+                </div>
+              </div>
 
-          {/* Actions */}
-          <div className="flex gap-4 flex-wrap">
-            <Button onClick={handleCreateInvoiceGeneric} className="bg-gradient-hero">
-              <FileText className="h-4 w-4 mr-2" />
-              Save & Create Invoice
-            </Button>
-            <Button onClick={generatePDF} variant="outline">
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Estimate PDF
-            </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button 
+                  onClick={finishJob} 
+                  className="bg-red-600 hover:bg-red-700 text-white font-black italic h-12 text-lg shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                >
+                  <CheckCircle2 className="h-5 w-5 mr-3" />
+                  FINISH & COMPLETE JOB
+                </Button>
+                <Button 
+                  onClick={handleCreateInvoiceGeneric} 
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-black italic h-12 text-lg shadow-[0_0_20px_rgba(147,51,234,0.3)] transition-all active:scale-95"
+                >
+                  <Receipt className="h-5 w-5 mr-3" />
+                  SAVE & CREATE INVOICE
+                </Button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={generatePDF} variant="outline" className="flex-1 h-10 border-white/10 text-zinc-400 hover:text-white">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Estimate PDF
+                </Button>
+                <Button onClick={() => window.print()} variant="outline" className="flex-1 h-10 border-white/10 text-zinc-400 hover:text-white">
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print Checklist
+                </Button>
+              </div>
+            </Card>
           </div>
 
           {/* Link to Customer (Optional) */}
@@ -2130,7 +2263,7 @@ const ServiceChecklist = () => {
             </DialogContent>
           </Dialog>
         </div>
-      </main >
+      </main>
       <ChemicalStepModal
         open={chemModalOpen}
         onOpenChange={setChemModalOpen}

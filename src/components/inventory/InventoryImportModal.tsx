@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save } from "lucide-react";
+import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet } from "lucide-react";
 import { saveChemical, saveTool, saveMaterial, getChemicals, getTools, getMaterials } from "@/lib/inventory-data";
 import { DETAILING_CHEMICALS } from "@/data/detailingChemicals";
 import { DETAILING_TOOLS } from "@/data/detailingTools";
 import { DETAILING_MATERIALS } from "@/data/detailingMaterials";
 import { searchAI, SearchResult } from "@/lib/inventory-ai";
-import { Sparkles, Search } from "lucide-react";
+import { Sparkles, Search, FileText } from "lucide-react";
 
 interface InventoryImportModalProps {
     open: boolean;
@@ -93,58 +93,82 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         return null;
     };
 
-    const downloadTemplate = () => {
+    const downloadTemplate = (format: 'json' | 'csv' = 'json') => {
         let data: any[] = [];
         let filename = "";
+        let headers: string[] = [];
 
         if (activeTab === "chemicals") {
-            data = [
-                {
-                    name: "Example Chemical Name",
-                    bottleSize: "16 oz",
-                    costPerBottle: 19.99,
-                    threshold: 5,
-                    currentStock: 10,
-                    description: "Optional notes about this chemical"
-                }
-            ];
-            filename = "chemicals_template.json";
+            const item = {
+                name: "Example Chemical Name",
+                bottleSize: "16 oz",
+                costPerBottle: 19.99,
+                threshold: 5,
+                currentStock: 10,
+                description: "Optional notes about this chemical"
+            };
+            data = [item];
+            headers = Object.keys(item);
+            filename = `chemicals_template.${format}`;
         } else if (activeTab === "equipment") {
-            data = [
-                {
-                    name: "Example Equipment Name",
-                    price: 150.00,
-                    purchaseDate: "2024-01-01",
-                    warranty: "2 Years",
-                    lifeExpectancy: "5 Years",
-                    notes: "Optional notes about this equipment"
-                }
-            ];
-            filename = "equipment_template.json";
+            const item = {
+                name: "Example Equipment Name",
+                price: 150.00,
+                purchaseDate: "2024-01-01",
+                warranty: "2 Years",
+                lifeExpectancy: "5 Years",
+                notes: "Optional notes about this equipment"
+            };
+            data = [item];
+            headers = Object.keys(item);
+            filename = `equipment_template.${format}`;
         } else if (activeTab === "supplies") {
-            data = [
-                {
-                    name: "Example Supply Name",
-                    category: "Microfiber",
-                    subtype: "Towels",
-                    costPerItem: 2.50,
-                    quantity: 50,
-                    lowThreshold: 1,
-                    notes: "Optional notes"
-                }
-            ];
-            filename = "supplies_template.json";
+            const item = {
+                name: "Example Supply Name",
+                category: "Microfiber",
+                subtype: "Towels",
+                costPerItem: 2.50,
+                quantity: 50,
+                lowThreshold: 1,
+                notes: "Optional notes"
+            };
+            data = [item];
+            headers = Object.keys(item);
+            filename = `supplies_template.${format}`;
         }
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } else {
+            // CSV Format
+            const csvRows = [];
+            csvRows.push(headers.join(","));
+            for (const row of data) {
+                const values = headers.map(h => {
+                    const val = row[h];
+                    const escaped = ('' + val).replace(/"/g, '""');
+                    return `"${escaped}"`;
+                });
+                csvRows.push(values.join(","));
+            }
+            const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
     };
 
     const loadStandardCatalog = () => {
@@ -182,7 +206,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             }));
         }
 
-        setParsedItems(items);
+        const catalogItems = items.map(i => ({ ...i, importSource: 'Catalog' }));
+        setParsedItems(catalogItems);
 
         // Auto-select items that are NOT duplicates
         const newSelection = new Set<number>();
@@ -197,37 +222,59 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         toast.success(`Loaded ${items.length} items from standard catalog.`);
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, format: 'json' | 'csv' = 'json') => {
         const selectedFile = e.target.files?.[0];
         if (!selectedFile) return;
         setFile(selectedFile);
 
         try {
             const text = await selectedFile.text();
-            let data = JSON.parse(text);
+            let data: any[] = [];
 
-            if (!Array.isArray(data)) {
-                // Try wrapping in array if single object
-                if (typeof data === 'object' && data !== null) {
-                    data = [data];
-                } else {
-                    toast.error("Invalid JSON format. Expected an array of items.");
+            if (format === 'json') {
+                data = JSON.parse(text);
+                if (!Array.isArray(data)) {
+                    if (typeof data === 'object' && data !== null) data = [data];
+                    else throw new Error("Invalid Format");
+                }
+            } else {
+                // CSV Parsing
+                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                if (lines.length < 2) {
+                    toast.error("CSV file is empty or missing data.");
                     return;
                 }
+                
+                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                data = lines.slice(1).map(line => {
+                    // Basic CSV split that handles quotes
+                    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                    const row: any = {};
+                    headers.forEach((header, i) => {
+                        let val = (values[i] || "").trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+                        // conversion
+                        if (['costPerBottle', 'threshold', 'currentStock', 'price', 'costPerItem', 'quantity', 'lowThreshold'].includes(header)) {
+                            row[header] = Number(val) || 0;
+                        } else {
+                            row[header] = val;
+                        }
+                    });
+                    return row;
+                });
             }
 
             if (data.length === 0) {
-                toast.error("No items found in JSON file.");
+                toast.error("No items found in file.");
                 return;
             }
 
-            setParsedItems(data);
+            const itemsWithSource = data.map(i => ({ ...i, importSource: format === 'csv' ? 'Manual Import' : 'JSON Import' }));
+            setParsedItems(itemsWithSource);
 
             // Auto-select items that are NOT duplicates
             const newSelection = new Set<number>();
-            data.forEach((item, index) => {
+            itemsWithSource.forEach((item, index) => {
                 const name = item.name?.toLowerCase().trim();
-                // If it's not a duplicate, select it by default
                 if (name && !existingNames.has(name)) {
                     newSelection.add(index);
                 }
@@ -236,7 +283,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             setStep("preview");
         } catch (error) {
             console.error("Parse Error", error);
-            toast.error("Failed to parse JSON file.");
+            toast.error(`Failed to parse ${format.toUpperCase()} file.`);
         }
     };
 
@@ -266,11 +313,11 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const addItem = () => {
         let newItem: any = {};
         if (activeTab === "chemicals") {
-            newItem = { name: "", bottleSize: "", costPerBottle: 0, currentStock: 0, threshold: 1, description: "" };
+            newItem = { name: "", bottleSize: "", costPerBottle: 0, currentStock: 0, threshold: 1, description: "", importSource: 'Manual Entry' };
         } else if (activeTab === "equipment") {
-            newItem = { name: "", price: 0, purchaseDate: "", notes: "" };
+            newItem = { name: "", price: 0, purchaseDate: "", notes: "", importSource: 'Manual Entry' };
         } else if (activeTab === "supplies") {
-            newItem = { name: "", category: "", costPerItem: 0, quantity: 0, lowThreshold: 1, notes: "" };
+            newItem = { name: "", category: "", costPerItem: 0, quantity: 0, lowThreshold: 1, notes: "", importSource: 'Manual Entry' };
         }
 
         const newItems = [...parsedItems, newItem];
@@ -325,7 +372,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 threshold: item.threshold || 5,
                 currentStock: 0,
                 description: item.description,
-                category: item.category
+                category: item.category,
+                importSource: 'AI Suggestion'
             };
             if (activeTab !== 'chemicals') setActiveTab('chemicals');
         } else if (result.type === 'tools') {
@@ -337,7 +385,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 warranty: item.warranty || "",
                 lifeExpectancy: item.lifeExpectancy || "",
                 notes: item.description,
-                category: item.category
+                category: item.category,
+                importSource: 'AI Suggestion'
             };
             if (activeTab !== 'equipment') setActiveTab('equipment');
         } else if (result.type === 'materials') {
@@ -349,7 +398,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 costPerItem: item.suggestedPrice || 0,
                 quantity: 0,
                 lowThreshold: item.threshold || 5,
-                notes: item.description
+                notes: item.description,
+                importSource: 'AI Suggestion'
             };
             if (activeTab !== 'supplies') setActiveTab('supplies');
         }
@@ -497,24 +547,47 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                 </div>
                             </div>
 
-                            <div className="space-y-4 p-6 border border-dashed rounded-lg border-muted-foreground/25 bg-muted/10 opacity-75 hover:opacity-100 transition-opacity">
-                                <h3 className="font-semibold flex items-center gap-2 text-lg">
-                                    <Upload className="w-5 h-5 text-green-500" /> Upload JSON File
-                                </h3>
-                                <div className="space-y-2">
-                                    <Label htmlFor="json-file">Select your filled JSON file</Label>
-                                    <Input
-                                        id="json-file"
-                                        type="file"
-                                        accept=".json"
-                                        onChange={handleFileChange}
-                                        className="cursor-pointer file:cursor-pointer"
-                                    />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-4 p-6 border border-dashed rounded-lg border-muted-foreground/25 bg-muted/10 opacity-75 hover:opacity-100 transition-opacity">
+                                    <h3 className="font-semibold flex items-center gap-2 text-lg">
+                                        <Upload className="w-5 h-5 text-green-500" /> Upload JSON File
+                                    </h3>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="json-file">Select your filled JSON file</Label>
+                                        <Input
+                                            id="json-file"
+                                            type="file"
+                                            accept=".json"
+                                            onChange={(e) => handleFileChange(e, 'json')}
+                                            className="cursor-pointer file:cursor-pointer h-9 text-xs"
+                                        />
+                                    </div>
+                                    <div className="pt-2">
+                                        <Button variant="outline" size="sm" onClick={() => downloadTemplate('json')} className="text-[10px] h-7">
+                                            <Download className="w-3 h-3 mr-2" /> Download JSON Template
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="pt-2">
-                                    <Button variant="outline" size="sm" onClick={downloadTemplate} className="text-xs">
-                                        <Download className="w-3 h-3 mr-2" /> Download JSON Template
-                                    </Button>
+
+                                <div className="space-y-4 p-6 border border-dashed rounded-lg border-muted-foreground/25 bg-muted/10 opacity-75 hover:opacity-100 transition-opacity">
+                                    <h3 className="font-semibold flex items-center gap-2 text-lg">
+                                        <FileSpreadsheet className="w-5 h-5 text-blue-500" /> Upload CSV File
+                                    </h3>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="csv-file">Select your filled CSV file</Label>
+                                        <Input
+                                            id="csv-file"
+                                            type="file"
+                                            accept=".csv"
+                                            onChange={(e) => handleFileChange(e, 'csv')}
+                                            className="cursor-pointer file:cursor-pointer h-9 text-xs"
+                                        />
+                                    </div>
+                                    <div className="pt-2">
+                                        <Button variant="outline" size="sm" onClick={() => downloadTemplate('csv')} className="text-[10px] h-7">
+                                            <Download className="w-3 h-3 mr-2" /> Download CSV Template
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -578,132 +651,158 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                             {/* Item List */}
                             <div className="flex-1 overflow-y-auto min-h-0 border rounded-md bg-background pr-2">
                                 <div className="divide-y">
-                                    {parsedItems.map((item, index) => {
-                                        const duplicate = isDuplicate(item.name || "");
-                                        const isSelected = selectedIndices.has(index);
-                                        return (
-                                            <div
-                                                key={index}
-                                                className={`flex items-start gap-3 p-4 transition-colors ${isSelected ? 'bg-muted/40' : 'hover:bg-muted/20'}`}
-                                            >
-                                                <Checkbox
-                                                    id={`item-${index}`}
-                                                    checked={isSelected}
-                                                    onCheckedChange={() => toggleSelection(index)}
-                                                    className="mt-3"
-                                                />
-                                                <div className="flex-1 flex flex-col gap-2">
-                                                    {/* Row 1: Name and Metadata */}
-                                                    <div className="flex flex-col gap-2 w-full">
+                                    {(() => {
+                                        const sources = Array.from(new Set(parsedItems.map(i => i.importSource || 'Other')));
+                                        return sources.map(source => {
+                                            const groupItems = parsedItems
+                                                .map((item, index) => ({ item, index }))
+                                                .filter(obj => (obj.item.importSource || 'Other') === source);
+                                            
+                                            if (groupItems.length === 0) return null;
+
+                                            return (
+                                                <div key={source} className="flex flex-col">
+                                                    <div className="bg-zinc-100 dark:bg-zinc-800/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest flex items-center justify-between sticky top-0 z-10 border-b">
                                                         <div className="flex items-center gap-2">
-                                                            <Input
-                                                                value={item.name}
-                                                                onChange={(e) => updateItem(index, 'name', e.target.value)}
-                                                                placeholder="Item Name"
-                                                                className={`h-9 font-medium ${duplicate ? 'border-orange-500/50' : ''}`}
-                                                            />
-                                                            {duplicate ? (
-                                                                <div className="shrink-0 text-[10px] uppercase font-bold tracking-wider bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-1 rounded border border-orange-500/20 flex items-center gap-1 h-9">
-                                                                    <AlertCircle className="w-3 h-3" /> Exists
-                                                                </div>
-                                                            ) : (
-                                                                <div className="shrink-0 text-[10px] uppercase font-bold tracking-wider bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded border border-green-500/20 flex items-center gap-1 h-9">
-                                                                    <Check className="w-3 h-3" /> New
-                                                                </div>
-                                                            )}
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => removeItem(index)}
-                                                                className="h-9 w-9 text-muted-foreground hover:text-red-500"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
+                                                            {source === 'Manual Import' ? <FileSpreadsheet className="w-3 h-3 text-blue-500" /> : 
+                                                             source === 'Catalog' ? <BookOpen className="w-3 h-3 text-purple-500" /> :
+                                                             source === 'AI Suggestion' ? <Sparkles className="w-3 h-3 text-amber-500" /> :
+                                                             <FileText className="w-3 h-3 text-zinc-500" />}
+                                                            {source} Section
                                                         </div>
-                                                        {(() => {
-                                                            const validationMsg = validateClassification(item, activeTab);
-                                                            if (validationMsg) {
-                                                                return (
-                                                                    <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-md animate-in fade-in slide-in-from-top-1">
-                                                                        <AlertCircle className="w-3 h-3 shrink-0" />
-                                                                        <span className="font-medium">{validationMsg}</span>
+                                                        <span className="opacity-50">{groupItems.length} items</span>
+                                                    </div>
+                                                    
+                                                    {groupItems.map(({ item, index }) => {
+                                                        const duplicate = isDuplicate(item.name || "");
+                                                        const isSelected = selectedIndices.has(index);
+                                                        return (
+                                                            <div
+                                                                key={index}
+                                                                className={`flex items-start gap-3 p-4 transition-colors ${isSelected ? 'bg-muted/40' : 'hover:bg-muted/20'}`}
+                                                            >
+                                                                <Checkbox
+                                                                    id={`item-${index}`}
+                                                                    checked={isSelected}
+                                                                    onCheckedChange={() => toggleSelection(index)}
+                                                                    className="mt-3"
+                                                                />
+                                                                <div className="flex-1 flex flex-col gap-2">
+                                                                    {/* Row 1: Name and Metadata */}
+                                                                    <div className="flex flex-col gap-2 w-full">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Input
+                                                                                value={item.name}
+                                                                                onChange={(e) => updateItem(index, 'name', e.target.value)}
+                                                                                placeholder="Item Name"
+                                                                                className={`h-9 font-medium ${duplicate ? 'border-orange-500/50' : ''}`}
+                                                                            />
+                                                                            {duplicate ? (
+                                                                                <div className="shrink-0 text-[10px] uppercase font-bold tracking-wider bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-1 rounded border border-orange-500/20 flex items-center gap-1 h-9">
+                                                                                    <AlertCircle className="w-3 h-3" /> Exists
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="shrink-0 text-[10px] uppercase font-bold tracking-wider bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded border border-green-500/20 flex items-center gap-1 h-9">
+                                                                                    <Check className="w-3 h-3" /> New
+                                                                                </div>
+                                                                            )}
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => removeItem(index)}
+                                                                                className="h-9 w-9 text-muted-foreground hover:text-red-500"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </Button>
+                                                                        </div>
+                                                                        {(() => {
+                                                                            const validationMsg = validateClassification(item, activeTab);
+                                                                            if (validationMsg) {
+                                                                                return (
+                                                                                    <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-md animate-in fade-in slide-in-from-top-1">
+                                                                                        <AlertCircle className="w-3 h-3 shrink-0" />
+                                                                                        <span className="font-medium">{validationMsg}</span>
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            return null;
+                                                                        })()}
                                                                     </div>
-                                                                );
-                                                            }
-                                                            return null;
-                                                        })()}
-                                                    </div>
 
-                                                    {/* Row 2: Detailed Inputs */}
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                        {activeTab === "chemicals" && (
-                                                            <>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Bottle Size</Label>
-                                                                    <Input value={item.bottleSize} onChange={(e) => updateItem(index, 'bottleSize', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Cost ($)</Label>
-                                                                    <Input type="number" value={item.costPerBottle} onChange={(e) => updateItem(index, 'costPerBottle', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Stock</Label>
-                                                                    <Input type="number" value={item.currentStock} onChange={(e) => updateItem(index, 'currentStock', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Threshold</Label>
-                                                                    <Input type="number" value={item.threshold} onChange={(e) => updateItem(index, 'threshold', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                        {activeTab === "equipment" && (
-                                                            <>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Price ($)</Label>
-                                                                    <Input type="number" value={item.price} onChange={(e) => updateItem(index, 'price', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5 md:col-span-2">
-                                                                    <Label className="text-[10px]">Warranty</Label>
-                                                                    <Input value={item.warranty} onChange={(e) => updateItem(index, 'warranty', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                        {activeTab === "supplies" && (
-                                                            <>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Cost/Item ($)</Label>
-                                                                    <Input type="number" value={item.costPerItem} onChange={(e) => updateItem(index, 'costPerItem', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Qty</Label>
-                                                                    <Input type="number" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Low Threshold</Label>
-                                                                    <Input type="number" value={item.lowThreshold} onChange={(e) => updateItem(index, 'lowThreshold', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    <Label className="text-[10px]">Category</Label>
-                                                                    <Input value={item.category} onChange={(e) => updateItem(index, 'category', e.target.value)} className="h-7 text-xs" />
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
+                                                                    {/* Row 2: Detailed Inputs */}
+                                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                                        {activeTab === "chemicals" && (
+                                                                            <>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Bottle Size</Label>
+                                                                                    <Input value={item.bottleSize} onChange={(e) => updateItem(index, 'bottleSize', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Cost ($)</Label>
+                                                                                    <Input type="number" value={item.costPerBottle} onChange={(e) => updateItem(index, 'costPerBottle', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Stock</Label>
+                                                                                    <Input type="number" value={item.currentStock} onChange={(e) => updateItem(index, 'currentStock', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Threshold</Label>
+                                                                                    <Input type="number" value={item.threshold} onChange={(e) => updateItem(index, 'threshold', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+                                                                        {activeTab === "equipment" && (
+                                                                            <>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Price ($)</Label>
+                                                                                    <Input type="number" value={item.price} onChange={(e) => updateItem(index, 'price', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5 md:col-span-2">
+                                                                                    <Label className="text-[10px]">Warranty</Label>
+                                                                                    <Input value={item.warranty} onChange={(e) => updateItem(index, 'warranty', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+                                                                        {activeTab === "supplies" && (
+                                                                            <>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Cost/Item ($)</Label>
+                                                                                    <Input type="number" value={item.costPerItem} onChange={(e) => updateItem(index, 'costPerItem', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Qty</Label>
+                                                                                    <Input type="number" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Low Threshold</Label>
+                                                                                    <Input type="number" value={item.lowThreshold} onChange={(e) => updateItem(index, 'lowThreshold', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Category</Label>
+                                                                                    <Input value={item.category} onChange={(e) => updateItem(index, 'category', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
 
-                                                    {/* Row 3: Description/Notes */}
-                                                    <div className="space-y-0.5">
-                                                        <Label className="text-[10px]">Description / Notes</Label>
-                                                        <Input
-                                                            value={activeTab === 'equipment' ? item.notes : item.description || item.notes || ""}
-                                                            onChange={(e) => updateItem(index, activeTab === 'equipment' ? 'notes' : 'description', e.target.value)}
-                                                            className="h-7 text-xs text-muted-foreground"
-                                                            placeholder="Details..."
-                                                        />
-                                                    </div>
+                                                                    {/* Row 3: Description/Notes */}
+                                                                    <div className="space-y-0.5">
+                                                                        <Label className="text-[10px]">Description / Notes</Label>
+                                                                        <Input
+                                                                            value={activeTab === 'equipment' ? item.notes : item.description || item.notes || ""}
+                                                                            onChange={(e) => updateItem(index, activeTab === 'equipment' ? 'notes' : 'description', e.target.value)}
+                                                                            className="h-7 text-xs text-muted-foreground"
+                                                                            placeholder="Details..."
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        });
+                                    })()}
                                     <div id="imports-end-anchor" />
                                 </div>
                             </div>
