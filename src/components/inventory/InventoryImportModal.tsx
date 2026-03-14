@@ -832,7 +832,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                 <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="text-zinc-100 hover:text-white font-bold bg-zinc-800 px-4">
                                     <ArrowLeft className="w-5 h-5 mr-2" /> EXIT & BACK
                                 </Button>
-                                <h3 className="font-black text-white uppercase tracking-widest text-lg">Quick Manual Entry</h3>
+                                <h3 className="font-black text-white uppercase tracking-tighter text-2xl">Stock Entry</h3>
                                 <div className="w-[80px]" /> {/* Spacer */}
                             </div>
 
@@ -845,10 +845,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
                             <ScrollArea className="flex-1 -mx-2 px-2">
                                 <div className="space-y-6 pb-20">
-                                    <div className="grid grid-cols-12 gap-2 text-[11px] font-black uppercase tracking-widest text-zinc-400 px-1">
-                                        <div className="col-span-12 md:col-span-5 mb-1 px-1">Product Name / Brand</div>
-                                        <div className="hidden md:block md:col-span-3 mb-1 px-1">{activeTab === 'chemicals' ? 'Size' : activeTab === 'equipment' ? 'Price' : 'Category'}</div>
-                                        <div className="hidden md:block md:col-span-2 mb-1 px-1">{activeTab === 'supplies' ? 'Qty' : 'Stock'}</div>
+                                    <div className="grid grid-cols-12 gap-2 text-[12px] font-black uppercase tracking-widest text-white px-1">
+                                        <div className="col-span-12 md:col-span-5 mb-1 px-1">Item Name / Brand</div>
+                                        <div className="hidden md:block md:col-span-3 mb-1 px-1">{activeTab === 'chemicals' ? 'Unit Size' : activeTab === 'equipment' ? 'Price Tag' : 'Category'}</div>
+                                        <div className="hidden md:block md:col-span-2 mb-1 px-1">Current Stock</div>
                                     </div>
                                     
                                     {manualRows.map((row, idx) => (
@@ -859,8 +859,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                     <Input 
                                                         value={row.name}
                                                         onChange={(e) => updateManualRow(idx, 'name', e.target.value)}
-                                                        placeholder="Product Name..."
-                                                        className="bg-zinc-900 border-zinc-700 h-12 text-white text-base font-bold placeholder:text-zinc-500 focus:border-indigo-500"
+                                                        placeholder="ENTER NAME HERE"
+                                                        className="bg-black border-zinc-700 h-14 text-white text-lg font-black placeholder:text-zinc-300 focus:border-indigo-400 ring-2 ring-zinc-800"
                                                     />
                                                 </div>
                                                 <div className="col-span-6 md:col-span-3">
@@ -1178,16 +1178,16 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         <Input
                             value={aiQuery}
                             onChange={(e) => setAiQuery(e.target.value)}
-                            placeholder={isAiSearching ? "AI is thinking..." : "ASK AI: 'find leather cleaners' or 'show tools'"}
-                            className="h-12 pl-10 pr-24 bg-zinc-950 border-2 border-zinc-800 text-white text-base font-black placeholder:text-zinc-400 focus:border-purple-500 focus:ring-purple-500/20 shadow-lg"
+                            placeholder={isAiSearching ? "AI IS THINKING..." : "TYPE HERE: 'find sprayers' or 'show chemicals'"}
+                            className="h-14 pl-10 pr-24 bg-black border-2 border-indigo-500 text-white text-lg font-black placeholder:text-white focus:ring-indigo-500/50 shadow-2xl"
                         />
                         <Button
                             type="submit"
                             size="sm"
-                            className="absolute right-1 top-1 h-10 px-6 bg-purple-600 hover:bg-purple-500 text-white font-black shadow-lg border-l border-purple-400"
+                            className="absolute right-1 top-1 h-12 px-8 bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-lg border-2 border-indigo-400"
                             disabled={isAiSearching || !aiQuery.trim()}
                         >
-                            <Search className="w-5 h-5 mr-2" /> FIND ITEMS
+                            <Search className="w-6 h-6 mr-2" /> FIND ITEMS
                         </Button>
                     </form>
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center">
