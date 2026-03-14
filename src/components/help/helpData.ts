@@ -11,6 +11,33 @@ export type HelpTopic = {
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
   {
+    id: 'chemical-decision-system',
+    title: 'Chemical Decision System',
+    summary: 'A complete guide to the precision chemistry logic within Prime Auto Detail.',
+    content: [
+      '**The Decision Engine**: This system is designed to remove guesswork from detailing. It guides you through assessing a vehicle and choosing the exact chemical for the task.',
+      '',
+      '🧠 **1. Universal Decision System**',
+      'The core engine where you input the **Vehicle Severity** and **Contamination Type**. It calculates the required chemistry profile (e.g., Alkaline Surfactant) and points you to the exact product in your inventory.',
+      '',
+      '⚙️ **2. Setup Workflow (Training)**',
+      'A repeatable, 5-step process for every detailer to follow: Inspect, Identify, Consult, Select, and Dilute. This ensures safety and consistency across all jobs.',
+      '',
+      '📚 **3. Condition Library**',
+      'A reference guide explaining what "Light", "Moderate", "Heavy", and "Severe" conditions actually look and feel like. It includes technical risk factors for each level.',
+      '',
+      '📦 **4. Service Packages**',
+      'Templatized workflows for common jobs like Maintenance Washes, Exterior Enhancements, and Interior Deep Cleans. It lists the required chemicals and estimated timeframes.',
+      '',
+      '📋 **5. Job Prep Checklist**',
+      'A final "pre-flight" checklist to ensure all spray bottles are mixed correctly and you have the right chemicals loaded based on the vehicle scenario.',
+      '',
+      '🎯 **Professional Tip**: Use the **AI Consultant** button in the Decision System for complex scenarios like "sap on ceramic coating" or "mold on leather".',
+    ],
+    route: '/chemical-training',
+    section: 'chemicals',
+  },
+  {
     id: 'chemical-workflow',
     title: 'Chemical Workflow',
     summary: 'Master the full lifecycle of chemical management—from library selection to bottle labeling and job tracking.',
@@ -514,6 +541,10 @@ export const adminMenuTopics: HelpTopic[] = [
     summary: 'Track chemical/material levels, view usage history, and manage tools.',
     content: [
       'Dashboards show stock levels with low-stock alerts.',
+      '**New Sorting System**: You can now sort your inventory in three distinct ways:',
+      '• **Name Brand (Default for Chemicals)**: Groups items by brand (e.g., Meguiar’s, P&S) and sorts chemicals A-Z within each group.',
+      '• **Alphabetical (A-Z List)**: A simple flat list of all items from A to Z, regardless of brand.',
+      '• **Category**: Groups items by their functional category (e.g., Degreasers, Polishes).',
       'Usage History tracks all consumption automatically from Jobs.',
       "Material Updates: Use the 'Material Updates' button to log bulk usage or adjustments (e.g. spills, restock) not tied to a specific job.",
       'Edit History: Click any Usage history item to view or edit notes.',
@@ -1061,11 +1092,34 @@ export const adminTopics: HelpTopic[] = [
   ...adminDashboardTopics,
 ];
 
-// Employee topics are organized into two sections per request:
-// 1) Menu Items (from the slide-out menu)
-// 2) Employee Dashboard items (cards and quick actions)
-
 export const employeeMenuTopics: HelpTopic[] = [
+  {
+    id: 'chemical-decision-system',
+    title: 'Chemical Decision System',
+    summary: 'A complete guide to the precision chemistry logic within Prime Auto Detail.',
+    content: [
+      '**The Decision Engine**: This system is designed to remove guesswork from detailing. It guides you through assessing a vehicle and choosing the exact chemical for the task.',
+      '',
+      '🧠 **1. Universal Decision System**',
+      'The core engine where you input the **Vehicle Severity** and **Contamination Type**. It calculates the required chemistry profile (e.g., Alkaline Surfactant) and points you to the exact product in your inventory.',
+      '',
+      '⚙️ **2. Setup Workflow (Training)**',
+      'A repeatable, 5-step process for every detailer to follow: Inspect, Identify, Consult, Select, and Dilute. This ensures safety and consistency across all jobs.',
+      '',
+      '📚 **3. Condition Library**',
+      'A reference guide explaining what "Light", "Moderate", "Heavy", and "Severe" conditions actually look and feel like. It includes technical risk factors for each level.',
+      '',
+      '📦 **4. Service Packages**',
+      'Templatized workflows for common jobs like Maintenance Washes, Exterior Enhancements, and Interior Deep Cleans. It lists the required chemicals and estimated timeframes.',
+      '',
+      '📋 **5. Job Prep Checklist**',
+      'A final "pre-flight" checklist to ensure all spray bottles are mixed correctly and you have the right chemicals loaded based on the vehicle scenario.',
+      '',
+      '🎯 **Professional Tip**: Use the **AI Consultant** button in the Decision System for complex scenarios like "sap on ceramic coating" or "mold on leather".',
+    ],
+    route: '/chemical-training',
+    section: 'chemicals',
+  },
   {
     id: 'website',
     title: 'Website',

@@ -24,11 +24,18 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
   // Handle direct navigation to topic
   useEffect(() => {
-    if (open && initialTopicId) {
-      const topicIndex = toc.findIndex(t => t.id === initialTopicId);
-      if (topicIndex !== -1) {
-        setIndex(topicIndex);
-        setAccordionValue(""); // Ensure menu is closed to show content
+    if (open) {
+      if (initialTopicId) {
+        const topicIndex = toc.findIndex(t => t.id === initialTopicId);
+        if (topicIndex !== -1) {
+          setIndex(topicIndex);
+          setAccordionValue(""); // Ensure menu is closed to show content
+        }
+      } else {
+        // If opened without ID, show the first topic or keep user's last spot?
+        // Let's default to the search query being cleared and index 0 for a "fresh" start from sidebar
+        setIndex(0);
+        setQuery('');
       }
     }
   }, [open, initialTopicId, toc]);

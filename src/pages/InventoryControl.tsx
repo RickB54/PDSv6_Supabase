@@ -84,6 +84,10 @@ const InventoryControl = () => {
   const [usageEditOpen, setUsageEditOpen] = useState(false);
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
+  // Sorting states
+  const [chemicalSort, setChemicalSort] = useState<"brand" | "alphabetical">("brand");
+  const [supplySort, setSupplySort] = useState<"name" | "category">("name");
+  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Chemical Card View State
@@ -254,19 +258,71 @@ const InventoryControl = () => {
     setModalOpen(true);
   };
 
-  // Filter functions for search
-  const filteredChemicals = chemicals.filter(c =>
-    c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
-    (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase()))
-  );
+  // Filter and Sort functions
+  const getSortedChemicals = () => {
+    const filtered = chemicals.filter(c =>
+      c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
+      (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase()))
+    );
 
-  const filteredSupplies = supplies.filter(s =>
-    s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
-    (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase()))
-  );
-  const filteredEquipment = equipment.filter(e =>
-    e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
-  );
+    if (chemicalSort === "brand") {
+      // Grouping logic handled in render, but primary sort here
+      return [...filtered].sort((a, b) => {
+        const brandA = (a.brand || "Z - No Brand").toLowerCase();
+        const brandB = (b.brand || "Z - No Brand").toLowerCase();
+        if (brandA !== brandB) return brandA.localeCompare(brandB);
+        return a.name.localeCompare(b.name);
+      });
+    }
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const getSortedSupplies = () => {
+    const filtered = supplies.filter(s =>
+      s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
+      (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase()))
+    );
+    
+    return [...filtered].sort((a, b) => {
+      if (supplySort === "category") {
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+      }
+      return a.name.localeCompare(b.name);
+    });
+  };
+
+  const getSortedEquipment = () => {
+    const filtered = equipment.filter(e =>
+      e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
+    );
+
+    return [...filtered].sort((a, b) => {
+      if (equipmentSort === "purchaseDate") {
+        const dateA = a.purchaseDate ? new Date(a.purchaseDate).getTime() : 0;
+        const dateB = b.purchaseDate ? new Date(b.purchaseDate).getTime() : 0;
+        return dateB - dateA;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  };
+
+  const filteredChemicals = getSortedChemicals();
+  const filteredSupplies = getSortedSupplies();
+  const filteredEquipment = getSortedEquipment();
+
+  // Helper for brand grouping
+  const groupedChemicals = filteredChemicals.reduce((acc, chem) => {
+    const brand = chem.brand || "Other / No Brand";
+    if (!acc[brand]) acc[brand] = [];
+    acc[brand].push(chem);
+    return acc;
+  }, {} as Record<string, Chemical[]>);
+
+  const sortedBrands = Object.keys(groupedChemicals).sort((a, b) => {
+    if (a === "Other / No Brand") return 1;
+    if (b === "Other / No Brand") return -1;
+    return a.localeCompare(b);
+  });
 
   // PDF Download - creates actual PDF file
   const downloadInventoryPDF = async (category: 'chemicals' | 'supplies' | 'equipment') => {
@@ -741,6 +797,112 @@ const InventoryControl = () => {
     return '-';
   };
 
+  const renderChemicalRow = (c: Chemical) => (
+    <TableRow
+      key={c.id}
+      className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer"
+      onClick={() => openEdit(c, 'chemical')}
+    >
+      <TableCell className="font-medium flex items-center gap-2 text-white">
+        {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
+        {c.brand ? `${c.brand} / ${c.name}` : c.name}
+      </TableCell>
+      <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
+      <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
+      <TableCell>
+        <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+          {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+          {c.currentStock} remaining
+        </span>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          {c.chemicalLibraryId ? (
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
+                <FileText className="h-4 w-4 mr-1" /> Card
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 ml-1"
+                title="Unlink Card"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  handleUnlinkRequest(c);
+                }}
+              >
+                <UnlinkIcon className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400" onClick={(e) => { e.stopPropagation(); setLinkTargetItem(c); setLinkModalOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Link
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
+  const renderChemicalCard = (c: Chemical) => (
+    <div
+      key={c.id}
+      className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors"
+      onClick={() => openEdit(c, 'chemical')}
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="font-bold text-white flex items-center gap-2">
+            {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
+            {c.brand ? `${c.brand} / ${c.name}` : c.name}
+          </div>
+          <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
+        </div>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+          {c.currentStock} left
+        </span>
+      </div>
+      <div className="flex justify-between items-center pt-2 border-t border-yellow-500/10 gap-2 flex-wrap">
+        <div className="flex gap-1">
+          {c.chemicalLibraryId ? (
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300 px-2" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
+                <FileText className="h-4 w-4 mr-1" /> Card
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10"
+                title="Unlink Card"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  handleUnlinkRequest(c);
+                }}
+              >
+                <UnlinkIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400 px-2" onClick={(e) => { e.stopPropagation(); setLinkTargetItem(c); setLinkModalOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Link
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2">
+            <Pencil className="h-4 w-4 mr-2" /> Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 text-red-500 px-2">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Inventory Control" />
@@ -863,6 +1025,17 @@ const InventoryControl = () => {
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{chemicals.length} items</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-zinc-400">
+              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
+                <select
+                  value={chemicalSort}
+                  onChange={(e) => setChemicalSort(e.target.value as any)}
+                  className="bg-zinc-800 border-zinc-700 text-yellow-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                >
+                  <option value="brand">By Brand</option>
+                  <option value="alphabetical">A-Z List</option>
+                </select>
+              </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
               {chemicals.some(c => c.currentStock < c.threshold) && (
                 <span className="text-red-400 font-medium flex items-center gap-1">
@@ -894,131 +1067,49 @@ const InventoryControl = () => {
                   />
                 </div>
               </div>
-              <div className="overflow-x-auto hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-yellow-500/20">
-                      <TableHead>Name</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Cost/Unit</TableHead>
-                      <TableHead>Stock Level</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredChemicals.map(c => (
-                      <TableRow
-                        key={c.id}
-                        className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer"
-                        onClick={() => openEdit(c, 'chemical')}
-                      >
-                        <TableCell className="font-medium flex items-center gap-2 text-white">
-                          {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
-                          {c.brand ? `${c.brand} / ${c.name}` : c.name}
-                        </TableCell>
-                        <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
-                        <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                            {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-                            {c.currentStock} remaining
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            {/* Link/View Button */}
-                            {c.chemicalLibraryId ? (
-                              <div className="flex items-center">
-                                <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
-                                  <FileText className="h-4 w-4 mr-1" /> Card
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 ml-1"
-                                  title="Unlink Card"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    handleUnlinkRequest(c);
-                                  }}
-                                >
-                                  <UnlinkIcon className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400" onClick={(e) => { e.stopPropagation(); setLinkTargetItem(c); setLinkModalOpen(true); }}>
-                                <Plus className="h-4 w-4 mr-1" /> Link
-                              </Button>
-                            )}
-
-                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {chemicals.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No chemicals tracked.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile Card View (Chemicals) */}
-              <div className="md:hidden space-y-3">
-                {filteredChemicals.map(c => (
-                  <div
-                    key={c.id}
-                    className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors"
-                    onClick={() => openEdit(c, 'chemical')}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-white flex items-center gap-2">
-                          {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
-                          {c.brand ? `${c.brand} / ${c.name}` : c.name}
-                        </div>
-                        <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
+              <div className="space-y-8">
+                {chemicalSort === "brand" ? (
+                  sortedBrands.map(brand => (
+                    <div key={brand} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-yellow-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-yellow-500">{brand}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedChemicals[brand].length} items)</span>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                        {c.currentStock} left
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-yellow-500/10 gap-2 flex-wrap">
-                      <div className="flex gap-1">
-                        {c.chemicalLibraryId ? (
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300 px-2" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
-                              <FileText className="h-4 w-4 mr-1" /> Card
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10"
-                              title="Unlink Card"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                handleUnlinkRequest(c);
-                              }}
-                            >
-                              <UnlinkIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400 px-2" onClick={(e) => { e.stopPropagation(); setLinkTargetItem(c); setLinkModalOpen(true); }}>
-                            <Plus className="h-4 w-4 mr-1" /> Link
-                          </Button>
-                        )}
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedChemicals[brand].map(c => renderChemicalRow(c))}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2">
-                          <Pencil className="h-4 w-4 mr-2" /> Edit
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 text-red-500 px-2">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="md:hidden space-y-3">
+                        {groupedChemicals[brand].map(c => renderChemicalCard(c))}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <>
+                    <div className="overflow-x-auto hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-yellow-500/20">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Cost/Unit</TableHead>
+                            <TableHead>Stock Level</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredChemicals.map(c => renderChemicalRow(c))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="md:hidden space-y-3">
+                      {filteredChemicals.map(c => renderChemicalCard(c))}
+                    </div>
+                  </>
+                )}
                 {chemicals.length === 0 && <div className="text-center py-6 text-muted-foreground">No chemicals tracked.</div>}
               </div>
             </div>
@@ -1064,6 +1155,17 @@ const InventoryControl = () => {
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{materials.length} items</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-zinc-400">
+              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
+                <select
+                  value={supplySort}
+                  onChange={(e) => setSupplySort(e.target.value as any)}
+                  className="bg-zinc-800 border-zinc-700 text-blue-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="name">A-Z Name</option>
+                  <option value="category">Category</option>
+                </select>
+              </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
               {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
                 <span className="text-red-400 font-medium flex items-center gap-1">
@@ -1212,6 +1314,17 @@ const InventoryControl = () => {
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{tools.length} items</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-zinc-400">
+              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
+                <select
+                  value={equipmentSort}
+                  onChange={(e) => setEquipmentSort(e.target.value as any)}
+                  className="bg-zinc-800 border-zinc-700 text-purple-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  <option value="name">A-Z Name</option>
+                  <option value="purchaseDate">Purchase Date</option>
+                </select>
+              </div>
               <div className="hidden sm:block">
                 <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + (t.price || 0), 0).toFixed(0)}</span></span>
               </div>

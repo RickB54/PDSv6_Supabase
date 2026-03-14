@@ -179,19 +179,19 @@ const App = () => {
     });
 
     const onOpenCallAssistant = () => setCallAssistantOpen(true);
-    window.addEventListener('open-call-assistant', onOpenCallAssistant);
-
     const onOpenHelp = (e: any) => {
-      const role = e.detail?.role || user?.role;
+      // Use getCurrentUser() directly or a functional update to get the latest state
+      // instead of relying on the closure which might be stale or triggering too many re-renders
+      const currentUser = getCurrentUser();
+      const role = e.detail?.role || currentUser?.role || 'customer';
       const topicId = e.detail?.topicId;
-      if (role === 'admin' || role === 'employee' || role === 'customer') {
-        setHelpRole(role);
-      } else {
-        setHelpRole('customer');
-      }
+      
+      setHelpRole(role as any);
       setHelpId(topicId);
       setHelpOpen(true);
     };
+
+    window.addEventListener('open-call-assistant', onOpenCallAssistant);
     window.addEventListener('open-help', onOpenHelp);
 
     return () => {

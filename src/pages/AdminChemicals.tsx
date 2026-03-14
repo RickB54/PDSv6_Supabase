@@ -126,10 +126,6 @@ export default function AdminChemicals() {
         <div className="min-h-screen bg-black pb-20">
             <PageHeader title="Chemical Admin" />
             <div className="container mx-auto px-4 py-8 max-w-7xl">
-                <Button variant="ghost" className="mb-6 text-zinc-400" onClick={() => navigate('/chemicals')}>
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Library
-                </Button>
-
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-white">Manage Chemicals</h1>
                     <Button onClick={handleCreate} className="bg-purple-600 hover:bg-purple-700">

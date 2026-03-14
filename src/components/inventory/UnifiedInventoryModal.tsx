@@ -92,7 +92,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     brand: "", // NEW: Brand field
     bottleSize: "",
     costPerBottle: "",
-    currentStock: "0",
+    currentStock: "1",
     threshold: "1",
     category: "Rag",
     subtype: "",

@@ -549,7 +549,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                       onClick={(e) => {
                                         e.preventDefault();
                                         if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
-                                        if (item.url === '#help-admin') window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin' } }));
+                                        if (item.url === '#help' || item.url === '#help-admin') {
+                                          window.dispatchEvent(new CustomEvent('open-help', { detail: { role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer') } }));
+                                        }
                                         if (item.url === '#help-employee') window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'employee' } }));
                                         handleNavClick();
                                       }}

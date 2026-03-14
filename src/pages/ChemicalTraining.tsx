@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart, Calculator } from "lucide-react";
+import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart, Calculator, ClipboardList, ChevronLeft, HelpCircle } from "lucide-react";
 import { Chemical } from "@/types/chemicals";
 import { getChemicals } from "@/lib/chemicals";
 import { useNavigate } from "react-router-dom";
@@ -40,6 +40,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { JobPrepChecklist } from "@/components/chemicals/JobPrepChecklist";
 
 export default function ChemicalTraining() {
     const navigate = useNavigate();
@@ -83,6 +84,14 @@ export default function ChemicalTraining() {
     const resetDecision = () => {
         setContamination("");
         setSelectedProduct(null);
+    }
+
+    const resetPage = () => {
+        setCondition("");
+        setContamination("");
+        setSelectedProduct(null);
+        setContaminationZone('exterior');
+        toast.success("System reset successfully");
     }
 
     const matches = contamination ? findProductForContamination(contamination as ContaminationType, chemicals) : [];
@@ -209,16 +218,29 @@ export default function ChemicalTraining() {
     };
 
     return (
-        <div className="space-y-6 pb-20">
-            <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="min-h-screen bg-black pb-20">
+            <PageHeader title="Chemical Decision System" />
+
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800 shadow-2xl">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-600/20 rounded-xl border border-blue-500/30">
                             <Beaker className="w-8 h-8 text-blue-400" />
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-black text-white tracking-tight italic">CHEMICAL DECISION SYSTEM</h1>
-                            <p className="text-zinc-400 text-sm font-medium">Precision chemistry for a perfect finish.</p>
+                        <div className="flex flex-row items-center gap-4">
+                            <div>
+                                <h1 className="text-3xl font-black text-white tracking-tight italic">CHEMICAL DECISION SYSTEM</h1>
+                                <p className="text-zinc-400 text-sm font-medium">Precision chemistry for a perfect finish.</p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'chemical-decision-system' } }))}
+                                className="text-zinc-500 hover:text-blue-400 h-10 w-10 mt-1"
+                                title="Help Guide"
+                            >
+                                <HelpCircle className="w-5 h-5" />
+                            </Button>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -241,11 +263,14 @@ export default function ChemicalTraining() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto gap-2 bg-transparent p-0 mb-8">
-                    <TabsTrigger value="decision" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Universal Decision System</TabsTrigger>
-                    <TabsTrigger value="workflow" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Setup Workflow (Training)</TabsTrigger>
-                    <TabsTrigger value="library" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Condition Library</TabsTrigger>
-                    <TabsTrigger value="guides" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10">Service Packages</TabsTrigger>
+                <TabsList className="grid grid-cols-2 lg:grid-cols-5 h-auto gap-2 bg-transparent p-0 mb-8">
+                    <TabsTrigger value="decision" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10 text-[10px] md:text-sm">Universal Decision System</TabsTrigger>
+                    <TabsTrigger value="workflow" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10 text-[10px] md:text-sm">Setup Workflow (Training)</TabsTrigger>
+                    <TabsTrigger value="library" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10 text-[10px] md:text-sm">Condition Library</TabsTrigger>
+                    <TabsTrigger value="guides" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-blue-600 data-[state=active]:text-white h-10 text-[10px] md:text-sm">Service Packages</TabsTrigger>
+                    <TabsTrigger value="prep" className="bg-zinc-900 border border-zinc-800 data-[state=active]:bg-purple-600 data-[state=active]:text-white h-10 text-[10px] md:text-sm flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4" /> Job Prep
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="decision" className="space-y-8 animate-fade-in relative">
@@ -266,7 +291,7 @@ export default function ChemicalTraining() {
                                 <Sparkles className="w-3 h-3 mr-1.5" /> AI Consultant
                             </Button>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                             {(Object.keys(ConditionDefinitions) as VehicleCondition[]).map((cond) => (
                                 <button
                                     key={cond}
@@ -669,6 +694,10 @@ export default function ChemicalTraining() {
                             </Card>
                         ))}
                     </div>
+                </TabsContent>
+                
+                <TabsContent value="prep" className="animate-fade-in outline-none">
+                    <JobPrepChecklist />
                 </TabsContent>
             </Tabs>
 

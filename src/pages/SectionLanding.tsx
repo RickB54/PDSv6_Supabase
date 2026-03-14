@@ -3,14 +3,25 @@ import { getMenuGroups } from "@/components/menu-config";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function SectionLanding() {
     const { sectionId } = useParams();
+    const user = getCurrentUser();
+    const isAdmin = user?.role === 'admin';
+    const isEmployee = user?.role === 'employee';
 
     // We don't have access to the dynamic counts here easily without context or prop drilling, 
     // but for the landing page static links are usually fine. 
     // If badges are critical we'd need a global store or context.
-    const groups = getMenuGroups({ todoCount: 0, payrollDueCount: 0, inventoryCount: 0, fileCount: 0 });
+    const groups = getMenuGroups({ 
+        todoCount: 0, 
+        payrollDueCount: 0, 
+        inventoryCount: 0, 
+        fileCount: 0,
+        bookingsBadgeColor: 'blue',
+        tentativeBookingsCount: 0
+    });
 
     const group = groups.find(g =>
         g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === sectionId
@@ -46,32 +57,81 @@ export default function SectionLanding() {
         "text-zinc-400 group-hover:text-pink-400",
     ];
 
+    const validItems = group.items.filter(item => {
+        if (item.role === 'admin' && !isAdmin) return false;
+        if (item.role === 'employee' && !isEmployee && !isAdmin) return false;
+        // Basic check for hidden items
+        try {
+            const raw = localStorage.getItem('hiddenMenuItems');
+            const hidden = JSON.parse(raw || '[]');
+            if (item.key && hidden.includes(item.key)) return false;
+        } catch { }
+        return true;
+    });
+
+    if (validItems.length === 0) {
+        return (
+            <div className="min-h-screen bg-background pb-20">
+                <PageHeader title={group.title} />
+                <div className="p-8 text-center text-zinc-500 italic">
+                    No items in this section for your access level.
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <PageHeader title={group.title} />
             <main className="container mx-auto px-4 py-8 max-w-6xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {group.items.map((item, index) => {
+                    {validItems.map((item, index) => {
                         const colorClass = colors[index % colors.length];
                         const iconColorClass = iconColors[index % iconColors.length];
 
+                        const isHashLink = item.url.startsWith('#');
+                        const content = (
+                            <Card className={`h-full bg-zinc-900 transition-all hover:scale-[1.02] hover:shadow-lg ${colorClass}`}>
+                                <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                                    <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center transition-colors">
+                                        {item.icon && <item.icon className={`w-6 h-6 transition-colors ${iconColorClass}`} />}
+                                    </div>
+                                    <CardTitle className={`text-xl text-white transition-colors ${iconColorClass}`}>
+                                        {item.title}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-zinc-500 group-hover:text-zinc-400 text-sm">
+                                        Click to access {item.title}.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        );
+
+                        if (isHashLink) {
+                            return (
+                                <button
+                                    key={item.url}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
+                                        if (item.url === '#help' || item.url === '#help-admin') {
+                                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role: item.url === '#help-admin' ? 'admin' : (isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')) } }));
+                                        }
+                                        if (item.url === '#help-employee') {
+                                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'employee' } }));
+                                        }
+                                    }}
+                                    className="block group text-left w-full h-full"
+                                >
+                                    {content}
+                                </button>
+                            );
+                        }
+
                         return (
                             <Link key={item.url} to={item.url} className="block group">
-                                <Card className={`h-full bg-zinc-900 transition-all hover:scale-[1.02] hover:shadow-lg ${colorClass}`}>
-                                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                                        <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center transition-colors">
-                                            {item.icon && <item.icon className={`w-6 h-6 transition-colors ${iconColorClass}`} />}
-                                        </div>
-                                        <CardTitle className={`text-xl text-white transition-colors ${iconColorClass}`}>
-                                            {item.title}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-zinc-500 group-hover:text-zinc-400 text-sm">
-                                            Click to access {item.title}.
-                                        </p>
-                                    </CardContent>
-                                </Card>
+                                {content}
                             </Link>
                         );
                     })}
