@@ -101,6 +101,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         if (activeTab === "chemicals") {
             const item = {
                 name: "Example Chemical Name",
+                brand: "Best Brand",
                 bottleSize: "16 oz",
                 costPerBottle: 19.99,
                 threshold: 5,
@@ -238,25 +239,71 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     else throw new Error("Invalid Format");
                 }
             } else {
-                // CSV Parsing
+                // Improved CSV Parsing for LibreOffice/Excel compatibility
+                const parseLine = (line: string) => {
+                    const result = [];
+                    let curVal = "";
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            if (inQuotes && line[i + 1] === '"') {
+                                curVal += '"';
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(curVal.trim());
+                            curVal = "";
+                        } else {
+                            curVal += char;
+                        }
+                    }
+                    result.push(curVal.trim());
+                    return result;
+                };
+
                 const lines = text.split(/\r?\n/).filter(l => l.trim());
                 if (lines.length < 2) {
                     toast.error("CSV file is empty or missing data.");
                     return;
                 }
                 
-                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                const rawHeaders = parseLine(lines[0]);
+                const headers = rawHeaders.map(h => h.toLowerCase().trim());
+                
                 data = lines.slice(1).map(line => {
-                    // Basic CSV split that handles quotes
-                    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                    const values = parseLine(line);
                     const row: any = {};
+                    
+                    // Map by header name instead of index to be robust
                     headers.forEach((header, i) => {
-                        let val = (values[i] || "").trim().replace(/^"|"$/g, '').replace(/""/g, '"');
-                        // conversion
-                        if (['costPerBottle', 'threshold', 'currentStock', 'price', 'costPerItem', 'quantity', 'lowThreshold'].includes(header)) {
-                            row[header] = Number(val) || 0;
+                        let val = values[i] || "";
+                        
+                        // Clean numeric fields
+                        const numFields = ['costperbottle', 'threshold', 'currentstock', 'price', 'costperitem', 'quantity', 'lowthreshold'];
+                        if (numFields.includes(header)) {
+                             // Handle currency symbols if present
+                            const numericVal = Number(val.replace(/[$,]/g, ''));
+                            row[header === 'costperbottle' ? 'costPerBottle' : 
+                                header === 'currentstock' ? 'currentStock' : 
+                                header === 'costperitem' ? 'costPerItem' : 
+                                header === 'lowthreshold' ? 'lowThreshold' : header] = isNaN(numericVal) ? 0 : numericVal;
                         } else {
-                            row[header] = val;
+                            // Map case-sensitive property names back for consistency with component state
+                            const propertyMap: Record<string, string> = {
+                                'name': 'name',
+                                'brand': 'brand',
+                                'bottlesize': 'bottleSize',
+                                'purchasedate': 'purchaseDate',
+                                'lifeexpectancy': 'lifeExpectancy',
+                                'category': 'category',
+                                'subtype': 'subtype',
+                                'description': 'description',
+                                'notes': 'notes'
+                            };
+                            row[propertyMap[header] || header] = val;
                         }
                     });
                     return row;
@@ -313,7 +360,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const addItem = () => {
         let newItem: any = {};
         if (activeTab === "chemicals") {
-            newItem = { name: "", bottleSize: "", costPerBottle: 0, currentStock: 0, threshold: 1, description: "", importSource: 'Manual Entry' };
+            newItem = { name: "", brand: "", bottleSize: "", costPerBottle: 0, currentStock: 0, threshold: 1, description: "", importSource: 'Manual Entry' };
         } else if (activeTab === "equipment") {
             newItem = { name: "", price: 0, purchaseDate: "", notes: "", importSource: 'Manual Entry' };
         } else if (activeTab === "supplies") {
@@ -437,6 +484,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     if (!row.name) continue;
                     await saveChemical({
                         name: row.name,
+                        brand: row.brand || "",
                         bottleSize: row.bottleSize || "16 oz",
                         costPerBottle: Number(row.costPerBottle) || 0,
                         threshold: Number(row.threshold) || 1,
@@ -733,6 +781,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                                                         {activeTab === "chemicals" && (
                                                                             <>
+                                                                                <div className="space-y-0.5">
+                                                                                    <Label className="text-[10px]">Brand</Label>
+                                                                                    <Input value={item.brand || ""} onChange={(e) => updateItem(index, 'brand', e.target.value)} className="h-7 text-xs" />
+                                                                                </div>
                                                                                 <div className="space-y-0.5">
                                                                                     <Label className="text-[10px]">Bottle Size</Label>
                                                                                     <Input value={item.bottleSize} onChange={(e) => updateItem(index, 'bottleSize', e.target.value)} className="h-7 text-xs" />

@@ -212,33 +212,25 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const file = e.target.files[0];
 
         let fileToUpload = file;
-
-        // Only compress if file is ALREADY small (from library, not camera)
-        // Skip compression for large camera photos to prevent memory errors
-        const isLikelyFromCamera = file.size > 2 * 1024 * 1024; // > 2MB = probably camera
-
-        if (!isLikelyFromCamera) {
-          try {
-            // Try to compress smaller images for faster uploads
-            toast.info("Compressing...");
-            fileToUpload = await browserImageCompression(file, {
-              maxSizeMB: 0.5,
-              maxWidthOrHeight: 1200,
-              useWebWorker: true
-            });
-          } catch (compressionError) {
-            console.warn("Compression failed, uploading original:", compressionError);
-            // Fallback to original if compression fails
-            fileToUpload = file;
-          }
-        } else {
-          // Large camera photo - upload raw to avoid memory issues
-          console.log("Large camera photo detected, skipping compression");
-          toast.info("Uploading camera photo...");
+        
+        // Always attempt to compress images to ensure reliable mobile upload
+        // regardless of source (local or camera)
+        try {
+          toast.info("Compressing for upload...");
+          const options = {
+            maxSizeMB: 0.8,
+            maxWidthOrHeight: 1600,
+            useWebWorker: true,
+            initialQuality: 0.8
+          };
+          fileToUpload = await browserImageCompression(file, options);
+        } catch (compressionError) {
+          console.warn("Compression failed, uploading original:", compressionError);
+          fileToUpload = file;
         }
 
         // Upload to Supabase Storage
-        const ext = file.name.split('.').pop();
+        const ext = file.name?.split('.').pop() || 'jpg';
         const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
         const filePath = `inventory/${fileName}`;
 
@@ -385,6 +377,31 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     } catch (err: any) {
       console.error("Save error:", err);
       toast.error("Save failed: " + (err?.message || String(err)));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!form.id) return;
+    if (!window.confirm("Are you sure you want to delete this item? This action cannot be undone.")) return;
+
+    try {
+      if (mode === 'chemical') {
+        const { deleteChemical } = await import("@/lib/inventory-data");
+        await deleteChemical(form.id);
+      } else if (mode === 'equipment' || mode === 'tool') {
+        const { deleteTool } = await import("@/lib/inventory-data");
+        await deleteTool(form.id);
+      } else {
+        const { deleteMaterial } = await import("@/lib/inventory-data");
+        await deleteMaterial(form.id);
+      }
+      
+      toast.success("Item deleted successfully");
+      onOpenChange(false);
+      onSaved?.();
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete item: " + (error.message || "Unknown error"));
     }
   };
 
@@ -900,14 +917,26 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             </div>
           </div>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-end gap-2 mt-auto">
-          <Button
-            variant="outline"
-            onClick={() => { try { window.location.href = '/reports?tab=inventory'; } catch { } }}
-            className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
-          >
-            View Inventory Report
-          </Button>
+        <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-between gap-2 mt-auto">
+          <div className="flex gap-2">
+            {form.id && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="bg-red-900/40 border border-red-800 text-red-400 hover:bg-red-800 hover:text-white"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => { try { window.location.href = '/reports?tab=inventory'; } catch { } }}
+              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+            >
+              View Inventory Report
+            </Button>
+          </div>
           <Button
             onClick={save}
             disabled={isUploading}
