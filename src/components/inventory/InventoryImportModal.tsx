@@ -715,8 +715,9 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         )}
                     </div>
 
-                    {step === "upload" ? (
-                        <div className="py-6 space-y-6 flex-1 overflow-y-auto">
+                    <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto p-1">
+                        {step === "upload" ? (
+                        <div className="py-6 space-y-6 flex-1">
                             {/* NEW: Quick Manual Entry Button */}
                             <div className="bg-gradient-to-br from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 p-6 rounded-xl shadow-xl shadow-indigo-950/20">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -988,7 +989,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                             </div>
 
                             {/* Item List */}
-                            <div className="flex-1 overflow-y-auto min-h-0 border rounded-md bg-background pr-2">
+                            <div className="flex-1 min-h-0 border rounded-md bg-background pr-2">
                                 <div className="divide-y">
                                     {(() => {
                                         const sources = Array.from(new Set(parsedItems.map(i => i.importSource || 'Other')));
@@ -1152,6 +1153,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                             </div>
                         </div>
                     )}
+                    </div>
                 </Tabs>
 
                 <DialogFooter className="mt-6 sm:justify-between sticky bottom-0">
@@ -1173,21 +1175,23 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         handleAISearch(e);
-                    }} className="relative group">
-                        <Sparkles className={`absolute left-3 top-4 w-5 h-5 ${isAiSearching ? 'text-purple-400 animate-pulse' : 'text-purple-500'}`} />
-                        <Input
-                            value={aiQuery}
-                            onChange={(e) => setAiQuery(e.target.value)}
-                            placeholder={isAiSearching ? "AI IS THINKING..." : "TYPE HERE: 'find sprayers' or 'show chemicals'"}
-                            className="h-14 pl-10 pr-24 bg-black border-2 border-indigo-500 text-white text-lg font-black placeholder:text-white focus:ring-indigo-500/50 shadow-2xl"
-                        />
+                    }} className="flex flex-col sm:flex-row items-stretch gap-2">
+                        <div className="relative flex-1">
+                            <Sparkles className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isAiSearching ? 'text-purple-400 animate-pulse' : 'text-purple-500'}`} />
+                            <Input
+                                value={aiQuery}
+                                onChange={(e) => setAiQuery(e.target.value)}
+                                placeholder={isAiSearching ? "AI IS THINKING..." : "TYPE: 'leather cleaners'"}
+                                className="h-14 pl-10 pr-4 bg-black border-2 border-indigo-500 text-white text-lg font-black placeholder:text-zinc-400 focus:ring-indigo-500/50 shadow-2xl w-full"
+                            />
+                        </div>
                         <Button
                             type="submit"
-                            size="sm"
-                            className="absolute right-1 top-1 h-12 px-8 bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-lg border-2 border-indigo-400"
+                            size="lg"
+                            className="h-14 px-8 bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-lg border-2 border-indigo-400 shrink-0 uppercase tracking-widest text-lg"
                             disabled={isAiSearching || !aiQuery.trim()}
                         >
-                            <Search className="w-6 h-6 mr-2" /> FIND ITEMS
+                            <Search className="w-6 h-6 mr-2" /> Find Items
                         </Button>
                     </form>
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center">
