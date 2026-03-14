@@ -216,8 +216,13 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
             loadChemicals();
             const saved = localStorage.getItem('chemical_label_templates');
             if (saved) setSavedTemplates(JSON.parse(saved));
+            
+            // Sync selected chemical if provided
+            if (initialChemical) {
+                setSelectedChemical(initialChemical);
+            }
         }
-    }, [open]);
+    }, [open, initialChemical]);
 
     useEffect(() => {
         if (selectedChemical) {

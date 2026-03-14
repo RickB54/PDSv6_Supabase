@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -29,6 +29,7 @@ import { InventoryImportModal } from "@/components/inventory/InventoryImportModa
 import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
 
 import { Chemical as LibraryChemical } from "@/types/chemicals";
+import { ChemicalLabelMaker } from "@/components/chemicals/ChemicalLabelMaker";
 
 // Import types from inventory-data
 type Chemical = inventoryData.Chemical;
@@ -85,9 +86,9 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<"brand" | "alphabetical">("brand");
-  const [supplySort, setSupplySort] = useState<"name" | "category">("name");
-  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate">("name");
+  const [chemicalSort, setChemicalSort] = useState<"brand" | "alphabetical" | "low_stock">("brand");
+  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock">("name");
+  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Chemical Card View State
@@ -97,6 +98,10 @@ const InventoryControl = () => {
   // Linker Modal State
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkTargetItem, setLinkTargetItem] = useState<Chemical | null>(null);
+
+  // Label Maker State
+  const [labelMakerOpen, setLabelMakerOpen] = useState(false);
+  const [labelMakerChemical, setLabelMakerChemical] = useState<LibraryChemical | null>(null);
 
   // Consolidated Delete/Unlink Alert State
   const [deleteState, setDeleteState] = useState<{
@@ -250,6 +255,30 @@ const InventoryControl = () => {
     setModalOpen(true);
   };
 
+  const openLabelMaker = async (item: Chemical) => {
+    if (!item.chemicalLibraryId) {
+      toast({ 
+        title: "Link Required", 
+        description: "Please link this item to a Library Card first to generate a label.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const chem = await getChemicalById(item.chemicalLibraryId);
+      if (chem) {
+        setLabelMakerChemical(chem);
+        setLabelMakerOpen(true);
+      } else {
+        toast({ title: "Error", description: "Could not find the linked library chemical.", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Failed to load chemical for label", err);
+      toast({ title: "Error", description: "Failed to load chemical data.", variant: "destructive" });
+    }
+  };
+
   const openEdit = (item: any, mode: 'chemical' | 'supply' | 'equipment' | 'material' | 'tool') => {
     setEditing(item);
     // Normalize legacy mode names
@@ -274,6 +303,15 @@ const InventoryControl = () => {
         return a.name.localeCompare(b.name);
       });
     }
+    if (chemicalSort === "low_stock") {
+      return [...filtered].sort((a, b) => {
+        const aLow = a.currentStock < a.threshold;
+        const bLow = b.currentStock < b.threshold;
+        if (aLow && !bLow) return -1;
+        if (!aLow && bLow) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   };
 
@@ -284,6 +322,12 @@ const InventoryControl = () => {
     );
     
     return [...filtered].sort((a, b) => {
+      if (supplySort === "low_stock") {
+        const aLow = typeof a.lowThreshold === 'number' && a.quantity < (a.lowThreshold || 0);
+        const bLow = typeof b.lowThreshold === 'number' && b.quantity < (b.lowThreshold || 0);
+        if (aLow && !bLow) return -1;
+        if (!aLow && bLow) return 1;
+      }
       if (supplySort === "category") {
         if (a.category !== b.category) return a.category.localeCompare(b.category);
       }
@@ -297,6 +341,10 @@ const InventoryControl = () => {
     );
 
     return [...filtered].sort((a, b) => {
+      if (equipmentSort === "low_stock") {
+        // Equipment doesn't typically have threshold in DB, but we'll sort by 'life expectancy' or just alphabet as fallback
+        return a.name.localeCompare(b.name);
+      }
       if (equipmentSort === "purchaseDate") {
         const dateA = a.purchaseDate ? new Date(a.purchaseDate).getTime() : 0;
         const dateB = b.purchaseDate ? new Date(b.purchaseDate).getTime() : 0;
@@ -362,18 +410,18 @@ const InventoryControl = () => {
     pdf.setFont('helvetica', 'bold');
 
     const totalValue = category === 'chemicals' ?
-      items.reduce((a, c: any) => a + (c.costPerBottle * c.currentStock), 0) :
+      (items as any[]).reduce((a, c: any) => a + (c.costPerBottle * c.currentStock), 0) :
       category === 'supplies' ?
-        items.reduce((a, m: any) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0) :
-        items.reduce((a, t: any) => a + (t.price || 0), 0);
+        (items as any[]).reduce((a, m: any) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0) :
+        (items as any[]).reduce((a, t: any) => a + (t.price || 0), 0);
 
     pdf.text(`Total Items: ${items.length}`, 15, yPos + 10);
     pdf.text(`Total Value: $${totalValue.toFixed(2)}`, pageWidth / 2, yPos + 10);
 
     if (category !== 'equipment') {
       const lowStock = category === 'chemicals' ?
-        items.filter((c: any) => c.currentStock < c.threshold).length :
-        items.filter((m: any) => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length;
+        (items as any[]).filter((c: any) => c.currentStock < c.threshold).length :
+        (items as any[]).filter((m: any) => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length;
       pdf.setTextColor(239, 68, 68);
       pdf.text(`Low Stock: ${lowStock}`, pageWidth - 60, yPos + 10);
     }
@@ -608,14 +656,14 @@ const InventoryControl = () => {
             </div>
             <div class="summary-item">
               <div class="summary-label">Total Value</div>
-              <div class="summary-value">$${items.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(2)}</div>
+              <div class="summary-value">$${(items as any[]).reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(2)}</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">Low Stock</div>
-              <div class="summary-value" style="color: #ef4444;">${items.filter(c => c.currentStock < c.threshold).length}</div>
+              <div class="summary-value" style="color: #ef4444;">${(items as any[]).filter(c => c.currentStock < c.threshold).length}</div>
             </div>
           </div>
-          ${items.map((c, idx) => `
+          ${(items as any[]).map((c, idx) => `
             <div class="item ${c.currentStock < c.threshold ? 'low-stock' : ''}">
               <div class="item-header">${c.brand ? `${c.brand} / ` : ''}${c.name}</div>
               ${c.brand ? `<div class="field"><div class="field-label">Brand</div><div class="field-value">${c.brand}</div></div>` : ''}
@@ -638,14 +686,14 @@ const InventoryControl = () => {
             </div>
             <div class="summary-item">
               <div class="summary-label">Total Value</div>
-              <div class="summary-value">$${items.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(2)}</div>
+              <div class="summary-value">$${(items as any[]).reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(2)}</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">Low Stock</div>
-              <div class="summary-value" style="color: #ef4444;">${items.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length}</div>
+              <div class="summary-value" style="color: #ef4444;">${(items as any[]).filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length}</div>
             </div>
           </div>
-          ${items.map((m, idx) => `
+          ${(items as any[]).map((m, idx) => `
             <div class="item ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'low-stock' : ''}">
               <div class="item-header">${m.name}</div>
               <div class="field"><div class="field-label">Name</div><div class="field-value">${m.name}</div></div>
@@ -667,10 +715,10 @@ const InventoryControl = () => {
             </div>
             <div class="summary-item">
               <div class="summary-label">Total Value</div>
-              <div class="summary-value">$${items.reduce((a, t) => a + (t.price || 0), 0).toFixed(2)}</div>
+              <div class="summary-value">$${(items as any[]).reduce((a, t) => a + (t.price || 0), 0).toFixed(2)}</div>
             </div>
           </div>
-          ${items.map((t, idx) => `
+          ${(items as any[]).map((t, idx) => `
             <div class="item">
               <div class="item-header">${t.name}</div>
               <div class="field"><div class="field-label">Name</div><div class="field-value">${t.name}</div></div>
@@ -822,6 +870,9 @@ const InventoryControl = () => {
               <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
                 <FileText className="h-4 w-4 mr-1" /> Card
               </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-purple-400 hover:text-purple-300" onClick={(e) => { e.stopPropagation(); openLabelMaker(c); }}>
+                <Tag className="h-4 w-4 mr-1" /> Label
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -871,6 +922,9 @@ const InventoryControl = () => {
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300 px-2" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
                 <FileText className="h-4 w-4 mr-1" /> Card
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-purple-400 hover:text-purple-300 px-2" onClick={(e) => { e.stopPropagation(); openLabelMaker(c); }}>
+                <Tag className="h-4 w-4 mr-1" /> Label
               </Button>
               <Button
                 variant="ghost"
@@ -1034,6 +1088,7 @@ const InventoryControl = () => {
                 >
                   <option value="brand">By Brand</option>
                   <option value="alphabetical">A-Z List</option>
+                  <option value="low_stock">Low Threshold</option>
                 </select>
               </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
@@ -1049,8 +1104,9 @@ const InventoryControl = () => {
           {expandedSections.chemicals && (
             <div className="p-4 border-t border-yellow-500/10 animate-in slide-in-from-top-2 duration-200">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap text-[10px] font-bold">
                   <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setLabelMakerChemical(null); setLabelMakerOpen(true); }} className="border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400"><Tag className="h-3 w-3 mr-1" /> Create Label</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
                   <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                   <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300" onClick={() => downloadInventoryPDF('chemicals')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
@@ -1164,6 +1220,7 @@ const InventoryControl = () => {
                 >
                   <option value="name">A-Z Name</option>
                   <option value="category">Category</option>
+                  <option value="low_stock">Low Threshold</option>
                 </select>
               </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
@@ -1323,6 +1380,7 @@ const InventoryControl = () => {
                 >
                   <option value="name">A-Z Name</option>
                   <option value="purchaseDate">Purchase Date</option>
+                  <option value="low_stock">Low Threshold</option>
                 </select>
               </div>
               <div className="hidden sm:block">
@@ -1733,6 +1791,20 @@ const InventoryControl = () => {
           if (!open) loadData(); // Refresh data after close
         }}
       />
+      <ChemicalDetail
+        chemical={viewChemical}
+        open={!!viewCardId}
+        onOpenChange={(open) => !open && setViewCardId(null)}
+        isAdmin={true}
+        onUpdate={loadData}
+      />
+      {labelMakerOpen && (
+        <ChemicalLabelMaker
+          open={labelMakerOpen}
+          onOpenChange={setLabelMakerOpen}
+          initialChemical={labelMakerChemical}
+        />
+      )}
     </div >
   );
 }
