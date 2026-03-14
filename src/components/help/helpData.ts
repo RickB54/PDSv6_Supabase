@@ -8,8 +8,29 @@ export type HelpTopic = {
   section?: 'menu' | 'dashboard' | 'chemicals';
 };
 
+export const checklistToolsGuide: HelpTopic = {
+  id: 'checklist-tools-guide',
+  title: 'Checklist Tools Guide',
+  summary: 'Explanation of the quick-action tool buttons at the top of your checklist.',
+  content: [
+    '**Checklist Tools**: These four buttons provide expert resources and preparation guides tailored to the specific job you are performing.',
+    '',
+    '🟣 **Rick\'s Tips**: expert, situation-specific advice from Rick himself. These tips update based on the vehicle type and service package you have selected.',
+    '',
+    '🔵 **Prep**: This is **Job-Specific**. It generates a complete "Pre-Flight" summary of every chemical, tool, and material you need for the **entire job** (based on your selected package and add-ons). Use this to gather all your supplies before you start working to maximize efficiency.',
+    '',
+    '🟢 **Decision**: Opens the **Chemical Decision System**. Use this if you encounter a surface or stain you aren\'t sure how to treat. Input the condition, and it will tell you the exact surfactant profile and product to use.',
+    '',
+    '🟦 **Training**: Quick access to the **Professional Training Manual**. Watch SOP videos and read step-by-step guides for chemical safety and application techniques.',
+    '',
+    '💡 **Pro Tip**: Always open the **Prep** summary first. It ensures you have 100% of your materials ready at your cart, saving you trips back to the chemical room.',
+  ],
+  section: 'chemicals',
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
+  checklistToolsGuide,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',
@@ -1120,6 +1141,7 @@ export const employeeMenuTopics: HelpTopic[] = [
     route: '/chemical-training',
     section: 'chemicals',
   },
+  checklistToolsGuide,
   {
     id: 'website',
     title: 'Website',

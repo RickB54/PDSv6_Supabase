@@ -34,6 +34,7 @@ import { getSupabaseEmployees } from "@/lib/supa-data";
 import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
 import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionModal";
 import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummary";
+import HelpModal from "@/components/help/HelpModal";
 
 type DisplayService = {
   id: string;
@@ -92,7 +93,6 @@ const ServiceChecklist = () => {
   });
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact', 'midsize', 'truck', 'luxury']);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [addOnsExpanded, setAddOnsExpanded] = useState(false);
   const [discountType, setDiscountType] = useState<"percent" | "dollar">("percent");
   const [discountValue, setDiscountValue] = useState("");
   const [destinationFee, setDestinationFee] = useState(0);
@@ -141,11 +141,17 @@ const ServiceChecklist = () => {
   /* Accordion states for Materials Used & Discount */
   const [materialsAccordion, setMaterialsAccordion] = useState({ chemicals: false, materials: false, tools: false });
   const [materialsSectionExpanded, setMaterialsSectionExpanded] = useState(false);
+  const [mileageExpanded, setMileageExpanded] = useState(false);
+  const [addOnsExpanded, setAddOnsExpanded] = useState(false);
   const [discountExpanded, setDiscountExpanded] = useState(false);
   const [destinationExpanded, setDestinationExpanded] = useState(false);
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
+
+  // Help Modal State
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpTopicId, setHelpTopicId] = useState<string | undefined>(undefined);
 
   // Rick's Tips State
   const [tipsOpen, setTipsOpen] = useState(false);
@@ -1565,18 +1571,43 @@ const ServiceChecklist = () => {
               </div>
             </div>
             {liveAddOns.length > 0 && (
-              <div className="space-y-2">
-                <Label>Optional Add-Ons</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {liveAddOns.map((a: any) => (
-                    <label key={a.id} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={selectedAddOns.includes(a.id)} onChange={(e) => {
-                        setSelectedAddOns(prev => e.target.checked ? [...prev, a.id] : prev.filter(id => id !== a.id));
-                      }} />
-                      <span>{a.name}</span>
-                    </label>
-                  ))}
+              <div className="mt-4 border-t border-white/5 pt-4">
+                <div 
+                  className="flex items-center justify-between cursor-pointer group mb-2"
+                  onClick={() => setAddOnsExpanded(!addOnsExpanded)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Label className="cursor-pointer">Optional Add-Ons</Label>
+                    {selectedAddOns.length > 0 && (
+                      <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] h-4">
+                        {selectedAddOns.length} selected
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+                    {addOnsExpanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+                  </div>
                 </div>
+                
+                {addOnsExpanded && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 animate-in slide-in-from-top-1 duration-200">
+                    {liveAddOns.map((a: any) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm p-2 rounded hover:bg-white/5 cursor-pointer transition-colors">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedAddOns.includes(a.id)} 
+                          onChange={(e) => {
+                            setSelectedAddOns(prev => e.target.checked ? [...prev, a.id] : prev.filter(id => id !== a.id));
+                          }} 
+                          className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-purple-600 focus:ring-offset-0"
+                        />
+                        <span className={selectedAddOns.includes(a.id) ? "text-purple-300 font-medium" : "text-zinc-400"}>
+                          {a.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </Card>
@@ -1628,6 +1659,18 @@ const ServiceChecklist = () => {
                     className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 h-8 text-[10px] md:text-xs px-2 md:px-3 font-bold"
                   >
                     <ExternalLink className="w-3 h-3 mr-1" /> Training
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                      setHelpTopicId('checklist-tools-guide');
+                      setHelpOpen(true);
+                    }} 
+                    className="h-8 w-8 text-zinc-400 hover:text-white"
+                    title="Tools Guide"
+                  >
+                    <HelpCircle className="h-4 w-4" />
                   </Button>
                 </div>
                 
@@ -1993,53 +2036,70 @@ const ServiceChecklist = () => {
 
           {/* Mileage Section (New) */}
           <Card className="p-6 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border-indigo-500/20">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-indigo-500/20 rounded-lg">
-                <Gauge className="h-5 w-5 text-indigo-400" />
+            <div 
+              className="flex items-center justify-between cursor-pointer group"
+              onClick={() => setMileageExpanded(!mileageExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/20 rounded-lg">
+                  <Gauge className="h-5 w-5 text-indigo-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Job Mileage Tracking</h2>
+                {milesTraveled > 0 && (
+                  <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 ml-2">
+                    {milesTraveled.toFixed(1)} mi
+                  </Badge>
+                )}
               </div>
-              <h2 className="text-xl font-bold text-white">Job Mileage Tracking</h2>
+              <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+                {mileageExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-6 w-6 text-zinc-500" />}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-              <div className="space-y-2">
-                <Label className="text-zinc-400">Odometer Start</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    placeholder="Enter start reading"
-                    className="bg-black/40 border-zinc-800 font-mono text-zinc-200"
-                    value={odometerStart}
-                    onChange={(e) => setOdometerStart(e.target.value)}
-                  />
-                  <span className="absolute right-3 top-2.5 text-zinc-600 text-xs">mi</span>
-                </div>
-              </div>
+            {mileageExpanded && (
+              <div className="mt-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400">Odometer Start</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="Enter start reading"
+                        className="bg-black/40 border-zinc-800 font-mono text-zinc-200"
+                        value={odometerStart}
+                        onChange={(e) => setOdometerStart(e.target.value)}
+                      />
+                      <span className="absolute right-3 top-2.5 text-zinc-600 text-xs">mi</span>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label className="text-zinc-400">Odometer End</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    placeholder="Enter end reading"
-                    className="bg-black/40 border-zinc-800 font-mono text-zinc-200"
-                    value={odometerEnd}
-                    onChange={(e) => setOdometerEnd(e.target.value)}
-                  />
-                  <span className="absolute right-3 top-2.5 text-zinc-600 text-xs">mi</span>
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400">Odometer End</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="Enter end reading"
+                        className="bg-black/40 border-zinc-800 font-mono text-zinc-200"
+                        value={odometerEnd}
+                        onChange={(e) => setOdometerEnd(e.target.value)}
+                      />
+                      <span className="absolute right-3 top-2.5 text-zinc-600 text-xs">mi</span>
+                    </div>
+                  </div>
 
-              <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 flex justify-between items-center h-10 mb-0.5">
-                <span className="text-zinc-500 text-xs uppercase font-medium">Auto-Calculated</span>
-                <span className={`font-mono font-bold text-lg ${milesTraveled > 0 ? 'text-indigo-400' : 'text-zinc-600'}`}>
-                  {milesTraveled.toFixed(1)} <span className="text-xs font-normal">mi</span>
-                </span>
+                  <div className="bg-zinc-950/50 rounded-xl p-3 border border-zinc-800/50 flex justify-between items-center h-10 mb-0.5">
+                    <span className="text-zinc-500 text-xs uppercase font-medium">Auto-Calculated</span>
+                    <span className={`font-mono font-bold text-lg ${milesTraveled > 0 ? 'text-indigo-400' : 'text-zinc-600'}`}>
+                      {milesTraveled.toFixed(1)} <span className="text-xs font-normal">mi</span>
+                    </span>
+                  </div>
+                </div>
+                {milesTraveled > 0 && (
+                  <p className="text-[10px] text-zinc-500 mt-2 italic animate-in fade-in">
+                    * Mileage will be automatically logged to Finance upon finishing the job.
+                  </p>
+                )}
               </div>
-            </div>
-            {milesTraveled > 0 && (
-              <p className="text-[10px] text-zinc-500 mt-2 italic animate-in fade-in">
-                * Mileage will be automatically logged to Finance upon finishing the job.
-              </p>
             )}
           </Card>
 
@@ -2279,6 +2339,12 @@ const ServiceChecklist = () => {
         open={prepSummaryOpen}
         onOpenChange={setPrepSummaryOpen}
         steps={checklistSteps}
+      />
+      <HelpModal
+        open={helpOpen}
+        onOpenChange={setHelpOpen}
+        role={(getCurrentUser()?.role as any) || 'employee'}
+        initialTopicId={helpTopicId}
       />
     </div>
   );
