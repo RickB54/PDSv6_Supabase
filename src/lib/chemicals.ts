@@ -1,6 +1,6 @@
 import supabase from './supabase';
 import { Chemical } from '@/types/chemicals';
-// import { cleanInventoryItem } from './utils'; // Helper if needed, or define simple cleaner
+import { saveChemical as saveInventoryChemical, getChemicals as getInventoryChemicals } from './inventory-data';
 
 export interface StepChemicalMapping {
     id: string;
@@ -79,6 +79,63 @@ export async function getChemicals(): Promise<Chemical[]> {
     }
 }
 
+/**
+ * Fetches all products from the Library AND Inventory to ensure the user
+ * sees everything they expect to be able to make labels for.
+ */
+export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
+    try {
+        // 1. Get Library Chemicals
+        const library = await getChemicals();
+        
+        // 2. Get Inventory Chemicals
+        const { data: inventoryData, error } = await supabase
+            .from('chemicals')
+            .select('*')
+            .order('name');
+        
+        if (error) {
+            console.error('Error fetching inventory for combination:', error);
+            return library;
+        }
+
+        // 3. Merge them. If an inventory item is not in library, add it.
+        const result = [...library];
+        
+        if (inventoryData) {
+            inventoryData.forEach(inv => {
+                // Check if this inventory item is already represented by a library card
+                // Check by link ID first
+                const isLinked = library.some(lib => lib.id === inv.chemical_library_id);
+                // Then check by name/brand match as a fallback
+                const isNamed = library.some(lib => 
+                    lib.name.toLowerCase() === inv.name.toLowerCase() && 
+                    (lib.brand || '').toLowerCase() === (inv.brand || '').toLowerCase()
+                );
+                
+                if (!isLinked && !isNamed) {
+                    // Add a pseudo-chemical object for this inventory item
+                    result.push({
+                        id: inv.id, // Using inventory ID as the "chemical ID" for the picker
+                        name: inv.name,
+                        brand: inv.brand || '',
+                        category: 'Exterior', // Default for now
+                        description: `Inventory Item (No library card found)`,
+                        used_for: [],
+                        dilution_ratios: [],
+                        is_inventory_only: true // Flag to help UI know it's not a full library card
+                    } as any);
+                }
+            });
+        }
+        
+        return result;
+    } catch (e) {
+        console.error('getCombinedSelectableProducts exception:', e);
+        return await getChemicals();
+    }
+}
+
 export async function getChemicalById(id: string): Promise<Chemical | null> {
     try {
         const { data, error } = await supabase
@@ -96,6 +153,8 @@ export async function getChemicalById(id: string): Promise<Chemical | null> {
 
 export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ error: any; data: Chemical | null }> {
     try {
+        const isNew = !chemical.id;
+        
         // Ensure arrays are initialized if missing, standard cleanup
         const payload = {
             ...chemical,
@@ -103,7 +162,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
         };
 
         // If new, add created_at
-        if (!payload.id) {
+        if (isNew) {
             (payload as any).created_at = new Date().toISOString();
         }
 
@@ -112,6 +171,46 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
             .upsert(payload)
             .select()
             .single();
+
+        if (!error && data) {
+            // SYNC TO INVENTORY: If it's a new chemical, automatically add it to inventory (shelf)
+            if (isNew) {
+                try {
+                    await saveInventoryChemical({
+                        name: data.name,
+                        brand: data.brand,
+                        bottleSize: '16 oz', // Default
+                        costPerBottle: 0,
+                        threshold: 1,
+                        currentStock: 1,
+                        chemicalLibraryId: data.id
+                    }, false);
+                } catch (invErr) {
+                    console.error('Failed to auto-create inventory item:', invErr);
+                    // Don't fail the whole operation if inventory sync fails, but log it
+                }
+            } else {
+                // If existing, update the chemicalLibraryId mapping in inventory if it's missing
+                // This handles the "pseudo-chemical -> library card" conversion
+                try {
+                    const inventoryItems = await getInventoryChemicals();
+                    const matching = inventoryItems.find(inv => 
+                        !inv.chemicalLibraryId && 
+                        inv.name.toLowerCase() === data.name.toLowerCase() && 
+                        (inv.brand || '').toLowerCase() === (data.brand || '').toLowerCase()
+                    );
+                    
+                    if (matching) {
+                        await saveInventoryChemical({
+                            ...matching,
+                            chemicalLibraryId: data.id
+                        }, false);
+                    }
+                } catch (syncErr) {
+                    console.error('Failed to sync existing inventory item:', syncErr);
+                }
+            }
+        }
 
         return { error, data };
     } catch (e) {

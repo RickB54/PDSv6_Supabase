@@ -458,7 +458,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
-                      <Link to={item.url} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors')}>
+                      <Link to={item.url} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors')}>
                         <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {open && <span>{item.title}</span>}
                         {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
@@ -496,7 +496,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                         <SidebarMenuButton asChild tooltip={group.title} className="flex-1">
                           <Link
                             to={`/section/${group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                            className={`flex items-center gap-2 ${validItems.some(item => location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'))) ? 'text-blue-500 font-semibold' : 'text-zinc-400'}`}
+                            className={`flex items-center gap-2 ${validItems.some(item => location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'))) ? 'text-blue-500 font-bold' : 'text-zinc-300 font-bold hover:text-white transition-colors'}`}
                           >
                             <group.icon className="h-4 w-4" />
                             {open && <span>{group.title}</span>}
@@ -536,9 +536,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                             if (isActive) {
                               className += " text-blue-500 font-semibold";
                             } else {
-                              className += " text-zinc-400 hover:text-white hover:bg-zinc-800";
-                              if (item.highlight === 'red') className = className.replace('text-zinc-400', 'text-red-600 hover:text-red-500');
-                              else if (item.highlight === 'green') className = className.replace('text-zinc-400', 'text-green-600 hover:text-green-500');
+                              className += " text-zinc-100 font-bold hover:text-white hover:bg-zinc-800";
+                              if (item.highlight === 'red') className = className.replace('text-zinc-100', 'text-red-500 hover:text-red-400');
+                              else if (item.highlight === 'green') className = className.replace('text-zinc-100', 'text-green-500 hover:text-green-400');
                             }
 
                             return (

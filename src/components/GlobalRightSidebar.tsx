@@ -63,7 +63,7 @@ export function GlobalRightSidebar() {
             {/* Pricing Scenario Shortcut - MOVED TO TOP */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Calculator className="w-5 h-5 text-red-500" />
-                {!collapsed && <span>Scenario Builder</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Scenario Builder</span>}
             </Button>
 
             {/* Availability Manager - Admin Only */}
@@ -75,21 +75,21 @@ export function GlobalRightSidebar() {
                 className={collapsed ? "" : "w-full justify-start gap-2"}
             >
                 <CalendarCheck className="w-5 h-5 text-blue-600" />
-                {!collapsed && <span>Availability</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Availability</span>}
             </Button>
 
             {/* Existing Icons */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/staff-schedule')} title="Staff Schedule" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <CalendarDays className="w-5 h-5 text-emerald-500" />
-                {!collapsed && <span>Staff Schedule</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Staff Schedule</span>}
             </Button>
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <CheckSquare className="w-5 h-5 text-blue-500" />
-                {!collapsed && <span>Tasks</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Tasks</span>}
             </Button>
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Video className="w-5 h-5 text-pink-500" />
-                {!collapsed && <span>Gallery</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Gallery</span>}
             </Button>
 
             {/* Separator - Removed */}
@@ -97,36 +97,36 @@ export function GlobalRightSidebar() {
             {/* Quick Access Icons */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Calendar className="w-5 h-5 text-purple-500" />
-                {!collapsed && <span>Bookings</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Bookings</span>}
             </Button>
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/service-checklist')} title="Checklist" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <ClipboardList className="w-5 h-5 text-orange-500" />
-                {!collapsed && <span>Checklist</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Checklist</span>}
             </Button>
 
             {/* Additional High Value */}
             {/* Personal Notes (Replaces previous 'Quick Ref') */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/notes')} title="Personal Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Book className="w-5 h-5 text-amber-200" />
-                {!collapsed && <span>Notes</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Notes</span>}
             </Button>
 
             {/* Inventory Shortcut - Added */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Package className="w-5 h-5 text-cyan-500" />
-                {!collapsed && <span>Inventory</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Inventory</span>}
             </Button>
 
             {/* Chemicals Shortcut */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <FlaskConical className="w-5 h-5 text-teal-400" />
-                {!collapsed && <span>Chemicals</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Chemicals</span>}
             </Button>
 
             {/* Dilution Calculator Shortcut */}
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/dilution-calculator')} title="Dilution Calculator" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Beaker className="w-5 h-5 text-green-400" />
-                {!collapsed && <span>Calc</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Calc</span>}
             </Button>
 
         </div>

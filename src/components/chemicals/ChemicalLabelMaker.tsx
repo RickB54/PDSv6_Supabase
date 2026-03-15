@@ -41,8 +41,9 @@ import {
     Calculator
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
-import { getChemicals } from '@/lib/chemicals';
+import { getCombinedSelectableProducts } from '@/lib/chemicals';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -144,6 +145,34 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     const [activeTab, setActiveTab] = useState('edit');
     const [showHelp, setShowHelp] = useState(false);
     const [helpTopicId, setHelpTopicId] = useState('chemical-label-maker');
+
+    // Add print styles
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @media print {
+                body * { visibility: hidden !important; }
+                .freeform-print-page, .freeform-print-page * { visibility: visible !important; }
+                .freeform-print-page { 
+                    position: fixed !important; 
+                    left: 0 !important; 
+                    top: 0 !important; 
+                    width: 8.5in !important; 
+                    height: 11in !important; 
+                    margin: 0 !important; 
+                    padding: 0 !important;
+                    transform: scale(1) !important;
+                    background: white !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                }
+                @page { size: auto; margin: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        return () => { document.head.removeChild(style); };
+    }, []);
+
     const [savedTemplates, setSavedTemplates] = useState<SavedLabelTemplate[]>([]);
     const [newTemplateName, setNewTemplateName] = useState('');
 
@@ -189,12 +218,46 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     });
 
     const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'editor' | 'calculator'>('editor');
+    const [viewMode, setViewMode] = useState<'editor' | 'calculator' | 'freeform'>('editor');
     const [hasChanges, setHasChanges] = useState(false);
     const [selectedForBatch, setSelectedForBatch] = useState<string[]>([]);
-    const skipDefaultApplicator = useRef(false);
+    
+    const [freeformConfig, setFreeformConfig] = useState({
+        name: true,
+        ratio: true,
+        notes: true,
+        customText: 'Write something here...',
+        fontSize: 14,
+        labelsPerPage: 10,
+        pageZoom: 0.8, // Default zoom
+    });
 
+    const skipDefaultApplicator = useRef(false);
     const previewRef = useRef<HTMLDivElement>(null);
+    const pageContainerRef = useRef<HTMLDivElement>(null);
+
+    // Auto-fit scale effect
+    useEffect(() => {
+        if (viewMode === 'freeform' && pageContainerRef.current) {
+            const container = pageContainerRef.current;
+            const updateScale = () => {
+                const containerWidth = container.clientWidth - 60;
+                const containerHeight = container.clientHeight - 60;
+                const pageWidth = 816; // 8.5in at 96dpi
+                const pageHeight = 1056; // 11in at 96dpi
+                
+                const scaleW = containerWidth / pageWidth;
+                const scaleH = containerHeight / pageHeight;
+                const newScale = Math.min(scaleW, scaleH, 1);
+                
+                setFreeformConfig(prev => ({ ...prev, pageZoom: newScale }));
+            };
+            
+            updateScale();
+            window.addEventListener('resize', updateScale);
+            return () => window.removeEventListener('resize', updateScale);
+        }
+    }, [viewMode]);
 
 
     // Track changes for the "Save Changes" button
@@ -257,7 +320,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     const loadChemicals = async () => {
         setLoading(true);
         try {
-            const data = await getChemicals();
+            const data = await getCombinedSelectableProducts();
             setChemicals(data);
         } finally {
             setLoading(false);
@@ -829,7 +892,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-none md:max-w-none lg:max-w-none xl:max-w-[1700px] w-[96vw] h-[92vh] max-h-[92vh] bg-zinc-950 border-zinc-800 text-white p-0 flex flex-col overflow-hidden sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+            <DialogContent className="max-w-[100vw] w-full h-[100vh] sm:max-w-[95vw] sm:h-[95vh] xl:max-w-[1700px] bg-zinc-950 border-zinc-800 text-white p-0 flex flex-col overflow-hidden sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                 <DialogHeader className="px-8 py-5 border-b border-zinc-800 shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="p-2.5 bg-purple-600/20 rounded-xl">
@@ -853,6 +916,16 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                             <DialogDescription className="text-zinc-500">
                                 Design professional labels for your bottles and stickers.
                             </DialogDescription>
+                        </div>
+                        <div className="ml-auto flex items-center gap-2">
+                            <Button 
+                                variant={viewMode === 'freeform' ? "default" : "outline"}
+                                onClick={() => setViewMode(viewMode === 'freeform' ? 'editor' : 'freeform')}
+                                className={`h-9 px-4 text-xs font-black gap-2 transition-all ${viewMode === 'freeform' ? 'bg-indigo-600 hover:bg-indigo-500' : 'border-zinc-800 bg-zinc-900 text-indigo-400 hover:bg-zinc-800'}`}
+                            >
+                                <Layout className="w-4 h-4" />
+                                {viewMode === 'freeform' ? "CLOSE DESIGNER" : "FREE FORM LABEL"}
+                            </Button>
                         </div>
                     </div>
                 </DialogHeader>
@@ -891,7 +964,14 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                         </SelectTrigger>
                                         <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                             {chemicals.map(c => (
-                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                                <SelectItem key={c.id} value={c.id}>
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>{c.name}</span>
+                                                        {(c as any).is_inventory_only && (
+                                                            <Badge variant="outline" className="ml-2 text-[8px] h-3 border-amber-500/50 text-amber-500 uppercase px-1">New</Badge>
+                                                        )}
+                                                    </div>
+                                                </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -1362,23 +1442,141 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                             )}
                         </div>
 
-                        <div className={`${activeTab === 'edit' ? 'hidden xl:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent)] pointer-events-none" />
-                            <div ref={previewRef} className="flex flex-col items-center gap-12 w-fit min-w-[300px] pt-10 pb-60 origin-top transition-all duration-500">
-                                {labelStyle.splitRatios ? (
-                                    <>
-                                        <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">Label 1: Primary</div>
-                                        <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="primary" />
-                                        <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">Label 2: Technical</div>
-                                        <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="ratios" />
-                                    </>
-                                ) : (
-                                    <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="all" />
-                                )}
-                        </div>
-                    </div>
+                        {viewMode === 'freeform' ? (
+                            <div className="flex-1 flex flex-col bg-zinc-950 overflow-hidden">
+                                <div className="p-6 border-b border-zinc-900 bg-zinc-950 flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2">Toggle Fields:</div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => setFreeformConfig(prev => ({ ...prev, name: !prev.name }))}
+                                            className={`h-8 px-3 text-[10px] font-bold border ${freeformConfig.name ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-zinc-500 border-zinc-800'}`}
+                                        >
+                                            Product Name
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => setFreeformConfig(prev => ({ ...prev, ratio: !prev.ratio }))}
+                                            className={`h-8 px-3 text-[10px] font-bold border ${freeformConfig.ratio ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-zinc-500 border-zinc-800'}`}
+                                        >
+                                            Dilution Ratio
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => setFreeformConfig(prev => ({ ...prev, notes: !prev.notes }))}
+                                            className={`h-8 px-3 text-[10px] font-bold border ${freeformConfig.notes ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-zinc-500 border-zinc-800'}`}
+                                        >
+                                            Notes Area
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        <div className="hidden sm:flex flex-col">
+                                            <Label className="text-[9px] text-zinc-500 font-bold uppercase mb-1">Preview Zoom</Label>
+                                            <div className="text-[10px] font-black text-indigo-400">
+                                                {Math.round(freeformConfig.pageZoom * 100)}%
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <Label className="text-[9px] text-zinc-500 font-bold uppercase mb-1">Font Size</Label>
+                                            <Input 
+                                                type="number" 
+                                                value={freeformConfig.fontSize}
+                                                onChange={(e) => setFreeformConfig(prev => ({ ...prev, fontSize: parseInt(e.target.value) || 12 }))}
+                                                className="h-8 w-16 bg-zinc-900 border-zinc-800 text-xs"
+                                            />
+                                        </div>
+                                        <Button 
+                                            onClick={() => window.print()}
+                                            className="bg-green-600 hover:bg-green-500 text-white h-9 px-4 text-xs font-black shadow-lg"
+                                        >
+                                            <Printer className="w-4 h-4 mr-2" />
+                                            PRINT STICKER SHEET
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div ref={pageContainerRef} className="flex-1 bg-zinc-900 overflow-hidden flex items-center justify-center p-6 relative">
+                                    <div className="absolute top-4 left-6 flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-zinc-800 z-10">
+                                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Live Sheet Preview</span>
+                                        <span className="text-[10px] font-black text-indigo-400 ml-2">{Math.round(freeformConfig.pageZoom * 100)}% SCALE</span>
+                                    </div>
+
+                                    <div 
+                                        className="bg-white shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-sm border border-zinc-200 origin-center flex flex-col freeform-print-page transition-transform duration-300"
+                                        style={{ 
+                                            width: '8.5in', 
+                                            height: '11.0in', 
+                                            transform: `scale(${freeformConfig.pageZoom})`,
+                                            padding: '0.5in 0.156in',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <div className="grid grid-cols-2 gap-x-[0.187in] gap-y-0 h-full overflow-hidden">
+                                            {Array.from({ length: 10 }).map((_, i) => (
+                                                <div 
+                                                    key={i} 
+                                                    className="w-[4.0in] h-[2.0in] border border-zinc-100 p-8 flex flex-col justify-between bg-white text-black overflow-hidden hover:border-indigo-400/50 hover:bg-indigo-50/10 transition-all group relative box-border"
+                                                    style={{ borderRadius: '12px' }}
+                                                >
+                                                    <div className="absolute top-2 right-3 text-[7px] text-zinc-300 font-black tracking-widest opacity-20 uppercase">2" x 4" LABEL</div>
+                                                    
+                                                    {freeformConfig.name && (
+                                                        <div className="font-extrabold uppercase tracking-tighter leading-[0.9] border-l-4 border-indigo-600 pl-4" style={{ fontSize: `${freeformConfig.fontSize + 12}px` }}>
+                                                            {labelContent.name || 'Chemical Name'}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex items-end justify-between gap-8 pointer-events-none">
+                                                        <div className="flex-1 min-w-0">
+                                                            {freeformConfig.notes && (
+                                                                <div className="space-y-4">
+                                                                    <div className="text-[9px] font-bold uppercase opacity-30 tracking-[0.2em] text-zinc-600">Handwritten Area</div>
+                                                                    <div className="border-b-2 border-zinc-950/10 w-full h-[1px]" />
+                                                                    <div className="border-b-2 border-zinc-950/10 w-full h-[1px]" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        {freeformConfig.ratio && (
+                                                            <div className="border-[4px] border-black p-4 rounded-[20px] flex flex-col items-center justify-center min-w-[90px] shrink-0 bg-white">
+                                                                <div className="text-[10px] uppercase font-black mb-1 opacity-50 tracking-tighter leading-none">Ratio</div>
+                                                                <div className="font-black leading-none" style={{ fontSize: `${freeformConfig.fontSize + 6}px` }}>
+                                                                    {labelContent.dilutionRatio || '1:10'}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={`${activeTab === 'edit' ? 'hidden xl:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent)] pointer-events-none" />
+                                <div ref={previewRef} className="flex flex-col items-center gap-12 w-fit min-w-[300px] pt-10 pb-60 origin-top transition-all duration-500">
+                                    {labelStyle.splitRatios ? (
+                                        <>
+                                            <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">Label 1: Primary</div>
+                                            <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="primary" />
+                                            <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">Label 2: Technical</div>
+                                            <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="ratios" />
+                                        </>
+                                    ) : (
+                                        <LabelBlock labelStyle={labelStyle} labelContent={labelContent} selectedChemical={selectedChemical} mode="all" />
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
+
 
                 <DialogFooter className="px-6 py-4 border-t border-zinc-800 bg-zinc-950 flex items-center justify-end gap-2 shrink-0">
                     <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zinc-800 bg-zinc-900 text-zinc-400 h-9 text-xs">Cancel</Button>

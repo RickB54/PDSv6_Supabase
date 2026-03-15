@@ -27,7 +27,8 @@ import {
     Loader2,
     BookOpen,
     Images,
-    Calculator
+    Calculator,
+    Sparkles
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
@@ -65,6 +66,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     const [initialPhotoIndex, setInitialPhotoIndex] = useState(0);
     const [confirmDelete, setConfirmDelete] = useState<{ url: string; isPrimary: boolean } | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [autoAiTrigger, setAutoAiTrigger] = useState(false); // New state
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -721,7 +723,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                     .dialog-overlay { opacity: 0; display: none; }
                 }
             `}</style>
-            <DialogContent id="chemical-detail-content" className="max-w-4xl h-[90vh] bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden flex flex-col print:h-auto print:max-w-none print:border-0">
+            <DialogContent id="chemical-detail-content" className="max-w-[100vw] w-full h-[100vh] sm:max-w-4xl sm:h-[90vh] bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden flex flex-col print:h-auto print:max-w-none print:border-0">
                 {/* Header with Theme Color */}
                 <div
                     className="h-2 w-full shrink-0"
@@ -745,28 +747,44 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                 <span className="text-sm font-bold uppercase">High Risk Chemical</span>
                             </div>
                         )}
-                        <div className="flex gap-1 print:hidden">
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => navigate('/dilution-calculator')} 
-                                className="text-zinc-400 hover:text-green-400" 
-                                title="Prime Dilution Calculator"
-                            >
-                                <Calculator className="w-5 h-5" />
-                            </Button>
-                            {isAdmin && (
-                                <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white" title="Edit Card">
-                                    <Pencil className="w-5 h-5" />
+                        {!isEditing && (
+                            <div className="flex gap-1 print:hidden">
+                                {isAdmin && (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => {
+                                            setAutoAiTrigger(true);
+                                            setIsEditing(true);
+                                        }}
+                                        className="border-purple-500/50 text-purple-400 hover:bg-purple-900/20 mr-2"
+                                    >
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        AI Auto-Fill
+                                    </Button>
+                                )}
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => navigate('/dilution-calculator')} 
+                                    className="text-zinc-400 hover:text-green-400" 
+                                    title="Prime Dilution Calculator"
+                                >
+                                    <Calculator className="w-5 h-5" />
                                 </Button>
-                            )}
-                            <Button variant="ghost" size="icon" onClick={handlePrint} className="text-zinc-400 hover:text-white" title="Print Card">
-                                <Printer className="w-5 h-5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="text-zinc-400 hover:text-white" title="Save as PDF">
-                                <Download className="w-5 h-5" />
-                            </Button>
-                        </div>
+                                {isAdmin && (
+                                    <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="text-zinc-400 hover:text-white" title="Edit Card">
+                                        <Pencil className="w-5 h-5" />
+                                    </Button>
+                                )}
+                                <Button variant="ghost" size="icon" onClick={handlePrint} className="text-zinc-400 hover:text-white" title="Print Card">
+                                    <Printer className="w-5 h-5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="text-zinc-400 hover:text-white" title="Save as PDF">
+                                    <Download className="w-5 h-5" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </DialogHeader>
 
@@ -774,16 +792,45 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                     <div className="flex-1 overflow-hidden p-6 bg-zinc-950">
                         <ChemicalEditForm
                             initialData={chemical}
+                            autoFillOnMount={autoAiTrigger}
                             onSave={() => {
                                 setIsEditing(false);
+                                setAutoAiTrigger(false);
                                 onUpdate?.();
                             }}
-                            onCancel={() => setIsEditing(false)}
+                            onCancel={() => {
+                                setIsEditing(false);
+                                setAutoAiTrigger(false);
+                            }}
                         />
                     </div>
                 ) : (
                     <ScrollArea className="flex-1">
                         <div className="p-6 space-y-8">
+                            
+                            {isAdmin && (!chemical.description || !chemical.dilution_ratios?.length) && (
+                                <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                            <Sparkles className="w-6 h-6 text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-purple-400 font-bold">Incomplete Product Card</h4>
+                                            <p className="text-zinc-400 text-sm">Use AI to automatically fill in the missing details for this product.</p>
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        onClick={() => {
+                                            setAutoAiTrigger(true);
+                                            setIsEditing(true);
+                                        }}
+                                        className="bg-purple-600 hover:bg-purple-700"
+                                    >
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        Auto-Fill Now
+                                    </Button>
+                                </div>
+                            )}
 
                             {/* TOP SECTION: USED FOR (Mandatory) */}
                             <section className="bg-blue-900/10 border border-blue-900/30 rounded-xl p-4">

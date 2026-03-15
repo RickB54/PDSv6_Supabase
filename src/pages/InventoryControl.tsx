@@ -873,24 +873,8 @@ const InventoryControl = () => {
               <Button variant="ghost" size="sm" className="h-8 text-purple-400 hover:text-purple-300" onClick={(e) => { e.stopPropagation(); openLabelMaker(c); }}>
                 <Tag className="h-4 w-4 mr-1" /> Label
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 ml-1"
-                title="Unlink Card"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  handleUnlinkRequest(c);
-                }}
-              >
-                <UnlinkIcon className="h-3 w-3" />
-              </Button>
             </div>
-          ) : (
-            <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400" onClick={(e) => { e.stopPropagation(); setLinkTargetItem(c); setLinkModalOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Link
-            </Button>
-          )}
+          ) : null}
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
         </div>
@@ -926,24 +910,8 @@ const InventoryControl = () => {
               <Button variant="ghost" size="sm" className="h-8 text-purple-400 hover:text-purple-300 px-2" onClick={(e) => { e.stopPropagation(); openLabelMaker(c); }}>
                 <Tag className="h-4 w-4 mr-1" /> Label
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10"
-                title="Unlink Card"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  handleUnlinkRequest(c);
-                }}
-              >
-                <UnlinkIcon className="h-4 w-4" />
-              </Button>
             </div>
-          ) : (
-            <Button variant="ghost" size="sm" className="h-8 text-yellow-500 hover:text-yellow-400 px-2" onClick={(e) => { e.stopPropagation(); setLinkTargetItem(c); setLinkModalOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Link
-            </Button>
-          )}
+          ) : null}
         </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2">

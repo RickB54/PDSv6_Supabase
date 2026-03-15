@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chemical, DilutionRatio } from "@/types/chemicals";
-import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images } from 'lucide-react';
+import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images, Printer } from 'lucide-react';
 import { upsertChemical } from "@/lib/chemicals";
 import { generateTemplate, analyzeLabelFromImage } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
@@ -19,9 +19,10 @@ interface ChemicalEditFormProps {
     initialData: Partial<Chemical>;
     onSave: () => void;
     onCancel: () => void;
+    autoFillOnMount?: boolean;
 }
 
-export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEditFormProps) {
+export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMount = false }: ChemicalEditFormProps) {
     const [editing, setEditing] = useState<Partial<Chemical>>(initialData);
     const [aiLoading, setAiLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -39,6 +40,14 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
     // Image Upload Logic
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-trigger AI if requested
+    useEffect(() => {
+        // Trigger if requested via prop and we have a name to work with
+        if (autoFillOnMount && editing.name) {
+            handleAiGenerate();
+        }
+    }, []); // Run once on mount
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
@@ -106,36 +115,67 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
     };
 
     // Enhanced Auto-Fill
-    const handleAiGenerate = async () => {
+    async function handleAiGenerate() {
         if (!editing?.name) {
-            return toast({ title: "Enter Name", description: "We need a name to generate a template.", variant: "destructive" });
+            return toast({ title: "Name Required", description: "Enter a product name first so AI knows what to look for.", variant: "destructive" });
         }
+        
         setAiLoading(true);
+        toast({ title: "AI Magic", description: "Searching database for product details..." });
 
         setTimeout(() => {
-            const category = editing.category || "Exterior";
-            const template = generateTemplate(editing.name!, category as any);
+            setEditing(prev => {
+                const category = prev.category || "Exterior";
+                const template = generateTemplate(prev.name || "Product", category as any);
 
-            // Calculate new state
-            const newState = {
-                ...editing,
-                ...template,
-                // Preserve user-defined identity
-                name: editing?.name,
-                brand: editing?.brand,
-                category: editing?.category,
-                theme_color: editing?.theme_color || "#3b82f6",
-                // Mark as AI-generated
-                ai_generated: true,
-                manually_modified: false,
-            };
-
-            setEditing(newState);
-            // Take snapshot of AI-generated content for comparison
-            setAiSnapshot(newState);
+                const newState = {
+                    ...prev,
+                    ...template,
+                    name: prev.name, // Keep user's name
+                    brand: prev.brand, // Keep user's brand
+                    category: prev.category,
+                    theme_color: prev.theme_color || "#3b82f6",
+                    ai_generated: true,
+                    manually_modified: false,
+                };
+                
+                // Also update the comparison snapshot
+                setAiSnapshot(newState);
+                return newState;
+            });
+            
             setAiLoading(false);
-            toast({ title: "Auto-Fill Complete", description: "Template data applied.", className: "bg-green-900 border-green-800" });
-        }, 1000);
+            toast({ 
+                title: "Auto-Fill Complete", 
+                description: "Product card details populated from database.", 
+                className: "bg-green-900 border-green-800" 
+            });
+        }, 800);
+    };
+
+    const handleAddToLabelSheet = () => {
+        if (!editing.name) {
+            return toast({ title: "Name Required", description: "Enter a name before adding to a label.", variant: "destructive" });
+        }
+        
+        // Dispatch custom event that MixedLabelMaker listens for
+        const event = new CustomEvent('add-chemical-to-label-sheet', { 
+            detail: {
+                ...editing,
+                id: editing.id || `temp_${Date.now()}`
+            } 
+        });
+        window.dispatchEvent(event);
+    };
+
+    const handleCancelInternal = () => {
+        const baseline = aiSnapshot || initialData;
+        const modified = hasContentChanged(baseline, editing) || editing.name !== initialData.name || editing.brand !== initialData.brand;
+        
+        if (modified && !window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+            return;
+        }
+        onCancel();
     };
 
     const handleSaveInternal = async () => {
@@ -202,16 +242,45 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                 <div className="flex items-center gap-2">
                     <span className="text-xl font-bold">{editing?.id ? 'Edit Chemical' : 'New Chemical'}</span>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-purple-500/50 text-purple-400 hover:bg-purple-900/20"
-                    onClick={handleAiGenerate}
-                    disabled={aiLoading}
-                >
-                    {aiLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                    AI Auto-Fill
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelInternal}
+                        className="text-zinc-500 hover:text-white"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddToLabelSheet}
+                        className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        title="Add to 10-Label Printing Sheet"
+                    >
+                        <Printer className="w-4 h-4 mr-2" />
+                        Add to Label
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-purple-500/50 text-purple-400 hover:bg-purple-900/20"
+                        onClick={handleAiGenerate}
+                        disabled={aiLoading}
+                    >
+                        {aiLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                        AI Auto-Fill
+                    </Button>
+                    <Button
+                        onClick={handleSaveInternal}
+                        disabled={saving}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 font-bold"
+                    >
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                        Save
+                    </Button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 space-y-8">
@@ -856,14 +925,21 @@ export function ChemicalEditForm({ initialData, onSave, onCancel }: ChemicalEdit
                 </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800 mt-4">
+            <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800 mt-4 shrink-0">
+                <Button
+                    variant="ghost"
+                    onClick={handleCancelInternal}
+                    className="text-zinc-400 hover:text-white"
+                >
+                    Cancel
+                </Button>
                 <Button
                     onClick={handleSaveInternal}
                     disabled={saving}
-                    className="bg-green-600 hover:bg-green-700 min-w-[200px]"
+                    className="bg-green-600 hover:bg-green-700 min-w-[200px] font-black uppercase tracking-widest text-xs"
                 >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    {saving ? "Saving..." : "Save Changes"}
+                    {saving ? "Saving..." : "Save Product Card"}
                 </Button>
             </div>
 

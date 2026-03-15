@@ -3,60 +3,98 @@ import { StepChemicalMapping } from "@/lib/chemicals";
 
 // Helper for generating smart templates
 export const generateTemplate = (name: string, category: ChemicalCategory): Partial<Chemical> => {
-    const isInterior = category === 'Interior';
-    const isCleaner = name.toLowerCase().includes('cleaner') || name.toLowerCase().includes('apc') || name.toLowerCase().includes('wash');
-    const isCoating = name.toLowerCase().includes('coat') || name.toLowerCase().includes('seal') || name.toLowerCase().includes('ceramic');
+    const normName = name.toLowerCase();
+    const isInterior = category === 'Interior' || normName.includes('interior') || normName.includes('carpet') || normName.includes('upholstery') || normName.includes('leather');
+    
+    // 1. PRODUCT SPECIFIC OVERRIDES (Expert Knowledge Base)
+    if (normName.includes('carpet bomber')) {
+        return {
+            name: name,
+            brand: "P & S",
+            category: "Interior",
+            description: "A citrus-based high-performance cleaner specifically formulated for carpets, upholstery, and rugs. It breaks down stubborn contaminants and odors while remaining safe for most interior surfaces and fabrics.",
+            used_for: ["Carpets", "Upholstery", "Floor Mats", "Rugs"],
+            when_to_use: "During the interior detailing phase for deep cleaning fabric and fibers.",
+            why_to_use: "Non-toxic, citrus-scented, and highly effective at lifting deep-set dirt without harsh fuming.",
+            warnings: { damage_risk: "Low", risks: ["Always test on an inconspicuous area for colorfastness", "Ensure surface is fully dry after cleaning"] },
+            application_guide: { method: "Spray and Agitate", agitation: "Drill Brush or Hand Brush", rinse: "Extract or wipe with damp microfiber", dwell_time_min: 2, dwell_time_max: 5 },
+            surface_compatibility: { safe: ["Nylon", "Polyester", "Carpet", "Fabric"], risky: ["Alcantara", "Raw Suede"], avoid: ["Leather", "Polished Wood"] },
+            dilution_ratios: [
+                { method: "Spray Bottle", ratio: "1:5", soil_level: "Heavy Soil", notes: "For deep stains and high traffic areas" },
+                { method: "Spray Bottle", ratio: "1:8", soil_level: "Maintenance", notes: "Standard interior cleaning" }
+            ]
+        };
+    }
 
-    // Safety Fallbacks
-    const safeCategory = category || 'Exterior';
+    if (normName.includes('bead maker')) {
+        return {
+            name: name,
+            brand: "P & S",
+            category: "Exterior",
+            description: "A high-gloss paint protectant that provides incredible slickness and water beading. It is easy to apply and works as a stand-alone sealant or a booster for existing coatings.",
+            used_for: ["Paint", "Glass", "Chrome", "Plastic Trim"],
+            when_to_use: "Apply after washing as a drying aid or on a clean dry surface for maximum gloss.",
+            why_to_use: "Creates an extremely slick surface that repels water and prevents dirt from bonding.",
+            warnings: { damage_risk: "Low", risks: ["Avoid application in direct sunlight for best results"] },
+            application_guide: { method: "Spray and Wipe", agitation: "Microfiber Towel", rinse: "Buff to a high gloss", dwell_time_min: 0, dwell_time_max: 1 },
+            dilution_ratios: [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Ready to Use - Do not dilute" }]
+        };
+    }
 
-    // Base Template
+    if (normName.includes('iron remover') || normName.includes('iron x') || normName.includes('iron out')) {
+        return {
+            description: "Specially formulated pH-balanced iron remover that targets and dissolves embedded iron particles from automotive paint and wheels.",
+            used_for: ["Wheels", "Body Panels", "Glass"],
+            warnings: { damage_risk: "Medium", risks: ["Do not let dry on surface", "Avoid raw aluminum", "Smells like sulfur"] },
+            application_guide: { method: "Spray and Dwell", agitation: "Soft Brush on wheels", rinse: "Pressure wash thoroughly", dwell_time_min: 3, dwell_time_max: 5 },
+            dilution_ratios: [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Standard use" }]
+        };
+    }
+
+    // 2. KEYWORD BASED LOGIC (Fallback)
+    const isCleaner = normName.includes('cleaner') || normName.includes('apc') || normName.includes('wash') || normName.includes('degreaser');
+    const isCoating = normName.includes('coat') || normName.includes('seal') || normName.includes('ceramic') || normName.includes('wax');
+
+    const safeCategory = isInterior ? 'Interior' : (category || 'Exterior');
+
     const template: Partial<Chemical> = {
         name: name,
         category: safeCategory as any,
-        description: `Premium ${safeCategory.toLowerCase()} detailing solution designed for professional results.`,
-        used_for: isInterior ? ["Leather", "Plastic", "Vinyl"] : ["Paint", "Glass", "Wheels"],
-        when_to_use: isCleaner ? "During the prep or wash stage." : "As a final protection step.",
-        why_to_use: isCleaner ? "Removes stubborn contaminants tailored for safe cleaning." : "Provides long-lasting protection and gloss.",
+        description: `Professional-grade ${safeCategory.toLowerCase()} solution for ${isCleaner ? 'deep cleaning' : 'protection and finishing'}.`,
+        used_for: isInterior ? ["Plastic", "Vinyl", "Dashboard"] : ["Paint", "Glass", "Wheels"],
+        when_to_use: isCleaner ? "During the cleaning or decontamination phase." : "As a final protection or maintenance step.",
+        why_to_use: isCleaner ? "Efficiently breaks down surface contaminants." : "Enhances visual appearance and provides protection.",
         warnings: {
             damage_risk: isCoating ? "Medium" : "Low",
-            risks: isCoating ? ["High spots if not leveled", "Do not apply in direct sun"] : ["Do not let dry on surface"]
+            risks: isCoating ? ["Ensure surface is decontaminated", "Do not apply in direct sun"] : ["Keep surface cool during use"]
         },
         application_guide: {
             method: isCoating ? "Applicator Pad" : "Spray and Wipe",
-            agitation: isCleaner ? "Soft Brush" : "None",
-            rinse: isCleaner ? "Wipe off with damp towel" : "Buff off haze",
+            agitation: isCleaner ? "Brush or Mitt" : "None",
+            rinse: isCleaner ? "Thoroughly rinse or wipe clean" : "Buff off residue",
             dwell_time_min: 1,
             dwell_time_max: 3
         },
         surface_compatibility: {
-            safe: isInterior ? ["Leather", "Vinyl", "Plastic"] : ["Clear Coat", "Chrome", "Glass"],
-            risky: isInterior ? ["Alcantara (if not diluted)"] : ["Matte Finishes"],
-            avoid: isInterior ? ["Unsealed Wood"] : ["Wraps", "PPF (unless specified)"]
+            safe: isInterior ? ["Vinyl", "Plastic", "Synthetic Fibers"] : ["Clear Coat", "Glass", "Powder Coat"],
+            risky: isInterior ? ["Alcantara"] : ["Matte Finishes"],
+            avoid: ["Raw wood", "Unsealed surfaces"]
         },
-        interactions: {
-            do_not_mix: ["Bleach", "Ammonia"],
-            sequencing: []
-        },
+        interactions: { do_not_mix: ["Strong acids", "Bleach"], sequencing: [] },
         dilution_ratios: [],
-        pro_tips: ["Always test on an inconspicuous area first."],
+        pro_tips: ["Always test on an inconspicuous area first.", "For best results, avoid direct sunlight and hot surfaces."],
         video_urls: []
     };
 
-    // Dilution Logic
     if (isCleaner) {
         template.dilution_ratios = [
-            { method: "Spray Bottle", ratio: "1:10", soil_level: "Heavy Soil", notes: "For deep cleaning" },
-            { method: "Spray Bottle", ratio: "1:20", soil_level: "Maintenance", notes: "For regular upkeep" },
+            { method: "Spray Bottle", ratio: "1:4", soil_level: "Heavy Soil", notes: "Tough grime" },
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Maintenance", notes: "General cleaning" },
         ];
     } else if (isCoating) {
-        template.dilution_ratios = [
-            { method: "Direct", ratio: "Ready to Use", soil_level: "Standard", notes: "Do not dilute" }
-        ];
+        template.dilution_ratios = [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Do not dilute" }];
     } else {
-        template.dilution_ratios = [
-            { method: "Bucket", ratio: "1oz per Gallon", soil_level: "Standard", notes: "Standard wash mix" }
-        ];
+        template.dilution_ratios = [{ method: "Bucket", ratio: "1:100", soil_level: "Standard", notes: "Standard wash mix" }];
     }
 
     return template;

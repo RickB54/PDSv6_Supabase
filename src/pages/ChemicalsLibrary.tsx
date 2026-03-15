@@ -2,17 +2,20 @@ import { PageHeader } from "@/components/PageHeader";
 import { ChemicalCard } from "@/components/chemicals/ChemicalCard";
 import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
 import { ChemicalLabelMaker } from "@/components/chemicals/ChemicalLabelMaker";
+import { MixedLabelMaker } from "@/components/chemicals/MixedLabelMaker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getChemicals, deleteChemical } from "@/lib/chemicals";
-import { Chemical } from "@/types/chemicals";
-import { Plus, Search, Tag, HelpCircle } from "lucide-react";
+import { getCombinedSelectableProducts, deleteChemical } from "@/lib/chemicals";
+import { Chemical, ChemicalCategory } from "@/types/chemicals";
+import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/hooks/use-toast";
-import { Beaker, Calculator } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ChemicalEditForm } from "@/components/chemicals/ChemicalEditForm";
+import { Badge } from "@/components/ui/badge";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
@@ -23,6 +26,9 @@ export default function ChemicalsLibrary() {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("All");
     const [labelMakerOpen, setLabelMakerOpen] = useState(false);
+    const [mixedLabelMakerOpen, setMixedLabelMakerOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingChemical, setEditingChemical] = useState<Partial<Chemical> | null>(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -36,7 +42,7 @@ export default function ChemicalsLibrary() {
 
     const loadChemicals = async () => {
         setLoading(true);
-        const data = await getChemicals();
+        const data = await getCombinedSelectableProducts();
         setChemicals(data);
         setLoading(false);
         return data;
@@ -85,53 +91,82 @@ export default function ChemicalsLibrary() {
 
             <main className="container mx-auto px-4 py-8 max-w-7xl">
                 {/* Header Actions */}
-                <div className="flex flex-row flex-wrap justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
                     <div className="flex items-center gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-white mb-2">Chemical Knowledge Base</h1>
-                            <p className="text-zinc-400">Master every product in our arsenal.</p>
+                            <h1 className="text-2xl sm:text-3xl font-black text-white mb-1 uppercase tracking-tight">Chemical Knowledge Base</h1>
+                            <p className="text-zinc-500 text-sm font-medium">Master every product in our arsenal.</p>
                         </div>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin', topicId: 'chemical-workflow' } }))}
-                            className="text-zinc-500 hover:text-blue-400 h-10 w-10 mt-1"
+                            className="text-zinc-600 hover:text-blue-400 h-10 w-10 shrink-0"
                             title="Help Guide"
                         >
                             <HelpCircle className="w-6 h-6" />
                         </Button>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
                         <Button 
                             variant="outline" 
                             onClick={() => navigate('/dilution-calculator')} 
-                            className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 border font-bold"
+                            className="flex-1 sm:flex-none h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-xs"
                         >
-                            <Calculator className="w-4 h-4 mr-2" /> Dilution Calc
+                            <Calculator className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Dilution Calc</span><span className="sm:hidden">Calc</span>
                         </Button>
                         <Button 
                             variant="outline" 
                             onClick={() => navigate('/chemical-training')} 
-                            className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border font-bold"
+                            className="flex-1 sm:flex-none h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-xs"
                         >
-                            <Beaker className="w-4 h-4 mr-2" /> Decision System
+                            <Beaker className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Decision System</span><span className="sm:hidden">Decision</span>
                         </Button>
                         {isAdmin && (
-                            <>
-                                <Button variant="outline" onClick={() => setLabelMakerOpen(true)} className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-purple-400 font-bold">
-                                    <Tag className="w-4 h-4 mr-2" /> Bottle Label
+                            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setLabelMakerOpen(true)} 
+                                    className="flex-1 sm:flex-none h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 border font-bold text-xs"
+                                >
+                                    <Tag className="w-4 h-4 mr-2" /> Labels
                                 </Button>
-                                <Button onClick={() => navigate('/admin/chemicals')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold">
-                                    <Plus className="w-4 h-4 mr-2" /> Add 
+                                <Button 
+                                    onClick={() => setMixedLabelMakerOpen(true)} 
+                                    className="flex-1 sm:flex-none h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20 px-4"
+                                >
+                                    <Printer className="w-3.5 h-3.5 mr-2" /> Mixed Sheet
                                 </Button>
-                            </>
+                                <Button 
+                                    onClick={() => {
+                                        setEditingChemical({
+                                            name: "",
+                                            brand: "",
+                                            category: "Exterior",
+                                            theme_color: "#3b82f6",
+                                            used_for: [],
+                                            dilution_ratios: [],
+                                            warnings: { damage_risk: "Low", risks: [] },
+                                            interactions: { do_not_mix: [], sequencing: [] },
+                                            surface_compatibility: { safe: [], risky: [], avoid: [] },
+                                            application_guide: { method: "Spray", agitation: "None", rinse: "Can rinse" },
+                                            video_urls: [],
+                                            gallery_image_urls: []
+                                        });
+                                        setEditDialogOpen(true);
+                                    }} 
+                                    className="sm:flex-none h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[10px] px-6"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" /> Add
+                                </Button>
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col md:flex-row gap-4 mb-8">
-                    <div className="relative flex-1">
+                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                    <div className="relative flex-1 z-10">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <Input
                             placeholder="Search chemicals, uses, or brands..."
@@ -167,9 +202,35 @@ export default function ChemicalsLibrary() {
                             />
                         ))}
                         {filtered.length === 0 && (
-                            <div className="col-span-full text-center py-20 text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
-                                <p>No chemicals found matching your search.</p>
-                                {isAdmin && <Button variant="link" onClick={() => navigate('/admin/chemicals')}>Add New Chemical</Button>}
+                            <div className="col-span-full text-center py-20 text-zinc-500 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/20 backdrop-blur-sm">
+                                <Search className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
+                                <p className="text-zinc-400 font-bold">No results found matching "{search}"</p>
+                                <p className="text-xs text-zinc-600 mt-1 mb-6">Try searching for a different term or add a new chemical.</p>
+                                {isAdmin && (
+                                    <Button 
+                                        variant="outline" 
+                                        className="border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300"
+                                        onClick={() => {
+                                            setEditingChemical({
+                                                name: search, // Carry search term over
+                                                brand: "",
+                                                category: "Exterior",
+                                                theme_color: "#3b82f6",
+                                                used_for: [],
+                                                dilution_ratios: [],
+                                                warnings: { damage_risk: "Low", risks: [] },
+                                                interactions: { do_not_mix: [], sequencing: [] },
+                                                surface_compatibility: { safe: [], risky: [], avoid: [] },
+                                                application_guide: { method: "Spray", agitation: "None", rinse: "Can rinse" },
+                                                video_urls: [],
+                                                gallery_image_urls: []
+                                            });
+                                            setEditDialogOpen(true);
+                                        }}
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" /> Add New Chemical
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -189,6 +250,30 @@ export default function ChemicalsLibrary() {
                 onOpenChange={setLabelMakerOpen}
                 initialChemical={selectedChemical}
             />
+
+            <MixedLabelMaker 
+                open={mixedLabelMakerOpen}
+                onOpenChange={setMixedLabelMakerOpen}
+            />
+
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent 
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    className="max-w-4xl h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 text-white p-6"
+                >
+                    {editingChemical && (
+                        <ChemicalEditForm
+                            initialData={editingChemical}
+                            onSave={() => {
+                                setEditDialogOpen(false);
+                                loadChemicals();
+                            }}
+                            onCancel={() => setEditDialogOpen(false)}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

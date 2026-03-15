@@ -116,6 +116,11 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                                 <Sparkles className="w-2.5 h-2.5 mr-1" /> AI {chemical.manually_modified && "+ Manual"}
                             </Badge>
                         )}
+                        {(chemical as any).is_inventory_only && (
+                            <Badge className="bg-amber-900/80 backdrop-blur border-amber-700 text-amber-200 text-[10px] px-1.5 py-0.5 uppercase font-bold animate-pulse">
+                                New Product
+                            </Badge>
+                        )}
                     </div>
 
                     {riskLevel === 'High' && (
