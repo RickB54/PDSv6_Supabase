@@ -121,45 +121,62 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const pageContainerRef = useRef<HTMLDivElement>(null);
-    const [previewZoom, setPreviewZoom] = useState(1);
+    const [previewZoom, setPreviewZoom] = useState(0.4);
+    const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+    const [isCloudLoading, setIsCloudLoading] = useState(false);
+    const [lastSaved, setLastSaved] = useState<string | null>(null);
 
     // Auto-scaling logic
     useEffect(() => {
+        if (!open) return;
+
         const updateScale = () => {
             if (!containerRef.current || !pageContainerRef.current) return;
             
             const container = containerRef.current;
-            // More space for header/info bar on mobile
-            const padW = 32; 
-            const padH = window.innerWidth < 640 ? 140 : 100;
+            // High padding for mobile to account for shared height with editor
+            const padW = window.innerWidth < 1024 ? 32 : 64; 
+            const padH = window.innerWidth < 1024 ? 180 : 120;
             
             const targetW = TEMPLATE.sheetWidth * 100;
             const targetH = TEMPLATE.sheetHeight * 100;
             
-            const availableW = container.clientWidth - padW;
-            const availableH = container.clientHeight - padH;
+            const availableW = Math.max(container.clientWidth - padW, 100);
+            const availableH = Math.max(container.clientHeight - padH, 100);
             
             const scaleW = availableW / targetW;
             const scaleH = availableH / targetH;
             
-            // Limit minimum scale for legibility, but fit to width primarily on small screens
             let finalScale = Math.min(scaleW, scaleH);
             
-            if (container.clientWidth < 1024) {
-                finalScale = Math.min(finalScale, 1);
-            } else {
-                finalScale = Math.min(finalScale, 1.25);
-            }
+            // Limit range: 0.2 to 1.1x
+            finalScale = Math.max(0.2, Math.min(finalScale, 1.1));
 
             setPreviewZoom(finalScale);
         };
 
-        const resizeObserver = new ResizeObserver(updateScale);
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(updateScale);
+        });
+
         if (containerRef.current) resizeObserver.observe(containerRef.current);
         
+        // Run immediately and after a delay to catch modal settling
         updateScale();
-        return () => resizeObserver.disconnect();
-    }, [open]);
+        const timers = [
+            setTimeout(updateScale, 100),
+            setTimeout(updateScale, 400),
+            setTimeout(updateScale, 1000)
+        ];
+
+        window.addEventListener('resize', updateScale);
+        
+        return () => {
+            resizeObserver.disconnect();
+            timers.forEach(clearTimeout);
+            window.removeEventListener('resize', updateScale);
+        };
+    }, [open, editingSlot]);
 
     useEffect(() => {
         const load = async () => {
@@ -171,19 +188,75 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
     }, []);
 
     useEffect(() => {
-        // Handle cloud synchronization whenever labels change
-        const syncLabels = async () => {
-            // Always save to local storage for instant feedback/offline
-            localStorage.setItem('mixed_label_sheet_v1', JSON.stringify(labels));
-
-            // Save to cloud if user is logged in
-            const user = getCurrentUser();
-            if (user?.id) {
-                await saveAppSetting(`label_sheet_${user.id}`, labels);
-            }
-        };
-        syncLabels();
+        // Handle local storage synchronization whenever labels change
+        // This provides instant feedback and persistence within the session/tab
+        localStorage.setItem('mixed_label_sheet_v1', JSON.stringify(labels));
     }, [labels]);
+
+    const handleSaveToCloud = async () => {
+        const user = getCurrentUser();
+        if (!user?.id) {
+            toast({
+                title: "Authentication Required",
+                description: "You must be signed in to sync labels to the cloud.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsCloudSyncing(true);
+        try {
+            const success = await saveAppSetting(`label_sheet_${user.id}`, labels);
+            if (success) {
+                setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                toast({
+                    title: "Page Saved to Cloud",
+                    description: "Your label layout is now synced across all devices.",
+                    className: "bg-green-600 border-green-500 text-white font-bold"
+                });
+            } else {
+                throw new Error("Upsert returned false");
+            }
+        } catch (error) {
+            console.error("Cloud save failed", error);
+            toast({
+                title: "Cloud Sync Failed",
+                description: "Ensure you have a stable internet connection.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsCloudSyncing(false);
+        }
+    };
+
+    const handleLoadFromCloud = async () => {
+        const user = getCurrentUser();
+        if (!user?.id) return;
+
+        setIsCloudLoading(true);
+        try {
+            const cloudLabels = await getAppSetting<LabelData[]>(`label_sheet_${user.id}`);
+            if (cloudLabels && Array.isArray(cloudLabels) && cloudLabels.length === 10) {
+                setLabels(cloudLabels);
+                setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                toast({
+                    title: "Cloud Data Restored",
+                    description: "Your previous session labels have been loaded.",
+                    className: "bg-indigo-600 text-white"
+                });
+            } else {
+                toast({
+                    title: "No Cloud Data",
+                    description: "No saved label sheet was found for your account.",
+                    variant: "destructive"
+                });
+            }
+        } catch (err) {
+            console.error("Cloud load error:", err);
+        } finally {
+            setIsCloudLoading(false);
+        }
+    };
 
     useEffect(() => {
         // Fetch from cloud when modal opens to ensure multi-device sync
@@ -200,6 +273,8 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     if (localHash !== cloudHash) {
                         setLabels(cloudLabels);
                     }
+                    // Even if hashes match/don't match, we can assume this is the latest known state
+                    setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
                 }
             };
             fetchCloudData();
@@ -338,6 +413,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     font-weight: 900;
                     text-transform: uppercase;
                     line-height: 1.1;
+                    height: 2.2em; /* Exactly 2 lines */
                     border-left: 6px solid #4f46e5;
                     padding-left: 10px;
                     margin-top: 4px;
@@ -345,7 +421,6 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
-                    max-height: 2.2em;
                 }
                 .label-footer {
                     display: flex;
@@ -374,13 +449,14 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     font-size: 9pt; 
                     font-weight: 600; 
                     color: #333; 
-                    line-height: 1.3;
-                    max-height: 0.7in;
+                    line-height: 1.2;
+                    max-height: 0.6in;
                     overflow: hidden;
                     display: -webkit-box;
                     -webkit-line-clamp: 3;
                     -webkit-box-orient: vertical;
                     padding-right: 5px;
+                    margin-bottom: 5px;
                 }
                 .notes-lines { 
                     position: absolute;
@@ -512,7 +588,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                 <div style="position: absolute; bottom: 10px; left: 25px; font-size: 6pt; font-weight: 900; text-transform: uppercase; color: #999;">${l.businessName || 'PRIMEAUTODETAIL.NET'}</div>
                                 <div>
                                     <div style="font-size: 8pt; font-weight: 900; color: #4f46e5; margin-bottom: 2px; text-transform: uppercase;">${l.brandName || 'Product'}</div>
-                                    <div style="font-size: 20pt; font-weight: 900; text-transform: uppercase; line-height: 1; border-left: 6px solid #4f46e5; padding-left: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${l.productName || 'UNNAMED'}</div>
+                                    <div style="font-size: 20pt; font-weight: 900; text-transform: uppercase; line-height: 1.1; height: 2.2em; border-left: 6px solid #4f46e5; padding-left: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${l.productName || 'UNNAMED'}</div>
                                 </div>
                                 <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; position: relative; z-index: 1;">
                                     <div style="flex: 1; font-size: 8pt; font-weight: 600; line-height: 1.2; max-height: 0.6in; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; margin-bottom: 5px;">
@@ -631,6 +707,11 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                         <DialogDescription className="text-zinc-400 flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 sm:mt-1">
                             <span className="flex items-center gap-1 text-[9px] sm:text-xs"><Info className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-400" /> 8.5"x11" Sheet</span>
                             <span className="flex items-center gap-1 text-[9px] sm:text-xs"><Info className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-400" /> Mixed Printing</span>
+                            {lastSaved && (
+                                <span className="flex items-center gap-1 text-[9px] sm:text-xs text-green-500 font-black uppercase tracking-tighter bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                                    <Save className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Last Synced: {lastSaved}
+                                </span>
+                            )}
                         </DialogDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -641,6 +722,41 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                             onClick={() => window.open('https://www.onlinelabels.com/templates/blank/ol125', '_blank')}
                         >
                             <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" /> <span className="hidden sm:inline">Template Ref</span>
+                        </Button>
+                        <Button 
+                            variant="default" 
+                            size="sm"
+                            disabled={isCloudSyncing || isCloudLoading}
+                            className={`bg-indigo-600 hover:bg-indigo-500 text-white h-7 sm:h-9 text-[9px] sm:text-xs px-2 sm:px-4 font-black uppercase tracking-widest shadow-[0_0_15px_rgba(79,70,229,0.3)] shrink-0 ${labels.every(l => l.isEmpty) ? 'opacity-50' : ''}`}
+                            onClick={() => {
+                                if (labels.every(l => l.isEmpty)) {
+                                    if (!confirm("Your sheet is empty. Do you really want to save an empty layout to the cloud?")) return;
+                                }
+                                handleSaveToCloud();
+                            }}
+                        >
+                            {isCloudSyncing ? (
+                                <>
+                                    <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 animate-spin" />
+                                    SAVING...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                                    SAVE PAGE
+                                </>
+                            )}
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            disabled={isCloudLoading}
+                            className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white h-7 sm:h-9 px-2 sm:px-3 text-[9px] sm:text-xs shrink-0"
+                            onClick={handleLoadFromCloud}
+                            title="Emergency Load from Cloud"
+                        >
+                            <RotateCcw className={`w-3 h-3 mr-1 ${isCloudLoading ? 'animate-spin' : ''}`} /> 
+                            <span className="hidden sm:inline">RESTORE</span>
                         </Button>
                         <Button 
                             variant="ghost" 
@@ -657,7 +773,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     {/* Left: Interactive Grid */}
                     <div 
                         ref={containerRef}
-                        className="flex-1 p-4 sm:p-8 bg-zinc-950/50 flex flex-col items-center justify-start lg:justify-center overflow-auto custom-scrollbar relative min-h-[300px] lg:min-h-0"
+                        className="flex-1 p-4 sm:p-8 bg-zinc-950/50 flex flex-col items-center justify-start lg:justify-center overflow-auto custom-scrollbar relative min-h-[400px] lg:min-h-0 pt-16 lg:pt-8"
                     >
                         <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 bg-zinc-900/50 p-3 sm:p-4 rounded-xl border border-zinc-800 w-full max-w-[800px]">
                             <div className="flex flex-col">
@@ -788,8 +904,12 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                         </div>
                     </div>
 
-                    {/* Right: Slot Editor (Sidebar) */}
-                    <div className="w-full lg:w-[450px] border-t lg:border-t-0 lg:border-l border-zinc-800 flex flex-col bg-zinc-950 shrink-0">
+                    {/* Right: Slot Editor (Sidebar / Responsive Bottom Sheet) */}
+                    <div className={`
+                        ${editingSlot !== null ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 lg:translate-y-0 lg:opacity-100 hidden lg:flex'}
+                        fixed lg:relative inset-0 lg:inset-auto z-50 lg:z-0
+                        w-full lg:w-[450px] border-t lg:border-t-0 lg:border-l border-zinc-800 flex flex-col bg-zinc-950 transition-all duration-300 ease-out
+                    `}>
                         {editingSlot !== null ? (
                             <div className="flex-1 flex flex-col overflow-hidden">
                                 <div className="p-6 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
@@ -1015,7 +1135,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
             </DialogContent>
 
             <Dialog open={zoomSlot !== null} onOpenChange={(open) => !open && setZoomSlot(null)}>
-                <DialogContent className="max-w-fit bg-zinc-950 border-zinc-800 p-6 sm:p-8 flex flex-col items-center">
+                <DialogContent className="max-w-fit max-h-[95vh] bg-zinc-950 border-zinc-800 p-6 sm:p-8 flex flex-col items-center overflow-y-auto overflow-x-hidden">
                     <DialogHeader className="w-full mb-6">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -1028,12 +1148,12 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                     <ChevronLeft className="w-5 h-5" />
                                 </Button>
                                 <div>
-                                    <DialogTitle className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                        <Search className="w-5 h-5 text-purple-400" />
+                                    <DialogTitle className="text-sm sm:text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                        <Search className="w-4 h-4 text-purple-400" />
                                         High-Res Label Preview
                                     </DialogTitle>
                                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none mt-1">
-                                        Slot {zoomSlot !== null ? zoomSlot + 1 : ''} • Rendered at 200% (4" x 8")
+                                        Rendered at 200% (4" x 8")
                                     </p>
                                 </div>
                             </div>
@@ -1044,26 +1164,35 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     </DialogHeader>
                     
                     {zoomSlot !== null && (
-                        <div className="relative group p-4 bg-zinc-900/40 rounded-2xl border border-white/5">
-                            {/* Guideline Decorations */}
-                            <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-zinc-700" />
-                            <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-zinc-700" />
-                            <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-zinc-700" />
-                            <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-zinc-700" />
+                        <div className="w-full h-full flex items-center justify-center overflow-hidden py-4 sm:py-8">
+                            <div className="relative group p-1.5 sm:p-4 bg-zinc-900/40 rounded-2xl border border-white/5 max-w-full">
+                                {/* Guideline Decorations */}
+                                <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-zinc-700 hidden sm:block" />
+                                <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-zinc-700 hidden sm:block" />
+                                <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-zinc-700 hidden sm:block" />
+                                <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-zinc-700 hidden sm:block" />
 
-                            <div 
-                                className="bg-white shadow-[0_0_80px_rgba(0,0,0,0.8)] border-[1px] border-zinc-200 overflow-hidden relative"
-                                style={{ 
-                                    width: `${TEMPLATE.labelWidth * 2 * 100}px`, 
-                                    height: `${TEMPLATE.labelHeight * 2 * 100}px`,
-                                }}
-                            >
-                                <div className="w-full h-full scale-[2] origin-top-left">
-                                    <LabelPreview data={labels[zoomSlot]} />
+                                <div 
+                                    className="bg-white shadow-[0_0_80px_rgba(0,0,0,0.8)] border-[1px] border-zinc-200 overflow-hidden relative shrink-0"
+                                    style={{ 
+                                        width: `calc(min(85vw, 800px))`, 
+                                        height: `calc(min(41.5vw, 400px))`,
+                                    }}
+                                >
+                                    <div 
+                                        className="origin-top-left"
+                                        style={{
+                                            width: '400px',
+                                            height: '200px',
+                                            transform: `scale(calc(min(85vw, 800px) / 400))`
+                                        }}
+                                    >
+                                        <LabelPreview data={labels[zoomSlot]} />
+                                    </div>
+                                    
+                                    {/* Overlay simulated cut line */}
+                                    <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-zinc-100/50" />
                                 </div>
-                                
-                                {/* Overlay simulated cut line */}
-                                <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-zinc-100/50" />
                             </div>
                         </div>
                     )}
@@ -1089,24 +1218,4 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
             </Dialog>
         </Dialog>
     );
-}
-
-function Tag(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-            <path d="M7 7h.01" />
-        </svg>
-    )
 }

@@ -90,7 +90,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
             <div className={`flex flex-col items-center w-full px-6 md:px-12 ${isModal ? 'bg-zinc-950 p-4 h-full overflow-y-auto' : ''}`}>
             {/* Header Area */}
             <div className="w-full max-w-md relative flex flex-col items-center mb-10 shrink-0">
-                {isModal && (
+                {(isModal || window.innerWidth < 768) && (
                     <Button 
                         variant="ghost" 
                         size="icon" 

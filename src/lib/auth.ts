@@ -368,18 +368,37 @@ export async function signupSupabase(email: string, password: string, name?: str
 }
 
 export async function logout(): Promise<void> {
-  // Always clear local state immediately to give UI feedback
-  localStorage.removeItem('customerProfile');
-  localStorage.removeItem('session_user_id');
+  // 1. Clear ALL application-specific local storage immediately
+  const keysToClear = [
+    'currentUser', 
+    'session_user_id', 
+    'customerProfile', 
+    'mixed_label_sheet_v1'
+  ];
+  keysToClear.forEach(key => localStorage.removeItem(key));
+
+  // 2. Clear Supabase auth keys (identifiable by their prefix)
+  Object.keys(localStorage).forEach(key => {
+    if (key.includes('supabase.auth.token') || key.startsWith('sb-')) {
+      localStorage.removeItem(key);
+    }
+  });
+
+  // 3. Update application state
   setCurrentUser(null);
 
+  // 4. Attempt server-side logout
   if (isSupabaseEnabled()) {
     try {
-      // Attempt server logout but don't block UI if it hangs
       await Promise.race([
         supabase.auth.signOut(),
-        new Promise((_, reject) => setTimeout(() => reject('timeout'), 2000))
+        new Promise((_, reject) => setTimeout(() => reject('timeout'), 1500))
       ]);
-    } catch (e) { console.warn("Logout (server) warning", e); }
+    } catch (e) { 
+      console.warn("Server logout timed out or failed, but local session is cleared.", e); 
+    }
   }
+
+  // 5. Force reload or redirect to be safe
+  window.location.href = '/login';
 }
