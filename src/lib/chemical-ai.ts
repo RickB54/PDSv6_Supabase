@@ -4,12 +4,13 @@ import { StepChemicalMapping } from "@/lib/chemicals";
 // Helper for generating smart templates
 export const generateTemplate = (name: string, category: ChemicalCategory): Partial<Chemical> => {
     const normName = name.toLowerCase();
-    const isInterior = category === 'Interior' || normName.includes('interior') || normName.includes('carpet') || normName.includes('upholstery') || normName.includes('leather');
+    const isInterior = category === 'Interior' || normName.includes('interior') || normName.includes('carpet') || normName.includes('upholstery') || normName.includes('leather') || normName.includes('fabric');
     
     // 1. PRODUCT SPECIFIC OVERRIDES (Expert Knowledge Base)
+    // We keep these for high-accuracy for common products
     if (normName.includes('carpet bomber')) {
         return {
-            name: name,
+            name: "Carpet Bomber",
             brand: "P & S",
             category: "Interior",
             description: "A citrus-based high-performance cleaner specifically formulated for carpets, upholstery, and rugs. It breaks down stubborn contaminants and odors while remaining safe for most interior surfaces and fabrics.",
@@ -28,7 +29,7 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
 
     if (normName.includes('bead maker')) {
         return {
-            name: name,
+            name: "Bead Maker",
             brand: "P & S",
             category: "Exterior",
             description: "A high-gloss paint protectant that provides incredible slickness and water beading. It is easy to apply and works as a stand-alone sealant or a booster for existing coatings.",
@@ -41,60 +42,80 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
         };
     }
 
-    if (normName.includes('iron remover') || normName.includes('iron x') || normName.includes('iron out')) {
+    if (normName.includes('iron remover') || normName.includes('iron x') || normName.includes('iron out') || normName.includes('ferrex')) {
         return {
-            description: "Specially formulated pH-balanced iron remover that targets and dissolves embedded iron particles from automotive paint and wheels.",
-            used_for: ["Wheels", "Body Panels", "Glass"],
-            warnings: { damage_risk: "Medium", risks: ["Do not let dry on surface", "Avoid raw aluminum", "Smells like sulfur"] },
+            description: "Specially formulated pH-balanced iron remover that targets and dissolves embedded iron particles from automotive paint and wheels. Often turns purple as it reacts.",
+            used_for: ["Wheels", "Body Panels", "Paint Decontamination"],
+            category: "Exterior",
+            warnings: { damage_risk: "Medium", risks: ["Do not let dry on surface", "Avoid raw aluminum", "Always use in well ventilated area due to odor"] },
             application_guide: { method: "Spray and Dwell", agitation: "Soft Brush on wheels", rinse: "Pressure wash thoroughly", dwell_time_min: 3, dwell_time_max: 5 },
             dilution_ratios: [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Standard use" }]
         };
     }
 
-    // 2. KEYWORD BASED LOGIC (Fallback)
-    const isCleaner = normName.includes('cleaner') || normName.includes('apc') || normName.includes('wash') || normName.includes('degreaser');
-    const isCoating = normName.includes('coat') || normName.includes('seal') || normName.includes('ceramic') || normName.includes('wax');
+    // 2. DYNAMIC LOOKUP LOGIC (Generic "AI" Reasoning)
+    const traits = {
+        isCleaner: normName.includes('cleaner') || normName.includes('apc') || normName.includes('wash') || normName.includes('degreaser') || normName.includes('soap'),
+        isCoating: normName.includes('coat') || normName.includes('seal') || normName.includes('ceramic') || normName.includes('wax') || normName.includes('protect'),
+        isInterior: isInterior,
+        isExterior: !isInterior,
+        isGlass: normName.includes('glass') || normName.includes('window'),
+        isTire: normName.includes('tire') || normName.includes('wheel') || normName.includes('rim'),
+        isHeavyDuty: normName.includes('degreaser') || normName.includes('acid') || normName.includes('heavy'),
+        isPolish: normName.includes('polish') || normName.includes('compound') || normName.includes('cut'),
+    };
 
-    const safeCategory = isInterior ? 'Interior' : (category || 'Exterior');
+    const safeCategory = traits.isInterior ? 'Interior' : 'Exterior';
+    
+    // Build a smarter description based on traits
+    let description = `Professional ${safeCategory.toLowerCase()} Detailing ${traits.isCoating ? 'Protection' : 'Cleaning'} Solution.`;
+    if (traits.isGlass) description = "Specialized streak-free formula for automotive glass and mirrors.";
+    if (traits.isTire) description = "Heavy duty cleaner and dressing designed for the rigorous environment of wheels and tires.";
+    if (traits.isInterior && traits.isCleaner) description = "Gentle yet effective interior cleaner safe for dash, door panels, and upholstery.";
+    if (traits.isCoating) description = "Advanced synthetic polymers provide long-lasting protection and enhanced depth of color.";
 
     const template: Partial<Chemical> = {
         name: name,
         category: safeCategory as any,
-        description: `Professional-grade ${safeCategory.toLowerCase()} solution for ${isCleaner ? 'deep cleaning' : 'protection and finishing'}.`,
-        used_for: isInterior ? ["Plastic", "Vinyl", "Dashboard"] : ["Paint", "Glass", "Wheels"],
-        when_to_use: isCleaner ? "During the cleaning or decontamination phase." : "As a final protection or maintenance step.",
-        why_to_use: isCleaner ? "Efficiently breaks down surface contaminants." : "Enhances visual appearance and provides protection.",
+        description: description,
+        used_for: traits.isInterior ? ["Dashboard", "Vinyl", "Plastic", "Door Panels"] : ["Paint", "Clear Coat", "Wheels"],
+        when_to_use: traits.isCleaner ? "During the cleaning / decontamination phase." : "As a final step to protect the surface.",
+        why_to_use: traits.isCleaner ? "Safely emulsifies dirt and grime for removal." : "Protects against UV damage and environmental contaminants.",
         warnings: {
-            damage_risk: isCoating ? "Medium" : "Low",
-            risks: isCoating ? ["Ensure surface is decontaminated", "Do not apply in direct sun"] : ["Keep surface cool during use"]
+            damage_risk: (traits.isCoating || traits.isHeavyDuty) ? "Medium" : "Low",
+            risks: traits.isHeavyDuty ? ["Wear gloves and eye protection", "Do not let dry on surface"] : ["Always test on obscure area"]
         },
         application_guide: {
-            method: isCoating ? "Applicator Pad" : "Spray and Wipe",
-            agitation: isCleaner ? "Brush or Mitt" : "None",
-            rinse: isCleaner ? "Thoroughly rinse or wipe clean" : "Buff off residue",
+            method: traits.isCoating ? "Applicator Pad" : "Spray and Wipe",
+            agitation: traits.isCleaner ? "Soft Brush or Mitt" : "None",
+            rinse: (traits.isCleaner && !traits.isInterior) ? "Pressure wash rinse" : "Wipe with clean microfiber",
             dwell_time_min: 1,
             dwell_time_max: 3
         },
         surface_compatibility: {
-            safe: isInterior ? ["Vinyl", "Plastic", "Synthetic Fibers"] : ["Clear Coat", "Glass", "Powder Coat"],
-            risky: isInterior ? ["Alcantara"] : ["Matte Finishes"],
-            avoid: ["Raw wood", "Unsealed surfaces"]
+            safe: traits.isInterior ? ["Plastic", "Vinyl", "Synthetic Textures"] : ["Clear Coat", "Chrome", "Powder Coat"],
+            risky: ["Alcantara", "Raw Suede", "Matte Graphics"],
+            avoid: ["Raw wood", "Unsealed finishes"]
         },
-        interactions: { do_not_mix: ["Strong acids", "Bleach"], sequencing: [] },
         dilution_ratios: [],
-        pro_tips: ["Always test on an inconspicuous area first.", "For best results, avoid direct sunlight and hot surfaces."],
-        video_urls: []
+        pro_tips: ["Work in small sections for even coverage.", "Avoid direct sunlight and ensured surface is cool to touch."],
     };
 
-    if (isCleaner) {
+    // Smart Dilution Logic
+    if (traits.isGlass || traits.isCoating) {
+        template.dilution_ratios = [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Do not dilute" }];
+    } else if (traits.isHeavyDuty) {
         template.dilution_ratios = [
-            { method: "Spray Bottle", ratio: "1:4", soil_level: "Heavy Soil", notes: "Tough grime" },
+            { method: "Spray Bottle", ratio: "1:4", soil_level: "Heavy Soil", notes: "Degreasing and engines" },
             { method: "Spray Bottle", ratio: "1:10", soil_level: "Maintenance", notes: "General cleaning" },
         ];
-    } else if (isCoating) {
-        template.dilution_ratios = [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Do not dilute" }];
+    } else if (traits.isCleaner) {
+        template.dilution_ratios = [
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Heavy Soil", notes: "Deep cleaning" },
+            { method: "Spray Bottle", ratio: "1:20", soil_level: "Maintenance", notes: "Light dust and grime" },
+        ];
     } else {
-        template.dilution_ratios = [{ method: "Bucket", ratio: "1:100", soil_level: "Standard", notes: "Standard wash mix" }];
+        template.dilution_ratios = [{ method: "Bucket", ratio: "1:100", soil_level: "Standard", notes: "Wash bucket dilution" }];
     }
 
     return template;
@@ -211,25 +232,53 @@ export interface ScannedLabelData {
 }
 
 /**
- * MOCK Vision Analysis
- * In a real app, this would send an image URL/base64 to a Vision model (GPT-4o / Claude 3.5 Sonnet)
- * with a prompt to extract specific chemical label details.
+ * OCR Engine: This simulates the AI reading the label.
+ * It will look for keywords in the hypothetical "scanned text"
+ * and return structured data.
  */
-export const analyzeLabelFromImage = async (imageUrl: string, chemicalName?: string): Promise<ScannedLabelData> => {
+export const analyzeLabelFromImage = async (imageUrl: string, fileName?: string): Promise<ScannedLabelData> => {
     // Artificial delay to simulate AI processing
-    await new Promise(r => setTimeout(r, 2500));
+    await new Promise(r => setTimeout(r, 2000));
 
-    // Mock extraction logic based on the image name or hypothetical label patterns
-    // We'll return localized data that looks like it came from the instructions
+    const nameToAnalyze = (fileName || imageUrl || "").toLowerCase();
+    
+    // Simulate DIFFERENT results based on the "image" / file name
+    // If the user uploads something that looks like "Armor All Multi Purpose", we "detect" it.
+    
+    if (nameToAnalyze.includes('armor') || nameToAnalyze.includes('all')) {
+        return {
+            name: "Multi Purpose Cleaner",
+            brand: "Armor All",
+            description: "Powerful cleaning for all surfaces. Removes tough dirt, grease and grime from interiors and exteriors.",
+            safety_warnings: ["Eye irritant", "Keep out of reach of children"],
+            ratios: [
+                { method: "Spray", ratio: "RTU", soil_level: "Standard", notes: "Use directly on surfaces" }
+            ]
+        };
+    }
+
+    if (nameToAnalyze.includes('turtle') || nameToAnalyze.includes('wax')) {
+        return {
+            name: "Hybrid Solutions Ceramic",
+            brand: "Turtle Wax",
+            description: "Advanced ceramic infusion for long-lasting protection and shine.",
+            safety_warnings: ["Store in cool place", "Do not ingest"],
+            ratios: [
+                { method: "Applicator", ratio: "RTU", soil_level: "Standard", notes: "Thin even coat" }
+            ]
+        };
+    }
+
+    // Default "Advanced Detection" fallback
     return {
-        name: chemicalName || "Identified Product",
-        brand: "Extracted Brand",
-        description: "Surface safe professional cleaner identified from label scan.",
-        dilution_instructions: "Mix 1 part product with 10 parts water for standard cleaning. Use 1:4 for heavy grease.",
-        safety_warnings: ["Eye Irritant", "Wear Gloves", "Do not ingest"],
+        name: "Identified Detailing Product",
+        brand: "Premium Detailing Co.",
+        description: "Surface safe professional cleaner identified from label scan. High concentration formula.",
+        dilution_instructions: "Mix 1 part product with 10 parts water for standard cleaning.",
+        safety_warnings: ["Eye Irritant", "Wear Gloves"],
         ratios: [
-            { method: "Identified (Scan)", ratio: "1:10", soil_level: "Medium", notes: "Extracted from label text" },
-            { method: "Identified (Scan)", ratio: "1:4", soil_level: "Heavy", notes: "Aggressive cleaning" }
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Medium", notes: "Extracted from label text" },
+            { method: "Direct", ratio: "RTU", soil_level: "Heavy", notes: "Aggressive cleaning" }
         ]
     };
 };

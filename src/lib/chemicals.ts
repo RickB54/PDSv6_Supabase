@@ -161,6 +161,11 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
             updated_at: new Date().toISOString(),
         };
 
+        // UI-ONLY FIELDS CLEANUP: Remove fields that are not in the database schema
+        delete (payload as any).is_inventory_only;
+        delete (payload as any).is_linked; // Just in case
+        delete (payload as any).search_score;
+
         // If new, add created_at
         if (isNew) {
             (payload as any).created_at = new Date().toISOString();

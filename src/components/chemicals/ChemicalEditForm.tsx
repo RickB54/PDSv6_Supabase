@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chemical, DilutionRatio } from "@/types/chemicals";
-import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images, Printer } from 'lucide-react';
+import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images, Printer, Camera } from 'lucide-react';
 import { upsertChemical } from "@/lib/chemicals";
 import { generateTemplate, analyzeLabelFromImage } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
@@ -40,6 +40,7 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
     // Image Upload Logic
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-trigger AI if requested
     useEffect(() => {
@@ -71,6 +72,11 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
 
             setEditing(prev => ({ ...prev, primary_image_url: data.publicUrl }));
             toast({ title: "Image Uploaded", description: "Primary image updated." });
+
+            // AUTO-SCAN: Automatically trigger AI vision if this is the first real detail we're getting
+            if (!editing.description || !editing.dilution_ratios?.length) {
+                runScan(data.publicUrl, editing.name || "Uploaded Product");
+            }
         } catch (error: any) {
             console.error("Upload Error:", error);
             toast({ title: "Upload Failed", description: error.message || "Failed to upload image.", variant: "destructive" });
@@ -80,15 +86,11 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
         }
     };
 
-    const handleScanLabel = async () => {
-        if (!editing?.primary_image_url) {
-            return toast({ title: "No Image", description: "Upload or set a primary image first to scan it.", variant: "destructive" });
-        }
-        
+    const runScan = async (imageUrl: string, productName: string) => {
         setScanLoading(true);
         try {
             toast({ title: "AI Vision Analysis", description: "Extracting instructions and ratios from label photo..." });
-            const data = await analyzeLabelFromImage(editing.primary_image_url, editing.name);
+            const data = await analyzeLabelFromImage(imageUrl, productName);
             
             setEditing(prev => ({
                 ...prev,
@@ -112,6 +114,13 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
         } finally {
             setScanLoading(false);
         }
+    };
+
+    const handleScanLabel = async () => {
+        if (!editing?.primary_image_url) {
+            return toast({ title: "No Image", description: "Upload or set a primary image first to scan it.", variant: "destructive" });
+        }
+        await runScan(editing.primary_image_url, editing.name || "Product");
     };
 
     // Enhanced Auto-Fill
@@ -811,6 +820,14 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                                             {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
                                             Upload from PC
                                         </Button>
+                                        <Button
+                                            onClick={() => cameraInputRef.current?.click()}
+                                            disabled={uploading}
+                                            className="bg-indigo-600 hover:bg-indigo-700 w-full"
+                                        >
+                                            {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
+                                            Take Photo (Camera)
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -820,6 +837,14 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                                 onChange={handleImageUpload}
                                 className="hidden"
                                 accept="image/*"
+                            />
+                            <input
+                                type="file"
+                                ref={cameraInputRef}
+                                onChange={handleImageUpload}
+                                className="hidden"
+                                accept="image/*"
+                                capture="environment"
                             />
                         </div>
 

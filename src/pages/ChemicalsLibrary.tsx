@@ -71,6 +71,25 @@ export default function ChemicalsLibrary() {
     });
 
     const handleCardClick = (c: Chemical) => {
+        // If this is a new "Inventory Only" product, go straight to Edit modal
+        // instead of opening the detail view with empty info.
+        if ((c as any).is_inventory_only) {
+            setEditingChemical({
+                ...c,
+                id: undefined, // Ensure it treats as a new library entry
+                theme_color: "#3b82f6",
+                used_for: [],
+                dilution_ratios: [],
+                warnings: { damage_risk: "Low", risks: [] },
+                interactions: { do_not_mix: [], sequencing: [] },
+                surface_compatibility: { safe: [], risky: [], avoid: [] },
+                application_guide: { method: "Spray", agitation: "None", rinse: "Can rinse" },
+                video_urls: [],
+                gallery_image_urls: []
+            });
+            setEditDialogOpen(true);
+            return;
+        }
         setSelectedChemical(c);
         setDetailOpen(true);
     };
