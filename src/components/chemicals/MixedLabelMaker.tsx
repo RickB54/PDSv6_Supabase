@@ -126,8 +126,9 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
             if (!containerRef.current || !pageContainerRef.current) return;
             
             const container = containerRef.current;
-            const padW = container.clientWidth < 640 ? 20 : 64; 
-            const padH = container.clientWidth < 640 ? 40 : 80;
+            // More space for header/info bar on mobile
+            const padW = 32; 
+            const padH = window.innerWidth < 640 ? 140 : 100;
             
             const targetW = TEMPLATE.sheetWidth * 100;
             const targetH = TEMPLATE.sheetHeight * 100;
@@ -138,7 +139,15 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
             const scaleW = availableW / targetW;
             const scaleH = availableH / targetH;
             
-            const finalScale = container.clientWidth < 1024 ? Math.min(scaleW, scaleH, 1) : Math.min(scaleW, scaleH, 1.25);
+            // Limit minimum scale for legibility, but fit to width primarily on small screens
+            let finalScale = Math.min(scaleW, scaleH);
+            
+            if (container.clientWidth < 1024) {
+                finalScale = Math.min(finalScale, 1);
+            } else {
+                finalScale = Math.min(finalScale, 1.25);
+            }
+
             setPreviewZoom(finalScale);
         };
 
@@ -527,7 +536,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                 <div className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter leading-none mb-1">
                                     {data.brandName || "Product"}
                                 </div>
-                                <div className="text-xl font-black leading-none uppercase tracking-tight">
+                                <div className="text-xl font-black leading-none uppercase tracking-tight line-clamp-2">
                                     {data.productName || "PRODUCT NAME"}
                                 </div>
                             </div>
@@ -578,34 +587,34 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[100vw] w-full h-[100vh] sm:max-w-[95vw] sm:h-[95vh] bg-black text-white p-0 border-zinc-800 flex flex-col overflow-hidden">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border-b border-zinc-800 bg-zinc-950 gap-4">
-                    <div>
-                        <DialogTitle className="text-2xl font-black text-white flex items-center gap-3">
-                            <Printer className="w-6 h-6 text-purple-500" />
-                            Custom 10-Label Sheet – OL125
+            <DialogContent className="max-w-[100vw] w-full h-[100dvh] sm:max-w-[95vw] sm:h-[95vh] bg-black text-white p-0 border-zinc-800 flex flex-col overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-6 border-b border-zinc-800 bg-zinc-950 gap-2 sm:gap-4 shrink-0">
+                    <div className="flex-1 min-w-0">
+                        <DialogTitle className="text-lg sm:text-2xl font-black text-white flex items-center gap-2 sm:gap-3 truncate">
+                            <Printer className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
+                            <span className="truncate">10-Label Sheet – OL125</span>
                         </DialogTitle>
-                        <DialogDescription className="text-zinc-400 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                            <span className="flex items-center gap-1 text-[10px] sm:text-xs"><Info className="w-3 h-3 text-blue-400" /> 8.5" x 11" Sticker Sheet</span>
-                            <span className="flex items-center gap-1 text-[10px] sm:text-xs"><Info className="w-3 h-3 text-blue-400" /> Mixed Product Printing</span>
+                        <DialogDescription className="text-zinc-400 flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 sm:mt-1">
+                            <span className="flex items-center gap-1 text-[9px] sm:text-xs"><Info className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-400" /> 8.5"x11" Sheet</span>
+                            <span className="flex items-center gap-1 text-[9px] sm:text-xs"><Info className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-400" /> Mixed Printing</span>
                         </DialogDescription>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2">
                         <Button 
                             variant="outline" 
                             size="sm"
-                            className="text-zinc-400 border-zinc-800 hover:bg-zinc-900 h-8 sm:h-9 text-[10px] sm:text-xs px-2 sm:px-3"
+                            className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white h-7 sm:h-9 text-[9px] sm:text-xs px-2 sm:px-3"
                             onClick={() => window.open('https://www.onlinelabels.com/templates/blank/ol125', '_blank')}
                         >
-                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> Template Ref
+                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" /> <span className="hidden sm:inline">Template Ref</span>
                         </Button>
                         <Button 
                             variant="ghost" 
                             size="icon" 
                             onClick={() => onOpenChange(false)}
-                            className="h-10 w-10 text-zinc-500 hover:text-white"
+                            className="h-7 w-7 sm:h-10 sm:w-10 text-zinc-500 hover:text-white"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5 sm:w-6 sm:h-6" />
                         </Button>
                     </div>
                 </div>
@@ -647,10 +656,16 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                             >
                                 <RotateCcw className="w-3 h-3 mr-2" /> Reset
                             </Button>
-                        </div>
-
+                        </div>                        <div 
+                            className="relative mb-8 lg:mb-0"
+                            style={{ 
+                                width: `${TEMPLATE.sheetWidth * 100 * previewZoom}px`, 
+                                height: `${TEMPLATE.sheetHeight * 100 * previewZoom}px`,
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
                             <div 
-                                className="relative bg-white shadow-2xl origin-center transition-transform duration-300 mb-8 lg:mb-0"
+                                className="bg-white shadow-2xl origin-top-left"
                                 ref={pageContainerRef}
                                 style={{ 
                                     width: `${TEMPLATE.sheetWidth * 100}px`, 
@@ -712,6 +727,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                 ))}
                             </div>
                         </div>
+                    </div>
 
                          <div className="mt-8 flex items-start gap-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 max-w-[500px]">
                             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
