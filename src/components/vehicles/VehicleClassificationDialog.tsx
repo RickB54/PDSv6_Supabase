@@ -261,7 +261,7 @@ export function VehicleClassificationDialog({ open, onOpenChange, onSelect }: Ve
 
                 <div className="p-4 bg-zinc-950 border-t border-zinc-900 flex items-center justify-center gap-2">
                     <AlertCircle className="w-3 h-3 text-zinc-600" />
-                    <span className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">Powered by PDS Intelligent Classification Database</span>
+                    <span className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">Powered by Prime Auto Detail Intelligent Classification Database</span>
                 </div>
             </DialogContent>
         </Dialog>

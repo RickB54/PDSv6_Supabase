@@ -53,9 +53,10 @@ interface ChemicalDetailProps {
     onOpenChange: (open: boolean) => void;
     onUpdate?: () => void;
     isAdmin?: boolean;
+    showReturnToInventory?: boolean;
 }
 
-export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin = false }: ChemicalDetailProps) {
+export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin = false, showReturnToInventory = false }: ChemicalDetailProps) {
     // Always start in view mode - admin can click Edit button to switch
     const [isEditing, setIsEditing] = useState(false);
     const [notes, setNotes] = useState("");
@@ -75,6 +76,16 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    // Helper to flip ratios (1:4 -> 4:1) for display consistency with calculator
+    const transformRatio = (r: string) => {
+        if (!r) return r;
+        const normalized = r.trim();
+        if (normalized.toLowerCase() === 'rtu' || normalized.toLowerCase().includes('direct')) return normalized;
+        const match = normalized.match(/^1[:/](\d+)$/);
+        if (match) return `${match[1]}:1`;
+        return normalized;
     };
 
     // Sync notes when chemical changes
@@ -218,7 +229,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             let y = margin;
 
             // Helper to add text with word wrap
-            const addLine = (text: string, x: number, fontSize: number = 10, bold: boolean = false, color: number[] = [255, 255, 255]) => {
+            const addLine = (text: string, x: number, fontSize: number = 10, bold: boolean = false, color: number[] = [0, 0, 0]) => {
                 pdf.setFontSize(fontSize);
                 pdf.setFont('helvetica', bold ? 'bold' : 'normal');
                 pdf.setTextColor(color[0], color[1], color[2]);
@@ -227,16 +238,17 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 y += lines.length * lineHeight * (fontSize / 10);
             };
 
-            const addSection = (title: string, color: number[] = [100, 200, 255]) => {
+            const addSection = (title: string, color: number[] = [0, 100, 200]) => {
                 y += 3;
-                pdf.setFillColor(30, 30, 40);
-                pdf.rect(margin, y - 5, pageWidth - 2 * margin, 8, 'F');
                 pdf.setTextColor(color[0], color[1], color[2]);
                 pdf.setFontSize(12);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(title.toUpperCase(), margin + 2, y);
+                pdf.text(title.toUpperCase(), margin, y);
+                y += 2;
+                pdf.setDrawColor(color[0], color[1], color[2]);
+                pdf.line(margin, y, pageWidth - margin, y);
                 y += 8;
-                pdf.setTextColor(255, 255, 255);
+                pdf.setTextColor(0, 0, 0);
             };
 
             const checkNewPage = (neededSpace: number = 40) => {
@@ -246,8 +258,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 }
             };
 
-            // BACKGROUND
-            pdf.setFillColor(9, 9, 11);
+            // BACKGROUND - WHITE for printing
+            pdf.setFillColor(255, 255, 255);
             pdf.rect(0, 0, pageWidth, pageHeight, 'F');
 
             // HEADER with theme color bar
@@ -260,7 +272,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             y = 18;
 
             // TITLE
-            pdf.setTextColor(255, 255, 255);
+            pdf.setTextColor(0, 0, 0);
             pdf.setFontSize(20);
             pdf.setFont('helvetica', 'bold');
             pdf.text(chemical.name || 'Chemical Card', margin, y);
@@ -269,15 +281,15 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             // Category & Brand
             pdf.setFontSize(10);
             pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(160, 160, 180);
+            pdf.setTextColor(80, 80, 80);
             pdf.text(`${chemical.category || ''}  ${chemical.brand ? '• ' + chemical.brand : ''}`, margin, y);
             y += 10;
 
             // HIGH RISK WARNING
             if (chemical.warnings?.damage_risk === 'High') {
-                pdf.setFillColor(80, 20, 20);
+                pdf.setFillColor(255, 235, 235);
                 pdf.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
-                pdf.setTextColor(255, 100, 100);
+                pdf.setTextColor(200, 0, 0);
                 pdf.setFontSize(11);
                 pdf.setFont('helvetica', 'bold');
                 pdf.text('⚠ HIGH RISK CHEMICAL', margin + 2, y);
@@ -310,18 +322,18 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 checkNewPage();
                 addSection('DILUTION RATIOS', [255, 200, 100]);
                 chemical.dilution_ratios.forEach((d: any) => {
-                    pdf.setTextColor(200, 200, 220);
+                    pdf.setTextColor(60, 60, 70);
                     pdf.setFontSize(10);
                     pdf.setFont('helvetica', 'bold');
                     pdf.text(`${d.method} - ${d.soil_level}`, margin + 2, y);
                     y += 6;
-                    pdf.setTextColor(150, 255, 150);
+                    pdf.setTextColor(0, 150, 0);
                     pdf.setFontSize(11);
                     pdf.setFont('helvetica', 'bold');
-                    pdf.text(`     ${d.ratio}`, margin + 2, y);
+                    pdf.text(`     ${transformRatio(d.ratio)}`, margin + 2, y);
                     y += 6;
                     if (d.notes) {
-                        pdf.setTextColor(180, 180, 180);
+                        pdf.setTextColor(110, 110, 110);
                         pdf.setFontSize(8);
                         pdf.setFont('helvetica', 'italic');
                         const noteLines = pdf.splitTextToSize(`     ${d.notes}`, pageWidth - 2 * margin - 10);
@@ -338,25 +350,25 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 addSection('CRITICAL WARNINGS & RISKS', [255, 100, 100]);
 
                 if (chemical.warnings.risks && chemical.warnings.risks.length > 0) {
-                    pdf.setTextColor(255, 150, 150);
+                    pdf.setTextColor(150, 0, 0);
                     pdf.setFontSize(10);
                     pdf.setFont('helvetica', 'bold');
                     pdf.text('Potential Damage:', margin + 2, y);
                     y += 6;
                     chemical.warnings.risks.forEach((risk: string) => {
-                        addLine(`  ✗ ${risk}`, margin + 3, 8, false, [255, 180, 180]);
+                        addLine(`  ✗ ${risk}`, margin + 3, 8, false, [180, 40, 40]);
                     });
                     y += 3;
                 }
 
                 if (chemical.interactions?.do_not_mix && chemical.interactions.do_not_mix.length > 0) {
-                    pdf.setTextColor(255, 150, 150);
+                    pdf.setTextColor(150, 0, 0);
                     pdf.setFontSize(10);
                     pdf.setFont('helvetica', 'bold');
                     pdf.text('Do Not Mix With:', margin + 2, y);
                     y += 6;
                     chemical.interactions.do_not_mix.forEach((mix: string) => {
-                        addLine(`  ☠ ${mix}`, margin + 3, 8, false, [255, 200, 200]);
+                        addLine(`  ☠ ${mix}`, margin + 3, 8, false, [120, 0, 0]);
                     });
                 }
             }
@@ -371,7 +383,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 if (guide.agitation) addLine(`Agitation: ${guide.agitation}`, margin + 2, 9);
                 if (guide.notes) {
                     y += 2;
-                    pdf.setTextColor(200, 200, 200);
+                    pdf.setTextColor(100, 100, 100);
                     pdf.setFontSize(8);
                     pdf.setFont('helvetica', 'italic');
                     const noteLines = pdf.splitTextToSize(`Note: ${guide.notes}`, pageWidth - 2 * margin - 5);
@@ -386,32 +398,32 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 addSection('SURFACE COMPATIBILITY', [100, 255, 200]);
 
                 if (chemical.surface_compatibility.safe && chemical.surface_compatibility.safe.length > 0) {
-                    pdf.setTextColor(100, 255, 150);
+                    pdf.setTextColor(0, 150, 0);
                     pdf.setFontSize(9);
                     pdf.setFont('helvetica', 'bold');
                     pdf.text('SAFE ON:', margin + 2, y);
                     y += 5;
-                    addLine(chemical.surface_compatibility.safe.join(', '), margin + 3, 8, false, [150, 255, 180]);
+                    addLine(chemical.surface_compatibility.safe.join(', '), margin + 3, 8, false, [0, 100, 0]);
                     y += 2;
                 }
 
                 if (chemical.surface_compatibility.risky && chemical.surface_compatibility.risky.length > 0) {
-                    pdf.setTextColor(255, 200, 100);
+                    pdf.setTextColor(180, 100, 0);
                     pdf.setFontSize(9);
                     pdf.setFont('helvetica', 'bold');
                     pdf.text('USE CAUTION:', margin + 2, y);
                     y += 5;
-                    addLine(chemical.surface_compatibility.risky.join(', '), margin + 3, 8, false, [255, 220, 150]);
+                    addLine(chemical.surface_compatibility.risky.join(', '), margin + 3, 8, false, [150, 100, 0]);
                     y += 2;
                 }
 
                 if (chemical.surface_compatibility.avoid && chemical.surface_compatibility.avoid.length > 0) {
-                    pdf.setTextColor(255, 100, 100);
+                    pdf.setTextColor(200, 0, 0);
                     pdf.setFontSize(9);
                     pdf.setFont('helvetica', 'bold');
                     pdf.text('DO NOT USE ON:', margin + 2, y);
                     y += 5;
-                    addLine(chemical.surface_compatibility.avoid.join(', '), margin + 3, 8, false, [255, 150, 150]);
+                    addLine(chemical.surface_compatibility.avoid.join(', '), margin + 3, 8, false, [150, 0, 0]);
                 }
             }
 
@@ -420,7 +432,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 checkNewPage();
                 addSection('TRAINING VIDEOS', [200, 150, 255]);
                 chemical.video_urls.forEach((url: string, idx: number) => {
-                    addLine(`Video ${idx + 1}: ${url}`, margin + 2, 8, false, [180, 180, 255]);
+                    addLine(`Video ${idx + 1}: ${url}`, margin + 2, 8, false, [0, 0, 150]);
                 });
             }
 
@@ -466,12 +478,13 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
 
             const addSection = (title: string, color: number[] = [0, 100, 200]) => {
                 y += 3;
-                pdf.setFillColor(240, 240, 245);
-                pdf.rect(margin, y - 5, pageWidth - 2 * margin, 8, 'F');
                 pdf.setTextColor(color[0], color[1], color[2]);
                 pdf.setFontSize(12);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(title.toUpperCase(), margin + 2, y);
+                pdf.text(title.toUpperCase(), margin, y);
+                y += 2;
+                pdf.setDrawColor(color[0], color[1], color[2]);
+                pdf.line(margin, y, pageWidth - margin, y);
                 y += 8;
                 pdf.setTextColor(0, 0, 0);
             };
@@ -555,7 +568,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                     pdf.setTextColor(0, 120, 0);
                     pdf.setFontSize(11);
                     pdf.setFont('helvetica', 'bold');
-                    pdf.text(`     ${d.ratio}`, margin + 2, y);
+                    pdf.text(`     ${transformRatio(d.ratio)}`, margin + 2, y);
                     y += 6;
                     if (d.notes) {
                         pdf.setTextColor(80, 80, 80);
@@ -741,12 +754,24 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                 {chemical.name}
                             </DialogTitle>
                         </div>
-                        {chemical.warnings?.damage_risk === 'High' && (
-                            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-1.5 rounded-full">
-                                <Skull className="w-5 h-5" />
-                                <span className="text-sm font-bold uppercase">High Risk Chemical</span>
-                            </div>
-                        )}
+                        <div className="flex flex-col items-end gap-2">
+                            {showReturnToInventory && (
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => onOpenChange(false)}
+                                    className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700 h-8 font-bold text-[10px] uppercase tracking-wider px-4"
+                                >
+                                    ← Return to Inventory
+                                </Button>
+                            )}
+                            {chemical.warnings?.damage_risk === 'High' && (
+                                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-1.5 rounded-full">
+                                    <Skull className="w-5 h-5" />
+                                    <span className="text-sm font-bold uppercase">High Risk</span>
+                                </div>
+                            )}
+                        </div>
                         {!isEditing && (
                             <div className="flex gap-1 print:hidden">
                                 {isAdmin && (
@@ -977,7 +1002,7 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                                     <tr key={i} className="hover:bg-zinc-800/30">
                                                         <td className="px-4 py-3 font-medium text-white">{d.method}</td>
                                                         <td className="px-4 py-3">{d.soil_level}</td>
-                                                        <td className="px-4 py-3 text-purple-400 font-bold font-mono text-base">{d.ratio}</td>
+                                                        <td className="px-4 py-3 text-purple-400 font-bold font-mono text-base">{transformRatio(d.ratio)}</td>
                                                         <td
                                                             className="px-4 py-3 text-zinc-400 text-xs cursor-pointer hover:text-blue-400 hover:underline transition-colors"
                                                             onClick={() => d.notes && setViewingDilutionNote({ method: d.method, note: d.notes || '' })}

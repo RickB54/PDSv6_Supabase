@@ -155,21 +155,41 @@ export function generateTemplate(name: string, category: 'Interior' | 'Exterior'
         pro_tips: proTips,
     };
 
-    // Smart Dilution Logic
-    if (traits.isGlass || traits.isCoating || traits.isPolish || traits.isDetailed) {
-        template.dilution_ratios = [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Ready To Use - Formula is pre-mixed for maximum performance." }];
+    // Smart Dilution Logic - Standardized to 3 major Detailing Tiers
+    if (traits.isGlass) {
+        template.dilution_ratios = [
+            { method: "Spray Bottle", ratio: "RTU", soil_level: "Standard", notes: "Streak-free clarity" },
+            { method: "Spray Bottle", ratio: "1:4", soil_level: "Heavy Soil", notes: "Smoker film or heavy grime" },
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Light Dust", notes: "Fingerprints and light dusting" }
+        ];
+    } else if (traits.isCoating || traits.isDetailed || traits.isPolish) {
+        template.dilution_ratios = [
+            { method: "Hand Direct", ratio: "RTU", soil_level: "Standard", notes: "Use as supplied for maximum protection" }
+        ];
     } else if (traits.isHeavyDuty) {
         template.dilution_ratios = [
-            { method: "Dilution Bottle", ratio: "1:4", soil_level: "Heavy Degreasing", notes: "Engine bays and wheel wells" },
-            { method: "Dilution Bottle", ratio: "1:10", soil_level: "General Cleaner", notes: "Normal soil on undercarriage" },
+            { method: "Spray Bottle", ratio: "1:4", soil_level: "Standard / Degreasing", notes: "Engines and filthy wheel wells" },
+            { method: "Spray Bottle", ratio: "1:1", soil_level: "Heavy Concentrated", notes: "Stripping old wax or heavy grease" },
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Maintenance", notes: "Normal exterior cleaning" },
         ];
     } else if (traits.isCleaner) {
         template.dilution_ratios = [
-            { method: "Spray Bottle", ratio: "1:10", soil_level: "Deep Cleaning", notes: "Heavy interior stains or floor mats" },
-            { method: "Spray Bottle", ratio: "1:20", soil_level: "Light Maintenance", notes: "General dusting and light wiping" },
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Standard / Interior", notes: "Upholstery and floor mats" },
+            { method: "Spray Bottle", ratio: "1:5", soil_level: "Heavy / Strong", notes: "Stubborn stains and spills" },
+            { method: "Spray Bottle", ratio: "1:20", soil_level: "Maintenance / Light", notes: "Dashboard and general dusting" },
+        ];
+    } else if (normName.includes('shampoo') || normName.includes('wash') || normName.includes('soap')) {
+        template.dilution_ratios = [
+            { method: "Wash Bucket", ratio: "1:128", soil_level: "Standard Wash", notes: "1oz per Gallon of water" },
+            { method: "Wash Bucket", ratio: "1:64", soil_level: "Tough Grime", notes: "2oz per Gallon for extra lubrication" },
+            { method: "Foam Cannon", ratio: "1:10", soil_level: "Snow Foam", notes: "Pre-soak for safe washing" }
         ];
     } else {
-        template.dilution_ratios = [{ method: "Bucket", ratio: "1:128", soil_level: "Soap Solution", notes: "1oz per Gallon of water" }];
+        template.dilution_ratios = [
+            { method: "Spray Bottle", ratio: "RTU", soil_level: "Standard", notes: "General Use" },
+            { method: "Spray Bottle", ratio: "1:4", soil_level: "Heavy", notes: "Tougher areas" },
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Light", notes: "Frequent maintenance" }
+        ];
     }
 
     return template;

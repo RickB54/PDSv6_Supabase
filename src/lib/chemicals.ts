@@ -188,7 +188,8 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
                         costPerBottle: 0,
                         threshold: 1,
                         currentStock: 1,
-                        chemicalLibraryId: data.id
+                        chemicalLibraryId: data.id,
+                        dilutionRatios: data.dilution_ratios || []
                     }, false);
                 } catch (invErr) {
                     console.error('Failed to auto-create inventory item:', invErr);
@@ -197,22 +198,26 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
             } else {
                 // If existing, update the chemicalLibraryId mapping in inventory if it's missing
                 // This handles the "pseudo-chemical -> library card" conversion
+                // ALSO: Sync dilution ratios to ANY linked inventory items
                 try {
                     const inventoryItems = await getInventoryChemicals();
-                    const matching = inventoryItems.find(inv => 
-                        !inv.chemicalLibraryId && 
+                    // 1. Find items that match but aren't linked yet
+                    const matching = inventoryItems.filter(inv => 
+                        (!inv.chemicalLibraryId && 
                         inv.name.toLowerCase() === data.name.toLowerCase() && 
-                        (inv.brand || '').toLowerCase() === (data.brand || '').toLowerCase()
+                        (inv.brand || '').toLowerCase() === (data.brand || '').toLowerCase()) ||
+                        inv.chemicalLibraryId === data.id
                     );
                     
-                    if (matching) {
+                    for (const item of matching) {
                         await saveInventoryChemical({
-                            ...matching,
-                            chemicalLibraryId: data.id
+                            ...item,
+                            chemicalLibraryId: data.id,
+                            dilutionRatios: data.dilution_ratios || []
                         }, false);
                     }
                 } catch (syncErr) {
-                    console.error('Failed to sync existing inventory item:', syncErr);
+                    console.error('Failed to sync existing inventory items:', syncErr);
                 }
             }
         }
@@ -237,6 +242,21 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
             .select()
             .single();
 
+        if (!error && data && updates.dilution_ratios) {
+            try {
+                const inventoryItems = await getInventoryChemicals();
+                const matching = inventoryItems.filter(inv => inv.chemicalLibraryId === id);
+                for (const item of matching) {
+                    await saveInventoryChemical({
+                        ...item,
+                        dilutionRatios: data.dilution_ratios || []
+                    }, false);
+                }
+            } catch (syncErr) {
+                console.error('Failed to sync inventory ratios on partial update:', syncErr);
+            }
+        }
+
         return { error, data };
     } catch (e) {
         return { error: e, data: null };
@@ -244,6 +264,19 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
 }
 
 export async function deleteChemical(id: string): Promise<boolean> {
+    try {
+        const items = await getInventoryChemicals();
+        const matching = items.filter(inv => inv.chemicalLibraryId === id);
+        for (const item of matching) {
+            await saveInventoryChemical({
+                ...item,
+                chemicalLibraryId: undefined
+            }, false);
+        }
+    } catch (e) {
+        console.warn("Failed to unlink inventory items during deletion", e);
+    }
+
     const { error } = await supabase.from('chemical_library').delete().eq('id', id);
     return !error;
 }

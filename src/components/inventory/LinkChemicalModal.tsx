@@ -41,14 +41,15 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
         if (!inventoryItem || !selectedId) return;
         setLoading(true);
         try {
-            // Update inventory item with new chemicalLibraryId
+            // Update inventory item with new chemicalLibraryId AND pull its ratios
+            const libCard = libraryOptions.find(opt => opt.id === selectedId);
             const updated = {
                 ...inventoryItem,
-                chemicalLibraryId: selectedId
+                chemicalLibraryId: selectedId,
+                dilutionRatios: libCard?.dilution_ratios || []
             };
 
             // We need to save this. using saveChemical from inventory-data.
-            // Note: saveChemical expects full object.
             await saveChemical(updated, false); // isNew = false
 
             toast.success("Linked successfully");
@@ -85,7 +86,8 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
             // 4. Update Inventory Item
             const updated = {
                 ...inventoryItem,
-                chemicalLibraryId: data.id
+                chemicalLibraryId: data.id,
+                dilutionRatios: data.dilution_ratios || []
             };
             await saveChemical(updated, false);
 

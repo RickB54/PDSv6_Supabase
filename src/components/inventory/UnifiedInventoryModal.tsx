@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import localforage from "localforage";
-import { Trash2, Upload, X, ImageIcon, Info, Save, Camera } from "lucide-react";
+import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles } from "lucide-react";
 import browserImageCompression from "browser-image-compression";
 import { supabase, upsertSupabaseTaxExpense, getSupabaseTaxExpenses } from "@/lib/supa-data";
-import { getChemicals as getLibraryChemicals } from "@/lib/chemicals";
+import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
+import { DilutionRatio } from "@/types/chemicals";
+import { generateTemplate } from "@/lib/chemical-ai";
 
 // Updated naming: material → supply, tool → equipment
 // Backward compatibility maintained in data layer
@@ -29,6 +31,7 @@ interface ChemicalForm {
   chemicalLibraryId?: string;
   isTaxDeductible?: boolean;
   notes?: string;
+  dilutionRatios: DilutionRatio[];
 }
 
 // Renamed: Material → Supply
@@ -109,6 +112,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     imageUrl: "",
     chemicalLibraryId: "",
     isTaxDeductible: true,
+    dilutionRatios: [],
   });
 
   const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
@@ -170,6 +174,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         unitOfMeasure: initialUnit,
         imageUrl: (initial as any).imageUrl || "",
         chemicalLibraryId: (initial as any).chemicalLibraryId || "",
+        dilutionRatios: (initial as any).dilutionRatios || [],
       }));
     } else {
       setCustomSubtype(false);
@@ -195,6 +200,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         consumptionRatePerJob: "0",
         imageUrl: "",
         chemicalLibraryId: "",
+        dilutionRatios: [],
       });
     }
   }, [initial, open, mode]);
@@ -260,6 +266,39 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     setForm(prev => ({ ...prev, imageUrl: "" }));
   };
 
+  const addDilution = () => {
+    const newD: DilutionRatio = { method: "Spray", ratio: "1:10", soil_level: "General", notes: "" };
+    setForm(f => ({ ...f, dilutionRatios: [...(f.dilutionRatios || []), newD] }));
+  };
+
+  const updateDilution = (index: number, field: keyof DilutionRatio, val: string) => {
+    const arr = [...(form.dilutionRatios || [])];
+    arr[index] = { ...arr[index], [field]: val };
+    setForm(f => ({ ...f, dilutionRatios: arr }));
+  };
+
+  const removeDilution = (index: number) => {
+    const arr = [...(form.dilutionRatios || [])];
+    arr.splice(index, 1);
+    setForm(f => ({ ...f, dilutionRatios: arr }));
+  };
+
+  const syncFromLibrary = async (libId: string) => {
+    if (!libId) return;
+    try {
+      const libData = await getChemicalById(libId);
+      if (libData && libData.dilution_ratios) {
+        setForm(f => ({
+          ...f,
+          dilutionRatios: libData.dilution_ratios
+        }));
+        toast.success("Synced dilution ratios from library card");
+      }
+    } catch (err) {
+      console.error("Failed to sync from library", err);
+    }
+  };
+
   const save = async () => {
     try {
       // Validate required fields
@@ -292,6 +331,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           imageUrl: form.imageUrl,
           chemicalLibraryId: form.chemicalLibraryId || undefined,
           notes: form.notes || undefined,
+          dilutionRatios: form.dilutionRatios,
         };
 
         // Import inventory-data at top of file
@@ -474,29 +514,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               )}
               {mode === 'chemical' && (
                 <div>
-                  <Label className="text-xs text-zinc-400">Main Chemical Card (Link)</Label>
-                  <select
-                    value={form.chemicalLibraryId || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setForm(f => {
-                        const libItem = libraryOptions.find(o => o.id === val);
-                        return {
-                          ...f,
-                          chemicalLibraryId: val,
-                          // Auto-fill name/image if empty? Optional.
-                          name: (!f.name && libItem) ? libItem.name : f.name,
-                          imageUrl: (!f.imageUrl && libItem?.primary_image_url) ? libItem.primary_image_url : f.imageUrl
-                        };
-                      });
-                    }}
-                    className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                  >
-                    <option value="">Select chemical card...</option>
-                    {libraryOptions.map(l => (
-                      <option key={l.id} value={l.id}>{l.name} ({l.brand})</option>
-                    ))}
-                  </select>
+                  <Label className="text-xs text-zinc-400">Bottle Size</Label>
+                  <Input
+                    value={form.bottleSize}
+                    onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                    placeholder="e.g., 32 oz, 1 L"
+                  />
                 </div>
               )}
               {mode === 'chemical' && (
@@ -844,12 +868,141 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 {form.id ? "" : " (Will create record in Taxes)"}
               </Label>
             </div>
-            {!form.id && (
-              <p className="text-[10px] text-zinc-500 mt-1 italic">
-                * If checked, a record will be added to your Tax Ledger automatically at the current purchase price.
-              </p>
-            )}
           </div>
+
+          {/* Dilution Ratios Section */}
+          {mode === 'chemical' && (
+            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+              <div className="flex items-center justify-between border-b border-blue-900/30 pb-2 mb-3">
+                <h3 className="text-sm font-semibold text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                  <Beaker className="w-4 h-4" /> Dilution Ratios
+                </h3>
+                {form.chemicalLibraryId && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={() => syncFromLibrary(form.chemicalLibraryId!)}
+                    className="text-[10px] text-blue-400 p-0 h-auto"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" /> Force Sync
+                  </Button>
+                )}
+              </div>
+
+              {/* Link Status & Actions */}
+              <div className="mb-4 bg-zinc-900/50 p-3 rounded border border-zinc-700/50">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <Label className="text-[10px] text-zinc-400 uppercase mb-1 block font-bold">Linked Knowledge Card</Label>
+                    {form.chemicalLibraryId ? (
+                      <div className="flex items-center gap-2 group">
+                        <span className="text-sm text-yellow-500 font-semibold truncate">
+                          {libraryOptions.find(l => l.id === form.chemicalLibraryId)?.brand} - {libraryOptions.find(l => l.id === form.chemicalLibraryId)?.name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            onOpenChange(false);
+                            window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: form.chemicalLibraryId }));
+                          }}
+                          className="h-5 w-5 text-zinc-500 hover:text-white"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-zinc-500 italic">Not linked to a library card.</span>
+                    )}
+                  </div>
+                  
+                  {(!form.dilutionRatios || form.dilutionRatios.length === 0) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const template = generateTemplate(form.name, 'Exterior');
+                        if (template.dilution_ratios) {
+                          setForm(f => ({ ...f, dilutionRatios: [...template.dilution_ratios!] }));
+                          toast.success("AI suggested ratios for this product type.");
+                        }
+                      }}
+                      className="h-8 text-[10px] bg-blue-900/20 border-blue-800/50 text-blue-300 hover:bg-blue-900/40"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" /> AI Lookup
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {form.dilutionRatios?.map((ratio, idx) => (
+                  <div key={idx} className="flex gap-2 items-start bg-zinc-900 p-2 rounded border border-zinc-700/50">
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Method</Label>
+                        <Input 
+                          value={ratio.method} 
+                          onChange={e => updateDilution(idx, 'method', e.target.value)} 
+                          className="h-8 text-sm bg-zinc-800 border-zinc-700" 
+                          placeholder="Spray, Foam..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Ratio</Label>
+                        <Input 
+                          value={ratio.ratio} 
+                          onChange={e => updateDilution(idx, 'ratio', e.target.value)} 
+                          className="h-8 text-sm bg-zinc-800 border-zinc-700 font-bold text-blue-300" 
+                          placeholder="1:10, 1oz/gal..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Soil Level</Label>
+                        <Input 
+                          value={ratio.soil_level} 
+                          onChange={e => updateDilution(idx, 'soil_level', e.target.value)} 
+                          className="h-8 text-sm bg-zinc-800 border-zinc-700" 
+                          placeholder="General, Heavy..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Notes</Label>
+                        <Input 
+                          value={ratio.notes} 
+                          onChange={e => updateDilution(idx, 'notes', e.target.value)} 
+                          className="h-8 text-sm bg-zinc-800 border-zinc-700" 
+                          placeholder="Specific tips..."
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => removeDilution(idx)} 
+                      className="mt-5 hover:text-red-500 h-8 w-8 text-zinc-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {(!form.dilutionRatios || form.dilutionRatios.length === 0) && (
+                  <p className="text-xs text-zinc-500 italic">No dilution ratios defined for this inventory item.</p>
+                )}
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={addDilution} 
+                  className="mt-2 border-dashed border-zinc-700 text-zinc-400 hover:text-white"
+                >
+                  <PlusIcon className="w-3 h-3 mr-2" /> Add Ratio
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Usage Tracking Section */}
           <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">

@@ -2,10 +2,12 @@
 import { supabase } from './supabase';
 import { upsertExpense } from './db';
 
+import { DilutionRatio } from '@/types/chemicals';
+
 export interface Chemical {
     id: string;
     name: string;
-    brand?: string; // NEW: Brand name
+    brand?: string; 
     bottleSize: string;
     costPerBottle: number;
     threshold: number;
@@ -13,6 +15,7 @@ export interface Chemical {
     imageUrl?: string;
     chemicalLibraryId?: string;
     createdAt?: string;
+    dilutionRatios?: DilutionRatio[];
 }
 
 export interface Material {
@@ -81,7 +84,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         currentStock: item.current_stock || 0,
         imageUrl: item.image_url,
         chemicalLibraryId: item.chemical_library_id,
-        createdAt: item.created_at
+        createdAt: item.created_at,
+        dilutionRatios: item.dilution_ratios || []
     }));
 }
 
@@ -99,6 +103,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         current_stock: chemical.currentStock,
         image_url: chemical.imageUrl,
         chemical_library_id: chemical.chemicalLibraryId,
+        dilution_ratios: chemical.dilutionRatios || [],
         updated_at: new Date().toISOString()
     };
     if (chemical.id) dbData.id = chemical.id;

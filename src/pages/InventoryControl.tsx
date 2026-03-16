@@ -19,14 +19,16 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import UnifiedInventoryModal from "@/components/inventory/UnifiedInventoryModal";
 import ImportWizardModal from "@/components/inventory/ImportWizardModal";
 import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
 import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import localforage from "localforage";
 import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
 import { LinkChemicalModal } from "@/components/inventory/LinkChemicalModal";
-import { getChemicalById } from "@/lib/chemicals";
+import { getChemicalById, getChemicals as getLibraryChemicals } from "@/lib/chemicals";
 import { InventoryImportModal } from "@/components/inventory/InventoryImportModal";
 import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
+import { generateTemplate } from "@/lib/chemical-ai";
 
 import { Chemical as LibraryChemical } from "@/types/chemicals";
 import { ChemicalLabelMaker } from "@/components/chemicals/ChemicalLabelMaker";
@@ -40,6 +42,17 @@ type Supply = inventoryData.Material; // Renamed: Material → Supply (DB table 
 type Tool = Equipment;
 type MaterialItem = Supply;
 
+// Display Helper for Dilution Ratios (Reverses 1:X to X:1 per user request)
+const transformRatio = (r: string) => {
+  if (!r) return r;
+  const normalized = r.trim();
+  if (normalized.toLowerCase() === 'rtu' || normalized.toLowerCase().includes('direct')) return normalized;
+  const match = normalized.match(/^1[:/](\d+)$/);
+  if (match) return `${match[1]}:1`;
+  return normalized;
+};
+
+import autoTable from "jspdf-autotable";
 
 const InventoryControl = () => {
   const { toast } = useToast();
@@ -86,7 +99,7 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<"brand" | "alphabetical" | "low_stock">("brand");
+  const [chemicalSort, setChemicalSort] = useState<string>("brand");
   const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock">("name");
   const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -94,6 +107,7 @@ const InventoryControl = () => {
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
   const [viewChemical, setViewChemical] = useState<LibraryChemical | null>(null);
+  const [libMap, setLibMap] = useState<Record<string, LibraryChemical>>({});
 
   // Linker Modal State
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -208,12 +222,17 @@ const InventoryControl = () => {
   const loadData = async () => {
     setIsRefreshing(true);
     try {
-      const [chems, mats, tls, usage] = await Promise.all([
+      const [chems, mats, tls, usage, libChems] = await Promise.all([
         inventoryData.getChemicals(),
         inventoryData.getMaterials(),
         inventoryData.getTools(),
-        inventoryData.getUsageHistory()
+        inventoryData.getUsageHistory(),
+        getLibraryChemicals()
       ]);
+
+      const map: Record<string, LibraryChemical> = {};
+      libChems.forEach(c => map[c.id] = c);
+      setLibMap(map);
 
       setChemicals(chems);
       setMaterials(mats);
@@ -288,15 +307,26 @@ const InventoryControl = () => {
   };
 
   // Filter and Sort functions
+  // Dynamic brand list for jump-to functionality
+  const allAvailableBrands = Array.from(new Set(chemicals.map(c => c.brand || "Other / No Brand"))).sort((a, b) => {
+    if (a === "Other / No Brand") return 1;
+    if (b === "Other / No Brand") return -1;
+    return a.localeCompare(b);
+  });
+
   const getSortedChemicals = () => {
-    const filtered = chemicals.filter(c =>
+    let baseFiltered = chemicals.filter(c =>
       c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
       (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase()))
     );
 
-    if (chemicalSort === "brand") {
-      // Grouping logic handled in render, but primary sort here
-      return [...filtered].sort((a, b) => {
+    // If a specific brand is selected, filter by it
+    if (chemicalSort !== "brand" && chemicalSort !== "alphabetical" && chemicalSort !== "low_stock") {
+      baseFiltered = baseFiltered.filter(c => (c.brand || "Other / No Brand") === chemicalSort);
+    }
+
+    if (chemicalSort === "brand" || (chemicalSort !== "alphabetical" && chemicalSort !== "low_stock")) {
+      return [...baseFiltered].sort((a, b) => {
         const brandA = (a.brand || "Z - No Brand").toLowerCase();
         const brandB = (b.brand || "Z - No Brand").toLowerCase();
         if (brandA !== brandB) return brandA.localeCompare(brandB);
@@ -386,151 +416,130 @@ const InventoryControl = () => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    let yPos = 20;
+    const margin = 15;
+    let yPos: number = 20;
 
-    // Header
-    pdf.setFillColor(color[0], color[1], color[2], 0.1);
-    pdf.rect(10, 10, pageWidth - 20, 30, 'F');
+    try {
+      // Header
     pdf.setTextColor(color[0], color[1], color[2]);
-    pdf.setFontSize(20);
+    pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`${categoryName} Inventory Report`, pageWidth / 2, 25, { align: 'center' });
+    pdf.text(`${categoryName} Inventory Report`, pageWidth / 2, 28, { align: 'center' });
 
     pdf.setFontSize(10);
     pdf.setTextColor(100, 100, 100);
-    pdf.text(`Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, 35, { align: 'center' });
+    pdf.text(`Generated: ${new Date().toLocaleDateString()} - Prime Auto Detail`, pageWidth / 2, 36, { align: 'center' });
 
-    yPos = 50;
+    yPos = 55;
 
-    // Summary
-    pdf.setFillColor(color[0], color[1], color[2], 0.05);
-    pdf.rect(10, yPos, pageWidth - 20, 20, 'F');
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-
+    // Summary Box
     const totalValue = category === 'chemicals' ?
       (items as any[]).reduce((a, c: any) => a + (c.costPerBottle * c.currentStock), 0) :
       category === 'supplies' ?
         (items as any[]).reduce((a, m: any) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0) :
         (items as any[]).reduce((a, t: any) => a + (t.price || 0), 0);
 
-    pdf.text(`Total Items: ${items.length}`, 15, yPos + 10);
-    pdf.text(`Total Value: $${totalValue.toFixed(2)}`, pageWidth / 2, yPos + 10);
+    autoTable(pdf, {
+      startY: yPos,
+      head: [[`Category: ${categoryName}`, `Total Items: ${items.length}`, `Total Value: $${totalValue.toFixed(2)}`]],
+      styles: { fillColor: [245, 245, 245], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
+      theme: 'grid'
+    });
 
-    if (category !== 'equipment') {
-      const lowStock = category === 'chemicals' ?
-        (items as any[]).filter((c: any) => c.currentStock < c.threshold).length :
-        (items as any[]).filter((m: any) => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length;
-      pdf.setTextColor(239, 68, 68);
-      pdf.text(`Low Stock: ${lowStock}`, pageWidth - 60, yPos + 10);
-    }
-
-    yPos += 30;
+    yPos = (pdf as any).lastAutoTable.finalY + 15;
 
     // Items
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'normal');
-
     items.forEach((item: any, idx) => {
-      // Check if we need a new page
-      if (yPos > pageHeight - 60) {
+      if (yPos > pageHeight - 40) {
         pdf.addPage();
         yPos = 20;
       }
 
-      // Item header
-      pdf.setFillColor(color[0], color[1], color[2]);
-      pdf.rect(10, yPos, pageWidth - 20, 10, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-
-      const itemName = category === 'chemicals' && item.brand ?
-        `${item.brand} / ${item.name}` : item.name;
-      pdf.text(itemName, 15, yPos + 7);
-
-      yPos += 15;
+      // Title/Name Bar
       pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-
-      // Item fields
-      if (category === 'chemicals') {
-        if (item.brand) {
-          pdf.text(`Brand: ${item.brand}`, 15, yPos);
-          yPos += 5;
-        }
-        pdf.text(`Product: ${item.name}`, 15, yPos);
-        yPos += 5;
-        pdf.text(`Size: ${item.bottleSize}`, 15, yPos);
-        pdf.text(`Cost/Bottle: $${item.costPerBottle.toFixed(2)}`, pageWidth / 2, yPos);
-        yPos += 5;
-
-        const stockColor = item.currentStock < item.threshold ? [239, 68, 68] : [0, 0, 0];
-        pdf.setTextColor(stockColor[0], stockColor[1], stockColor[2]);
-        pdf.text(`Stock: ${item.currentStock} bottles`, 15, yPos);
-        pdf.setTextColor(0, 0, 0);
-        pdf.text(`Threshold: ${item.threshold}`, pageWidth / 2, yPos);
-        yPos += 5;
-        pdf.text(`Total Value: $${(item.costPerBottle * item.currentStock).toFixed(2)}`, 15, yPos);
-        yPos += 5;
-        if (item.notes) {
-          pdf.text(`Notes: ${item.notes.substring(0, 80)}`, 15, yPos);
-          yPos += 5;
-        }
-      } else if (category === 'supplies') {
-        pdf.text(`Name: ${item.name}`, 15, yPos);
-        yPos += 5;
-        pdf.text(`Category: ${item.category}`, 15, yPos);
-        if (item.subtype) pdf.text(`Subtype: ${item.subtype}`, pageWidth / 2, yPos);
-        yPos += 5;
-        pdf.text(`Cost/Item: $${(item.costPerItem || 0).toFixed(2)}`, 15, yPos);
-
-        const stockColor = typeof item.lowThreshold === 'number' && item.quantity < item.lowThreshold ? [239, 68, 68] : [0, 0, 0];
-        pdf.setTextColor(stockColor[0], stockColor[1], stockColor[2]);
-        pdf.text(`Quantity: ${item.quantity}`, pageWidth / 2, yPos);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 5;
-        if (typeof item.lowThreshold === 'number') {
-          pdf.text(`Threshold: ${item.lowThreshold}`, 15, yPos);
-          yPos += 5;
-        }
-        pdf.text(`Total Value: $${((item.costPerItem || 0) * (item.quantity || 0)).toFixed(2)}`, 15, yPos);
-        yPos += 5;
-        if (item.notes) {
-          pdf.text(`Notes: ${item.notes.substring(0, 80)}`, 15, yPos);
-          yPos += 5;
-        }
-      } else {
-        pdf.text(`Name: ${item.name}`, 15, yPos);
-        yPos += 5;
-        pdf.text(`Price: $${(item.price || 0).toFixed(2)}`, 15, yPos);
-        if (item.purchaseDate) pdf.text(`Purchased: ${new Date(item.purchaseDate).toLocaleDateString()}`, pageWidth / 2, yPos);
-        yPos += 5;
-        if (item.warranty) {
-          pdf.text(`Warranty: ${item.warranty}`, 15, yPos);
-          yPos += 5;
-        }
-        if (item.lifeExpectancy) {
-          pdf.text(`Life Expectancy: ${item.lifeExpectancy}`, 15, yPos);
-          yPos += 5;
-        }
-        if (item.notes) {
-          pdf.text(`Notes: ${item.notes.substring(0, 80)}`, 15, yPos);
-          yPos += 5;
-        }
-      }
-
-      yPos += 5;
-      // Separator line
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      const itemName = category === 'chemicals' && item.brand ? `${item.brand} / ${item.name}` : item.name;
+      pdf.text(itemName, 15, yPos + 7);
       pdf.setDrawColor(200, 200, 200);
-      pdf.line(10, yPos, pageWidth - 10, yPos);
-      yPos += 10;
+      pdf.line(margin, yPos + 10, pageWidth - margin, yPos + 10);
+      
+      yPos += 15;
+
+      // Draw Item Details table using autoTable
+      const body = category === 'chemicals' ? [
+        ['Brand', item.brand || '-'],
+        ['Product', item.name],
+        ['Bottle Size', item.bottleSize],
+        ['Current Stock', `${item.currentStock} bottles`],
+        ['Cost/Bottle', `$${item.costPerBottle.toFixed(2)}`],
+        ['Total Value', `$${(item.costPerBottle * item.currentStock).toFixed(2)}`]
+      ] : category === 'supplies' ? [
+        ['Name', item.name],
+        ['Category', item.category],
+        ['Quantity', `${item.quantity} units`],
+        ['Cost/Item', `$${(item.costPerItem || 0).toFixed(2)}`],
+      ] : [
+        ['Name', item.name],
+        ['Price', `$${(item.price || 0).toFixed(2)}`],
+        ['Notes', item.notes || '-']
+      ];
+
+      autoTable(pdf, {
+        startY: yPos,
+        margin: { left: 15 },
+        tableWidth: pageWidth - 30,
+        body: body,
+        theme: 'plain',
+        styles: { fontSize: 10, cellPadding: 1 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } }
+      });
+
+      const lastY = (pdf as any).lastAutoTable?.finalY;
+      yPos = (typeof lastY === 'number' ? lastY : yPos) + 5;
+
+      // Dilution Ratios for chemicals
+      if (category === 'chemicals') {
+        const libCard = item.chemicalLibraryId ? libMap[item.chemicalLibraryId] : null;
+        const ratios = (libCard?.dilution_ratios && libCard.dilution_ratios.length > 0)
+          ? libCard.dilution_ratios
+          : (item.dilutionRatios && item.dilutionRatios.length > 0) 
+            ? item.dilutionRatios 
+            : (generateTemplate(item.name, 'Exterior').dilution_ratios || []);
+
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(color[0], color[1], color[2]);
+        pdf.text(`Dilution Ratios ${!item.dilutionRatios || item.dilutionRatios.length === 0 ? '(AI Suggested)' : ''}:`, 15, yPos + 5);
+        yPos += 8;
+
+        autoTable(pdf, {
+          startY: yPos,
+          margin: { left: 15 },
+          tableWidth: pageWidth - 30,
+          head: [['Method', 'Ratio', 'Soil Level']],
+          body: ratios.map((r: any) => [r.method, transformRatio(r.ratio), r.soil_level]),
+          theme: 'striped',
+          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+          styles: { fontSize: 9 }
+        });
+        
+        const lastAutoTable = (pdf as any).lastAutoTable;
+        yPos = (lastAutoTable && typeof lastAutoTable.finalY === 'number' ? lastAutoTable.finalY : yPos) + 15;
+      } else {
+        yPos += 10;
+      }
     });
 
-    // Save PDF
     pdf.save(`${categoryName}_Inventory_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      toast({ 
+        title: "PDF Error", 
+        description: "An error occurred while generating the PDF. Please try again.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   // Print Preview - opens print dialog
@@ -563,11 +572,12 @@ const InventoryControl = () => {
             color: #1f2937;
           }
           .header {
-            background: linear-gradient(135deg, ${color}22, ${color}44);
             border-left: 4px solid ${color};
             padding: 20px;
             margin-bottom: 30px;
             border-radius: 8px;
+            background: #fdfdfd;
+            border: 1px solid #eee;
           }
           h1 { 
             color: ${color}; 
@@ -587,13 +597,13 @@ const InventoryControl = () => {
             break-inside: avoid;
           }
           .item-header {
-            background: ${color};
-            color: white;
-            padding: 12px 16px;
+            border-bottom: 2px solid ${color};
+            color: #111;
+            padding: 12px 0;
             margin: -20px -20px 16px -20px;
-            border-radius: 6px 6px 0 0;
             font-size: 18px;
             font-weight: bold;
+            padding-left: 20px;
           }
           .field {
             display: grid;
@@ -673,7 +683,42 @@ const InventoryControl = () => {
               <div class="field"><div class="field-label">Current Stock</div><div class="field-value" style="${c.currentStock < c.threshold ? 'color: #ef4444; font-weight: bold;' : ''}">${c.currentStock} bottles</div></div>
               <div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${c.threshold} bottles</div></div>
               <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${(c.costPerBottle * c.currentStock).toFixed(2)}</div></div>
-              ${c.chemicalLibraryId ? `<div class="field"><div class="field-label">Linked to Library</div><div class="field-value">Yes</div></div>` : ''}
+              
+              ${(() => {
+                const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
+                const ratios = (libCard?.dilution_ratios && libCard.dilution_ratios.length > 0)
+                  ? libCard.dilution_ratios
+                  : (c.dilutionRatios && c.dilutionRatios.length > 0) 
+                    ? c.dilutionRatios 
+                    : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+                  
+                if (ratios.length === 0) return '';
+                
+                return `
+                <div style="margin-top: 15px;">
+                  <div class="field-label" style="margin-bottom: 8px; color: ${color};">Dilution Ratios ${!c.dilutionRatios || c.dilutionRatios.length === 0 ? '<span style="font-size: 10px; opacity: 0.7;">(AI Suggested)</span>' : ''}</div>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <thead>
+                      <tr style="background: ${color}11; border-bottom: 2px solid ${color}33;">
+                        <th style="padding: 4px; text-align: left;">Method</th>
+                        <th style="padding: 4px; text-align: left;">Ratio</th>
+                        <th style="padding: 4px; text-align: left;">Soil Level</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${ratios.map((r: any) => `
+                        <tr style="border-bottom: 1px solid #eee;">
+                          <td style="padding: 4px;">${r.method}</td>
+                          <td style="padding: 4px; font-weight: bold; color: ${color};">${transformRatio(r.ratio)}</td>
+                          <td style="padding: 4px;">${r.soil_level}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>`;
+              })()}
+              
+              ${c.chemicalLibraryId ? `<div class="field" style="margin-top: 10px;"><div class="field-label">Linked to Library</div><div class="field-value">Yes</div></div>` : ''}
               ${c.notes ? `<div class="field"><div class="field-label">Notes</div><div class="field-value">${c.notes}</div></div>` : ''}
             </div>
             ${(idx + 1) % 3 === 0 && idx < items.length - 1 ? '<div class="page-break"></div>' : ''}
@@ -744,7 +789,227 @@ const InventoryControl = () => {
     }, 250);
   };
 
-  // Save handled inside UnifiedInventoryModal; refresh list on onSaved
+  const printDilutionChart = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Chemical Dilution Quick Reference</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #333; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eab308; padding-bottom: 20px; }
+          h1 { color: #111; margin: 0; font-size: 24px; }
+          p { color: #555; font-size: 14px; margin: 5px 0 0 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background-color: #f9fafb; color: #111; border: 1px solid #e5e7eb; padding: 12px 8px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+          td { border: 1px solid #f5f5f5; padding: 10px 8px; font-size: 14px; border-bottom: 1px solid #eee; }
+          tr:nth-child(even) { background-color: #ffffff; }
+          .product-name { font-weight: bold; color: #111; }
+          .brand-tag { font-size: 10px; color: #555; text-transform: uppercase; display: block; margin-top: 2px; }
+          .ratio-val { font-family: monospace; font-weight: 600; color: #111; }
+          .none { color: #ccc; font-style: italic; font-size: 12px; }
+          @media print {
+            body { margin: 20px; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Chemical Dilution Quick Reference Chart</h1>
+          <p>Generated on ${new Date().toLocaleDateString()} - Prime Auto Detail</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40%">Product (Brand / Name)</th>
+              <th style="width: 20%">Standard Dilution</th>
+              <th style="width: 20%">More Concentrated</th>
+              <th style="width: 20%">Less Concentrated</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredChemicals.map(c => {
+      // Use existing ratios or generate AI suggestions if empty
+      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) 
+        ? c.dilutionRatios 
+        : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+
+      // Bucket them into the 3 columns
+      const getParts = (rStr: string) => {
+        if (!rStr) return null;
+        if (rStr === 'RTU' || rStr.toLowerCase().includes('direct')) return 1;
+        const match = rStr.match(/1[:\/](\d+)/);
+        return match ? parseInt(match[1]) : null;
+      };
+
+      const sortedRatios = [...ratios].sort((a, b) => {
+        const pA = getParts(a.ratio) || 999;
+        const pB = getParts(b.ratio) || 999;
+        return pA - pB;
+      });
+
+      // Standard is usually the "Maintenance" or middle one, but if only 1, it's standard.
+      // If 3, we have Less, Standard, More.
+      // If 2, we have Standard/More or Standard/Less.
+      
+      let standardCandidate = sortedRatios.find(r => 
+        r.soil_level.toLowerCase().includes('standard') || 
+        r.soil_level.toLowerCase().includes('gen') || 
+        r.soil_level.toLowerCase().includes('maint')
+      );
+
+      let moreCandidate = sortedRatios.find(r => 
+        r.soil_level.toLowerCase().includes('heavy') || 
+        r.soil_level.toLowerCase().includes('strong') || 
+        r.soil_level.toLowerCase().includes('tough') ||
+        r.soil_level.toLowerCase().includes('concentrated')
+      );
+
+      let lessCandidate = sortedRatios.find(r => 
+        r.soil_level.toLowerCase().includes('light') || 
+        r.soil_level.toLowerCase().includes('glass') || 
+        r.soil_level.toLowerCase().includes('interior') ||
+        r.soil_level.toLowerCase().includes('dust')
+      );
+
+      // Fallback if find didn't work by label - use sorting
+      if (!standardCandidate && sortedRatios.length > 0) {
+        // If 3 ratios, pick the middle one as standard
+        if (sortedRatios.length >= 3) standardCandidate = sortedRatios[1];
+        else standardCandidate = sortedRatios[0];
+      }
+      
+      if (!moreCandidate && sortedRatios.length > 1) {
+        // Most concentrated is the one with smallest number
+        moreCandidate = sortedRatios[0] === standardCandidate ? (sortedRatios.length > 1 ? sortedRatios[0] : null) : sortedRatios[0];
+        // If the "more" is actually the same as standard, don't show it twice unless it's explicitly labeled
+        if (moreCandidate === standardCandidate) moreCandidate = null;
+      }
+
+      if (!lessCandidate && sortedRatios.length > 1) {
+        // Least concentrated is the one with biggest number
+        lessCandidate = sortedRatios[sortedRatios.length - 1];
+        if (lessCandidate === standardCandidate || lessCandidate === moreCandidate) lessCandidate = null;
+      }
+      
+      const standard = standardCandidate;
+      const more = moreCandidate;
+      const less = lessCandidate;
+      
+      return `
+                <tr>
+                  <td>
+                    <div class="product-name">${c.name}</div>
+                    <div class="brand-tag">${c.brand || 'No Brand'}</div>
+                  </td>
+                  <td>
+                    ${standard ? `<span class="ratio-val">${transformRatio(standard.ratio)}</span><div style="font-size: 9px; color: #666;">${standard.soil_level}</div>` : '<span class="none">x</span>'}
+                  </td>
+                  <td>
+                    ${more ? `<span class="ratio-val">${transformRatio(more.ratio)}</span><div style="font-size: 9px; color: #666;">${more.soil_level}</div>` : '<span class="none">x</span>'}
+                  </td>
+                  <td>
+                    ${less ? `<span class="ratio-val">${transformRatio(less.ratio)}</span><div style="font-size: 9px; color: #666;">${less.soil_level}</div>` : '<span class="none">x</span>'}
+                  </td>
+                </tr>
+              `;
+    }).join('')}
+          </tbody>
+        </table>
+        <div style="margin-top: 30px; font-size: 10px; color: #aaa; text-align: center;">
+          Always test chemicals on an inconspicuous area first.
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const downloadDilutionPDF = () => {
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 15;
+    
+    // Header
+    pdf.setTextColor(133, 77, 14);
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Chemical Dilution Reference", pageWidth / 2, 22, { align: 'center' });
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(150, 150, 150);
+    pdf.text(`Generated: ${new Date().toLocaleDateString()} - Prime Auto Detail`, pageWidth / 2, 30, { align: 'center' });
+
+    const rows = filteredChemicals.map(c => {
+      // Use existing ratios or generate AI suggestions
+      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) 
+        ? c.dilutionRatios 
+        : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+
+      const getParts = (rStr: string) => {
+        if (!rStr) return null;
+        if (rStr === 'RTU' || rStr.toLowerCase().includes('direct')) return 1;
+        const match = rStr.match(/1[:\/](\d+)/);
+        return match ? parseInt(match[1]) : null;
+      };
+
+      const sortedRatios = [...ratios].sort((a, b) => {
+        const pA = getParts(a.ratio) || 999;
+        const pB = getParts(b.ratio) || 999;
+        return pA - pB;
+      });
+
+      let standard = sortedRatios.find(r => r.soil_level.toLowerCase().includes('standard') || r.soil_level.toLowerCase().includes('gen') || r.soil_level.toLowerCase().includes('maint')) || sortedRatios[0];
+      let more = sortedRatios.find(r => r.soil_level.toLowerCase().includes('heavy') || r.soil_level.toLowerCase().includes('strong') || r.soil_level.toLowerCase().includes('tough') || r.soil_level.toLowerCase().includes('concentrated'));
+      let less = sortedRatios.find(r => r.soil_level.toLowerCase().includes('light') || r.soil_level.toLowerCase().includes('glass') || r.soil_level.toLowerCase().includes('interior') || r.soil_level.toLowerCase().includes('dust'));
+
+      // Logic Fallbacks
+      if (!standard && sortedRatios.length > 0) standard = sortedRatios.length >= 3 ? sortedRatios[1] : sortedRatios[0];
+      if (!more && sortedRatios.length > 1) {
+        more = sortedRatios[0] === standard ? (sortedRatios.length > 1 ? sortedRatios[0] : null) : sortedRatios[0];
+        if (more === standard) more = null;
+      }
+      if (!less && sortedRatios.length > 1) {
+        less = sortedRatios[sortedRatios.length - 1];
+        if (less === standard || less === more) less = null;
+      }
+
+      return [
+        { content: `${c.brand ? c.brand + ' - ' : ''}${c.name}`, styles: { fontStyle: 'bold' } },
+        standard ? `${transformRatio(standard.ratio)}\n(${standard.soil_level})` : '-',
+        more ? `${transformRatio(more.ratio)}\n(${more.soil_level})` : 'x',
+        less ? `${transformRatio(less.ratio)}\n(${less.soil_level})` : 'x'
+      ];
+    });
+
+    autoTable(pdf, {
+      startY: 40,
+      head: [['Product', 'Standard Dilution', 'More Concentrated', 'Less Concentrated']],
+      body: rows as any,
+      theme: 'grid',
+      headStyles: { fillColor: [245, 245, 245], textColor: [0, 0, 0] },
+      styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
+      columnStyles: { 0: { cellWidth: 70 } }
+    });
+
+      pdf.save(`Chemical_Dilution_Reference_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      toast({
+        title: "PDF Error",
+        description: "Failed to generate the dilution reference chart.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleDelete = (id: string, mode: 'chemical' | 'material' | 'tool', itemName: string) => {
     setDeleteState({ open: true, type: 'delete', mode, id, name: itemName });
@@ -851,9 +1116,25 @@ const InventoryControl = () => {
       className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer"
       onClick={() => openEdit(c, 'chemical')}
     >
-      <TableCell className="font-medium flex items-center gap-2 text-white">
-        {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
-        {c.brand ? `${c.brand} / ${c.name}` : c.name}
+      <TableCell className="font-medium flex items-center gap-2 text-white py-3">
+        {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700 shrink-0" />}
+        <div className="flex flex-col">
+          <span>{c.brand ? `${c.brand} / ${c.name}` : c.name}</span>
+          {(() => {
+            const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
+            const ratios = (libCard?.dilution_ratios && libCard.dilution_ratios.length > 0) ? libCard.dilution_ratios : c.dilutionRatios;
+            if (!ratios || ratios.length === 0) return null;
+            return (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {ratios.map((r, i) => (
+                  <span key={i} className="text-[9px] px-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded truncate max-w-[100px]" title={`${r.method}: ${transformRatio(r.ratio)}`}>
+                    {r.method}: {transformRatio(r.ratio)}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       </TableCell>
       <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
       <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
@@ -867,14 +1148,36 @@ const InventoryControl = () => {
         <div className="flex justify-end gap-1">
           {c.chemicalLibraryId ? (
             <div className="flex items-center">
-              <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId })); }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-blue-400 hover:text-blue-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: c.chemicalLibraryId }));
+                }}
+                title="View Technical Card"
+              >
                 <FileText className="h-4 w-4 mr-1" /> Card
               </Button>
               <Button variant="ghost" size="sm" className="h-8 text-purple-400 hover:text-purple-300" onClick={(e) => { e.stopPropagation(); openLabelMaker(c); }}>
                 <Tag className="h-4 w-4 mr-1" /> Label
               </Button>
             </div>
-          ) : null}
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-amber-500 hover:text-amber-400 bg-amber-500/5 border border-amber-500/10"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLinkTargetItem(c);
+                setLinkModalOpen(true);
+              }}
+            >
+              <UnlinkIcon className="h-4 w-4 mr-1" /> Link
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
         </div>
@@ -895,6 +1198,20 @@ const InventoryControl = () => {
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
           </div>
           <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
+          {(() => {
+            const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
+            const ratios = (libCard?.dilution_ratios && libCard.dilution_ratios.length > 0) ? libCard.dilution_ratios : (c.dilutionRatios || []);
+            if (ratios.length === 0) return null;
+            return (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {ratios.map((r, i) => (
+                  <span key={i} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded">
+                    {r.method}: {transformRatio(r.ratio)}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
           {c.currentStock} left
@@ -911,7 +1228,20 @@ const InventoryControl = () => {
                 <Tag className="h-4 w-4 mr-1" /> Label
               </Button>
             </div>
-          ) : null}
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-amber-500 hover:text-amber-400 bg-amber-500/5 border border-amber-500/10"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLinkTargetItem(c);
+                setLinkModalOpen(true);
+              }}
+            >
+              <UnlinkIcon className="h-4 w-4 mr-1" /> Link
+            </Button>
+          )}
         </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2">
@@ -1033,12 +1363,12 @@ const InventoryControl = () => {
                       Track all detailing chemicals, cleaners, polishes, waxes, and coatings used in your business.
                     </p>
                     <div className="text-xs text-zinc-400 space-y-1 pt-2 border-t border-zinc-700">
-                      <p><strong className="text-zinc-300">Features:</strong></p>
+                      <p><strong className="text-zinc-300">Sorting Options:</strong></p>
                       <ul className="list-disc list-inside space-y-0.5 ml-2">
-                        <li>Track bottle sizes and costs</li>
-                        <li>Monitor current stock levels</li>
-                        <li>Set low stock thresholds for alerts</li>
-                        <li>Link to Chemical Library for SDS info</li>
+                        <li><strong className="text-zinc-300">By Brand (Default)</strong>: Groups items by brand (e.g., Meguiar’s, P&S) and sorts chemicals A-Z within each group.</li>
+                        <li><strong className="text-zinc-300">Jump to Brand</strong>: Use the brand dropdown in the sort picker to instantly filter the view to a specific brand. This makes it easy to jump directly to any product in your inventory without scrolling.</li>
+                        <li><strong className="text-zinc-300">Alphabetical (A-Z List)</strong>: A simple flat list of all items from A to Z, regardless of brand.</li>
+                        <li><strong className="text-zinc-300">Low Threshold</strong>: Prioritizes items that are running low and need restocking.</li>
                       </ul>
                     </div>
                   </div>
@@ -1051,12 +1381,19 @@ const InventoryControl = () => {
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
                   value={chemicalSort}
-                  onChange={(e) => setChemicalSort(e.target.value as any)}
+                  onChange={(e) => setChemicalSort(e.target.value)}
                   className="bg-zinc-800 border-zinc-700 text-yellow-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500"
                 >
-                  <option value="brand">By Brand</option>
+                  <option value="brand">By Brand (All)</option>
                   <option value="alphabetical">A-Z List</option>
                   <option value="low_stock">Low Threshold</option>
+                  {allAvailableBrands.length > 0 && (
+                    <optgroup label="Jump to Brand">
+                      {allAvailableBrands.map(brand => (
+                        <option key={brand} value={brand}>{brand}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
@@ -1072,13 +1409,15 @@ const InventoryControl = () => {
           {expandedSections.chemicals && (
             <div className="p-4 border-t border-yellow-500/10 animate-in slide-in-from-top-2 duration-200">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <div className="flex gap-2 flex-wrap text-[10px] font-bold">
-                  <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setLabelMakerChemical(null); setLabelMakerOpen(true); }} className="border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400"><Tag className="h-3 w-3 mr-1" /> Create Label</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
-                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
-                  <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300" onClick={() => downloadInventoryPDF('chemicals')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
-                  <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300" onClick={() => printInventory('chemicals')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full text-[10px] font-bold">
+                  <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0 w-full sm:w-auto"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setLabelMakerChemical(null); setLabelMakerOpen(true); }} className="border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400 w-full sm:w-auto"><Tag className="h-3 w-3 mr-1" /> Create Label</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }} className="w-full sm:w-auto"><FileText className="h-3 w-3 mr-1" /> Import</Button>
+                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20 w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300 w-full sm:w-auto" onClick={() => { try { downloadInventoryPDF('chemicals'); } catch(e) { toast({ title: "PDF Error", description: "Failed to generate inventory PDF.", variant: "destructive"}); } }}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300 w-full sm:w-auto" onClick={() => printInventory('chemicals')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
+                  <Button size="sm" variant="outline" className="text-emerald-400 hover:text-emerald-300 w-full sm:w-auto" onClick={() => { try { downloadDilutionPDF(); } catch(e) { toast({ title: "PDF Error", description: "Failed to generate reference chart PDF.", variant: "destructive"}); } }}><Download className="h-3 w-3 mr-1" /> PDF Ref Chart</Button>
+                  <Button size="sm" variant="outline" className="text-emerald-400 hover:text-emerald-300 w-full sm:w-auto" onClick={printDilutionChart}><Printer className="h-3 w-3 mr-1" /> Print Ref Chart</Button>
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400" />
@@ -1092,7 +1431,7 @@ const InventoryControl = () => {
                 </div>
               </div>
               <div className="space-y-8">
-                {chemicalSort === "brand" ? (
+                {chemicalSort === "brand" || (chemicalSort !== "alphabetical" && chemicalSort !== "low_stock") ? (
                   sortedBrands.map(brand => (
                     <div key={brand} className="space-y-2">
                       <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-yellow-500">
@@ -1765,6 +2104,7 @@ const InventoryControl = () => {
         onOpenChange={(open) => !open && setViewCardId(null)}
         isAdmin={true}
         onUpdate={loadData}
+        showReturnToInventory={true}
       />
       {labelMakerOpen && (
         <ChemicalLabelMaker
