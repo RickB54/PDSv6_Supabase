@@ -12,9 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { getInvoices } from "@/lib/db";
 import { useCouponsStore } from "@/store/coupons";
 import { Tag, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface Invoice {
-  id?: string;
+  id: string; // Required for getInvoices type safety
   invoiceNumber?: number;
   customerId?: string;
   customerName?: string;
@@ -120,22 +121,29 @@ const Checkout = () => {
         lineItems.push({ name: "Prepayment", amount: prepay, quantity: 1 });
       }
 
-      const res = await fetch("/functions/v1/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "payment", lineItems, customerEmail: user?.email })
+      // Use supabase.functions.invoke for standard auth and compatibility
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { mode: "payment", lineItems, customerEmail: user?.email }
       });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      if (data.url) {
+
+      if (error) {
+        console.error("Supabase Function Error:", error);
+        throw new Error(error.message || "Function invocation failed");
+      }
+
+      if (data?.url) {
         // Redirect to Stripe-hosted checkout
         window.location.href = data.url;
       } else {
-        throw new Error("Missing checkout URL");
+        throw new Error(data?.error || "Missing checkout URL from Stripe response");
       }
-    } catch (err) {
-      console.error("Checkout error:", err);
-      toast({ title: "Stripe Checkout Error", description: "Unable to initialize Stripe session.", variant: "destructive" });
+    } catch (err: any) {
+      console.error("Detailed Checkout error:", err);
+      toast({ 
+        title: "Stripe Checkout Error", 
+        description: err.message || "Unable to initialize Stripe session.", 
+        variant: "destructive" 
+      });
     }
   };
 
