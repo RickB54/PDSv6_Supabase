@@ -126,23 +126,25 @@ export default function ChemicalsLibrary() {
                             <HelpCircle className="w-6 h-6" />
                         </Button>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
-                        <Button 
-                            variant="outline" 
-                            onClick={() => navigate('/dilution-calculator')} 
-                            className="flex-1 sm:flex-none h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-xs"
-                        >
-                            <Calculator className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Dilution Calc</span><span className="sm:hidden">Calc</span>
-                        </Button>
-                        <Button 
-                            variant="outline" 
-                            onClick={() => navigate('/chemical-training')} 
-                            className="flex-1 sm:flex-none h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-xs"
-                        >
-                            <Beaker className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Decision System</span><span className="sm:hidden">Decision</span>
-                        </Button>
+                    <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
+                        <div className="flex w-full sm:w-auto gap-2">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => navigate('/dilution-calculator')} 
+                                className="flex-1 sm:flex-none h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-xs"
+                            >
+                                <Calculator className="w-4 h-4 mr-2" /> <span>Dilution Calc</span>
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                onClick={() => navigate('/chemical-training')} 
+                                className="flex-1 sm:flex-none h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-xs"
+                            >
+                                <Beaker className="w-4 h-4 mr-2" /> <span>Decision</span>
+                            </Button>
+                        </div>
                         {isAdmin && (
-                            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                            <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                                 <Button 
                                     variant="outline" 
                                     onClick={() => setLabelMakerOpen(true)} 
@@ -174,9 +176,9 @@ export default function ChemicalsLibrary() {
                                         });
                                         setEditDialogOpen(true);
                                     }} 
-                                    className="sm:flex-none h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[10px] px-6"
+                                    className="flex-1 sm:flex-none h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[10px] px-6"
                                 >
-                                    <Plus className="w-4 h-4 mr-2" /> Add
+                                    <Plus className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Add Product</span><span className="sm:hidden">Add</span>
                                 </Button>
                             </div>
                         )}

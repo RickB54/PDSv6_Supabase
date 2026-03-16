@@ -136,7 +136,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
             const scaleW = availableW / targetW;
             const scaleH = availableH / targetH;
             
-            const finalScale = Math.min(scaleW, scaleH, 1);
+            const finalScale = container.clientWidth < 1024 ? Math.min(scaleW, scaleH, 1) : Math.min(scaleW, scaleH, 1.25);
             setPreviewZoom(finalScale);
         };
 
@@ -296,6 +296,11 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     border-left: 6px solid #4f46e5;
                     padding-left: 10px;
                     margin-top: 4px;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    max-height: 2.2em;
                 }
                 .label-footer {
                     display: flex;
@@ -303,6 +308,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     justify-content: space-between;
                     gap: 8px;
                     margin-bottom: 2px;
+                    height: 0.8in;
                 }
                 .ratio-box {
                     border: 3px solid black;
@@ -313,16 +319,49 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     align-items: center;
                     justify-content: center;
                     min-width: 80px;
+                    background: white;
+                    margin-bottom: 5px;
                 }
                 .ratio-label { font-size: 7pt; font-weight: 800; text-transform: uppercase; opacity: 0.6; line-height: 1; }
                 .ratio-value { font-size: 18pt; font-weight: 900; line-height: 1; margin-top: 1px; }
-                .notes-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-                .line { border-bottom: 1px solid #ddd; width: 100%; height: 1px; }
+                .notes-area { 
+                    flex: 1; 
+                    font-size: 9pt; 
+                    font-weight: 600; 
+                    color: #333; 
+                    line-height: 1.3;
+                    max-height: 0.7in;
+                    overflow: hidden;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                    padding-right: 5px;
+                }
+                .notes-lines { 
+                    position: absolute;
+                    bottom: 0.25in;
+                    left: 0.25in;
+                    right: 1.5in;
+                    display: flex; 
+                    flex-direction: column; 
+                    gap: 6px; 
+                    z-index: 0;
+                }
+                .line { border-bottom: 1px solid #eee; width: 100%; height: 1px; }
                 .logo-accent {
                     position: absolute;
                     top: 15px;
                     right: 15px;
                     opacity: 0.15;
+                }
+                .business-tag {
+                    position: absolute;
+                    bottom: 10px;
+                    left: 25px;
+                    font-size: 7pt;
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    color: #999;
                 }
             `;
 
@@ -340,11 +379,15 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                 </svg>
                             </div>
                         ` : ''}
+                        <div class="business-tag">${label.businessName || 'PRIMEAUTODETAIL.NET'}</div>
                         <div>
                             <div style="font-size: 8pt; font-weight: 900; color: #4f46e5; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.05em;">${label.brandName || 'Product'}</div>
                             <div class="label-title">${label.productName || 'UNNAMED'}</div>
                         </div>
                         <div class="label-footer">
+                            <div class="notes-area">
+                                ${label.notes || ''}
+                            </div>
                             <div class="notes-lines">
                                 <div class="line"></div>
                                 <div class="line"></div>
@@ -420,18 +463,17 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     ${labels.map(l => {
                         if (l.isEmpty) return `<div style="width:${TEMPLATE.labelWidth}in; height:${TEMPLATE.labelHeight}in;"></div>`;
                         return `
-                            <div style="width:${TEMPLATE.labelWidth}in; height:${TEMPLATE.labelHeight}in; padding: 0.25in; border: 0.1px solid #eee; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; color: black; position: relative; font-family: sans-serif;">
+                            <div style="width:${TEMPLATE.labelWidth}in; height:${TEMPLATE.labelHeight}in; padding: 0.25in; border: 0.1px solid #eee; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; color: black; position: relative; font-family: sans-serif; background: white;">
+                                <div style="position: absolute; bottom: 10px; left: 25px; font-size: 6pt; font-weight: 900; text-transform: uppercase; color: #999;">${l.businessName || 'PRIMEAUTODETAIL.NET'}</div>
                                 <div>
                                     <div style="font-size: 8pt; font-weight: 900; color: #4f46e5; margin-bottom: 2px; text-transform: uppercase;">${l.brandName || 'Product'}</div>
-                                    <div style="font-size: 20pt; font-weight: 900; text-transform: uppercase; line-height: 1; border-left: 6px solid #4f46e5; padding-left: 10px;">${l.productName || 'UNNAMED'}</div>
+                                    <div style="font-size: 20pt; font-weight: 900; text-transform: uppercase; line-height: 1; border-left: 6px solid #4f46e5; padding-left: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${l.productName || 'UNNAMED'}</div>
                                 </div>
-                                <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;">
-                                    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                                        <div style="border-bottom: 1px solid #ddd; width: 100%; height: 1px;"></div>
-                                        <div style="border-bottom: 1px solid #ddd; width: 100%; height: 1px;"></div>
-                                        <div style="border-bottom: 1px solid #ddd; width: 100%; height: 1px;"></div>
+                                <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; position: relative; z-index: 1;">
+                                    <div style="flex: 1; font-size: 8pt; font-weight: 600; line-height: 1.2; max-height: 0.6in; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; margin-bottom: 5px;">
+                                        ${l.notes || ''}
                                     </div>
-                                    <div style="border: 3px solid black; padding: 4px 12px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px;">
+                                    <div style="border: 3px solid black; padding: 4px 12px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; background: white;">
                                         <div style="font-size: 7pt; font-weight: 800; text-transform: uppercase; opacity: 0.6; line-height: 1;">RATIO</div>
                                         <div style="font-size: 16pt; font-weight: 900; line-height: 1; margin-top: 2px;">${l.dilutionRatio || '1:1'}</div>
                                     </div>

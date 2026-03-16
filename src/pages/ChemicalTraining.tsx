@@ -272,18 +272,18 @@ ${targetChem.surface_compatibility?.avoid?.length ? `**Avoid:** ${targetChem.sur
                             </Button>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                         <Button 
                             variant="outline" 
                             onClick={() => navigate('/dilution-calculator')} 
-                            className="bg-green-600/10 border-green-500/30 text-green-400 hover:bg-green-600 hover:text-white font-black italic tracking-tighter"
+                            className="flex-1 md:flex-none h-10 border-green-500/30 bg-green-500/5 hover:bg-green-600 hover:text-white text-green-400 font-black italic tracking-tighter"
                         >
                             <Calculator className="w-4 h-4 mr-2" /> DILUTION CALCULATOR
                         </Button>
                         <Button
                             variant="outline"
                             onClick={() => resetPage()}
-                            className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 font-bold"
+                            className="flex-1 md:flex-none h-10 bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 font-bold"
                         >
                             <RotateCcw className="w-4 h-4 mr-2" /> Reset System
                         </Button>

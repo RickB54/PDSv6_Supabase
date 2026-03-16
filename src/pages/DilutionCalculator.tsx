@@ -12,6 +12,7 @@ import {
     HelpCircle,
     BookOpen
 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Tooltip,
@@ -84,23 +85,27 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
     };
 
     return (
-        <div className={`flex flex-col items-center ${isModal ? 'bg-zinc-950 p-4 w-full h-full overflow-y-auto' : 'min-h-screen bg-[#05050a] text-white p-6 md:p-12'}`}>
+        <div className={`flex flex-col items-center min-h-screen bg-[#05050a] text-white ${isModal ? '' : 'pt-20'}`}>
+            {!isModal && <PageHeader title="Dilution Calculator" />}
+            <div className={`flex flex-col items-center w-full px-6 md:px-12 ${isModal ? 'bg-zinc-950 p-4 h-full overflow-y-auto' : ''}`}>
             {/* Header Area */}
             <div className="w-full max-w-md relative flex flex-col items-center mb-10 shrink-0">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute left-0 top-1 text-zinc-600 hover:text-white hover:bg-zinc-900 z-10"
-                    onClick={() => onBack ? onBack() : navigate(-1)}
-                >
-                    <ChevronLeft className="w-6 h-6" />
-                </Button>
+                {isModal && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute left-0 top-1 text-zinc-600 hover:text-white hover:bg-zinc-900 z-10"
+                        onClick={() => onBack ? onBack() : navigate(-1)}
+                    >
+                        <ChevronLeft className="w-6 h-6" />
+                    </Button>
+                )}
 
-                <div className="flex flex-col items-center group transition-all relative">
+                <div className="flex flex-col items-center group transition-all relative w-full">
                     <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg border border-white/10">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 mb-4 w-full justify-center">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg border border-white/10 shrink-0">
                             <Calculator className="w-7 h-7 text-white" />
                         </div>
                         <div className="flex flex-col items-center leading-none">
@@ -108,7 +113,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                                 Prime
                             </h1>
                             <div className="mt-2 text-center">
-                                <span className="text-[12px] sm:text-[14px] font-black text-white uppercase tracking-[0.2em] bg-blue-600/20 px-3 py-1 rounded-full border border-blue-500/30 whitespace-nowrap block shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                                <span className="text-[10px] sm:text-[14px] font-black text-white uppercase tracking-[0.2em] bg-blue-600/20 px-3 py-1 rounded-full border border-blue-500/30 whitespace-nowrap block shadow-[0_0_15px_rgba(59,130,246,0.2)]">
                                     PRIME DILUTION CALCULATOR
                                 </span>
                             </div>
@@ -322,6 +327,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                 role="admin"
                 initialTopicId="prime-dilution-masterclass"
             />
+            </div>
         </div>
     );
 };

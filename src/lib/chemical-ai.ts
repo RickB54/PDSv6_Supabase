@@ -13,16 +13,16 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
             name: "Carpet Bomber",
             brand: "P & S",
             category: "Interior",
-            description: "A citrus-based high-performance cleaner specifically formulated for carpets, upholstery, and rugs. It breaks down stubborn contaminants and odors while remaining safe for most interior surfaces and fabrics.",
-            used_for: ["Carpets", "Upholstery", "Floor Mats", "Rugs"],
-            when_to_use: "During the interior detailing phase for deep cleaning fabric and fibers.",
-            why_to_use: "Non-toxic, citrus-scented, and highly effective at lifting deep-set dirt without harsh fuming.",
-            warnings: { damage_risk: "Low", risks: ["Always test on an inconspicuous area for colorfastness", "Ensure surface is fully dry after cleaning"] },
+            description: "CITRUS-BASED PROFESSIONAL CLEANER: Engineered specifically for deep cleaning carpets, upholstery, and area rugs. This high-performance formula breaks down stubborn organic contaminants, protein stains, and odors at the molecular level while remaining safe for sensitive interior fabrics and automotive fibers.",
+            used_for: ["Vehicle Carpets", "Upholstery", "Floor Mats", "Rugs", "Fabric Seats"],
+            when_to_use: "Essential during the interior extraction phase or for heavy stain removal on any fabric surface.",
+            why_to_use: "Environmentally safe, non-toxic, and utilizes citrus derivatives to lift deep-set dirt without the harsh fumes of traditional solvent-based cleaners.",
+            warnings: { damage_risk: "Low", risks: ["Always test on an inconspicuous area for colorfastness", "Ensure surface is fully dry after cleaning to prevent mildew"] },
             application_guide: { method: "Spray and Agitate", agitation: "Drill Brush or Hand Brush", rinse: "Extract or wipe with damp microfiber", dwell_time_min: 2, dwell_time_max: 5 },
-            surface_compatibility: { safe: ["Nylon", "Polyester", "Carpet", "Fabric"], risky: ["Alcantara", "Raw Suede"], avoid: ["Leather", "Polished Wood"] },
+            surface_compatibility: { safe: ["Nylon", "Polyester", "Carpet", "Fabric", "Velour"], risky: ["Alcantara", "Raw Suede"], avoid: ["Unfinished Leather", "Polished Wood"] },
             dilution_ratios: [
-                { method: "Spray Bottle", ratio: "1:5", soil_level: "Heavy Soil", notes: "For deep stains and high traffic areas" },
-                { method: "Spray Bottle", ratio: "1:8", soil_level: "Maintenance", notes: "Standard interior cleaning" }
+                { method: "Spray Bottle", ratio: "1:5", soil_level: "Heavy Soil", notes: "For deep stains, grease, and high traffic rugs" },
+                { method: "Spray Bottle", ratio: "1:8", soil_level: "Maintenance", notes: "Standard interior upholstery cleaning" }
             ]
         };
     }
