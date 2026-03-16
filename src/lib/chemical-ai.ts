@@ -1,15 +1,17 @@
-import { Chemical, ChemicalCategory, DilutionRatio } from "@/types/chemicals";
-import { StepChemicalMapping } from "@/lib/chemicals";
+import { Chemical } from "@/types/chemicals";
 
-// Helper for generating smart templates
-export const generateTemplate = (name: string, category: ChemicalCategory): Partial<Chemical> => {
+/**
+ * Enhanced Chemical Template Generator
+ * Provides expert-level descriptions and instructions for detailing chemicals.
+ */
+export function generateTemplate(name: string, category: 'Interior' | 'Exterior'): Partial<Chemical> {
     const normName = name.toLowerCase();
     const isInterior = category === 'Interior' || normName.includes('interior') || normName.includes('carpet') || normName.includes('upholstery') || normName.includes('leather') || normName.includes('fabric');
     
     // 0. TRAIT DETECTION (Used for logic throughout)
     const traits = {
         isCleaner: normName.includes('cleaner') || normName.includes('apc') || normName.includes('wash') || normName.includes('degreaser') || normName.includes('soap') || normName.includes('remove') || normName.includes('decon'),
-        isCoating: normName.includes('coat') || normName.includes('seal') || normName.includes('ceramic') || normName.includes('wax') || normName.includes('protect') || normName.includes('bead') || normName.includes('graphene'),
+        isCoating: normName.includes('coat') || normName.includes('seal') || normName.includes('ceramic') || normName.includes('wax') || normName.includes('protect') || normName.includes('bead') || normName.includes('graphene') || normName.includes('sealant'),
         isInterior: isInterior,
         isExterior: !isInterior,
         isGlass: normName.includes('glass') || normName.includes('window') || normName.includes('mirror') || normName.includes('clarity'),
@@ -20,38 +22,19 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
     };
 
     // 1. PRODUCT SPECIFIC OVERRIDES (Expert Knowledge Base)
-    // We keep these for high-accuracy for common products
     if (normName.includes('carpet bomber')) {
         return {
-            name: "Carpet Bomber",
-            brand: "P & S",
+            description: "ULTRA-PREMIUM CARPET & UPHOLSTERY CLEANER: A non-toxic, citrus-based formula specifically engineered to deep clean rugs, carpets, and upholstery fibers. Safely breaks down organic stains, grease, and odors without leaving a sticky residue.",
+            used_for: ["Vehicle Carpets", "Floor Mats", "Cloth Seats", "Headliners", "Rug Fibers", "Home Upholstery"],
             category: "Interior",
-            description: "CITRUS-BASED PROFESSIONAL CLEANER: Engineered specifically for deep cleaning carpets, upholstery, and area rugs. This high-performance formula breaks down stubborn organic contaminants, protein stains, and odors at the molecular level while remaining safe for sensitive interior fabrics and automotive fibers.",
-            used_for: ["Vehicle Carpets", "Upholstery", "Floor Mats", "Rugs", "Fabric Seats"],
-            when_to_use: "Essential during the interior extraction phase or for heavy stain removal on any fabric surface.",
-            why_to_use: "Environmentally safe, non-toxic, and utilizes citrus derivatives to lift deep-set dirt without the harsh fumes of traditional solvent-based cleaners.",
-            warnings: { damage_risk: "Low", risks: ["Always test on an inconspicuous area for colorfastness", "Ensure surface is fully dry after cleaning to prevent mildew"] },
-            application_guide: { method: "Spray and Agitate", agitation: "Drill Brush or Hand Brush", rinse: "Extract or wipe with damp microfiber", dwell_time_min: 2, dwell_time_max: 5 },
-            surface_compatibility: { safe: ["Nylon", "Polyester", "Carpet", "Fabric", "Velour"], risky: ["Alcantara", "Raw Suede"], avoid: ["Unfinished Leather", "Polished Wood"] },
+            when_to_use: "Apply during the deep-cleaning phase after thorough vacuuming. Perfect for spot cleaning or full extractor use.",
+            why_to_use: "Encapsulates dirt particles for easy removal, brightening fibers and leaving a fresh citrus scent without harsh chemicals.",
+            warnings: { damage_risk: "Low", risks: ["Test for colorfastness on small area", "Do not soak headliners"] },
+            application_guide: { method: "Spray, Agitate, Extract/Wipe", agitation: "Upholstery Brush", rinse: "Vacuum or extraction", dwell_time_min: 1, dwell_time_max: 3 },
             dilution_ratios: [
-                { method: "Spray Bottle", ratio: "1:5", soil_level: "Heavy Soil", notes: "For deep stains, grease, and high traffic rugs" },
-                { method: "Spray Bottle", ratio: "1:8", soil_level: "Maintenance", notes: "Standard interior upholstery cleaning" }
+                { method: "Spray Bottle", ratio: "1:5", soil_level: "Heavy Duty", notes: "For deep stains and floor mats" },
+                { method: "Extractor", ratio: "1:10", soil_level: "Maintenance", notes: "General upholstery refreshing" }
             ]
-        };
-    }
-
-    if (normName.includes('bead maker')) {
-        return {
-            name: "Bead Maker",
-            brand: "P & S",
-            category: "Exterior",
-            description: "A high-gloss paint protectant that provides incredible slickness and water beading. It is easy to apply and works as a stand-alone sealant or a booster for existing coatings.",
-            used_for: ["Paint", "Glass", "Chrome", "Plastic Trim"],
-            when_to_use: "Apply after washing as a drying aid or on a clean dry surface for maximum gloss.",
-            why_to_use: "Creates an extremely slick surface that repels water and prevents dirt from bonding.",
-            warnings: { damage_risk: "Low", risks: ["Avoid application in direct sunlight for best results"] },
-            application_guide: { method: "Spray and Wipe", agitation: "Microfiber Towel", rinse: "Buff to a high gloss", dwell_time_min: 0, dwell_time_max: 1 },
-            dilution_ratios: [{ method: "Direct", ratio: "RTU", soil_level: "Standard", notes: "Ready to Use - Do not dilute" }]
         };
     }
 
@@ -71,7 +54,6 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
 
     if (normName.includes('apc') || (normName.includes('all purpose') && normName.includes('cleaner'))) {
         return {
-            brand: normName.includes('meguiar') ? "Meguiar's" : "",
             description: "ULTRA-VERSATILE MULTI-SURFACE EMULSIFIER: A high-foaming, professional strength cleaner designed to safely lift dirt, grease, and grime from both interior and exterior surfaces depending on dilution.",
             used_for: ["Engine Bays", "Door Jambs", "Wheel Wells", "Floor Mats", "Interior Plastics", "Vinyl"],
             category: traits.isInterior ? "Interior" : "Exterior",
@@ -106,39 +88,44 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
     const safeCategory = traits.isInterior ? 'Interior' : 'Exterior';
     
     // Build a smarter description based on traits
-    let description = `High-performance professional grade ${safeCategory.toLowerCase()} ${traits.isCoating ? 'surface protection' : 'maintenance'} formula. `;
-    let usedFor = traits.isInterior ? ["Dashboard", "Vinyl", "Plastic", "Door Panels"] : ["Paintwork", "Clear Coat", "Exterior Surfaces"];
-    let agitation = "None required";
+    let description = "";
+    let usedFor: string[] = [];
     let method = "Spray and Wipe";
+    let agitation = "Brush or Microfiber";
     let proTips = ["Work in a shaded area.", "Ensure surface is cool to the touch."];
 
-    if (traits.isGlass) {
-        description = "Advanced streak-free glass cleaner designed to remove oily film, fingerprints, and environmental grime while leaving a crystal clear finish.";
-        usedFor = ["Automotive Glass", "Mirrors", "Heads-up Displays", "Window Tint"];
-        method = "Two-タオル (Two-towel) method for zero streaks.";
-    } else if (traits.isTire) {
-        description = "Heavy-duty cleaning and conditioning solution specifically formulated for the high-temperature and high-impact environment of wheels and tires.";
-        usedFor = ["Tire Sidewalls", "Alloy Wheels", "Brake Calipers", "Wheel Wells", "Powder Coated Rims"];
-        agitation = "Stiff brush for tires, soft brush for rim faces";
-    } else if (traits.isInterior && traits.isCleaner) {
-        description = "pH-balanced interior cleaner engineered to safely emulsify oils and dirt from delicate surfaces without leaving behind a greasy residue or white chalking.";
-        usedFor = ["Steering Wheels", "Dashboards", "Leatherette", "Vinyl Trim", "Textured Plastics", "Cupholders"];
-        agitation = "Soft detailing brush or microfiber scrub pad";
-    } else if (traits.isHeavyDuty) {
-        description = "Industrial-strength degreasing agent designed to break down heavy oils, grease, and stubborn road film on engine components and undercarriages.";
-        usedFor = ["Engine Bays", "Wheel Wells", "Exhaust Tips", "Undercarriage", "Heavy Equipment"];
-        agitation = "Boar's hair brush or nylon scrub";
-        proTips.push("Do not allow to dry on plastic or rubber.");
-    } else if (traits.isCoating) {
-        description = "Synthetic polymer / ceramic hybrid technology provides an ultra-hydrophobic barrier, extreme gloss, and long-term protection against UV rays and fallout.";
-        usedFor = ["Paintwork", "Clear Coat", "Plastic Trim", "Gloss Vinyl Wraps"];
-        method = "Applicator pad or cross-hatch spray application";
+    if (traits.isCoating) {
+        description = `ADVANCED SURFACE PROTECTION: A cutting-edge ${safeCategory.toLowerCase()} formulation engineered to create a durable, high-gloss sacrificial layer. Utilizes molecular bonding technology to provide superior hydrophobics and environmental resistance.`;
+        usedFor = traits.isInterior ? ["Vinyl", "Plastic", "Dashboard"] : ["Paintwork", "Clear Coat", "Exterior Trim"];
+        method = "Hand Applicator or Spray";
+        agitation = "Leveling with fresh microfiber";
         proTips.push("Allow 24 hours of cure time for maximum performance.");
+    } else if (traits.isCleaner) {
+        description = `PROFESSIONAL GRADE EMULSIFIER: High-performance ${safeCategory.toLowerCase()} cleaning solution designed to safely lift and encapsulate surface contaminants. Optimized for efficient soil removal while maintaining surface integrity.`;
+        usedFor = traits.isInterior ? ["Upholstery", "Carpets", "Rug Fibers"] : ["Paintwork", "Wheels", "Exhaust Tips"];
+        agitation = "Soft detailing brush or microfiber scrub pad";
     } else if (traits.isPolish) {
-        description = "Precision abrasive technology designed to level clear coat imperfections, scratches, and oxidation while refining the surface to a mirror finish.";
-        usedFor = ["Clear Coat", "Single Stage Paint", "Gel Coat", "Headlights"];
-        method = "Dual Action Polisher or Rotary";
-        agitation = "Foam or microfiber polishing pad";
+        description = `MICRO-ABRASIVE REFINING COMPOUND: Precision-engineered formula designed to remove surface imperfections, oxidation, and light swirling. Restores optical clarity and gloss to ${traits.isExterior ? 'paintwork' : 'trim'} surfaces.`;
+        usedFor = traits.isExterior ? ["Clear Coat", "Single stage paint"] : ["Piano Black Trim"];
+        method = "Machine Polisher or Hand Bloom";
+        agitation = "Buffing with foam or wool pad";
+    } else if (traits.isDetailed) {
+        description = `ULTRA-SLICK GLOSS ENHANCER: Versatile detail spray designed to remove light dust and fingerprints while adding an immediate pop of gloss and surface slickness. Perfect for "just-detailed" maintenance.`;
+        usedFor = ["All Polished Surfaces", "Emblems", "Door Jambs"];
+    } else {
+        description = `HIGH-PERFORMANCE ${safeCategory.toUpperCase()} FORMULA: Professional-grade detailing solution optimized for ${safeCategory.toLowerCase()} maintenance tasks. Delivers consistent, high-quality results for demanding detailing environments.`;
+        usedFor = traits.isInterior ? ["Upholstery", "Carpets", "Rug Fibers"] : ["Modern Clear Coats", "Single-Stage Paint"];
+    }
+
+    // Sub-refinement for specific surfaces
+    if (traits.isGlass) {
+        usedFor = traits.isInterior ? ["Tinted Windows", "Interior Glass", "Screens"] : ["Exterior Windows", "Windshields", "Mirrors"];
+        agitation = "Waffle-weave glass towel";
+        method = "Two-Towel method for zero streaks.";
+    } else if (traits.isTire) {
+        usedFor = ["Tire Sidewalls", "Wheel Barrels", "Alloy Rims", "Wheel Wells"];
+        method = "Spray, Dwell, Rinse";
+        agitation = "Stiff tire brush for sidewalls";
     }
 
     const template: Partial<Chemical> = {
@@ -186,7 +173,7 @@ export const generateTemplate = (name: string, category: ChemicalCategory): Part
     }
 
     return template;
-};
+}
 
 // --- AUTO-SUGGESTION AI LOGIC ---
 
@@ -199,7 +186,7 @@ export interface SuggestionItem {
     chem: Chemical;
     score: number;
     reason: string;
-    suggestedMapping: StepChemicalMapping;
+    suggestedMapping: any; 
 }
 
 export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical[], stepId: string): ChemicalSuggestionResults => {
@@ -248,104 +235,37 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
         // 3. Category Heuristic
         if ((normalizedStep.includes('interior') || normalizedStep.includes('vacuum') || normalizedStep.includes('mat')) && chem.category === 'Interior') {
             score += 5;
-        }
-        if ((normalizedStep.includes('exterior') || normalizedStep.includes('wash') || normalizedStep.includes('rinse')) && chem.category === 'Exterior') {
+            reasons.push("Category matches interior task");
+        } else if ((normalizedStep.includes('wheel') || normalizedStep.includes('paint') || normalizedStep.includes('wash')) && chem.category === 'Exterior') {
             score += 5;
+            reasons.push("Category matches exterior task");
         }
 
         return { score, reason: reasons.join(', ') };
     };
 
-    const results: SuggestionItem[] = allChemicals.map(chem => {
+    const results: SuggestionItem[] = [];
+
+    allChemicals.forEach(chem => {
         const { score, reason } = scoreChemical(chem);
-        if (score <= 0) return null;
+        if (score > 5) {
+            results.push({
+                chem,
+                score,
+                reason,
+                suggestedMapping: {
+                    id: crypto.randomUUID(),
+                    step_id: stepId,
+                    chemical_id: chem.id,
+                    dilution_ratio_id: chem.dilution_ratios?.[0]?.ratio || 'RTU',
+                    notes: reason
+                }
+            });
+        }
+    });
 
-        // Construct Mapping
-        const defaultDilution = chem.dilution_ratios?.[0];
-        const mapping: StepChemicalMapping = {
-            id: `suggest_${chem.id}_${Date.now()}`,
-            step_id: stepId,
-            chemical_id: chem.id,
-            chemical: chem, // Include joined for display
-            dilution_override: defaultDilution?.ratio || 'RTU',
-            tool_override: defaultDilution?.method || chem.application_guide?.method || 'Standard',
-            application_override: `Use for ${stepName}. ${chem.application_guide?.notes || ''}`.substring(0, 150),
-            warnings_override: chem.warnings?.damage_risk === 'High' ? chem.warnings?.risks?.[0] : '',
-            include_in_prep: true,
-            updated_at: new Date().toISOString()
-        };
-
-        return { chem, score, reason, suggestedMapping: mapping };
-    })
-        .filter((item): item is SuggestionItem => item !== null)
-        .sort((a, b) => b.score - a.score);
-
-    // Split groups
-    const onHand = results.filter(r => r.chem.is_on_hand !== false); // Default true
-    const alternatives = results.filter(r => r.chem.is_on_hand === false);
-
-    return { onHand, alternatives };
-};
-
-// --- VISION / OCR SIMULATION ---
-
-export interface ScannedLabelData {
-    name?: string;
-    brand?: string;
-    description?: string;
-    dilution_instructions?: string;
-    safety_warnings?: string[];
-    ratios?: DilutionRatio[];
-}
-
-/**
- * OCR Engine: This simulates the AI reading the label.
- * It will look for keywords in the hypothetical "scanned text"
- * and return structured data.
- */
-export const analyzeLabelFromImage = async (imageUrl: string, fileName?: string): Promise<ScannedLabelData> => {
-    // Artificial delay to simulate AI processing
-    await new Promise(r => setTimeout(r, 2000));
-
-    const nameToAnalyze = (fileName || imageUrl || "").toLowerCase();
-    
-    // Simulate DIFFERENT results based on the "image" / file name
-    // If the user uploads something that looks like "Armor All Multi Purpose", we "detect" it.
-    
-    if (nameToAnalyze.includes('armor') || nameToAnalyze.includes('all')) {
-        return {
-            name: "Multi Purpose Cleaner",
-            brand: "Armor All",
-            description: "Powerful cleaning for all surfaces. Removes tough dirt, grease and grime from interiors and exteriors.",
-            safety_warnings: ["Eye irritant", "Keep out of reach of children"],
-            ratios: [
-                { method: "Spray", ratio: "RTU", soil_level: "Standard", notes: "Use directly on surfaces" }
-            ]
-        };
-    }
-
-    if (nameToAnalyze.includes('turtle') || nameToAnalyze.includes('wax')) {
-        return {
-            name: "Hybrid Solutions Ceramic",
-            brand: "Turtle Wax",
-            description: "Advanced ceramic infusion for long-lasting protection and shine.",
-            safety_warnings: ["Store in cool place", "Do not ingest"],
-            ratios: [
-                { method: "Applicator", ratio: "RTU", soil_level: "Standard", notes: "Thin even coat" }
-            ]
-        };
-    }
-
-    // Default "Advanced Detection" fallback
     return {
-        name: "Identified Detailing Product",
-        brand: "Premium Detailing Co.",
-        description: "Surface safe professional cleaner identified from label scan. High concentration formula.",
-        dilution_instructions: "Mix 1 part product with 10 parts water for standard cleaning.",
-        safety_warnings: ["Eye Irritant", "Wear Gloves"],
-        ratios: [
-            { method: "Spray Bottle", ratio: "1:10", soil_level: "Medium", notes: "Extracted from label text" },
-            { method: "Direct", ratio: "RTU", soil_level: "Heavy", notes: "Aggressive cleaning" }
-        ]
+        onHand: results.sort((a, b) => b.score - a.score),
+        alternatives: [] // Could be extended to suggest products not in inventory
     };
 };

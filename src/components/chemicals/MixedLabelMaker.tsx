@@ -34,10 +34,13 @@ import {
     Search,
     ChevronDown,
     Layout,
-    ChevronLeft
+    ChevronLeft,
+    Tag
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
 import { getCombinedSelectableProducts } from '@/lib/chemicals';
+import { getCurrentUser } from '@/lib/auth';
+import { getAppSetting, saveAppSetting } from '@/services/supabase/appSettings';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
@@ -168,9 +171,40 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
     }, []);
 
     useEffect(() => {
-        // Save to local storage whenever labels change
-        localStorage.setItem('mixed_label_sheet_v1', JSON.stringify(labels));
+        // Handle cloud synchronization whenever labels change
+        const syncLabels = async () => {
+            // Always save to local storage for instant feedback/offline
+            localStorage.setItem('mixed_label_sheet_v1', JSON.stringify(labels));
+
+            // Save to cloud if user is logged in
+            const user = getCurrentUser();
+            if (user?.id) {
+                await saveAppSetting(`label_sheet_${user.id}`, labels);
+            }
+        };
+        syncLabels();
     }, [labels]);
+
+    useEffect(() => {
+        // Fetch from cloud when modal opens to ensure multi-device sync
+        if (open) {
+            const fetchCloudData = async () => {
+                const user = getCurrentUser();
+                if (!user?.id) return;
+
+                const cloudLabels = await getAppSetting<LabelData[]>(`label_sheet_${user.id}`);
+                if (cloudLabels && Array.isArray(cloudLabels) && cloudLabels.length === 10) {
+                    // Check if local is different from cloud
+                    const localHash = JSON.stringify(labels);
+                    const cloudHash = JSON.stringify(cloudLabels);
+                    if (localHash !== cloudHash) {
+                        setLabels(cloudLabels);
+                    }
+                }
+            };
+            fetchCloudData();
+        }
+    }, [open]);
 
     useEffect(() => {
         // Handle external requests to add a chemical (e.g. from ChemicalEditForm)
@@ -712,16 +746,31 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                             SLOT {idx + 1}
                                         </div>
 
-                                        {/* Zoom Button (Mobile Friendy) */}
-                                        <div 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setZoomSlot(idx);
-                                            }}
-                                            className="absolute top-2 right-2 w-7 h-7 bg-zinc-900/80 backdrop-blur-md border border-white/10 rounded-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-600 hover:scale-110 active:scale-95 z-10"
-                                            title="View Full Size"
-                                        >
-                                            <Tag className="w-3.5 h-3.5" />
+                                        {/* Quick Actions (Mobile Friendly) */}
+                                        <div className="absolute top-2 right-2 flex flex-col gap-2 z-10 opacity-0 group-hover:opacity-100 transition-all">
+                                            <div 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setZoomSlot(idx);
+                                                }}
+                                                className="w-7 h-7 bg-zinc-900/80 backdrop-blur-md border border-white/10 rounded-md flex items-center justify-center text-white hover:bg-purple-600 hover:scale-110 active:scale-95 shadow-lg"
+                                                title="View Full Size"
+                                            >
+                                                <Tag className="w-3.5 h-3.5" />
+                                            </div>
+                                            
+                                            {!label.isEmpty && (
+                                                <div 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if(confirm(`Clear slot ${idx + 1}?`)) handleResetSlot(idx);
+                                                    }}
+                                                    className="w-7 h-7 bg-red-900/80 backdrop-blur-md border border-red-500/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-600 hover:text-white hover:scale-110 active:scale-95 shadow-lg"
+                                                    title="Clear Slot"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
