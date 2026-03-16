@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chemical, DilutionRatio } from "@/types/chemicals";
-import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images, Printer, Camera } from 'lucide-react';
+import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTriangle, Images, Printer, Camera, Tag } from 'lucide-react';
 import { upsertChemical } from "@/lib/chemicals";
 import { generateTemplate, analyzeLabelFromImage } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
@@ -950,21 +950,42 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                 </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800 mt-4 shrink-0">
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-zinc-800 mt-4 shrink-0 pb-2">
                 <Button
                     variant="ghost"
+                    size="sm"
                     onClick={handleCancelInternal}
-                    className="text-zinc-400 hover:text-white"
+                    className="text-zinc-400 hover:text-white mr-auto sm:mr-0"
                 >
                     Cancel
                 </Button>
+                
                 <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-indigo-900/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-900/40 text-[10px] font-black uppercase tracking-widest px-4 h-9"
+                    onClick={() => {
+                        window.dispatchEvent(new CustomEvent('add-chemical-to-label-sheet', { 
+                            detail: editing 
+                        }));
+                        toast({ 
+                            title: "Staged for Labels", 
+                            description: `${editing.name} added to Label Sheet queue.`,
+                            className: "bg-indigo-900 border-indigo-800 text-white"
+                        });
+                    }}
+                >
+                    <Tag className="w-3.5 h-3.5 mr-2" /> Add to Label
+                </Button>
+
+                <Button
+                    size="sm"
                     onClick={handleSaveInternal}
                     disabled={saving}
-                    className="bg-green-600 hover:bg-green-700 min-w-[200px] font-black uppercase tracking-widest text-xs"
+                    className="bg-green-600 hover:bg-green-700 font-black uppercase tracking-widest text-[10px] px-6 h-9 sm:min-w-[180px]"
                 >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    {saving ? "Saving..." : "Save Product Card"}
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Save className="w-3.5 h-3.5 mr-2" />}
+                    {saving ? "Saving..." : "Save Card"}
                 </Button>
             </div>
 

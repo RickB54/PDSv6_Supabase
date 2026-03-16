@@ -1,4 +1,4 @@
-import { Chemical } from "@/types/chemicals";
+import { Chemical, DilutionRatio } from "@/types/chemicals";
 
 /**
  * Enhanced Chemical Template Generator
@@ -102,7 +102,7 @@ export function generateTemplate(name: string, category: 'Interior' | 'Exterior'
         proTips.push("Allow 24 hours of cure time for maximum performance.");
     } else if (traits.isCleaner) {
         description = `PROFESSIONAL GRADE EMULSIFIER: High-performance ${safeCategory.toLowerCase()} cleaning solution designed to safely lift and encapsulate surface contaminants. Optimized for efficient soil removal while maintaining surface integrity.`;
-        usedFor = traits.isInterior ? ["Upholstery", "Carpets", "Rug Fibers"] : ["Paintwork", "Wheels", "Exhaust Tips"];
+        usedFor = traits.isInterior ? ["Upholstery", "Carpets", "Rug Fibers", "Door Panels", "Vinyl & Plastic"] : ["Paintwork", "Wheels", "Exhaust Tips", "Modern Clear Coats"];
         agitation = "Soft detailing brush or microfiber scrub pad";
     } else if (traits.isPolish) {
         description = `MICRO-ABRASIVE REFINING COMPOUND: Precision-engineered formula designed to remove surface imperfections, oxidation, and light swirling. Restores optical clarity and gloss to ${traits.isExterior ? 'paintwork' : 'trim'} surfaces.`;
@@ -266,6 +266,67 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
 
     return {
         onHand: results.sort((a, b) => b.score - a.score),
-        alternatives: [] // Could be extended to suggest products not in inventory
+        alternatives: [] 
+    };
+};
+
+// --- VISION / OCR SIMULATION ---
+
+export interface ScannedLabelData {
+    name?: string;
+    brand?: string;
+    description?: string;
+    dilution_instructions?: string;
+    safety_warnings?: string[];
+    ratios?: DilutionRatio[];
+}
+
+/**
+ * OCR Engine: This simulates the AI reading the label.
+ * It will look for keywords in the hypothetical "scanned text"
+ * and return structured data.
+ */
+export const analyzeLabelFromImage = async (imageUrl: string, fileName?: string): Promise<ScannedLabelData> => {
+    // Artificial delay to simulate AI processing
+    await new Promise(r => setTimeout(r, 2000));
+
+    const nameToAnalyze = (fileName || imageUrl || "").toLowerCase();
+    
+    // Simulate DIFFERENT results based on the "image" / file name
+    if (nameToAnalyze.includes('armor') || nameToAnalyze.includes('all')) {
+        return {
+            name: "Multi Purpose Cleaner",
+            brand: "Armor All",
+            description: "Powerful cleaning for all surfaces. Removes tough dirt, grease and grime from interiors and exteriors.",
+            safety_warnings: ["Eye irritant", "Keep out of reach of children"],
+            ratios: [
+                { method: "Spray", ratio: "RTU", soil_level: "Standard", notes: "Use directly on surfaces" }
+            ]
+        };
+    }
+
+    if (nameToAnalyze.includes('turtle') || nameToAnalyze.includes('wax')) {
+        return {
+            name: "Hybrid Solutions Ceramic",
+            brand: "Turtle Wax",
+            description: "Advanced ceramic infusion for long-lasting protection and shine.",
+            safety_warnings: ["Store in cool place", "Do not ingest"],
+            ratios: [
+                { method: "Applicator", ratio: "RTU", soil_level: "Standard", notes: "Thin even coat" }
+            ]
+        };
+    }
+
+    // Default "Advanced Detection" fallback
+    return {
+        name: "Identified Detailing Product",
+        brand: "Premium Detailing Co.",
+        description: "Surface safe professional cleaner identified from label scan. High concentration formula.",
+        dilution_instructions: "Mix 1 part product with 10 parts water for standard cleaning.",
+        safety_warnings: ["Eye Irritant", "Wear Gloves"],
+        ratios: [
+            { method: "Spray Bottle", ratio: "1:10", soil_level: "Medium", notes: "Extracted from label text" },
+            { method: "Direct", ratio: "RTU", soil_level: "Heavy", notes: "Aggressive cleaning" }
+        ]
     };
 };
