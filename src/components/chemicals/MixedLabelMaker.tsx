@@ -33,7 +33,8 @@ import {
     RotateCcw,
     Search,
     ChevronDown,
-    Layout
+    Layout,
+    ChevronLeft
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
 import { getCombinedSelectableProducts } from '@/lib/chemicals';
@@ -695,6 +696,18 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                         <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-zinc-900 text-white text-[8px] font-black rounded border border-white/10 opacity-50 group-hover:opacity-100 transition-opacity">
                                             SLOT {idx + 1}
                                         </div>
+
+                                        {/* Zoom Button (Mobile Friendy) */}
+                                        <div 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setZoomSlot(idx);
+                                            }}
+                                            className="absolute top-2 right-2 w-7 h-7 bg-zinc-900/80 backdrop-blur-md border border-white/10 rounded-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-600 hover:scale-110 active:scale-95 z-10"
+                                            title="View Full Size"
+                                        >
+                                            <Tag className="w-3.5 h-3.5" />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -936,52 +949,75 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                 </div>
             </DialogContent>
 
-            {/* Zoom Modal */}
             <Dialog open={zoomSlot !== null} onOpenChange={(open) => !open && setZoomSlot(null)}>
-                <DialogContent className="max-w-fit bg-zinc-950 border-zinc-800 p-8 flex flex-col items-center">
+                <DialogContent className="max-w-fit bg-zinc-950 border-zinc-800 p-6 sm:p-8 flex flex-col items-center">
                     <DialogHeader className="w-full mb-6">
                         <div className="flex items-center justify-between">
-                            <DialogTitle className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                <Search className="w-5 h-5 text-purple-400" />
-                                High-Res Label Preview
-                            </DialogTitle>
+                            <div className="flex items-center gap-3">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => setZoomSlot(null)}
+                                    className="h-9 w-9 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </Button>
+                                <div>
+                                    <DialogTitle className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                        <Search className="w-5 h-5 text-purple-400" />
+                                        High-Res Label Preview
+                                    </DialogTitle>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none mt-1">
+                                        Slot {zoomSlot !== null ? zoomSlot + 1 : ''} • Rendered at 200% (4" x 8")
+                                    </p>
+                                </div>
+                            </div>
                             <Button variant="ghost" size="icon" onClick={() => setZoomSlot(null)} className="text-zinc-500 hover:text-white">
                                 <X className="w-5 h-5" />
                             </Button>
                         </div>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Slot {zoomSlot !== null ? zoomSlot + 1 : ''} • Rendered at 200% (4" x 8")</p>
                     </DialogHeader>
                     
                     {zoomSlot !== null && (
-                        <div 
-                            className="bg-white shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[0.5px] border-zinc-300 overflow-hidden"
-                            style={{ 
-                                width: `${TEMPLATE.labelWidth * 2 * 100}px`, 
-                                height: `${TEMPLATE.labelHeight * 2 * 100}px`,
-                                transform: 'scale(1)', // Fixed scale in modal
-                            }}
-                        >
-                            <div className="w-full h-full scale-[2] origin-top-left">
-                                <LabelPreview data={labels[zoomSlot]} />
+                        <div className="relative group p-4 bg-zinc-900/40 rounded-2xl border border-white/5">
+                            {/* Guideline Decorations */}
+                            <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-zinc-700" />
+                            <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-zinc-700" />
+                            <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-zinc-700" />
+                            <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-zinc-700" />
+
+                            <div 
+                                className="bg-white shadow-[0_0_80px_rgba(0,0,0,0.8)] border-[1px] border-zinc-200 overflow-hidden relative"
+                                style={{ 
+                                    width: `${TEMPLATE.labelWidth * 2 * 100}px`, 
+                                    height: `${TEMPLATE.labelHeight * 2 * 100}px`,
+                                }}
+                            >
+                                <div className="w-full h-full scale-[2] origin-top-left">
+                                    <LabelPreview data={labels[zoomSlot]} />
+                                </div>
+                                
+                                {/* Overlay simulated cut line */}
+                                <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-zinc-100/50" />
                             </div>
                         </div>
                     )}
                     
-                    <div className="mt-8 grid grid-cols-2 gap-4 w-full">
-                        <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800">
-                            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                    <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 w-full">
+                        <div className="flex-1 flex items-center gap-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800 w-full">
+                            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
                                 <Info className="w-5 h-5 text-indigo-400" />
                             </div>
                             <div>
-                                <div className="text-[10px] font-black text-white uppercase tracking-widest">Life Size View</div>
-                                <div className="text-[9px] text-zinc-500">Includes actual label boundary lines</div>
+                                <div className="text-[10px] font-black text-white uppercase tracking-widest">Single Sticker View</div>
+                                <div className="text-[9px] text-zinc-500 leading-tight">This represents exactly how one {TEMPLATE.labelWidth}" x {TEMPLATE.labelHeight}" label will look when printed.</div>
                             </div>
                         </div>
                         <Button 
-                            className="h-full bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase tracking-widest text-xs"
+                            className="w-full sm:w-auto px-8 h-14 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-xs shrink-0"
                             onClick={() => setZoomSlot(null)}
                         >
-                            Close Preview
+                            <ChevronLeft className="w-4 h-4 mr-2" /> Return to Sheet
                         </Button>
                     </div>
                 </DialogContent>
