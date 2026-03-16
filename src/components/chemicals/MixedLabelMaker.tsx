@@ -112,6 +112,7 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
     });
 
     const [editingSlot, setEditingSlot] = useState<number | null>(null);
+    const [zoomSlot, setZoomSlot] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -670,7 +671,12 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                     <div 
                                         key={idx}
                                         onClick={() => setEditingSlot(idx)}
+                                        onDoubleClick={(e) => {
+                                            e.stopPropagation();
+                                            setZoomSlot(idx);
+                                        }}
                                         className={`group cursor-pointer rounded-lg relative overflow-hidden transition-all ${editingSlot === idx ? 'ring-4 ring-purple-500 ring-offset-4 ring-offset-zinc-950 z-10 scale-[1.02]' : 'hover:scale-[1.01]'}`}
+                                        title="Double click to zoom"
                                     >
                                         <div className="absolute inset-0 bg-purple-600/0 group-hover:bg-purple-600/5 z-2 transition-colors" />
                                         
@@ -929,6 +935,57 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                     </div>
                 </div>
             </DialogContent>
+
+            {/* Zoom Modal */}
+            <Dialog open={zoomSlot !== null} onOpenChange={(open) => !open && setZoomSlot(null)}>
+                <DialogContent className="max-w-fit bg-zinc-950 border-zinc-800 p-8 flex flex-col items-center">
+                    <DialogHeader className="w-full mb-6">
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <Search className="w-5 h-5 text-purple-400" />
+                                High-Res Label Preview
+                            </DialogTitle>
+                            <Button variant="ghost" size="icon" onClick={() => setZoomSlot(null)} className="text-zinc-500 hover:text-white">
+                                <X className="w-5 h-5" />
+                            </Button>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Slot {zoomSlot !== null ? zoomSlot + 1 : ''} • Rendered at 200% (4" x 8")</p>
+                    </DialogHeader>
+                    
+                    {zoomSlot !== null && (
+                        <div 
+                            className="bg-white shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[0.5px] border-zinc-300 overflow-hidden"
+                            style={{ 
+                                width: `${TEMPLATE.labelWidth * 2 * 100}px`, 
+                                height: `${TEMPLATE.labelHeight * 2 * 100}px`,
+                                transform: 'scale(1)', // Fixed scale in modal
+                            }}
+                        >
+                            <div className="w-full h-full scale-[2] origin-top-left">
+                                <LabelPreview data={labels[zoomSlot]} />
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="mt-8 grid grid-cols-2 gap-4 w-full">
+                        <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <Info className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-black text-white uppercase tracking-widest">Life Size View</div>
+                                <div className="text-[9px] text-zinc-500">Includes actual label boundary lines</div>
+                            </div>
+                        </div>
+                        <Button 
+                            className="h-full bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase tracking-widest text-xs"
+                            onClick={() => setZoomSlot(null)}
+                        >
+                            Close Preview
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Dialog>
     );
 }
