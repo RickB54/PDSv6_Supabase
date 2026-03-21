@@ -103,6 +103,8 @@ const InventoryControl = () => {
   const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
+  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">("landscape");
+  const [savingChart, setSavingChart] = useState(false);
 
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
@@ -804,14 +806,14 @@ const InventoryControl = () => {
     const normalized = ratioStr?.toLowerCase().trim();
     if (!normalized) return null;
     let parts = 0;
-    if (normalized === 'rtu' || normalized.includes('direct') || normalized === '1:0' || normalized === '0:1') {
-      parts = 0;
+    if (normalized === 'rtu' || normalized.includes('direct') || normalized === '1:0' || normalized === '0:1' || normalized === '1/0' || normalized === '0/1') {
+      return { chem: bottleOz.toString(), water: "0.0" };
     } else {
-      const match = normalized.match(/1[:\/](\d+)/);
+      const match = normalized.match(/(\d+)[:\/]1/);
       if (match) {
         parts = parseInt(match[1]);
       } else {
-        const matchReverse = normalized.match(/(\d+)[:\/]1/);
+        const matchReverse = normalized.match(/1[:\/](\d+)/);
         if (matchReverse) parts = parseInt(matchReverse[1]);
         else return null;
       }
@@ -825,9 +827,64 @@ const InventoryControl = () => {
     };
   };
 
+  const handleChartCellEdit = async (chemicalId: string, soilLevel: string, field: 'ratio' | 'chem' | 'water', newValue: string, ozSize?: number) => {
+    const chem = chemicals.find(c => c.id === chemicalId);
+    if (!chem) return;
+
+    let updatedRatios = [...(chem.dilutionRatios || [])];
+    const index = updatedRatios.findIndex(r => r.soil_level.toLowerCase().includes(soilLevel.toLowerCase()));
+    
+    let targetRatio = index >= 0 ? updatedRatios[index] : { method: soilLevel, ratio: 'RTU', soil_level: soilLevel };
+    
+    if (field === 'ratio') {
+      targetRatio.ratio = newValue;
+    } else if (field === 'chem' && ozSize) {
+      // Back-calculate ratio from chemical amount: (ozSize - chem) / chem : 1
+      const chemAmt = parseFloat(newValue);
+      if (chemAmt > 0 && chemAmt <= ozSize) {
+         if (chemAmt === ozSize) {
+           targetRatio.ratio = 'RTU';
+         } else {
+           const parts = (ozSize - chemAmt) / chemAmt;
+           targetRatio.ratio = `${parts.toFixed(1).replace(/\.0$/, '')}:1`;
+         }
+      }
+    } else if (field === 'water' && ozSize) {
+      // Back-calculate ratio from water amount: water / (ozSize - water) : 1
+      const waterAmt = parseFloat(newValue);
+      if (waterAmt >= 0 && waterAmt < ozSize) {
+        if (waterAmt === 0) {
+          targetRatio.ratio = 'RTU';
+        } else {
+          const chemAmt = ozSize - waterAmt;
+          const parts = waterAmt / chemAmt;
+          targetRatio.ratio = `${parts.toFixed(1).replace(/\.0$/, '')}:1`;
+        }
+      }
+    }
+
+    (targetRatio as any).custom = true; // Mark as custom for color coding
+
+    if (index >= 0) {
+      updatedRatios[index] = targetRatio;
+    } else {
+      updatedRatios.push(targetRatio);
+    }
+
+    // Persist to state immediately
+    setChemicals(prev => prev.map(c => c.id === chemicalId ? { ...c, dilutionRatios: updatedRatios } : c));
+
+    // Persist to Supabase (debounced or discrete save would be better, but we'll try direct for now)
+    try {
+      await inventoryData.saveChemical({ ...chem, dilutionRatios: updatedRatios }, false);
+    } catch (err) {
+      console.error("Failed to save chart update", err);
+    }
+  };
+
     const downloadDilutionPDF = () => {
     try {
-      const pdf = new jsPDF('landscape');
+      const pdf = new jsPDF(chartOrientation);
       const pageWidth = pdf.internal.pageSize.getWidth();
     
     // Header
@@ -893,9 +950,9 @@ const InventoryControl = () => {
       head: [
         [
           { content: 'PRODUCT (BRAND / NAME)', rowSpan: 2, styles: { halign: 'left' } },
-          { content: 'STANDARD DILUTION', colSpan: 4, styles: { halign: 'center', fillColor: [248, 250, 252] } },
-          { content: 'MORE CONCENTRATED (HEAVY)', colSpan: 4, styles: { halign: 'center', fillColor: [255, 251, 235] } },
-          { content: 'LESS CONCENTRATED (LIGHT)', colSpan: 4, styles: { halign: 'center', fillColor: [240, 249, 255] } }
+          { content: 'STANDARD', colSpan: 4, styles: { halign: 'center', fillColor: [248, 250, 252] } },
+          { content: 'HEAVY DUTY', colSpan: 4, styles: { halign: 'center', fillColor: [255, 251, 235] } },
+          { content: 'MAINTENANCE', colSpan: 4, styles: { halign: 'center', fillColor: [240, 249, 255] } }
         ],
         ['RATIO', '16OZ', '24OZ', '32OZ', 'RATIO', '16OZ', '24OZ', '32OZ', 'RATIO', '16OZ', '24OZ', '32OZ']
       ],
@@ -926,7 +983,7 @@ const InventoryControl = () => {
         <title>Chemical Dilution Quick Reference Chart</title>
         <style>
           body { font-family: sans-serif; background: #fff; padding: 20px; box-sizing: border-box; }
-          @page { size: landscape; margin: 10mm; }
+          @page { size: ${chartOrientation}; margin: 10mm; }
           .header { text-align: center; margin-bottom: 25px; }
           .header h1 { font-weight: 900; font-size: 32px; margin: 0; text-transform: uppercase; color: #111; border-bottom: 5px solid #facc15; display: inline-block; padding-bottom: 5px; }
           .header p { color: #666; font-size: 11px; margin-top: 8px; }
@@ -954,9 +1011,9 @@ const InventoryControl = () => {
           <thead>
             <tr>
               <th rowspan="2" class="product-cell">PRODUCT (BRAND / NAME)</th>
-              <th colspan="4" style="background-color: #f8fafc; border-bottom: 2px solid #94a3b8;" class="thick-right">STANDARD DILUTION</th>
-              <th colspan="4" style="background-color: #fffbeb; border-bottom: 2px solid #f59e0b;" class="thick-right">MORE CONCENTRATED (HEAVY)</th>
-              <th colspan="4" style="background-color: #f0f9ff; border-bottom: 2px solid #0ea5e9;">LESS CONCENTRATED (LIGHT)</th>
+              <th colspan="4" style="background-color: #f8fafc; border-bottom: 2px solid #94a3b8;" class="thick-right">STANDARD</th>
+              <th colspan="4" style="background-color: #fffbeb; border-bottom: 2px solid #f59e0b;" class="thick-right">HEAVY DUTY</th>
+              <th colspan="4" style="background-color: #f0f9ff; border-bottom: 2px solid #0ea5e9;">MAINTENANCE</th>
             </tr>
             <tr>
               <th style="background-color: #f8fafc;">RATIO</th>
@@ -2146,27 +2203,47 @@ const InventoryControl = () => {
           }
         }
       }}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] flex flex-col p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl">
-          <div className="flex items-center justify-between p-4 bg-zinc-900 border-b border-zinc-800">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-amber-500" />
-              <DialogTitle className="text-lg font-bold text-white">Dilution Reference Chart</DialogTitle>
+        <DialogContent className={`${chartOrientation === 'landscape' ? 'max-w-[98vw] p-1' : 'max-w-[800px]'} w-full max-h-[98vh] flex flex-col p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl`}>
+          <div className="flex items-center justify-between p-3 bg-zinc-900 border-b border-zinc-800">
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-indigo-400" />
+                <DialogTitle className="text-lg font-bold text-white tracking-tight">Interactive Dilution Chart</DialogTitle>
+              </div>
+              <div className="flex items-center gap-2 ml-0 md:ml-6 bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setChartOrientation('landscape')}
+                  className={`h-7 px-3 text-[10px] font-black uppercase transition-all ${chartOrientation === 'landscape' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+                >
+                  <TrendingUp className="h-3 w-3 mr-1 rotate-90" /> Landscape
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setChartOrientation('portrait')}
+                  className={`h-7 px-3 text-[10px] font-black uppercase transition-all ${chartOrientation === 'portrait' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+                >
+                  <TrendingUp className="h-3 w-3 mr-1" /> Portrait
+                </Button>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={printDilutionChart} className="bg-zinc-800 border-zinc-700 text-zinc-200"><Printer className="h-4 w-4 mr-2" /> Print</Button>
-              <Button variant="outline" size="sm" onClick={downloadDilutionPDF} className="bg-zinc-800 border-zinc-700 text-zinc-200"><Download className="h-4 w-4 mr-2" /> PDF</Button>
+              <Button variant="outline" size="sm" onClick={printDilutionChart} className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 group"><Printer className="h-4 w-4 mr-2 text-indigo-400 group-hover:text-white" /> Print</Button>
+              <Button variant="outline" size="sm" onClick={downloadDilutionPDF} className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 group"><Download className="h-4 w-4 mr-2 text-indigo-400 group-hover:text-white" /> PDF</Button>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-2 sm:p-6 bg-zinc-50/50">
-            <div className="max-w-7xl mx-auto bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-2 sm:p-4">
+          <div className="flex-1 overflow-auto p-1 sm:p-2 bg-zinc-50/50">
+            <div className={`${chartOrientation === 'landscape' ? 'max-w-full' : 'max-w-4xl'} mx-auto bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-1`}>
               <div className="overflow-x-auto border border-zinc-300 rounded-lg">
-                <table className="w-full border-collapse border border-zinc-300 text-[11px] min-w-[900px]">
+                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[11px] min-w-[700px]'}`}>
                   <thead>
                     <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
-                      <th rowSpan={2} className="p-2 border border-zinc-300 text-left w-[18%] text-[11px]">Product (Brand / Name)</th>
-                      <th colSpan={4} className="p-2 border border-zinc-300 text-center bg-zinc-50 text-[11px]">Standard Dilution</th>
-                      <th colSpan={4} className="p-2 border border-zinc-300 text-center bg-zinc-50 text-[11px]">More Conc (Heavy)</th>
-                      <th colSpan={4} className="p-2 border border-zinc-300 text-center bg-zinc-50 text-[11px]">Less Conc (Light)</th>
+                      <th rowSpan={2} className="p-1 border border-zinc-300 text-left w-[12%]">Product</th>
+                      <th colSpan={4} className="p-1 border border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Standard</th>
+                      <th colSpan={4} className="p-1 border border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Heavy Duty</th>
+                      <th colSpan={4} className="p-1 border border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Maintenance</th>
                     </tr>
                     <tr className="bg-zinc-50 text-[10px] text-center font-bold">
                       <th className="p-1 border border-zinc-300">Ratio</th>
@@ -2186,17 +2263,53 @@ const InventoryControl = () => {
                           return pA - pB;
                        });
                        const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-                       const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
-                       const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
+                       const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : null);
+                       const light = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : null);
 
-                       const renderCellModal = (r: any, oz: number, extraClass: string = '') => {
-                          const amts = r ? calculateAmounts(r.ratio, oz) : null;
+                       const renderEditableCell = (r: any, soilLevel: string, field: 'ratio' | 'chem' | 'water', ozSize?: number, extraClass: string = '') => {
+                          const amts = r ? calculateAmounts(r.ratio, ozSize || 0) : null;
+                          const isCustom = r?.custom === true;
+                          const displayVal = field === 'ratio' ? transformRatio(r?.ratio || '-') : (field === 'chem' ? amts?.chem : amts?.water);
+                          
+                          return (
+                            <td className={`p-0 border border-zinc-300 text-center align-middle group ${extraClass}`}>
+                               {r ? (
+                                 <input 
+                                   defaultValue={displayVal}
+                                   onBlur={(e) => handleChartCellEdit(c.id, soilLevel, field, e.target.value, ozSize)}
+                                   className={`w-full h-full bg-transparent border-none text-center font-bold px-1 outline-none focus:bg-indigo-50 focus:ring-1 focus:ring-indigo-300 transition-all ${isCustom ? 'text-indigo-600' : 'text-zinc-900'} ${field === 'ratio' ? 'text-[11px]' : 'text-[10px]'}`}
+                                 />
+                               ) : '-'}
+                            </td>
+                          );
+                       };
+
+                       const renderOzCompoundCell = (r: any, ozSize: number, soilLevel: string, extraClass: string = '') => {
+                          const amts = r ? calculateAmounts(r.ratio, ozSize) : null;
+                          const isCustom = r?.custom === true;
+
                           return (
                             <td className={`p-0 border border-zinc-300 text-center align-bottom ${extraClass}`}>
-                               {amts ? (
+                               {r ? (
                                  <>
-                                   <div className="h-[14px] flex items-center justify-center font-bold text-zinc-900 border-b border-zinc-100 bg-white text-[11px]">{amts.chem}oz</div>
-                                   <div className="h-[14px] flex items-center justify-center font-bold text-zinc-900 bg-white text-[11px]">{amts.water}oz</div>
+                                   <div className="h-[14px] flex items-center justify-center border-b border-zinc-100 bg-white group relative">
+                                       <input 
+                                          key={`${c.id}-${soilLevel}-${ozSize}-chem`}
+                                          defaultValue={amts?.chem || ''}
+                                          onBlur={(e) => handleChartCellEdit(c.id, soilLevel, 'chem', e.target.value, ozSize)}
+                                          className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[10px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : 'text-zinc-900'}`}
+                                       />
+                                       <span className="absolute right-0.5 text-[7px] text-zinc-300 font-normal pointer-events-none">oz</span>
+                                   </div>
+                                   <div className="h-[14px] flex items-center justify-center bg-white group relative">
+                                       <input 
+                                          key={`${c.id}-${soilLevel}-${ozSize}-water`}
+                                          defaultValue={amts?.water || ''}
+                                          onBlur={(e) => handleChartCellEdit(c.id, soilLevel, 'water', e.target.value, ozSize)}
+                                          className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[10px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : 'text-zinc-900'}`}
+                                       />
+                                       <span className="absolute right-0.5 text-[7px] text-zinc-300 font-normal pointer-events-none">oz</span>
+                                   </div>
                                  </>
                                ) : '-'}
                             </td>
@@ -2204,39 +2317,62 @@ const InventoryControl = () => {
                        };
 
                        return (
-                         <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-zinc-50'}>
-                           <td className="p-2 border border-zinc-300 font-medium align-bottom text-[11px] sm:text-[12px]">
-                              <div className="font-bold text-zinc-900 leading-tight mb-2 uppercase">{c.name}</div>
-                              <div className="text-[9px] text-zinc-500 uppercase mb-4">{c.brand || ''}</div>
+                         <tr key={i} className={i % 2 === 0 ? 'bg-white font-mono' : 'bg-zinc-50 font-mono'}>
+                           <td className="p-2 border border-zinc-300 font-medium align-bottom text-[11px] sm:text-[12px] bg-white">
+                              <div className="font-bold text-zinc-900 leading-tight mb-2 uppercase tracking-tighter">{c.name}</div>
+                              <div className="text-[9px] text-zinc-400 uppercase font-black mb-4">{c.brand || ''}</div>
                               <div className="flex flex-col gap-0 text-[8px] font-black text-zinc-400 border-t border-zinc-100 pt-1">
-                                 <div className="h-[14px] flex items-center">CHEMICAL AMOUNT:</div>
-                                 <div className="h-[14px] flex items-center">WATER AMOUNT:</div>
+                                 <div className="h-[14px] flex items-center">CHEMICAL:</div>
+                                 <div className="h-[14px] flex items-center">WATER:</div>
                               </div>
                            </td>
-                           <td className="p-1 border border-zinc-300 text-center align-middle font-bold text-zinc-600 text-[11px]">{standard ? transformRatio(standard.ratio) : '-'}</td>
-                           {renderCellModal(standard, 16, 'bg-green-50/5')}
-                           {renderCellModal(standard, 24, 'bg-blue-50/5')}
-                           {renderCellModal(standard, 32, 'bg-purple-50/5 border-r-2 border-r-zinc-400')}
+                           <td className="p-0 border border-zinc-300 group">
+                              <input 
+                                 defaultValue={standard ? transformRatio(standard.ratio) : '-'}
+                                 onBlur={(e) => handleChartCellEdit(c.id, 'standard', 'ratio', e.target.value)}
+                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] py-4 focus:bg-indigo-50 ${standard?.custom ? 'text-indigo-600' : 'text-zinc-600'}`}
+                              />
+                           </td>
+                           {renderOzCompoundCell(standard, 16, 'standard', 'bg-green-50/10')}
+                           {renderOzCompoundCell(standard, 24, 'standard', 'bg-blue-50/10')}
+                           {renderOzCompoundCell(standard, 32, 'bg-purple-50/10 border-r-2 border-r-zinc-400')}
 
-                           <td className="p-1 border border-zinc-300 text-center align-middle font-bold text-zinc-600 text-[11px]">{more ? transformRatio(more.ratio) : '-'}</td>
-                           {renderCellModal(more, 16, 'bg-green-50/5')}
-                           {renderCellModal(more, 24, 'bg-blue-50/5')}
-                           {renderCellModal(more, 32, 'bg-purple-50/5 border-r-2 border-r-zinc-300')}
+                           <td className="p-0 border border-zinc-300 group">
+                              <input 
+                                 defaultValue={heavy ? transformRatio(heavy.ratio) : '-'}
+                                 onBlur={(e) => handleChartCellEdit(c.id, 'heavy', 'ratio', e.target.value)}
+                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] py-4 focus:bg-indigo-50 ${heavy?.custom ? 'text-indigo-600' : 'text-zinc-600'}`}
+                              />
+                           </td>
+                           {renderOzCompoundCell(heavy, 16, 'heavy', 'bg-green-50/10')}
+                           {renderOzCompoundCell(heavy, 24, 'heavy', 'bg-blue-50/10')}
+                           {renderOzCompoundCell(heavy, 32, 'bg-purple-50/10 border-r-2 border-r-zinc-300')}
 
-                           <td className="p-1 border border-zinc-300 text-center align-middle font-bold text-zinc-600 text-[11px]">{less ? transformRatio(less.ratio) : '-'}</td>
-                           {renderCellModal(less, 16, 'bg-green-50/5')}
-                           {renderCellModal(less, 24, 'bg-blue-50/5')}
-                           {renderCellModal(less, 32, 'bg-purple-50/5')}
+                           <td className="p-0 border border-zinc-300 group">
+                              <input 
+                                 defaultValue={light ? transformRatio(light.ratio) : '-'}
+                                 onBlur={(e) => handleChartCellEdit(c.id, 'maintenance', 'ratio', e.target.value)}
+                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] py-4 focus:bg-indigo-50 ${light?.custom ? 'text-indigo-600' : 'text-zinc-600'}`}
+                              />
+                           </td>
+                           {renderOzCompoundCell(light, 16, 'maintenance', 'bg-green-50/10')}
+                           {renderOzCompoundCell(light, 24, 'maintenance', 'bg-blue-50/10')}
+                           {renderOzCompoundCell(light, 32, 'bg-purple-50/10')}
                          </tr>
                        );
                     })}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-4 flex justify-center gap-6 text-[8px] font-bold uppercase text-zinc-400 tracking-widest">
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /> 16oz</div>
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500" /> 24oz</div>
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500" /> 32oz</div>
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-100 pt-4">
+                <div className="flex gap-6 text-[8px] font-bold uppercase text-zinc-400 tracking-widest">
+                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /> 16oz</div>
+                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500" /> 24oz</div>
+                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500" /> 32oz</div>
+                </div>
+                <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400 bg-indigo-500/5 px-3 py-1.5 rounded-full border border-indigo-500/10 uppercase tracking-tighter">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Editable Grid: Changes in Indigo are custom overrides
+                </div>
               </div>
             </div>
           </div>

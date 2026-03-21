@@ -52,7 +52,7 @@ import {
     Sparkle
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
-import { getCombinedSelectableProducts } from '@/lib/chemicals';
+import { getCombinedSelectableProducts, updateChemicalPartial } from '@/lib/chemicals';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -119,10 +119,11 @@ interface SavedLabelTemplate {
         imageUrl: string;
         freeformText: string;
         scenarioRatios: {
-            interior: string;
-            exterior: string;
+            standard: string;
             heavy: string;
             light: string;
+            interior: string;
+            exterior: string;
         };
     };
     style: {
@@ -198,10 +199,11 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         imageUrl: '',
         freeformText: '',
         scenarioRatios: {
-            interior: '',
-            exterior: '',
+            standard: '',
             heavy: '',
-            light: ''
+            light: '',
+            interior: '',
+            exterior: ''
         }
     });
 
@@ -251,6 +253,23 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
             setSheetLabels(Array(10).fill({ ...labelContent }));
         }
     }, [open, viewMode, labelContent.name]);
+
+    const saveRatiosToLibrary = async () => {
+        if (!selectedChemical) return;
+        try {
+            const newRatios = [
+                { method: 'Standard', ratio: labelContent.scenarioRatios.standard, soil_level: 'standard' },
+                { method: 'Heavy Duty', ratio: labelContent.scenarioRatios.heavy, soil_level: 'heavy duty / concentrated' },
+                { method: 'Maintenance', ratio: labelContent.scenarioRatios.light, soil_level: 'maintenance / light' }
+            ];
+            const { error } = await updateChemicalPartial(selectedChemical.id, { dilution_ratios: newRatios });
+            if (error) throw error;
+            toast({ title: "Reference Chart Updated", description: "Ratios have been synced to the main reference chart." });
+        } catch (err) {
+            console.error(err);
+            toast({ title: "Sync Failed", description: "Could not update the reference chart.", variant: "destructive" });
+        }
+    };
 
     const skipDefaultApplicator = useRef(false);
     const previewRef = useRef<HTMLDivElement>(null);
@@ -314,20 +333,32 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                 return;
             }
 
+            const ratios = selectedChemical.dilution_ratios || [];
+            const sorted = [...ratios].sort((a,b) => {
+               const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+               const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+               return pA - pB;
+            });
+            
+            const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
+            const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
+            const maintenance = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
+
             setLabelContent({
                 name: selectedChemical.name,
                 brand: selectedChemical.brand || '',
-                description: selectedChemical.description,
+                description: selectedChemical.description || '',
                 instructions: selectedChemical.application_guide?.notes || 'Apply following standard procedures.',
-                dilutionRatio: selectedChemical.dilution_ratios?.[0]?.ratio || '',
+                dilutionRatio: standard?.ratio || '',
                 safetyWarning: selectedChemical.warnings?.risks?.[0] || 'No specific hazard warnings.',
                 imageUrl: selectedChemical.primary_image_url || '',
                 freeformText: '',
                 scenarioRatios: {
-                    interior: findBestRatio('Interior', selectedChemical, ''),
-                    exterior: findBestRatio('Exterior', selectedChemical, ''),
-                    heavy: findBestRatio('Very Dirty', selectedChemical, ''),
-                    light: findBestRatio('Slightly Dirty', selectedChemical, '')
+                    standard: standard?.ratio || "RTU",
+                    heavy: heavy?.ratio || (standard?.ratio || "RTU"),
+                    light: maintenance?.ratio || (standard?.ratio || "RTU"),
+                    interior: ratios.find(r => r.soil_level.toLowerCase().includes('interior'))?.ratio || (standard?.ratio || "RTU"),
+                    exterior: ratios.find(r => r.soil_level.toLowerCase().includes('exterior'))?.ratio || (standard?.ratio || "RTU")
                 }
             });
             setLabelStyle(prev => ({
@@ -380,10 +411,11 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
             description: condensedDesc,
             instructions: condensedInst,
             scenarioRatios: {
-                interior: findBestRatio('Interior', selectedChemical, ''),
-                exterior: findBestRatio('Exterior', selectedChemical, ''),
+                standard: findBestRatio('Standard', selectedChemical, ''),
                 heavy: findBestRatio('Very Dirty', selectedChemical, ''),
-                light: findBestRatio('Slightly Dirty', selectedChemical, '')
+                light: findBestRatio('Maintenance', selectedChemical, '') || findBestRatio('Slightly Dirty', selectedChemical, ''),
+                interior: findBestRatio('Interior', selectedChemical, ''),
+                exterior: findBestRatio('Exterior', selectedChemical, '')
             }
         }));
 
@@ -398,7 +430,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         setLabelContent({
             name: selectedChemical.name,
             brand: selectedChemical.brand || '',
-            description: selectedChemical.description,
+            description: selectedChemical.description || '',
             instructions: selectedChemical.application_guide?.notes || 'Apply following standard procedures.',
             dilutionRatio: selectedChemical.dilution_ratios?.[0]?.ratio || '',
             safetyWarning: selectedChemical.warnings?.risks?.[0] || 'No specific hazard warnings.',
@@ -408,7 +440,8 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                 interior: findBestRatio('Interior', selectedChemical, ''),
                 exterior: findBestRatio('Exterior', selectedChemical, ''),
                 heavy: findBestRatio('Very Dirty', selectedChemical, ''),
-                light: findBestRatio('Slightly Dirty', selectedChemical, '')
+                light: findBestRatio('Slightly Dirty', selectedChemical, ''),
+                standard: (selectedChemical.dilution_ratios || []).find(r => r.soil_level.toLowerCase().includes('standard'))?.ratio || ''
             }
         });
         toast({ title: "Content Reset", description: "Labels restored to original chemical specs." });
@@ -468,11 +501,12 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         setLabelContent({
             ...labelContent,
             ...template.content,
-            scenarioRatios: template.content.scenarioRatios || {
-                interior: '',
-                exterior: '',
-                heavy: '',
-                light: ''
+            scenarioRatios: {
+                standard: template.content.scenarioRatios?.standard || '',
+                heavy: template.content.scenarioRatios?.heavy || '',
+                light: template.content.scenarioRatios?.light || '',
+                interior: template.content.scenarioRatios?.interior || '',
+                exterior: template.content.scenarioRatios?.exterior || ''
             }
         });
         setLabelStyle(template.style);
@@ -1409,6 +1443,26 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                         ))}
                                                                     </SelectContent>
                                                                 </Select>
+                                                                <div className="mt-4 flex items-center justify-between p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 shadow-inner">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="p-1.5 rounded-md bg-indigo-500/20 text-indigo-400">
+                                                                            <Save className="w-3.5 h-3.5" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">Reference Chart Sync</div>
+                                                                            <p className="text-[8px] text-zinc-500 font-bold uppercase">Update global chart with these ratios</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        type="button"
+                                                                        onClick={saveRatiosToLibrary}
+                                                                        className="h-8 px-4 text-[10px] bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white font-black transition-all"
+                                                                    >
+                                                                        SAVE TO CHART
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1416,7 +1470,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                     <div className="space-y-4">
                                                         <div className="flex items-center justify-between">
                                                             <Label className="text-amber-500 text-xs font-black uppercase tracking-[0.2em]">Select Dilution Scenario</Label>
-                                                            <Badge variant="outline" className="border-amber-500/20 text-amber-500 text-[9px] font-black tracking-widest bg-amber-500/5">AUTO-SYNCED TO CHART</Badge>
+                                                            <Badge variant="outline" className="border-amber-500/20 text-indigo-400 text-[9px] font-black tracking-widest bg-indigo-500/5 uppercase">Synced From Interactive Chart</Badge>
                                                         </div>
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                             {(() => {
@@ -1427,8 +1481,8 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                     return pA - pB;
                                                                 });
                                                                 const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
-                                                                const light = sorted.find(r => r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
+                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
+                                                                const maintenance = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
 
                                                                 return [
                                                                     { 
@@ -1449,7 +1503,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                     },
                                                                     { 
                                                                         label: "Maintenance", 
-                                                                        ratio: light?.ratio, 
+                                                                        ratio: maintenance?.ratio, 
                                                                         activeClass: "border-emerald-500 bg-emerald-500/20 ring-4 ring-emerald-500/10",
                                                                         iconClass: "bg-emerald-500 text-white",
                                                                         badgeClass: "bg-emerald-500",
@@ -1859,6 +1913,16 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                         ) : (
                             <div className={`${activeTab === 'edit' ? 'hidden xl:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>
                                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent)] pointer-events-none" />
+                                <div className="absolute top-10 right-10">
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        onClick={() => setViewMode('freeform')}
+                                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] gap-2 shadow-xl ring-2 ring-indigo-400/20 ring-offset-2 ring-offset-black"
+                                    >
+                                        <Layout className="w-3 h-3" /> OPEN FULL STICKER SHEET
+                                    </Button>
+                                </div>
                                 <div ref={previewRef} className="flex flex-col items-center gap-12 w-fit min-w-[300px] pt-10 pb-60 origin-top transition-all duration-500">
                                     {labelStyle.splitRatios ? (
                                         <>
