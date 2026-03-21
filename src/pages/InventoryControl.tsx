@@ -938,19 +938,19 @@ const InventoryControl = () => {
         { content: `${c.name}\n${c.brand || ''}\n\nChemical Amount:\nWater Amount:`, styles: { fontStyle: 'bold', fontSize: 8, valign: 'bottom' } },
         // Standard
         { content: standard ? transformRatio(standard.ratio) : '-', styles: { valign: 'middle', fontSize: 10, fontStyle: 'bold' } },
-        s16 ? { content: `${s16.chem}oz\n${s16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
-        s24 ? { content: `${s24.chem}oz\n${s24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
-        s32 ? { content: `${s32.chem}oz\n${s32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        s16 ? { content: `${s16.chem}oz\n${s16.water}oz`, styles: { textColor: [16, 185, 129], fontStyle: 'bold', fontSize: 9 } } : '-',
+        s24 ? { content: `${s24.chem}oz\n${s24.water}oz`, styles: { textColor: [59, 130, 246], fontStyle: 'bold', fontSize: 9 } } : '-',
+        s32 ? { content: `${s32.chem}oz\n${s32.water}oz`, styles: { textColor: [147, 51, 234], fontStyle: 'bold', fontSize: 9 } } : '-',
         // More
         { content: more ? transformRatio(more.ratio) : '-', styles: { valign: 'middle', fontSize: 10, fontStyle: 'bold' } },
-        m16 ? { content: `${m16.chem}oz\n${m16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
-        m24 ? { content: `${m24.chem}oz\n${m24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
-        m32 ? { content: `${m32.chem}oz\n${m32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        m16 ? { content: `${m16.chem}oz\n${m16.water}oz`, styles: { textColor: [16, 185, 129], fontStyle: 'bold', fontSize: 9 } } : '-',
+        m24 ? { content: `${m24.chem}oz\n${m24.water}oz`, styles: { textColor: [59, 130, 246], fontStyle: 'bold', fontSize: 9 } } : '-',
+        m32 ? { content: `${m32.chem}oz\n${m32.water}oz`, styles: { textColor: [147, 51, 234], fontStyle: 'bold', fontSize: 9 } } : '-',
         // Less
         { content: less ? transformRatio(less.ratio) : '-', styles: { valign: 'middle', fontSize: 10, fontStyle: 'bold' } },
-        l16 ? { content: `${l16.chem}oz\n${l16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
-        l24 ? { content: `${l24.chem}oz\n${l24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
-        l32 ? { content: `${l32.chem}oz\n${l32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-'
+        l16 ? { content: `${l16.chem}oz\n${l16.water}oz`, styles: { textColor: [16, 185, 129], fontStyle: 'bold', fontSize: 9 } } : '-',
+        l24 ? { content: `${l24.chem}oz\n${l24.water}oz`, styles: { textColor: [59, 130, 246], fontStyle: 'bold', fontSize: 9 } } : '-',
+        l32 ? { content: `${l32.chem}oz\n${l32.water}oz`, styles: { textColor: [147, 51, 234], fontStyle: 'bold', fontSize: 9 } } : '-'
       ];
     });
 
@@ -1032,11 +1032,11 @@ const InventoryControl = () => {
             </tr>
             <tr>
               <th class="bg-std">RATIO</th>
-              <th class="bg-std">16OZ</th><th class="bg-std">24OZ</th><th class="thick-right bg-std">32OZ</th>
+              <th class="bg-std" style="color: #10b981;">16OZ</th><th class="bg-std" style="color: #3b82f6;">24OZ</th><th class="thick-right bg-std" style="color: #9333ea;">32OZ</th>
               <th class="bg-heavy">RATIO</th>
-              <th class="bg-heavy">16OZ</th><th class="bg-heavy">24OZ</th><th class="thick-right bg-heavy">32OZ</th>
+              <th class="bg-heavy" style="color: #10b981;">16OZ</th><th class="bg-heavy" style="color: #3b82f6;">24OZ</th><th class="thick-right bg-heavy" style="color: #9333ea;">32OZ</th>
               <th class="bg-light">RATIO</th>
-              <th class="bg-light">16OZ</th><th class="bg-light">24OZ</th><th class="bg-light">32OZ</th>
+              <th class="bg-light" style="color: #10b981;">16OZ</th><th class="bg-light" style="color: #3b82f6;">24OZ</th><th class="bg-light" style="color: #9333ea;">32OZ</th>
             </tr>
           </thead>
           <tbody>
@@ -2313,11 +2313,17 @@ const InventoryControl = () => {
                     </tr>
                     <tr className="bg-zinc-50 text-[10px] text-center font-bold">
                       <th className={`p-1 border border-zinc-300 ${chartOrientation === 'landscape' ? 'w-auto' : 'w-[45px]'}`}>Ratio</th>
-                      <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
+                      <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
+                      <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
+                      <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
-                      <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
+                      <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
+                      <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
+                      <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
-                      <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
+                      <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
+                      <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
+                      <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2366,8 +2372,16 @@ const InventoryControl = () => {
                                {r ? (
                                  <input 
                                    defaultValue={displayVal}
-                                   onBlur={(e) => handleChartCellEdit(c.id, soilLevel, field, e.target.value, ozSize)}
-                                   className={`w-full h-full bg-transparent border-none text-center font-bold px-1 outline-none focus:bg-indigo-50 focus:ring-1 focus:ring-indigo-300 transition-all ${isCustom ? 'text-indigo-600' : 'text-zinc-900'} ${field === 'ratio' ? 'text-[11px]' : 'text-[10px]'}`}
+                                   onBlur={(e) => {
+                                       if (e.target.value !== displayVal) {
+                                         if (window.confirm("Are you sure you want to change this value? This will update the system's dilution ratio for this chemical.")) {
+                                            handleChartCellEdit(c.id, soilLevel, field, e.target.value, ozSize);
+                                         } else {
+                                            e.target.value = displayVal;
+                                         }
+                                       }
+                                     }}
+                                   className={`w-full h-full bg-transparent border-none text-center font-bold px-1 outline-none focus:bg-indigo-50 focus:ring-1 focus:ring-indigo-300 transition-all ${isCustom ? 'text-indigo-600' : (ozSize === 16 ? 'text-emerald-600' : ozSize === 24 ? 'text-blue-600' : ozSize === 32 ? 'text-purple-600' : 'text-zinc-900')} ${field === 'ratio' ? 'text-[11px]' : 'text-[10px]'}`}
                                  />
                                ) : '-'}
                             </td>
@@ -2386,18 +2400,34 @@ const InventoryControl = () => {
                                        <input 
                                           key={`${c.id}-${soilLevel}-${ozSize}-chem`}
                                           defaultValue={amts?.chem || ''}
-                                          onBlur={(e) => handleChartCellEdit(c.id, soilLevel, 'chem', e.target.value, ozSize)}
-                                          className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : 'text-zinc-900'}`}
-                                       />
+                                          onBlur={(e) => {
+                                              if (e.target.value !== (amts?.chem || '')) {
+                                                if (window.confirm("Are you sure you want to change this value?")) {
+                                                   handleChartCellEdit(c.id, soilLevel, 'chem', e.target.value, ozSize);
+                                                } else {
+                                                   e.target.value = amts?.chem || '';
+                                                }
+                                              }
+                                           }}
+                                          className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : (ozSize === 16 ? 'text-emerald-600' : ozSize === 24 ? 'text-blue-600' : ozSize === 32 ? 'text-purple-600' : 'text-zinc-900')}`}
+                                        />
                                        <span className="absolute right-0.5 text-[7px] text-zinc-300 font-normal pointer-events-none">oz</span>
                                    </div>
                                    <div className="h-[16px] flex items-center justify-center bg-white group relative">
                                        <input 
                                           key={`${c.id}-${soilLevel}-${ozSize}-water`}
                                           defaultValue={amts?.water || ''}
-                                          onBlur={(e) => handleChartCellEdit(c.id, soilLevel, 'water', e.target.value, ozSize)}
-                                          className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : 'text-zinc-900'}`}
-                                       />
+                                          onBlur={(e) => {
+                                              if (e.target.value !== (amts?.water || '')) {
+                                                if (window.confirm("Are you sure you want to change this value?")) {
+                                                   handleChartCellEdit(c.id, soilLevel, 'water', e.target.value, ozSize);
+                                                } else {
+                                                   e.target.value = amts?.water || '';
+                                                }
+                                              }
+                                           }}
+                                          className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : (ozSize === 16 ? 'text-emerald-600' : ozSize === 24 ? 'text-blue-600' : ozSize === 32 ? 'text-purple-600' : 'text-zinc-900')}`}
+                                        />
                                        <span className="absolute right-0.5 text-[7px] text-zinc-300 font-normal pointer-events-none">oz</span>
                                    </div>
                                  </>
