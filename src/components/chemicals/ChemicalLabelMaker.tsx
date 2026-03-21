@@ -11,6 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { 
     Select, 
     SelectContent, 
@@ -38,7 +44,11 @@ import {
     Save,
     Plus,
     RotateCcw,
-    Calculator
+    Calculator,
+    Check,
+    Waves,
+    Flame,
+    Sparkle
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
 import { getCombinedSelectableProducts } from '@/lib/chemicals';
@@ -1311,132 +1321,250 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                 </div>
                             ) : (
                                 <ScrollArea className="flex-1">
-                                    <div className="p-8 sm:p-12 space-y-10">
-                                        <div className="flex flex-col sm:flex-row gap-8">
-                                            <div className="space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Product Name</Label>
-                                                <Input 
-                                                    value={labelContent.name} 
-                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, name: e.target.value }))}
-                                                    className="bg-zinc-900 border-zinc-800 h-9"
-                                                />
-                                            </div>
-                                            {labelStyle.showBrand && (
-                                                <div className="space-y-3">
-                                                    <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Brand / Series</Label>
-                                                    <Input 
-                                                        value={labelContent.brand} 
-                                                        onChange={(e) => setLabelContent(prev => ({ ...prev, brand: e.target.value }))}
-                                                        className="bg-zinc-900 border-zinc-800 h-9"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {labelStyle.showDescription && (
-                                            <div className="space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Summary Description</Label>
-                                                <Textarea 
-                                                    value={labelContent.description} 
-                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, description: e.target.value }))}
-                                                    className="bg-zinc-900 border-zinc-800 min-h-[140px] text-sm"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {labelStyle.showPrimaryRatio && (
-                                            <div className="flex flex-col sm:flex-row gap-8">
-                                                <div className="flex-1 space-y-3">
-                                                    <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Primary Label Ratio</Label>
-                                                    <Select 
-                                                        value={labelContent.dilutionRatio} 
-                                                        onValueChange={(val) => setLabelContent(prev => ({ ...prev, dilutionRatio: val }))}
-                                                    >
-                                                        <SelectTrigger className="bg-zinc-900 border-zinc-800 h-9">
-                                                            <SelectValue placeholder="Select ratio" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                            <SelectItem value="RTU">RTU (Ready to Use)</SelectItem>
-                                                            {selectedChemical?.dilution_ratios?.map((d, i) => (
-                                                                <SelectItem key={i} value={d.ratio}>{d.ratio} ({d.method})</SelectItem>
-                                                            ))}
-                                                            <SelectItem value="Custom">Manual Entry...</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                {labelContent.dilutionRatio === 'Custom' && (
-                                                    <div className="space-y-3">
-                                                         <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Manual Ratio</Label>
-                                                         <Input 
-                                                             placeholder="e.g. 1:15"
-                                                             className="bg-zinc-900 border-zinc-800 h-9"
-                                                             onChange={(e) => setLabelContent(prev => ({ ...prev, dilutionRatio: e.target.value }))}
-                                                         />
+                                    <div className="p-6 sm:p-10">
+                                        <Accordion type="single" collapsible defaultValue="quick-label" className="w-full space-y-4">
+                                            {/* Top Level: Quick Choice Accordion */}
+                                            <AccordionItem value="quick-label" className="border border-zinc-800 rounded-xl bg-zinc-900/40 px-6 overflow-hidden shadow-2xl transition-all data-[state=open]:bg-zinc-900/60 data-[state=open]:ring-1 data-[state=open]:ring-amber-500/20">
+                                                <AccordionTrigger className="hover:no-underline py-6 group">
+                                                    <div className="flex items-center gap-4 text-left">
+                                                        <div className="p-3 rounded-full bg-amber-500/10 text-amber-500 group-data-[state=open]:bg-amber-500 group-data-[state=open]:text-black transition-all">
+                                                            <Calculator className="w-6 h-6" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-lg font-black uppercase tracking-tighter text-white">Quick Dilution Choice</h3>
+                                                            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Choose scenario from ref chart</p>
+                                                        </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
+                                                </AccordionTrigger>
+                                                <AccordionContent className="pb-8 space-y-8 animate-in fade-in slide-in-from-top-4 duration-500 mt-2">
+                                                    <div className="space-y-4">
+                                                        <Label className="text-amber-500 text-xs font-black uppercase tracking-[0.2em]">Product Reference</Label>
+                                                        <div className="bg-zinc-950/80 p-5 rounded-xl border border-zinc-800 flex items-center justify-between group hover:border-amber-500/30 transition-all">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="h-12 w-12 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-bold overflow-hidden">
+                                                                    {selectedChemical?.primary_image_url ? (
+                                                                        <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <Droplets className="w-6 h-6" />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-xl font-black text-white uppercase tracking-tighter">
+                                                                        {selectedChemical?.name || "Choose a chemical..."}
+                                                                    </div>
+                                                                    <div className="text-xs text-zinc-500 font-bold">
+                                                                        {selectedChemical?.brand || "No brand specified"}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                        {labelStyle.showInstructions && (
-                                            <div className="space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Usage Instructions</Label>
-                                                <Textarea 
-                                                    value={labelContent.instructions} 
-                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, instructions: e.target.value }))}
-                                                    className="bg-zinc-900 border-zinc-800 min-h-[250px] text-sm"
-                                                />
-                                            </div>
-                                        )}
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-amber-500 text-xs font-black uppercase tracking-[0.2em]">Select Dilution Scenario</Label>
+                                                            <Badge variant="outline" className="border-amber-500/20 text-amber-500 text-[9px] font-black tracking-widest bg-amber-500/5">AUTO-SYNCED TO CHART</Badge>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                            {(() => {
+                                                                const ratios = selectedChemical?.dilution_ratios || [];
+                                                                const sorted = [...ratios].sort((a,b) => {
+                                                                    const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+                                                                    const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+                                                                    return pA - pB;
+                                                                });
+                                                                const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
+                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
+                                                                const light = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
 
-                                        {labelStyle.showWarnings && (
-                                            <div className="space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                                    <AlertTriangle className="w-3 h-3 text-red-500" />
-                                                    Safety Alert
-                                                </Label>
-                                                <Input 
-                                                    value={labelContent.safetyWarning} 
-                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, safetyWarning: e.target.value }))}
-                                                    className="bg-zinc-900 border-zinc-800 h-9 text-sm text-red-200"
-                                                />
-                                            </div>
-                                        )}
+                                                                return [
+                                                                    { label: "Standard", ratio: standard?.ratio, color: "blue", icon: <Waves className="w-4 h-4" /> },
+                                                                    { label: "Heavy Duty", ratio: heavy?.ratio, color: "orange", icon: <Flame className="w-4 h-4" /> },
+                                                                    { label: "Maintenance", ratio: light?.ratio, color: "emerald", icon: <Sparkle className="w-4 h-4" /> }
+                                                                ].map((item) => (
+                                                                    <button
+                                                                        key={item.label}
+                                                                        onClick={() => {
+                                                                            if (item.ratio) {
+                                                                                setLabelContent(prev => ({ 
+                                                                                    ...prev, 
+                                                                                    dilutionRatio: item.ratio,
+                                                                                    name: selectedChemical?.name || prev.name 
+                                                                                }));
+                                                                                toast({
+                                                                                    title: `${item.label} Selected`,
+                                                                                    description: `Ratio updated to ${item.ratio}`,
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 relative overflow-hidden group ${
+                                                                            labelContent.dilutionRatio === item.ratio 
+                                                                                ? `border-${item.color}-500 bg-${item.color}-500/20 ring-4 ring-${item.color}-500/10` 
+                                                                                : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900'
+                                                                        }`}
+                                                                    >
+                                                                        <div className={`p-3 rounded-full ${labelContent.dilutionRatio === item.ratio ? `bg-${item.color}-500 text-white` : `bg-zinc-900 text-zinc-500 group-hover:bg-zinc-800 group-hover:text-zinc-300`} transition-all`}>
+                                                                            {item.icon}
+                                                                        </div>
+                                                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{item.label}</div>
+                                                                        <div className={`text-2xl font-black ${labelContent.dilutionRatio === item.ratio ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+                                                                            {item.ratio || "N/A"}
+                                                                        </div>
+                                                                        {labelContent.dilutionRatio === item.ratio && (
+                                                                            <div className={`absolute top-0 right-0 w-8 h-8 bg-${item.color}-500 flex items-center justify-center rounded-bl-xl`}>
+                                                                                <Check className="w-4 h-4 text-white" />
+                                                                            </div>
+                                                                        )}
+                                                                    </button>
+                                                                ));
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
 
-                                        {labelStyle.showFreeform && (
-                                            <div className="space-y-3">
-                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Freeform Custom Text</Label>
-                                                <Textarea 
-                                                    value={labelContent.freeformText} 
-                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, freeformText: e.target.value }))}
-                                                    placeholder="Type custom text here..."
-                                                    className="bg-zinc-900 border-zinc-800 min-h-[80px] text-sm"
-                                                />
-                                            </div>
-                                        )}
+                                            {/* Second Level: Advanced Design Accordion (Collapsed by default) */}
+                                            <AccordionItem value="advanced-design" className="border border-zinc-800 rounded-xl bg-zinc-900/20 px-6 overflow-hidden shadow-lg transition-all hover:bg-zinc-900/30">
+                                                <AccordionTrigger className="hover:no-underline py-4 group">
+                                                    <div className="flex items-center gap-4 text-left">
+                                                        <div className="p-2 rounded-full bg-zinc-800 text-zinc-500 group-data-[state=open]:bg-purple-500 group-data-[state=open]:text-white transition-all">
+                                                            <Settings2 className="w-4 h-4" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 group-data-[state=open]:text-zinc-100">Advanced Design Settings</h3>
+                                                            <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">Customize all label fields manually</p>
+                                                        </div>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="pb-8 space-y-10 animate-in fade-in slide-in-from-top-2">
+                                                    <div className="flex flex-col sm:flex-row gap-8 mt-4">
+                                                        <div className="space-y-3">
+                                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Product Name Override</Label>
+                                                            <Input 
+                                                                value={labelContent.name} 
+                                                                onChange={(e) => setLabelContent(prev => ({ ...prev, name: e.target.value }))}
+                                                                className="bg-zinc-900 border-zinc-800 h-9"
+                                                            />
+                                                        </div>
+                                                        {labelStyle.showBrand && (
+                                                            <div className="space-y-3">
+                                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Brand / Series</Label>
+                                                                <Input 
+                                                                    value={labelContent.brand} 
+                                                                    onChange={(e) => setLabelContent(prev => ({ ...prev, brand: e.target.value }))}
+                                                                    className="bg-zinc-900 border-zinc-800 h-9"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                        {/* Image Selection */}
-                                        {labelStyle.showImage && selectedChemical?.gallery_image_urls && selectedChemical.gallery_image_urls.length > 0 && (
-                                            <div className="space-y-4">
-                                                <Label className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Choose Photo</Label>
-                                                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-                                                    <button 
-                                                        onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: selectedChemical.primary_image_url || '' }))}
-                                                        className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === selectedChemical.primary_image_url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
-                                                    >
-                                                        <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover rounded-lg" />
-                                                    </button>
-                                                    {selectedChemical.gallery_image_urls.map((url, i) => (
-                                                        <button 
-                                                            key={i}
-                                                            onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: url }))}
-                                                            className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
-                                                        >
-                                                            <img src={url} className="w-full h-full object-cover rounded-lg" />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                                    {labelStyle.showDescription && (
+                                                        <div className="space-y-3">
+                                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Summary Description</Label>
+                                                            <Textarea 
+                                                                value={labelContent.description} 
+                                                                onChange={(e) => setLabelContent(prev => ({ ...prev, description: e.target.value }))}
+                                                                className="bg-zinc-900 border-zinc-800 min-h-[140px] text-sm"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {labelStyle.showPrimaryRatio && (
+                                                        <div className="flex flex-col sm:flex-row gap-8">
+                                                            <div className="flex-1 space-y-3">
+                                                                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Ratio Selection</Label>
+                                                                <Select 
+                                                                    value={labelContent.dilutionRatio} 
+                                                                    onValueChange={(val) => setLabelContent(prev => ({ ...prev, dilutionRatio: val }))}
+                                                                >
+                                                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 h-9">
+                                                                        <SelectValue placeholder="Select ratio" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                                        <SelectItem value="RTU">RTU (Ready to Use)</SelectItem>
+                                                                        {selectedChemical?.dilution_ratios?.map((d, i) => (
+                                                                            <SelectItem key={i} value={d.ratio}>{d.ratio} ({d.method})</SelectItem>
+                                                                        ))}
+                                                                        <SelectItem value="Custom">Manual Entry...</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            {labelContent.dilutionRatio === 'Custom' && (
+                                                                <div className="space-y-3">
+                                                                     <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Manual Entry</Label>
+                                                                     <Input 
+                                                                         placeholder="e.g. 1:15"
+                                                                         className="bg-zinc-900 border-zinc-800 h-9"
+                                                                         onChange={(e) => setLabelContent(prev => ({ ...prev, dilutionRatio: e.target.value }))}
+                                                                     />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {labelStyle.showInstructions && (
+                                                        <div className="space-y-3">
+                                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Usage Instructions</Label>
+                                                            <Textarea 
+                                                                value={labelContent.instructions} 
+                                                                onChange={(e) => setLabelContent(prev => ({ ...prev, instructions: e.target.value }))}
+                                                                className="bg-zinc-900 border-zinc-800 min-h-[250px] text-sm"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {labelStyle.showWarnings && (
+                                                        <div className="space-y-3">
+                                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                                                <AlertTriangle className="w-3 h-3 text-red-500" />
+                                                                Safety Alert
+                                                            </Label>
+                                                            <Input 
+                                                                value={labelContent.safetyWarning} 
+                                                                onChange={(e) => setLabelContent(prev => ({ ...prev, safetyWarning: e.target.value }))}
+                                                                className="bg-zinc-900 border-zinc-800 h-9 text-sm text-red-200"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {labelStyle.showFreeform && (
+                                                        <div className="space-y-3">
+                                                            <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Freeform Custom Text</Label>
+                                                            <Textarea 
+                                                                value={labelContent.freeformText} 
+                                                                onChange={(e) => setLabelContent(prev => ({ ...prev, freeformText: e.target.value }))}
+                                                                placeholder="Type custom text here..."
+                                                                className="bg-zinc-900 border-zinc-800 min-h-[80px] text-sm"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Image Selection */}
+                                                    {labelStyle.showImage && selectedChemical?.gallery_image_urls && selectedChemical.gallery_image_urls.length > 0 && (
+                                                        <div className="space-y-4">
+                                                            <Label className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Choose Photo</Label>
+                                                            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                                                                <button 
+                                                                    onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: selectedChemical.primary_image_url || '' }))}
+                                                                    className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === selectedChemical.primary_image_url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
+                                                                >
+                                                                    <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover rounded-lg" />
+                                                                </button>
+                                                                {selectedChemical.gallery_image_urls.map((url, i) => (
+                                                                    <button 
+                                                                        key={i}
+                                                                        onClick={() => setLabelContent(prev => ({ ...prev, imageUrl: url }))}
+                                                                        className={`shrink-0 w-20 h-20 rounded-xl border-2 transition-all ${labelContent.imageUrl === url ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-zinc-800 hover:border-zinc-700'}`}
+                                                                    >
+                                                                        <img src={url} className="w-full h-full object-cover rounded-lg" />
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
                                     </div>
                                 </ScrollArea>
                             )}
