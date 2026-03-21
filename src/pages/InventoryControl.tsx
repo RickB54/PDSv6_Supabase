@@ -2208,7 +2208,8 @@ const InventoryControl = () => {
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-indigo-400" />
-                <DialogTitle className="text-lg font-bold text-white tracking-tight">Interactive Dilution Chart</DialogTitle>
+                <DialogTitle className="text-lg font-bold text-white tracking-tight leading-none mb-0.5">Interactive Dilution Chart</DialogTitle>
+                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none">Generated: {new Date().toLocaleDateString()} — Prime Auto Detail</div>
               </div>
               <div className="flex items-center gap-2 ml-0 md:ml-6 bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
                 <Button 
@@ -2286,7 +2287,7 @@ const InventoryControl = () => {
 
                        const renderOzCompoundCell = (r: any, ozSize: number, soilLevel: string, extraClass: string = '') => {
                           const amts = r ? calculateAmounts(r.ratio, ozSize) : null;
-                          const isCustom = r?.custom === true;
+                          const isCustom = (r as any)?.custom === true;
 
                           return (
                             <td className={`p-0 border border-zinc-300 text-center align-bottom ${extraClass}`}>
@@ -2322,15 +2323,21 @@ const InventoryControl = () => {
                               <div className="font-bold text-zinc-900 leading-tight text-[12px] sm:text-[13px] mb-1">{c.name}</div>
                               <div className="text-[9px] text-zinc-400 font-bold uppercase mb-3 tracking-wider">{c.brand || ''}</div>
                               <div className="flex flex-col gap-0 text-[8px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 opacity-80">
-                                 <div className="h-[16px] flex items-center">CHEMICAL AMOUNT:</div>
-                                 <div className="h-[16px] flex items-center">WATER AMOUNT:</div>
+                                 <div className="h-[16px] flex items-center justify-between">
+                                    <span>CHEMICAL AMOUNT:</span>
+                                    <span className="text-zinc-400 text-[7px] mr-1">(C)</span>
+                                 </div>
+                                 <div className="h-[16px] flex items-center justify-between">
+                                    <span>WATER AMOUNT:</span>
+                                    <span className="text-zinc-400 text-[7px] mr-1">(W)</span>
+                                 </div>
                               </div>
                            </td>
                            <td className="p-0 border border-zinc-300 group align-middle">
                               <input 
                                  defaultValue={standard ? transformRatio(standard.ratio) : '-'}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'standard', 'ratio', e.target.value)}
-                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${standard?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
+                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(standard as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />
                            </td>
                            {renderOzCompoundCell(standard, 16, 'standard', 'bg-green-50/10')}
@@ -2341,7 +2348,7 @@ const InventoryControl = () => {
                               <input 
                                  defaultValue={heavy ? transformRatio(heavy.ratio) : '-'}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'heavy', 'ratio', e.target.value)}
-                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${heavy?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
+                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(heavy as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />
                            </td>
                            {renderOzCompoundCell(heavy, 16, 'heavy', 'bg-green-50/10')}
@@ -2352,7 +2359,7 @@ const InventoryControl = () => {
                               <input 
                                  defaultValue={light ? transformRatio(light.ratio) : '-'}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'maintenance', 'ratio', e.target.value)}
-                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${light?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
+                                 className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(light as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />
                            </td>
                            {renderOzCompoundCell(light, 16, 'maintenance', 'bg-green-50/10')}
