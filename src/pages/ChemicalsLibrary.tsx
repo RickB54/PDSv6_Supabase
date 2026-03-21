@@ -126,44 +126,44 @@ export default function ChemicalsLibrary() {
                             <HelpCircle className="w-6 h-6" />
                         </Button>
                     </div>
-                    <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
-                        <div className="flex w-full sm:w-auto gap-2">
+                    <div className="flex flex-col gap-2 w-full lg:w-auto">
+                        <div className="grid grid-cols-3 sm:flex sm:w-auto gap-2">
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/dilution-calculator')} 
-                                className="flex-1 sm:flex-none h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-xs"
+                                className="h-9 px-1 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-[9px] sm:text-xs"
                             >
-                                <Calculator className="w-4 h-4 mr-2" /> <span>Dilution Calc</span>
+                                <Calculator className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span>Calc</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/chemical-training')} 
-                                className="flex-1 sm:flex-none h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-xs"
+                                className="h-9 px-1 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-[9px] sm:text-xs"
                             >
-                                <Beaker className="w-4 h-4 mr-2" /> <span>Decision</span>
+                                <Beaker className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span>Decision</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/inventory-control?chart=modal')} 
-                                className="flex-1 sm:flex-none h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 border font-bold text-xs"
+                                className="h-9 px-1 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 border font-bold text-[9px] sm:text-xs"
                             >
-                                <Printer className="w-4 h-4 mr-2" /> <span>Dilution Chart</span>
+                                <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span className="truncate">Ref Chart</span>
                             </Button>
                         </div>
                         {isAdmin && (
-                            <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                            <div className="grid grid-cols-3 sm:flex sm:w-auto gap-2">
                                 <Button 
                                     variant="outline" 
                                     onClick={() => setLabelMakerOpen(true)} 
-                                    className="flex-1 sm:flex-none h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 border font-bold text-xs"
+                                    className="h-9 px-1 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 border font-bold text-[9px] sm:text-xs"
                                 >
-                                    <Tag className="w-4 h-4 mr-2" /> Labels
+                                    <Tag className="w-3.5 h-3.5 mr-1 sm:mr-2" /> Labels
                                 </Button>
                                 <Button 
                                     onClick={() => setMixedLabelMakerOpen(true)} 
-                                    className="flex-1 sm:flex-none h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20 px-4"
+                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[8px] sm:text-[10px] shadow-lg shadow-indigo-600/20"
                                 >
-                                    <Printer className="w-3.5 h-3.5 mr-2" /> Mixed Sheet
+                                    <Printer className="w-3.5 h-3.5 mr-1" /> Mixed
                                 </Button>
                                 <Button 
                                     onClick={() => {
@@ -183,9 +183,9 @@ export default function ChemicalsLibrary() {
                                         });
                                         setEditDialogOpen(true);
                                     }} 
-                                    className="flex-1 sm:flex-none h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[10px] px-6"
+                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[9px] sm:text-[10px]"
                                 >
-                                    <Plus className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Add Product</span><span className="sm:hidden">Add</span>
+                                    <Plus className="w-4 h-4 mr-0 sm:mr-2" /> <span className="hidden sm:inline">Add Product</span><span className="sm:hidden">Add</span>
                                 </Button>
                             </div>
                         )}
