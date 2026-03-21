@@ -229,7 +229,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     });
 
     const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'editor' | 'calculator' | 'freeform'>('editor');
+    const [viewMode, setViewMode] = useState<'editor' | 'calculator' | 'freeform'>('freeform');
     const [hasChanges, setHasChanges] = useState(false);
     const [selectedForBatch, setSelectedForBatch] = useState<string[]>([]);
     
@@ -244,6 +244,13 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
     });
 
     const [sheetLabels, setSheetLabels] = useState<Array<any>>(Array(10).fill(null));
+
+    // Auto-populate sheet if it's the default view and empty
+    useEffect(() => {
+        if (open && viewMode === 'freeform' && sheetLabels.every(s => s === null) && labelContent.name) {
+            setSheetLabels(Array(10).fill({ ...labelContent }));
+        }
+    }, [open, viewMode, labelContent.name]);
 
     const skipDefaultApplicator = useRef(false);
     const previewRef = useRef<HTMLDivElement>(null);
@@ -954,7 +961,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                 className={`h-9 px-4 text-xs font-black gap-2 transition-all ${viewMode === 'freeform' ? 'bg-indigo-600 hover:bg-indigo-500' : 'border-zinc-800 bg-zinc-900 text-indigo-400 hover:bg-zinc-800'}`}
                             >
                                 <Layout className="w-4 h-4" />
-                                {viewMode === 'freeform' ? "CLOSE DESIGNER" : "FREE FORM LABEL"}
+                                {viewMode === 'freeform' ? "SINGLE LABEL DESIGNER" : "STICKER SHEET EDITOR"}
                             </Button>
                         </div>
                     </div>
@@ -1420,8 +1427,8 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                     return pA - pB;
                                                                 });
                                                                 const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
-                                                                const light = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
+                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
+                                                                const light = sorted.find(r => r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
 
                                                                 return [
                                                                     { 
@@ -1645,7 +1652,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                             <div className="flex-1 flex flex-col bg-zinc-950 overflow-hidden">
                                 <div className="p-6 border-b border-zinc-900 bg-zinc-950 flex flex-wrap items-center justify-between gap-4">
                                     <div className="flex flex-wrap items-center gap-3">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2">Toggle Fields:</div>
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2">Toggle Info:</div>
                                         <Button 
                                             variant="ghost" 
                                             size="sm" 
@@ -1660,7 +1667,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                             onClick={() => setFreeformConfig(prev => ({ ...prev, ratio: !prev.ratio }))}
                                             className={`h-8 px-3 text-[10px] font-bold border ${freeformConfig.ratio ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-zinc-500 border-zinc-800'}`}
                                         >
-                                            Dilution Ratio
+                                            Precise Ratio
                                         </Button>
                                         <Button 
                                             variant="ghost" 
@@ -1668,7 +1675,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                             onClick={() => setFreeformConfig(prev => ({ ...prev, notes: !prev.notes }))}
                                             className={`h-8 px-3 text-[10px] font-bold border ${freeformConfig.notes ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-zinc-500 border-zinc-800'}`}
                                         >
-                                            Notes Area
+                                            Sticker Style
                                         </Button>
                                     </div>
 
