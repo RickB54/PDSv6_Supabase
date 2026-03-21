@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart, Calculator, ClipboardList, ChevronLeft, HelpCircle } from "lucide-react";
+import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart, Calculator, ClipboardList, ChevronLeft, HelpCircle, Printer, Download } from "lucide-react";
 import { Chemical } from "@/types/chemicals";
 import { getChemicals } from "@/lib/chemicals";
 import { useNavigate } from "react-router-dom";
@@ -279,6 +279,20 @@ ${targetChem.surface_compatibility?.avoid?.length ? `**Avoid:** ${targetChem.sur
                             className="flex-1 md:flex-none h-10 border-green-500/30 bg-green-500/5 hover:bg-green-600 hover:text-white text-green-400 font-black italic tracking-tighter"
                         >
                             <Calculator className="w-4 h-4 mr-2" /> DILUTION CALCULATOR
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => navigate('/inventory-control?chart=modal')} 
+                            className="flex-1 md:flex-none h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 font-black italic tracking-tighter"
+                        >
+                            <Printer className="w-4 h-4 mr-2" /> DILUTION REF CHART
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => navigate('/inventory-control?chart=modal')} 
+                            className="flex-1 md:flex-none h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-600 hover:text-white text-blue-400 font-black italic tracking-tighter"
+                        >
+                            <Download className="w-4 h-4 mr-2" /> SAVE PDF CHART
                         </Button>
                         <Button
                             variant="outline"

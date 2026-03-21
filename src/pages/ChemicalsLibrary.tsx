@@ -142,6 +142,13 @@ export default function ChemicalsLibrary() {
                             >
                                 <Beaker className="w-4 h-4 mr-2" /> <span>Decision</span>
                             </Button>
+                            <Button 
+                                variant="outline" 
+                                onClick={() => navigate('/inventory-control?chart=modal')} 
+                                className="flex-1 sm:flex-none h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 border font-bold text-xs"
+                            >
+                                <Printer className="w-4 h-4 mr-2" /> <span>Dilution Chart</span>
+                            </Button>
                         </div>
                         {isAdmin && (
                             <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">

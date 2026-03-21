@@ -19,7 +19,7 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import UnifiedInventoryModal from "@/components/inventory/UnifiedInventoryModal";
 import ImportWizardModal from "@/components/inventory/ImportWizardModal";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
 import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import localforage from "localforage";
@@ -52,7 +52,6 @@ const transformRatio = (r: string) => {
   return normalized;
 };
 
-import autoTable from "jspdf-autotable";
 
 const InventoryControl = () => {
   const { toast } = useToast();
@@ -103,6 +102,7 @@ const InventoryControl = () => {
   const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock">("name");
   const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
 
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
@@ -181,7 +181,14 @@ const InventoryControl = () => {
       setUpdatesModalOpen(true);
       setAutoOpenedFromQuery(true);
     }
-  }, [location.search, autoOpenedFromQuery]);
+
+    const chart = params.get("chart");
+    if (chart === "print" || chart === "pdf" || chart === "modal") {
+       setTimeout(() => {
+          if (chemicals.length > 0) setIsDilutionModalOpen(true);
+       }, 1500);
+    }
+  }, [location.search, autoOpenedFromQuery, chemicals.length]);
 
   useEffect(() => {
     localStorage.setItem('inventory-date-filter', dateFilter);
@@ -334,7 +341,7 @@ const InventoryControl = () => {
       });
     }
     if (chemicalSort === "low_stock") {
-      return [...filtered].sort((a, b) => {
+      return [...baseFiltered].sort((a, b) => {
         const aLow = a.currentStock < a.threshold;
         const bLow = b.currentStock < b.threshold;
         if (aLow && !bLow) return -1;
@@ -342,7 +349,7 @@ const InventoryControl = () => {
         return a.name.localeCompare(b.name);
       });
     }
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const getSortedSupplies = () => {
@@ -789,226 +796,220 @@ const InventoryControl = () => {
     }, 250);
   };
 
-  const printDilutionChart = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Chemical Dilution Quick Reference</title>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #333; }
-          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eab308; padding-bottom: 20px; }
-          h1 { color: #111; margin: 0; font-size: 24px; }
-          p { color: #555; font-size: 14px; margin: 5px 0 0 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #f9fafb; color: #111; border: 1px solid #e5e7eb; padding: 12px 8px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-          td { border: 1px solid #f5f5f5; padding: 10px 8px; font-size: 14px; border-bottom: 1px solid #eee; }
-          tr:nth-child(even) { background-color: #ffffff; }
-          .product-name { font-weight: bold; color: #111; }
-          .brand-tag { font-size: 10px; color: #555; text-transform: uppercase; display: block; margin-top: 2px; }
-          .ratio-val { font-family: monospace; font-weight: 600; color: #111; }
-          .none { color: #ccc; font-style: italic; font-size: 12px; }
-          @media print {
-            body { margin: 20px; }
-            button { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Chemical Dilution Quick Reference Chart</h1>
-          <p>Generated on ${new Date().toLocaleDateString()} - Prime Auto Detail</p>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40%">Product (Brand / Name)</th>
-              <th style="width: 20%">Standard Dilution</th>
-              <th style="width: 20%">More Concentrated</th>
-              <th style="width: 20%">Less Concentrated</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredChemicals.map(c => {
-      // Use existing ratios or generate AI suggestions if empty
-      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) 
-        ? c.dilutionRatios 
-        : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
-
-      // Bucket them into the 3 columns
-      const getParts = (rStr: string) => {
-        if (!rStr) return null;
-        if (rStr === 'RTU' || rStr.toLowerCase().includes('direct')) return 1;
-        const match = rStr.match(/1[:\/](\d+)/);
-        return match ? parseInt(match[1]) : null;
-      };
-
-      const sortedRatios = [...ratios].sort((a, b) => {
-        const pA = getParts(a.ratio) || 999;
-        const pB = getParts(b.ratio) || 999;
-        return pA - pB;
-      });
-
-      // Standard is usually the "Maintenance" or middle one, but if only 1, it's standard.
-      // If 3, we have Less, Standard, More.
-      // If 2, we have Standard/More or Standard/Less.
-      
-      let standardCandidate = sortedRatios.find(r => 
-        r.soil_level.toLowerCase().includes('standard') || 
-        r.soil_level.toLowerCase().includes('gen') || 
-        r.soil_level.toLowerCase().includes('maint')
-      );
-
-      let moreCandidate = sortedRatios.find(r => 
-        r.soil_level.toLowerCase().includes('heavy') || 
-        r.soil_level.toLowerCase().includes('strong') || 
-        r.soil_level.toLowerCase().includes('tough') ||
-        r.soil_level.toLowerCase().includes('concentrated')
-      );
-
-      let lessCandidate = sortedRatios.find(r => 
-        r.soil_level.toLowerCase().includes('light') || 
-        r.soil_level.toLowerCase().includes('glass') || 
-        r.soil_level.toLowerCase().includes('interior') ||
-        r.soil_level.toLowerCase().includes('dust')
-      );
-
-      // Fallback if find didn't work by label - use sorting
-      if (!standardCandidate && sortedRatios.length > 0) {
-        // If 3 ratios, pick the middle one as standard
-        if (sortedRatios.length >= 3) standardCandidate = sortedRatios[1];
-        else standardCandidate = sortedRatios[0];
+  const calculateAmounts = (ratioStr: string, bottleOz: number) => {
+    const normalized = ratioStr?.toLowerCase().trim();
+    if (!normalized) return null;
+    let parts = 0;
+    if (normalized === 'rtu' || normalized.includes('direct') || normalized === '1:0' || normalized === '0:1') {
+      parts = 0;
+    } else {
+      const match = normalized.match(/1[:\/](\d+)/);
+      if (match) {
+        parts = parseInt(match[1]);
+      } else {
+        const matchReverse = normalized.match(/(\d+)[:\/]1/);
+        if (matchReverse) parts = parseInt(matchReverse[1]);
+        else return null;
       }
-      
-      if (!moreCandidate && sortedRatios.length > 1) {
-        // Most concentrated is the one with smallest number
-        moreCandidate = sortedRatios[0] === standardCandidate ? (sortedRatios.length > 1 ? sortedRatios[0] : null) : sortedRatios[0];
-        // If the "more" is actually the same as standard, don't show it twice unless it's explicitly labeled
-        if (moreCandidate === standardCandidate) moreCandidate = null;
-      }
-
-      if (!lessCandidate && sortedRatios.length > 1) {
-        // Least concentrated is the one with biggest number
-        lessCandidate = sortedRatios[sortedRatios.length - 1];
-        if (lessCandidate === standardCandidate || lessCandidate === moreCandidate) lessCandidate = null;
-      }
-      
-      const standard = standardCandidate;
-      const more = moreCandidate;
-      const less = lessCandidate;
-      
-      return `
-                <tr>
-                  <td>
-                    <div class="product-name">${c.name}</div>
-                    <div class="brand-tag">${c.brand || 'No Brand'}</div>
-                  </td>
-                  <td>
-                    ${standard ? `<span class="ratio-val">${transformRatio(standard.ratio)}</span><div style="font-size: 9px; color: #666;">${standard.soil_level}</div>` : '<span class="none">x</span>'}
-                  </td>
-                  <td>
-                    ${more ? `<span class="ratio-val">${transformRatio(more.ratio)}</span><div style="font-size: 9px; color: #666;">${more.soil_level}</div>` : '<span class="none">x</span>'}
-                  </td>
-                  <td>
-                    ${less ? `<span class="ratio-val">${transformRatio(less.ratio)}</span><div style="font-size: 9px; color: #666;">${less.soil_level}</div>` : '<span class="none">x</span>'}
-                  </td>
-                </tr>
-              `;
-    }).join('')}
-          </tbody>
-        </table>
-        <div style="margin-top: 30px; font-size: 10px; color: #aaa; text-align: center;">
-          Always test chemicals on an inconspicuous area first.
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 300);
+    }
+    const totalParts = parts + 1;
+    const chem = bottleOz / totalParts;
+    const water = bottleOz - chem;
+    return {
+      chem: chem < 1 ? chem.toFixed(2) : chem.toFixed(1),
+      water: water < 1 ? water.toFixed(2) : water.toFixed(1)
+    };
   };
 
   const downloadDilutionPDF = () => {
     try {
-      const pdf = new jsPDF();
+      const pdf = new jsPDF('landscape');
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 15;
     
     // Header
     pdf.setTextColor(133, 77, 14);
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
-    pdf.text("Chemical Dilution Reference", pageWidth / 2, 22, { align: 'center' });
+    pdf.text("Chemical Dilution Quick Reference Chart", pageWidth / 2, 22, { align: 'center' });
     
     pdf.setFontSize(9);
     pdf.setTextColor(150, 150, 150);
-    pdf.text(`Generated: ${new Date().toLocaleDateString()} - Prime Auto Detail`, pageWidth / 2, 30, { align: 'center' });
+    pdf.text(`Generated: ${new Date().toLocaleDateString()} - Spreadsheet Mode`, pageWidth / 2, 30, { align: 'center' });
 
     const rows = filteredChemicals.map(c => {
-      // Use existing ratios or generate AI suggestions
-      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) 
-        ? c.dilutionRatios 
-        : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
-
-      const getParts = (rStr: string) => {
-        if (!rStr) return null;
-        if (rStr === 'RTU' || rStr.toLowerCase().includes('direct')) return 1;
-        const match = rStr.match(/1[:\/](\d+)/);
-        return match ? parseInt(match[1]) : null;
-      };
-
-      const sortedRatios = [...ratios].sort((a, b) => {
-        const pA = getParts(a.ratio) || 999;
-        const pB = getParts(b.ratio) || 999;
-        return pA - pB;
+      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+      const sorted = [...ratios].sort((a,b) => {
+          const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+          const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+          return pA - pB;
       });
+      const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
+      const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
+      const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
 
-      let standard = sortedRatios.find(r => r.soil_level.toLowerCase().includes('standard') || r.soil_level.toLowerCase().includes('gen') || r.soil_level.toLowerCase().includes('maint')) || sortedRatios[0];
-      let more = sortedRatios.find(r => r.soil_level.toLowerCase().includes('heavy') || r.soil_level.toLowerCase().includes('strong') || r.soil_level.toLowerCase().includes('tough') || r.soil_level.toLowerCase().includes('concentrated'));
-      let less = sortedRatios.find(r => r.soil_level.toLowerCase().includes('light') || r.soil_level.toLowerCase().includes('glass') || r.soil_level.toLowerCase().includes('interior') || r.soil_level.toLowerCase().includes('dust'));
-
-      // Logic Fallbacks
-      if (!standard && sortedRatios.length > 0) standard = sortedRatios.length >= 3 ? sortedRatios[1] : sortedRatios[0];
-      if (!more && sortedRatios.length > 1) {
-        more = sortedRatios[0] === standard ? (sortedRatios.length > 1 ? sortedRatios[0] : null) : sortedRatios[0];
-        if (more === standard) more = null;
-      }
-      if (!less && sortedRatios.length > 1) {
-        less = sortedRatios[sortedRatios.length - 1];
-        if (less === standard || less === more) less = null;
-      }
+      const s16 = calculateAmounts(standard?.ratio || '', 16);
+      const s24 = calculateAmounts(standard?.ratio || '', 24);
+      const s32 = calculateAmounts(standard?.ratio || '', 32);
+      
+      const m16 = calculateAmounts(more?.ratio || '', 16);
+      const m24 = calculateAmounts(more?.ratio || '', 24);
+      const m32 = calculateAmounts(more?.ratio || '', 32);
+      
+      const l16 = calculateAmounts(less?.ratio || '', 16);
+      const l24 = calculateAmounts(less?.ratio || '', 24);
+      const l32 = calculateAmounts(less?.ratio || '', 32);
 
       return [
-        { content: `${c.brand ? c.brand + ' - ' : ''}${c.name}`, styles: { fontStyle: 'bold' } },
-        standard ? `${transformRatio(standard.ratio)}\n(${standard.soil_level})` : '-',
-        more ? `${transformRatio(more.ratio)}\n(${more.soil_level})` : 'x',
-        less ? `${transformRatio(less.ratio)}\n(${less.soil_level})` : 'x'
+        { content: `${c.brand ? c.brand + ' - ' : ''}${c.name}\n\nChemical Amount:\nWater Amount:`, styles: { fontStyle: 'bold', fontSize: 6, valign: 'bottom' } },
+        // Standard
+        { content: standard ? transformRatio(standard.ratio) : '-', styles: { valign: 'middle' } },
+        s16 ? { content: `${s16.chem}oz\n${s16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        s24 ? { content: `${s24.chem}oz\n${s24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        s32 ? { content: `${s32.chem}oz\n${s32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        // More
+        { content: more ? transformRatio(more.ratio) : '-', styles: { valign: 'middle' } },
+        m16 ? { content: `${m16.chem}oz\n${m16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        m24 ? { content: `${m24.chem}oz\n${m24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        m32 ? { content: `${m32.chem}oz\n${m32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        // Less
+        { content: less ? transformRatio(less.ratio) : '-', styles: { valign: 'middle' } },
+        l16 ? { content: `${l16.chem}oz\n${l16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        l24 ? { content: `${l24.chem}oz\n${l24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        l32 ? { content: `${l32.chem}oz\n${l32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-'
       ];
     });
 
     autoTable(pdf, {
       startY: 40,
-      head: [['Product', 'Standard Dilution', 'More Concentrated', 'Less Concentrated']],
+      head: [
+        [
+          { content: 'Product', rowSpan: 2 },
+          { content: 'Standard Dilution', colSpan: 4, styles: { halign: 'center', fillColor: [248, 250, 252] } },
+          { content: 'More Conc (Heavy)', colSpan: 4, styles: { halign: 'center', fillColor: [255, 247, 237] } },
+          { content: 'Less Conc (Light)', colSpan: 4, styles: { halign: 'center', fillColor: [240, 249, 255] } }
+        ],
+        ['Ratio', '16oz', '24oz', '32oz', 'Ratio', '16oz', '24oz', '32oz', 'Ratio', '16oz', '24oz', '32oz']
+      ],
       body: rows as any,
       theme: 'grid',
-      headStyles: { fillColor: [245, 245, 245], textColor: [0, 0, 0] },
-      styles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
-      columnStyles: { 0: { cellWidth: 70 } }
+      headStyles: { textColor: [0, 0, 0], fontSize: 6, fontStyle: 'bold' },
+      styles: { fontSize: 5, cellPadding: 1, valign: 'middle', halign: 'center' },
+      columnStyles: { 
+        0: { cellWidth: 35, halign: 'left', fontStyle: 'bold', lineWidth: { right: 0.5 } },
+        4: { lineWidth: { right: 0.5 } },
+        8: { lineWidth: { right: 0.5 } }
+      }
     });
 
-      pdf.save(`Chemical_Dilution_Reference_${new Date().toISOString().split('T')[0]}.pdf`);
+    pdf.save(`Chemical_Dilution_Reference_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
-      console.error("PDF Export Error:", error);
-      toast({
-        title: "PDF Error",
-        description: "Failed to generate the dilution reference chart.",
-        variant: "destructive"
-      });
+       console.error("PDF Error:", error);
     }
+  };
+
+  const printDilutionChart = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <html>
+      <head>
+        <title>Chemical Dilution Quick Reference Chart</title>
+        <style>
+          body { font-family: sans-serif; background: #fff; padding: 20px; box-sizing: border-box; }
+          @page { size: landscape; margin: 10mm; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .header h1 { font-weight: 900; size: 28px; margin: 0; text-transform: uppercase; color: #111; border-bottom: 4px solid #facc15; display: inline-block; padding-bottom: 5px; }
+          .header p { color: #666; font-size: 10px; margin-top: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 2px; text-align: center; }
+          th { background-color: #f4f4f5; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+          td { height: 40px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Chemical Dilution Quick Reference Chart</h1>
+          <p>Generated: ${new Date().toLocaleDateString()}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" style="width: 16%; font-size: 10px; border-right: 2px solid #94a3b8;">Product (Brand / Name)</th>
+              <th colspan="4" style="width: 28%; background-color: #f8fafc; text-align: center; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #94a3b8;">Standard Dilution</th>
+              <th colspan="4" style="width: 28%; background-color: #fff7ed; text-align: center; border-bottom: 2px solid #fdba74; border-right: 2px solid #94a3b8;">More Concentrated (Heavy)</th>
+              <th colspan="4" style="width: 28%; background-color: #f0f9ff; text-align: center; border-bottom: 2px solid #bae6fd;">Less Concentrated (Light)</th>
+            </tr>
+            <tr style="font-size: 9px; text-align: center;">
+              <th style="background-color: #f8fafc;">Ratio</th>
+              <th style="background-color: #f0fdf4;">16oz</th>
+              <th style="background-color: #eff6ff;">24oz</th>
+              <th style="background-color: #f5f3ff; border-right: 2px solid #94a3b8;">32oz</th>
+              <th style="background-color: #fff7ed;">Ratio</th>
+              <th style="background-color: #f0fdf4;">16oz</th>
+              <th style="background-color: #eff6ff;">24oz</th>
+              <th style="background-color: #f5f3ff; border-right: 2px solid #94a3b8;">32oz</th>
+              <th style="background-color: #f0f9ff;">Ratio</th>
+              <th style="background-color: #f0fdf4;">16oz</th>
+              <th style="background-color: #eff6ff;">24oz</th>
+              <th style="background-color: #f5f3ff;">32oz</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredChemicals.map(c => {
+               const ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+               const sorted = [...ratios].sort((a,b) => {
+                  const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+                  const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+                  return pA - pB;
+               });
+               const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
+               const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
+               const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
+
+               const renderCellHtml = (r: any, oz: number, border: boolean = false) => {
+                  const amts = r ? calculateAmounts(r.ratio, oz) : null;
+                  return amts ? `
+                    <td style="vertical-align: bottom; padding: 0; line-height: 1; ${border ? 'border-right: 2px solid #94a3b8;' : ''}">
+                       <div style="height: 14px; font-weight: bold; color: #111; font-size: 10px;">${amts.chem}oz</div>
+                       <div style="height: 14px; font-weight: bold; color: #111; font-size: 10px; border-top: 1px solid #eee;">${amts.water}oz</div>
+                    </td>
+                  ` : `<td style="${border ? 'border-right: 2px solid #94a3b8;' : ''}">-</td>`;
+               };
+
+               return `
+                 <tr>
+                    <td style="text-align: left; border-right: 2px solid #94a3b8; padding: 4px; vertical-align: bottom;">
+                       <div style="font-weight: bold; font-size: 11px; margin-bottom: 2px;">${c.name}</div>
+                       <div style="font-size: 8px; color: #888; margin-bottom: 6px;">${c.brand || ''}</div>
+                       <div style="font-size: 7px; font-weight: bold; color: #444; border-top: 1px solid #ccc; pt: 1px;">
+                          <div style="height: 14px;">Chemical Amount:</div>
+                          <div style="height: 14px;">Water Amount:</div>
+                       </div>
+                    </td>
+                    <td style="vertical-align: middle; font-weight: bold;">${standard ? transformRatio(standard.ratio) : '-'}</td>
+                    ${renderCellHtml(standard, 16)}
+                    ${renderCellHtml(standard, 24)}
+                    ${renderCellHtml(standard, 32, true)}
+                    <td style="vertical-align: middle; font-weight: bold;">${more ? transformRatio(more.ratio) : '-'}</td>
+                    ${renderCellHtml(more, 16)}
+                    ${renderCellHtml(more, 24)}
+                    ${renderCellHtml(more, 32, true)}
+                    <td style="vertical-align: middle; font-weight: bold;">${less ? transformRatio(less.ratio) : '-'}</td>
+                    ${renderCellHtml(less, 16)}
+                    ${renderCellHtml(less, 24)}
+                    ${renderCellHtml(less, 32)}
+                 </tr>
+               `;
+            }).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
   };
 
   const handleDelete = (id: string, mode: 'chemical' | 'material' | 'tool', itemName: string) => {
@@ -2087,7 +2088,7 @@ const InventoryControl = () => {
         open={inventoryImportOpen}
         onOpenChange={(open) => {
           setInventoryImportOpen(open);
-          if (!open) loadData(); // Refresh data after close
+          if (!open) loadData();
         }}
         defaultTab={activeImportTab}
       />
@@ -2095,7 +2096,7 @@ const InventoryControl = () => {
         open={inventoryCleanupOpen}
         onOpenChange={(open) => {
           setInventoryCleanupOpen(open);
-          if (!open) loadData(); // Refresh data after close
+          if (!open) loadData();
         }}
       />
       <ChemicalDetail
@@ -2113,6 +2114,111 @@ const InventoryControl = () => {
           initialChemical={labelMakerChemical}
         />
       )}
+      <Dialog open={isDilutionModalOpen} onOpenChange={(val) => {
+        setIsDilutionModalOpen(val);
+        if (!val) {
+          const params = new URLSearchParams(window.location.search);
+          if (params.has("chart")) {
+            navigate(-1);
+          }
+        }
+      }}>
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] flex flex-col p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl">
+          <div className="flex items-center justify-between p-4 bg-zinc-900 border-b border-zinc-800">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-amber-500" />
+              <DialogTitle className="text-lg font-bold text-white">Dilution Reference Chart</DialogTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={printDilutionChart} className="bg-zinc-800 border-zinc-700 text-zinc-200"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+              <Button variant="outline" size="sm" onClick={downloadDilutionPDF} className="bg-zinc-800 border-zinc-700 text-zinc-200"><Download className="h-4 w-4 mr-2" /> PDF</Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-2 sm:p-6 bg-zinc-50/50">
+            <div className="max-w-7xl mx-auto bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-2 sm:p-4">
+              <div className="overflow-x-auto border border-zinc-400 rounded-lg">
+                <table className="w-full border-collapse border-2 border-zinc-400 text-[20px] min-w-[1200px]">
+                  <thead>
+                    <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-400">
+                      <th rowSpan={2} className="p-3 border-2 border-zinc-400 text-left w-[18%] text-[20px]">Product (Brand / Name)</th>
+                      <th colSpan={4} className="p-3 border-2 border-zinc-400 text-center bg-zinc-50 text-[20px]">Standard Dilution</th>
+                      <th colSpan={4} className="p-3 border-2 border-zinc-400 text-center bg-zinc-50 text-[20px]">More Conc (Heavy)</th>
+                      <th colSpan={4} className="p-3 border-2 border-zinc-400 text-center bg-zinc-50 text-[20px]">Less Conc (Light)</th>
+                    </tr>
+                    <tr className="bg-zinc-50 text-[18px] text-center font-bold">
+                      <th className="p-2 border-2 border-zinc-400">Ratio</th>
+                      <th className="p-2 border-2 border-zinc-400">16oz</th><th className="p-2 border-2 border-zinc-400">24oz</th><th className="p-2 border-2 border-zinc-400">32oz</th>
+                      <th className="p-2 border-2 border-zinc-400">Ratio</th>
+                      <th className="p-2 border-2 border-zinc-400">16oz</th><th className="p-2 border-2 border-zinc-400">24oz</th><th className="p-2 border-2 border-zinc-400">32oz</th>
+                      <th className="p-2 border-2 border-zinc-400">Ratio</th>
+                      <th className="p-2 border-2 border-zinc-400">16oz</th><th className="p-2 border-2 border-zinc-400">24oz</th><th className="p-2 border-2 border-zinc-400">32oz</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredChemicals.map((c, i) => {
+                       const ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+                       const sorted = [...ratios].sort((a,b) => {
+                          const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+                          const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
+                          return pA - pB;
+                       });
+                       const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
+                       const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
+                       const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
+
+                       const renderCellModal = (r: any, oz: number, extraClass: string = '') => {
+                          const amts = r ? calculateAmounts(r.ratio, oz) : null;
+                          return (
+                            <td className={`p-0 border-2 border-zinc-400 text-center align-bottom ${extraClass}`}>
+                               {amts ? (
+                                 <>
+                                   <div className="h-[28px] flex items-center justify-center font-bold text-zinc-900 border-b-2 border-zinc-200 bg-white text-[18px]">{amts.chem}oz</div>
+                                   <div className="h-[28px] flex items-center justify-center font-bold text-zinc-900 bg-white text-[18px]">{amts.water}oz</div>
+                                 </>
+                               ) : '-'}
+                            </td>
+                          );
+                       };
+
+                       return (
+                         <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-zinc-50'}>
+                           <td className="p-3 border-2 border-zinc-400 font-medium align-bottom text-[18px] sm:text-[20px]">
+                              <div className="font-bold text-zinc-900 leading-tight mb-2 uppercase">{c.name}</div>
+                              <div className="text-[14px] text-zinc-500 uppercase mb-6 font-bold">{c.brand || ''}</div>
+                              <div className="flex flex-col gap-0 text-[14px] font-black text-zinc-500 border-t-2 border-zinc-200 pt-2">
+                                 <div className="h-[28px] flex items-center">CHEMICAL AMOUNT:</div>
+                                 <div className="h-[28px] flex items-center">WATER AMOUNT:</div>
+                              </div>
+                           </td>
+                           <td className="p-1 border-2 border-zinc-400 text-center align-middle font-bold text-zinc-800 text-[20px]">{standard ? transformRatio(standard.ratio) : '-'}</td>
+                           {renderCellModal(standard, 16, 'bg-green-50/5')}
+                           {renderCellModal(standard, 24, 'bg-blue-50/5')}
+                           {renderCellModal(standard, 32, 'bg-purple-50/5 border-r-2 border-r-zinc-400')}
+
+                           <td className="p-1 border-2 border-zinc-400 text-center align-middle font-bold text-zinc-800 text-[20px]">{more ? transformRatio(more.ratio) : '-'}</td>
+                           {renderCellModal(more, 16, 'bg-green-50/5')}
+                           {renderCellModal(more, 24, 'bg-blue-50/5')}
+                           {renderCellModal(more, 32, 'bg-purple-50/5 border-r-4 border-r-zinc-500')}
+
+                           <td className="p-1 border-2 border-zinc-400 text-center align-middle font-bold text-zinc-800 text-[20px]">{less ? transformRatio(less.ratio) : '-'}</td>
+                           {renderCellModal(less, 16, 'bg-green-50/5')}
+                           {renderCellModal(less, 24, 'bg-blue-50/5')}
+                           {renderCellModal(less, 32, 'bg-purple-50/5')}
+                         </tr>
+                       );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex justify-center gap-6 text-[8px] font-bold uppercase text-zinc-400 tracking-widest">
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /> 16oz</div>
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500" /> 24oz</div>
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500" /> 32oz</div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }

@@ -24,7 +24,8 @@ import {
     Phone,
     HelpCircle,
     ListOrdered,
-    Beaker
+    Beaker,
+    Printer
 } from "lucide-react";
 
 export type MenuItem = {
@@ -132,6 +133,7 @@ export const getMenuGroups = (counts: {
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
                 { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
+                { title: "Dilution Ref Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
             ]
         },
