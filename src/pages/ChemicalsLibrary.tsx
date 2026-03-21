@@ -131,21 +131,21 @@ export default function ChemicalsLibrary() {
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/dilution-calculator')} 
-                                className="h-9 px-1 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-[9px] sm:text-xs"
+                                className="h-9 px-1 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-[11px] sm:text-xs"
                             >
                                 <Calculator className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span>Calc</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/chemical-training')} 
-                                className="h-9 px-1 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-[9px] sm:text-xs"
+                                className="h-9 px-1 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-[11px] sm:text-xs"
                             >
                                 <Beaker className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span>Decision</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/inventory-control?chart=modal')} 
-                                className="h-9 px-1 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 border font-bold text-[9px] sm:text-xs"
+                                className="h-9 px-1 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 border font-bold text-[11px] sm:text-xs"
                             >
                                 <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span className="truncate">Ref Chart</span>
                             </Button>
@@ -155,13 +155,13 @@ export default function ChemicalsLibrary() {
                                 <Button 
                                     variant="outline" 
                                     onClick={() => setLabelMakerOpen(true)} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 border font-bold text-[9px] sm:text-xs"
+                                    className="h-9 px-1 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 border font-bold text-[11px] sm:text-xs"
                                 >
                                     <Tag className="w-3.5 h-3.5 mr-1 sm:mr-2" /> Labels
                                 </Button>
                                 <Button 
                                     onClick={() => setMixedLabelMakerOpen(true)} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[8px] sm:text-[10px] shadow-lg shadow-indigo-600/20"
+                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] sm:text-[10px] shadow-lg shadow-indigo-600/20"
                                 >
                                     <Printer className="w-3.5 h-3.5 mr-1" /> Mixed
                                 </Button>
@@ -183,7 +183,7 @@ export default function ChemicalsLibrary() {
                                         });
                                         setEditDialogOpen(true);
                                     }} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[9px] sm:text-[10px]"
+                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[11px] sm:text-[10px]"
                                 >
                                     <Plus className="w-4 h-4 mr-0 sm:mr-2" /> <span className="hidden sm:inline">Add Product</span><span className="sm:hidden">Add</span>
                                 </Button>
