@@ -291,6 +291,10 @@ const InventoryControl = () => {
       return;
     }
     
+    // Ensure other modals are closed for a focused experience
+    setViewCardId(null);
+    setModalOpen(false);
+    
     try {
       const chem = await getChemicalById(item.chemicalLibraryId);
       if (chem) {

@@ -5,7 +5,8 @@ import {
     DialogHeader, 
     DialogTitle, 
     DialogDescription,
-    DialogFooter
+    DialogFooter,
+    DialogTrigger
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -241,6 +242,8 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
         labelsPerPage: 10,
         pageZoom: 0.8, // Default zoom
     });
+
+    const [sheetLabels, setSheetLabels] = useState<Array<any>>(Array(10).fill(null));
 
     const skipDefaultApplicator = useRef(false);
     const previewRef = useRef<HTMLDivElement>(null);
@@ -930,7 +933,24 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                         <div className="ml-auto flex items-center gap-2">
                             <Button 
                                 variant={viewMode === 'freeform' ? "default" : "outline"}
-                                onClick={() => setViewMode(viewMode === 'freeform' ? 'editor' : 'freeform')}
+                                onClick={() => {
+                                    if (viewMode !== 'freeform') {
+                                        // Entering freeform mode - check for selection
+                                        const templates = savedTemplates.filter(t => selectedForBatch.includes(t.id));
+                                        const newSheet = [...sheetLabels];
+                                        
+                                        if (templates.length > 0) {
+                                            templates.forEach((t, i) => { if (i < 10) newSheet[i] = { ...t.content }; });
+                                        } else {
+                                            // Fill with current if nothing else assigned
+                                            if (newSheet.every(s => s === null)) {
+                                                for (let i = 0; i < 10; i++) newSheet[i] = { ...labelContent };
+                                            }
+                                        }
+                                        setSheetLabels(newSheet);
+                                    }
+                                    setViewMode(viewMode === 'freeform' ? 'editor' : 'freeform');
+                                }}
                                 className={`h-9 px-4 text-xs font-black gap-2 transition-all ${viewMode === 'freeform' ? 'bg-indigo-600 hover:bg-indigo-500' : 'border-zinc-800 bg-zinc-900 text-indigo-400 hover:bg-zinc-800'}`}
                             >
                                 <Layout className="w-4 h-4" />
@@ -1339,23 +1359,49 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                 <AccordionContent className="pb-8 space-y-8 animate-in fade-in slide-in-from-top-4 duration-500 mt-2">
                                                     <div className="space-y-4">
                                                         <Label className="text-amber-500 text-xs font-black uppercase tracking-[0.2em]">Product Reference</Label>
-                                                        <div className="bg-zinc-950/80 p-5 rounded-xl border border-zinc-800 flex items-center justify-between group hover:border-amber-500/30 transition-all">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="h-12 w-12 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-bold overflow-hidden">
-                                                                    {selectedChemical?.primary_image_url ? (
-                                                                        <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <Droplets className="w-6 h-6" />
-                                                                    )}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-xl font-black text-white uppercase tracking-tighter">
-                                                                        {selectedChemical?.name || "Choose a chemical..."}
+                                                        <div className="flex flex-col sm:flex-row gap-4">
+                                                            <div className="flex-1 bg-zinc-950/80 p-5 rounded-xl border border-zinc-800 flex items-center justify-between group hover:border-amber-500/30 transition-all">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="h-12 w-12 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-bold overflow-hidden">
+                                                                        {selectedChemical?.primary_image_url ? (
+                                                                            <img src={selectedChemical.primary_image_url} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <Droplets className="w-6 h-6" />
+                                                                        )}
                                                                     </div>
-                                                                    <div className="text-xs text-zinc-500 font-bold">
-                                                                        {selectedChemical?.brand || "No brand specified"}
+                                                                    <div>
+                                                                        <div className="text-xl font-black text-white uppercase tracking-tighter">
+                                                                            {selectedChemical?.name || "Choose a chemical..."}
+                                                                        </div>
+                                                                        <div className="text-xs text-zinc-500 font-bold">
+                                                                            {selectedChemical?.brand || "No brand specified"}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <Label className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2 block">Switch Chemical</Label>
+                                                                <Select 
+                                                                    value={selectedChemical?.id} 
+                                                                    onValueChange={(val) => {
+                                                                        const found = chemicals.find(c => c.id === val);
+                                                                        if (found) setSelectedChemical(found);
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 h-14 font-bold text-zinc-300">
+                                                                        <SelectValue placeholder="Pick another product..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white max-h-[300px]">
+                                                                        {chemicals.map(c => (
+                                                                            <SelectItem key={c.id} value={c.id} className="focus:bg-zinc-800 focus:text-white py-3">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="font-bold">{c.name}</span>
+                                                                                    <span className="text-[10px] text-zinc-500 uppercase">{c.brand}</span>
+                                                                                </div>
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1378,45 +1424,70 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                 const light = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
 
                                                                 return [
-                                                                    { label: "Standard", ratio: standard?.ratio, color: "blue", icon: <Waves className="w-4 h-4" /> },
-                                                                    { label: "Heavy Duty", ratio: heavy?.ratio, color: "orange", icon: <Flame className="w-4 h-4" /> },
-                                                                    { label: "Maintenance", ratio: light?.ratio, color: "emerald", icon: <Sparkle className="w-4 h-4" /> }
-                                                                ].map((item) => (
-                                                                    <button
-                                                                        key={item.label}
-                                                                        onClick={() => {
-                                                                            if (item.ratio) {
-                                                                                setLabelContent(prev => ({ 
-                                                                                    ...prev, 
-                                                                                    dilutionRatio: item.ratio,
-                                                                                    name: selectedChemical?.name || prev.name 
-                                                                                }));
-                                                                                toast({
-                                                                                    title: `${item.label} Selected`,
-                                                                                    description: `Ratio updated to ${item.ratio}`,
-                                                                                });
-                                                                            }
-                                                                        }}
-                                                                        className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 relative overflow-hidden group ${
-                                                                            labelContent.dilutionRatio === item.ratio 
-                                                                                ? `border-${item.color}-500 bg-${item.color}-500/20 ring-4 ring-${item.color}-500/10` 
-                                                                                : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900'
-                                                                        }`}
-                                                                    >
-                                                                        <div className={`p-3 rounded-full ${labelContent.dilutionRatio === item.ratio ? `bg-${item.color}-500 text-white` : `bg-zinc-900 text-zinc-500 group-hover:bg-zinc-800 group-hover:text-zinc-300`} transition-all`}>
-                                                                            {item.icon}
-                                                                        </div>
-                                                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{item.label}</div>
-                                                                        <div className={`text-2xl font-black ${labelContent.dilutionRatio === item.ratio ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
-                                                                            {item.ratio || "N/A"}
-                                                                        </div>
-                                                                        {labelContent.dilutionRatio === item.ratio && (
-                                                                            <div className={`absolute top-0 right-0 w-8 h-8 bg-${item.color}-500 flex items-center justify-center rounded-bl-xl`}>
-                                                                                <Check className="w-4 h-4 text-white" />
+                                                                    { 
+                                                                        label: "Standard", 
+                                                                        ratio: standard?.ratio, 
+                                                                        activeClass: "border-blue-500 bg-blue-500/20 ring-4 ring-blue-500/10",
+                                                                        iconClass: "bg-blue-500 text-white",
+                                                                        badgeClass: "bg-blue-500",
+                                                                        icon: <Waves className="w-4 h-4" /> 
+                                                                    },
+                                                                    { 
+                                                                        label: "Heavy Duty", 
+                                                                        ratio: heavy?.ratio, 
+                                                                        activeClass: "border-orange-500 bg-orange-500/20 ring-4 ring-orange-500/10",
+                                                                        iconClass: "bg-orange-500 text-white",
+                                                                        badgeClass: "bg-orange-500",
+                                                                        icon: <Flame className="w-4 h-4" /> 
+                                                                    },
+                                                                    { 
+                                                                        label: "Maintenance", 
+                                                                        ratio: light?.ratio, 
+                                                                        activeClass: "border-emerald-500 bg-emerald-500/20 ring-4 ring-emerald-500/10",
+                                                                        iconClass: "bg-emerald-500 text-white",
+                                                                        badgeClass: "bg-emerald-500",
+                                                                        icon: <Sparkle className="w-4 h-4" /> 
+                                                                    }
+                                                                ].map((item) => {
+                                                                    const isActive = labelContent.dilutionRatio === item.ratio;
+                                                                    return (
+                                                                        <button
+                                                                            key={item.label}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (item.ratio) {
+                                                                                    setLabelContent(prev => ({ 
+                                                                                        ...prev, 
+                                                                                        dilutionRatio: item.ratio,
+                                                                                        name: selectedChemical?.name || prev.name 
+                                                                                    }));
+                                                                                    toast({
+                                                                                        title: `${item.label} Selected`,
+                                                                                        description: `Ratio updated to ${item.ratio}`,
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                            className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 relative overflow-hidden group ${
+                                                                                isActive 
+                                                                                    ? item.activeClass 
+                                                                                    : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900'
+                                                                            }`}
+                                                                        >
+                                                                            <div className={`p-3 rounded-full ${isActive ? item.iconClass : `bg-zinc-900 text-zinc-500 group-hover:bg-zinc-800 group-hover:text-zinc-300`} transition-all`}>
+                                                                                {item.icon}
                                                                             </div>
-                                                                        )}
-                                                                    </button>
-                                                                ));
+                                                                            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{item.label}</div>
+                                                                            <div className={`text-2xl font-black ${isActive ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+                                                                                {item.ratio || "N/A"}
+                                                                            </div>
+                                                                            {isActive && (
+                                                                                <div className={`absolute top-0 right-0 w-8 h-8 ${item.badgeClass} flex items-center justify-center rounded-bl-xl`}>
+                                                                                    <Check className="w-4 h-4 text-white" />
+                                                                                </div>
+                                                                            )}
+                                                                        </button>
+                                                                    );
+                                                                });
                                                             })()}
                                                         </div>
                                                     </div>
@@ -1601,6 +1672,26 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                         </Button>
                                     </div>
 
+                                    <div className="flex flex-wrap items-center gap-3 border-l border-zinc-800 pl-6 ml-3">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2">Sheet Tools:</div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => setSheetLabels(Array(10).fill({ ...labelContent }))}
+                                            className="h-8 px-3 text-[10px] bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white font-black border border-indigo-500/20"
+                                        >
+                                            FILL ENTIRE SHEET
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => setSheetLabels(Array(10).fill(null))}
+                                            className="h-8 px-3 text-[10px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white font-black border border-red-500/20"
+                                        >
+                                            CLEAR SHEET
+                                        </Button>
+                                    </div>
+
                                     <div className="flex items-center gap-4">
                                         <div className="hidden sm:flex flex-col">
                                             <Label className="text-[9px] text-zinc-500 font-bold uppercase mb-1">Preview Zoom</Label>
@@ -1635,7 +1726,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                     </div>
 
                                     <div 
-                                        className="bg-white shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-sm border border-zinc-200 origin-center flex flex-col freeform-print-page transition-transform duration-300"
+                                        className="bg-white shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-sm border border-zinc-200 origin-center flex flex-col freeform-print-page transition-all duration-300"
                                         style={{ 
                                             width: '8.5in', 
                                             height: '11.0in', 
@@ -1645,40 +1736,113 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                         }}
                                     >
                                         <div className="grid grid-cols-2 gap-x-[0.187in] gap-y-0 h-full overflow-hidden">
-                                            {Array.from({ length: 10 }).map((_, i) => (
+                                            {sheetLabels.map((slot, i) => (
                                                 <div 
                                                     key={i} 
                                                     className="w-[4.0in] h-[2.0in] border border-zinc-100 p-8 flex flex-col justify-between bg-white text-black overflow-hidden hover:border-indigo-400/50 hover:bg-indigo-50/10 transition-all group relative box-border"
                                                     style={{ borderRadius: '12px' }}
                                                 >
-                                                    <div className="absolute top-2 right-3 text-[7px] text-zinc-300 font-black tracking-widest opacity-20 uppercase">2" x 4" LABEL</div>
-                                                    
-                                                    {freeformConfig.name && (
-                                                        <div className="font-extrabold uppercase tracking-tighter leading-[0.9] border-l-4 border-indigo-600 pl-4" style={{ fontSize: `${freeformConfig.fontSize + 12}px` }}>
-                                                            {labelContent.name || 'Chemical Name'}
-                                                        </div>
-                                                    )}
+                                                    <div className="absolute top-2 left-3 text-[7px] text-zinc-300 font-bold tracking-widest opacity-40 uppercase">Label Slot {i + 1}</div>
+                                                    <div className="absolute top-2 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            onClick={() => {
+                                                                const newSheet = [...sheetLabels];
+                                                                newSheet[i] = { ...labelContent };
+                                                                setSheetLabels(newSheet);
+                                                            }}
+                                                            className="h-6 px-2 text-[8px] bg-indigo-600 text-white hover:bg-indigo-500 rounded-md font-black shadow-lg"
+                                                            title="Apply Current Design to Slot"
+                                                        >
+                                                            USE CURRENT
+                                                        </Button>
+                                                        <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    className="h-6 px-2 text-[8px] bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-md font-black border border-zinc-700"
+                                                                >
+                                                                    PICK SAVED
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="text-sm font-black uppercase">Assign Saved Design</DialogTitle>
+                                                                    <DialogDescription className="text-xs text-zinc-500">Pick a design for Label Slot {i + 1}</DialogDescription>
+                                                                </DialogHeader>
+                                                                <div className="max-h-[300px] overflow-y-auto space-y-1 p-2">
+                                                                    {savedTemplates.map(t => (
+                                                                        <button
+                                                                            key={t.id}
+                                                                            onClick={() => {
+                                                                                const newSheet = [...sheetLabels];
+                                                                                newSheet[i] = { ...t.content };
+                                                                                setSheetLabels(newSheet);
+                                                                            }}
+                                                                            className="w-full flex items-center justify-between p-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-all group"
+                                                                        >
+                                                                            <div className="text-left">
+                                                                                <div className="text-[10px] font-black uppercase text-zinc-300 group-hover:text-white">{t.templateName}</div>
+                                                                                <div className="text-[8px] text-zinc-600 font-bold uppercase">{t.content.name}</div>
+                                                                            </div>
+                                                                            <Check className="w-3.5 h-3.5 text-indigo-500 opacity-0 group-hover:opacity-100" />
+                                                                        </button>
+                                                                    ))}
+                                                                    {savedTemplates.length === 0 && <div className="text-center py-8 text-zinc-600 text-xs italic">No saved designs found</div>}
+                                                                </div>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            onClick={() => {
+                                                                const newSheet = [...sheetLabels];
+                                                                newSheet[i] = null;
+                                                                setSheetLabels(newSheet);
+                                                            }}
+                                                            className="h-6 w-6 p-0 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-md border border-red-500/20"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
 
-                                                    <div className="flex items-end justify-between gap-8 pointer-events-none">
-                                                        <div className="flex-1 min-w-0">
-                                                            {freeformConfig.notes && (
-                                                                <div className="space-y-4">
-                                                                    <div className="text-[9px] font-bold uppercase opacity-30 tracking-[0.2em] text-zinc-600">Handwritten Area</div>
-                                                                    <div className="border-b-2 border-zinc-950/10 w-full h-[1px]" />
-                                                                    <div className="border-b-2 border-zinc-950/10 w-full h-[1px]" />
+                                                    {slot ? (
+                                                        <>
+                                                            {freeformConfig.name && (
+                                                                <div className="font-extrabold uppercase tracking-tighter leading-[0.9] border-l-4 border-indigo-600 pl-4" style={{ fontSize: `${freeformConfig.fontSize + 12}px` }}>
+                                                                    {slot.name || 'Chemical Name'}
                                                                 </div>
                                                             )}
-                                                        </div>
-                                                        
-                                                        {freeformConfig.ratio && (
-                                                            <div className="border-[4px] border-black p-4 rounded-[20px] flex flex-col items-center justify-center min-w-[90px] shrink-0 bg-white">
-                                                                <div className="text-[10px] uppercase font-black mb-1 opacity-50 tracking-tighter leading-none">Ratio</div>
-                                                                <div className="font-black leading-none" style={{ fontSize: `${freeformConfig.fontSize + 6}px` }}>
-                                                                    {labelContent.dilutionRatio || '1:10'}
+
+                                                            <div className="flex items-end justify-between gap-8 pointer-events-none">
+                                                                <div className="flex-1 min-w-0">
+                                                                    {freeformConfig.notes && (
+                                                                        <div className="space-y-4">
+                                                                            <div className="text-[9px] font-bold uppercase opacity-30 tracking-[0.2em] text-zinc-600">Handwritten Area</div>
+                                                                            <div className="border-b-2 border-zinc-950/10 w-full h-[1px]" />
+                                                                            <div className="border-b-2 border-zinc-950/10 w-full h-[1px]" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
+                                                                
+                                                                {freeformConfig.ratio && (
+                                                                    <div className="border-[4px] border-black p-4 rounded-[20px] flex flex-col items-center justify-center min-w-[90px] shrink-0 bg-white">
+                                                                        <div className="text-[10px] uppercase font-black mb-1 opacity-50 tracking-tighter leading-none">Ratio</div>
+                                                                        <div className="font-black leading-none" style={{ fontSize: `${freeformConfig.fontSize + 6}px` }}>
+                                                                            {slot.dilutionRatio || '1:10'}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex-1 border-2 border-dashed border-zinc-200 rounded-xl flex flex-col items-center justify-center gap-2 text-zinc-300 opacity-50 group-hover:opacity-100 transition-all group-hover:border-indigo-400 group-hover:text-indigo-400">
+                                                            <Plus className="w-8 h-8" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-center px-4">Assign Chemical to this Slot</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
