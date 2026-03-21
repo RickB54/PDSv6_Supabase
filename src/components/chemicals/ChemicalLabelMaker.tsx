@@ -49,7 +49,8 @@ import {
     Check,
     Waves,
     Flame,
-    Sparkle
+    Sparkle,
+    FileText
 } from 'lucide-react';
 import { Chemical } from '@/types/chemicals';
 import { getCombinedSelectableProducts, updateChemicalPartial } from '@/lib/chemicals';
@@ -64,8 +65,11 @@ import { DilutionCalculator } from '@/pages/DilutionCalculator';
 
 const mapScenarioLabel = (val: string) => {
     const s = (val || '').toLowerCase();
-    if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "VERY DIRTY";
-    if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) return "SLIGHTLY DIRTY";
+    if (s.match(/heavy|grime|deep|strong|worst|dirty|very dirty|degrease|tough/)) return "HEAVY DUTY";
+    if (s.match(/light|standard|daily|maintenance|slightly dirty|fair|rinse|quick/)) {
+        if (s.match(/maintenance|light|rinse/)) return "MAINTENANCE";
+        return "STANDARD";
+    }
     if (s.match(/interior|cabin|seats|carpet|dash|upholstery|leather|inside/)) return "INTERIOR";
     if (s.match(/exterior|outside|paint|body|wash|soap|foam/)) return "EXTERIOR";
     return (val || '').toUpperCase();
@@ -101,6 +105,7 @@ interface ChemicalLabelMakerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     initialChemical?: Chemical | null;
+    onOpenRefChart?: () => void;
 }
 
 type LabelSize = 'Small (4oz)' | 'Mini (8oz)' | 'Medium (16oz)' | 'Large (24oz)' | 'X-Large (32oz)' | 'Sticker (4x3)';
@@ -150,7 +155,7 @@ interface SavedLabelTemplate {
     createdAt: string;
 }
 
-export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: ChemicalLabelMakerProps) {
+export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpenRefChart }: ChemicalLabelMakerProps) {
     const [chemicals, setChemicals] = useState<Chemical[]>([]);
     const [selectedChemical, setSelectedChemical] = useState<Chemical | null>(initialChemical || null);
     const [loading, setLoading] = useState(false);
@@ -177,8 +182,10 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                     background: white !important;
                     box-shadow: none !important;
                     border: none !important;
+                    display: block !important;
                 }
-                @page { size: auto; margin: 0; }
+                @page { size: letter portrait; margin: 0; }
+                .no-print { display: none !important; }
             }
         `;
         document.head.appendChild(style);
@@ -954,7 +961,9 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <DialogTitle className="text-xl font-bold">Chemical Label Maker</DialogTitle>
+                                <DialogTitle className="text-xl font-bold">
+                                    {viewMode === 'freeform' ? `10-Label Sheet — OL125 - 4" x 2"` : 'Chemical Label Maker'}
+                                </DialogTitle>
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
@@ -997,6 +1006,15 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                 <Layout className="w-4 h-4" />
                                 {viewMode === 'freeform' ? "SINGLE LABEL DESIGNER" : "STICKER SHEET EDITOR"}
                             </Button>
+                            <Button 
+                                 variant="outline" 
+                                 onClick={() => {
+                                     if (onOpenRefChart) onOpenRefChart();
+                                 }}
+                                 className="h-9 px-4 text-xs font-black gap-2 border-amber-500/30 bg-zinc-900 text-amber-500 hover:bg-amber-500 hover:text-white transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                             >
+                                 <FileText className="w-4 h-4" /> REF CHART
+                             </Button>
                         </div>
                     </div>
                 </DialogHeader>
@@ -1368,7 +1386,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                     {/* Main Content: Editor & Preview */}
                     <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-zinc-950">
                         {/* Editor Forms */}
-                        <div className={`${activeTab === 'preview' ? 'hidden xl:flex' : 'flex'} flex-[1.6] border-r border-zinc-800 flex-col min-w-0`}>
+                        <div className={`${activeTab === 'preview' ? 'hidden md:flex' : 'flex'} flex-[1.6] border-r border-zinc-800 flex-col min-w-0`}>
                             {viewMode === 'calculator' ? (
                                 <div className="flex-1 bg-zinc-950 flex flex-col">
                                     <DilutionCalculator 
@@ -1480,33 +1498,33 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                     const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                                                                     return pA - pB;
                                                                 });
-                                                                const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
-                                                                const maintenance = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
+                                                                const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard'));
+                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy'));
+                                                                const maintenance = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light'));
 
                                                                 return [
                                                                     { 
                                                                         label: "Standard", 
-                                                                        ratio: standard?.ratio, 
+                                                                        ratio: standard?.ratio || "Unknown", 
                                                                         activeClass: "border-blue-500 bg-blue-500/20 ring-4 ring-blue-500/10",
-                                                                        iconClass: "bg-blue-500 text-white",
-                                                                        badgeClass: "bg-blue-500",
+                                                                        iconClass: standard ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-500",
+                                                                        badgeClass: standard ? "bg-blue-500" : "bg-zinc-700",
                                                                         icon: <Waves className="w-4 h-4" /> 
                                                                     },
                                                                     { 
                                                                         label: "Heavy Duty", 
-                                                                        ratio: heavy?.ratio, 
+                                                                        ratio: heavy?.ratio || "Unknown", 
                                                                         activeClass: "border-orange-500 bg-orange-500/20 ring-4 ring-orange-500/10",
-                                                                        iconClass: "bg-orange-500 text-white",
-                                                                        badgeClass: "bg-orange-500",
+                                                                        iconClass: heavy ? "bg-orange-500 text-white" : "bg-zinc-800 text-zinc-500",
+                                                                        badgeClass: heavy ? "bg-orange-500" : "bg-zinc-700",
                                                                         icon: <Flame className="w-4 h-4" /> 
                                                                     },
                                                                     { 
                                                                         label: "Maintenance", 
-                                                                        ratio: maintenance?.ratio, 
+                                                                        ratio: maintenance?.ratio || "Unknown", 
                                                                         activeClass: "border-emerald-500 bg-emerald-500/20 ring-4 ring-emerald-500/10",
-                                                                        iconClass: "bg-emerald-500 text-white",
-                                                                        badgeClass: "bg-emerald-500",
+                                                                        iconClass: maintenance ? "bg-emerald-500 text-white" : "bg-zinc-800 text-zinc-500",
+                                                                        badgeClass: maintenance ? "bg-emerald-500" : "bg-zinc-700",
                                                                         icon: <Sparkle className="w-4 h-4" /> 
                                                                     }
                                                                 ].map((item) => {
@@ -1516,7 +1534,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                                                             key={item.label}
                                                                             type="button"
                                                                             onClick={() => {
-                                                                                if (item.ratio) {
+                                                                                if (item.ratio && item.ratio !== "Unknown") {
                                                                                     setLabelContent(prev => ({ 
                                                                                         ...prev, 
                                                                                         dilutionRatio: item.ratio,
@@ -1787,23 +1805,24 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                     </div>
 
                                     <div 
-                                        className="bg-white shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-sm border border-zinc-200 origin-center flex flex-col freeform-print-page transition-all duration-300"
+                                        className="bg-white shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-sm border border-zinc-200 origin-center flex flex-col freeform-print-page transition-all duration-300 overflow-hidden"
                                         style={{ 
                                             width: '8.5in', 
                                             height: '11.0in', 
                                             transform: `scale(${freeformConfig.pageZoom})`,
                                             padding: '0.5in 0.156in',
-                                            flexShrink: 0
+                                            flexShrink: 0,
+                                            boxSizing: 'border-box'
                                         }}
                                     >
-                                        <div className="grid grid-cols-2 gap-x-[0.187in] gap-y-0 h-full overflow-hidden">
+                                        <div className="grid grid-cols-2 gap-x-[0.187in] gap-y-0 h-full w-full overflow-hidden box-border">
                                             {sheetLabels.map((slot, i) => (
                                                 <div 
                                                     key={i} 
-                                                    className="w-[4.0in] h-[2.0in] border border-zinc-100 p-8 flex flex-col justify-between bg-white text-black overflow-hidden hover:border-indigo-400/50 hover:bg-indigo-50/10 transition-all group relative box-border"
-                                                    style={{ borderRadius: '12px' }}
+                                                    className="w-[4.0in] h-[2.0in] border border-zinc-100/30 p-4 flex flex-col justify-between bg-white text-black overflow-hidden hover:border-indigo-400 group relative box-border"
+                                                    style={{ borderRadius: '1.25rem' }}
                                                 >
-                                                    <div className="absolute top-2 left-3 text-[7px] text-zinc-300 font-bold tracking-widest opacity-40 uppercase">Label Slot {i + 1}</div>
+                                                    <div className="absolute top-2 left-3 text-[7px] text-zinc-300 font-bold tracking-widest opacity-40 uppercase no-print">Label Slot {i + 1}</div>
                                                     <div className="absolute top-2 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
                                                         <Button 
                                                             variant="ghost" 
@@ -1911,7 +1930,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical }: Chem
                                 </div>
                             </div>
                         ) : (
-                            <div className={`${activeTab === 'edit' ? 'hidden xl:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>
+                        <div className={`${activeTab === 'edit' ? 'hidden md:flex' : 'flex'} flex-1 p-6 sm:p-20 flex-col items-center justify-start overflow-auto min-h-[500px] relative bg-black/40`}>
                                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent)] pointer-events-none" />
                                 <div className="absolute top-10 right-10">
                                     <Button 

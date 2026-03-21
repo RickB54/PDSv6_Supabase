@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -105,6 +106,9 @@ const InventoryControl = () => {
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
   const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">("landscape");
   const [savingChart, setSavingChart] = useState(false);
+  const [hiddenChemicalIds, setHiddenChemicalIds] = useState<string[]>([]);
+  const [confirmHideId, setConfirmHideId] = useState<string | null>(null);
+  const [chartSort, setChartSort] = useState<string>('brand');
 
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
@@ -172,6 +176,11 @@ const InventoryControl = () => {
       const emps = await getSupabaseEmployees();
       setEmployees(emps as any[]);
     })();
+
+    // Listen for external open requests (e.g. from Label Maker)
+    const handleOpenChart = () => setIsDilutionModalOpen(true);
+    window.addEventListener('open-dilution-chart', handleOpenChart);
+    return () => window.removeEventListener('open-dilution-chart', handleOpenChart);
   }, []);
 
   // Auto-open Material Updates modal ONCE when `?updates=true` or `?updates` is present
@@ -982,65 +991,65 @@ const InventoryControl = () => {
       <head>
         <title>Chemical Dilution Quick Reference Chart</title>
         <style>
-          body { font-family: sans-serif; background: #fff; padding: 20px; box-sizing: border-box; }
-          @page { size: ${chartOrientation}; margin: 10mm; }
+          @media print {
+            @page { size: ${chartOrientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 5mm; }
+            body { margin: 0; padding: 0; }
+          }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; padding: 20px; box-sizing: border-box; }
           .header { text-align: center; margin-bottom: 25px; }
-          .header h1 { font-weight: 900; font-size: 32px; margin: 0; text-transform: uppercase; color: #111; border-bottom: 5px solid #facc15; display: inline-block; padding-bottom: 5px; }
-          .header p { color: #666; font-size: 11px; margin-top: 8px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #ccc; }
-          th, td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; color: #000; }
-          th { background-color: #f4f4f5; font-weight: bold; font-size: 11px; text-transform: uppercase; }
-          .product-cell { text-align: left; border-right: 2px solid #64748b; padding-left: 8px; vertical-align: bottom; }
-          .product-name { font-weight: bold; font-size: 13px; margin-bottom: 2px; text-transform: uppercase; }
-          .brand-name { font-size: 10px; color: #666; margin-bottom: 8px; }
-          .labels-block { font-size: 9px; font-weight: bold; color: #444; border-top: 1px solid #eee; padding-top: 4px; }
-          .labels-block div { height: 18px; display: flex; align-items: center; }
-          .ratio-cell { vertical-align: middle; font-weight: bold; font-size: 13px; }
+          .header h1 { font-weight: 800; font-size: 28px; margin: 0; text-transform: uppercase; color: #111; border-bottom: 4px solid #facc15; display: inline-block; padding-bottom: 5px; letter-spacing: -0.02em; }
+          .header p { color: #888; font-size: 10px; margin-top: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #ddd; table-layout: fixed; }
+          th, td { border: 1px solid #ddd; padding: 4px 2px; text-align: center; color: #000; word-wrap: break-word; overflow: hidden; }
+          th { background-color: #f8fafc; font-weight: 800; font-size: 9px; text-transform: uppercase; color: #475569; }
+          .product-cell { text-align: left; border-right: 2px solid #cbd5e1; padding-left: 6px; vertical-align: bottom; width: 140px; }
+          .product-name { font-weight: 800; font-size: 11px; margin-bottom: 1px; color: #0f172a; }
+          .brand-name { font-size: 8px; color: #94a3b8; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; }
+          .labels-block { font-size: 7px; font-weight: 800; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 4px; }
+          .labels-block div { height: 16px; display: flex; align-items: center; justify-content: space-between; }
+          .ratio-cell { vertical-align: middle; font-weight: 800; font-size: 10px; color: #334155; }
           .amount-cell { vertical-align: bottom; padding: 0; }
-          .amount-cell div { height: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 12px; }
-          .chem-row { border-bottom: 1px solid #f1f5f9; }
-          .thick-right { border-right: 2px solid #64748b; }
+          .amount-cell div { height: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #1e293b; }
+          .chem-row { border-bottom: 1px solid #f8fafc; color: #0f172a; }
+          .thick-right { border-right: 2px solid #cbd5e1; }
+          .bg-std { background-color: #f8fafc; }
+          .bg-heavy { background-color: #fffbeb; }
+          .bg-light { background-color: #f0f9ff; }
         </style>
       </head>
       <body>
         <div class="header">
           <h1>CHEMICAL DILUTION QUICK REFERENCE CHART</h1>
-          <p>Generated: ${new Date().toLocaleDateString()}</p>
+          <p>Generated: ${new Date().toLocaleDateString()} — Prime Auto Detail</p>
         </div>
         <table>
           <thead>
             <tr>
               <th rowspan="2" class="product-cell">PRODUCT (BRAND / NAME)</th>
-              <th colspan="4" style="background-color: #f8fafc; border-bottom: 2px solid #94a3b8;" class="thick-right">STANDARD</th>
-              <th colspan="4" style="background-color: #fffbeb; border-bottom: 2px solid #f59e0b;" class="thick-right">HEAVY DUTY</th>
-              <th colspan="4" style="background-color: #f0f9ff; border-bottom: 2px solid #0ea5e9;">MAINTENANCE</th>
+              <th colspan="4" class="thick-right bg-std" style="border-bottom: 2px solid #94a3b8;">STANDARD</th>
+              <th colspan="4" class="thick-right bg-heavy" style="border-bottom: 2px solid #f59e0b;">HEAVY DUTY</th>
+              <th colspan="4" class="bg-light" style="border-bottom: 2px solid #0ea5e9;">MAINTENANCE</th>
             </tr>
             <tr>
-              <th style="background-color: #f8fafc;">RATIO</th>
-              <th style="background-color: white;">16OZ</th>
-              <th style="background-color: white;">24OZ</th>
-              <th style="background-color: white;" class="thick-right">32OZ</th>
-              <th style="background-color: #fffbeb;">RATIO</th>
-              <th style="background-color: white;">16OZ</th>
-              <th style="background-color: white;">24OZ</th>
-              <th style="background-color: white;" class="thick-right">32OZ</th>
-              <th style="background-color: #f0f9ff;">RATIO</th>
-              <th style="background-color: white;">16OZ</th>
-              <th style="background-color: white;">24OZ</th>
-              <th style="background-color: white;">32OZ</th>
+              <th class="bg-std">RATIO</th>
+              <th class="bg-std">16OZ</th><th class="bg-std">24OZ</th><th class="thick-right bg-std">32OZ</th>
+              <th class="bg-heavy">RATIO</th>
+              <th class="bg-heavy">16OZ</th><th class="bg-heavy">24OZ</th><th class="thick-right bg-heavy">32OZ</th>
+              <th class="bg-light">RATIO</th>
+              <th class="bg-light">16OZ</th><th class="bg-light">24OZ</th><th class="bg-light">32OZ</th>
             </tr>
           </thead>
           <tbody>
             ${filteredChemicals.map(c => {
-               const ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+               const ratios = (c.dilution_ratios && (c as any).dilution_ratios.length > 0) ? (c as any).dilution_ratios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
                const sorted = [...ratios].sort((a,b) => {
                   const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                   const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                   return pA - pB;
                });
-               const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-               const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
-               const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
+               const s = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || (sorted.length > 0 ? sorted[0] : null);
+               const h = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : null);
+               const m = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : null);
 
                const renderCellHtml = (r: any, oz: number, isLast: boolean = false) => {
                   const amts = r ? calculateAmounts(r.ratio, oz) : null;
@@ -1058,22 +1067,22 @@ const InventoryControl = () => {
                        <div class="product-name">${c.name}</div>
                        <div class="brand-name">${c.brand || ''}</div>
                        <div class="labels-block">
-                          <div>Chemical Amount:</div>
-                          <div>Water Amount:</div>
+                          <div><span>Chemical:</span> <span style="font-size: 6px">(C)</span></div>
+                          <div><span>Water:</span> <span style="font-size: 6px">(W)</span></div>
                        </div>
                     </td>
-                    <td class="ratio-cell">${standard ? transformRatio(standard.ratio) : '-'}</td>
-                    ${renderCellHtml(standard, 16)}
-                    ${renderCellHtml(standard, 24)}
-                    ${renderCellHtml(standard, 32, true)}
-                    <td class="ratio-cell">${more ? transformRatio(more.ratio) : '-'}</td>
-                    ${renderCellHtml(more, 16)}
-                    ${renderCellHtml(more, 24)}
-                    ${renderCellHtml(more, 32, true)}
-                    <td class="ratio-cell">${less ? transformRatio(less.ratio) : '-'}</td>
-                    ${renderCellHtml(less, 16)}
-                    ${renderCellHtml(less, 24)}
-                    ${renderCellHtml(less, 32)}
+                    <td class="ratio-cell">${s ? transformRatio(s.ratio) : '-'}</td>
+                    ${renderCellHtml(s, 16)}
+                    ${renderCellHtml(s, 24)}
+                    ${renderCellHtml(s, 32, true)}
+                    <td class="ratio-cell">${h ? transformRatio(h.ratio) : '-'}</td>
+                    ${renderCellHtml(h, 16)}
+                    ${renderCellHtml(h, 24)}
+                    ${renderCellHtml(h, 32, true)}
+                    <td class="ratio-cell">${m ? transformRatio(m.ratio) : '-'}</td>
+                    ${renderCellHtml(m, 16)}
+                    ${renderCellHtml(m, 24)}
+                    ${renderCellHtml(m, 32)}
                  </tr>
                `;
             }).join('')}
@@ -1084,7 +1093,11 @@ const InventoryControl = () => {
     `;
     printWindow.document.write(html);
     printWindow.document.close();
-    setTimeout(() => printWindow.print(), 300);
+    
+    // Force a slight delay to ensure styles are applied before print dialog
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   const handleDelete = (id: string, mode: 'chemical' | 'material' | 'tool', itemName: string) => {
@@ -2183,11 +2196,12 @@ const InventoryControl = () => {
         showReturnToInventory={true}
       />
       {labelMakerOpen && (
-        <ChemicalLabelMaker
-          open={labelMakerOpen}
-          onOpenChange={setLabelMakerOpen}
-          initialChemical={labelMakerChemical}
-        />
+        <ChemicalLabelMaker 
+             open={labelMakerOpen} 
+             onOpenChange={setLabelMakerOpen}
+             initialChemical={labelMakerChemical as any}
+             onOpenRefChart={() => setIsDilutionModalOpen(true)}
+           />
       )}
       <Dialog open={isDilutionModalOpen} onOpenChange={(val) => {
         setIsDilutionModalOpen(val);
@@ -2203,7 +2217,7 @@ const InventoryControl = () => {
           }
         }
       }}>
-        <DialogContent className={`${chartOrientation === 'landscape' ? 'max-w-[98vw] p-1' : 'max-w-[800px]'} w-full max-h-[98vh] flex flex-col p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl`}>
+        <DialogContent className={`${chartOrientation === 'landscape' ? 'max-w-[98vw] 2xl:max-w-[1700px] p-1' : 'max-w-[800px]'} w-full h-[95vh] flex flex-col p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl`}>
           <div className="flex items-center justify-between p-3 bg-zinc-900 border-b border-zinc-800">
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="flex items-center gap-3">
@@ -2221,51 +2235,126 @@ const InventoryControl = () => {
                   <TrendingUp className="h-3 w-3 mr-1 rotate-90" /> Landscape
                 </Button>
                 <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setChartOrientation('portrait')}
-                  className={`h-7 px-3 text-[10px] font-black uppercase transition-all ${chartOrientation === 'portrait' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
-                >
-                  <TrendingUp className="h-3 w-3 mr-1" /> Portrait
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
+                   variant="ghost" 
+                   size="sm" 
+                   onClick={() => setChartOrientation('portrait')}
+                   className={`h-7 px-3 text-[10px] font-black uppercase transition-all ${chartOrientation === 'portrait' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+                 >
+                   <TrendingUp className="h-3 w-3 mr-1" /> Portrait
+                 </Button>
+               </div>
+               
+               <div className="flex items-center gap-2 ml-0 md:ml-2">
+                 <Select value={chartSort} onValueChange={setChartSort}>
+                   <SelectTrigger className="w-[180px] h-7 bg-zinc-800/80 border-zinc-700 text-zinc-100 font-bold uppercase tracking-wider text-[10px] rounded-lg focus:ring-indigo-500/30">
+                     <div className="flex items-center gap-2">
+                       <TrendingUp className="h-3 w-3 text-indigo-400" />
+                       <span>Sort: {chartSort === 'brand' ? 'By Brand' : chartSort === 'name' ? 'A-Z List' : chartSort === 'low_stock' ? 'Low Stock' : chartSort.startsWith('brand:') ? chartSort.split(':')[1] : 'Custom'}</span>
+                     </div>
+                   </SelectTrigger>
+                   <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                     <SelectItem value="brand" className="text-xs font-bold uppercase tracking-wider focus:bg-zinc-800 hover:text-indigo-400">By Brand (All)</SelectItem>
+                     <SelectItem value="name" className="text-xs font-bold uppercase tracking-wider focus:bg-zinc-800 hover:text-indigo-400">A-Z List</SelectItem>
+                     <SelectItem value="low_stock" className="text-xs font-bold uppercase tracking-wider focus:bg-zinc-800 hover:text-indigo-400 text-red-400">Low Threshold</SelectItem>
+                     
+                     <div className="px-2 py-1.5 text-[10px] font-black text-indigo-400 border-t border-zinc-800 mt-1 uppercase tracking-widest">Jump to Brand</div>
+                     {Array.from(new Set(chemicals.map(c => c.brand).filter(Boolean))).sort().map(brand => (
+                       <SelectItem key={brand as string} value={`brand:${brand}`} className="text-xs font-semibold focus:bg-zinc-800 hover:text-indigo-400">{brand as string}</SelectItem>
+                     ))}
+                     <SelectItem value="brand:Other" className="text-xs font-semibold focus:bg-zinc-800 hover:text-indigo-400">Other / No Brand</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
+             </div>
+             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={printDilutionChart} className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 group"><Printer className="h-4 w-4 mr-2 text-indigo-400 group-hover:text-white" /> Print</Button>
               <Button variant="outline" size="sm" onClick={downloadDilutionPDF} className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 group"><Download className="h-4 w-4 mr-2 text-indigo-400 group-hover:text-white" /> PDF</Button>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-1 sm:p-2 bg-zinc-50/50">
-            <div className={`${chartOrientation === 'landscape' ? 'max-w-full' : 'max-w-4xl'} mx-auto bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-1`}>
-              <div className="overflow-x-auto border border-zinc-300 rounded-lg">
+          <div className="flex-1 p-1 sm:p-2 bg-zinc-50/50 flex flex-col min-h-0 overflow-hidden">
+            <div className={`${chartOrientation === 'landscape' ? 'max-w-full' : 'max-w-4xl'} mx-auto w-full bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-1 flex flex-col min-h-0`}>
+              {/* TOP SYNC SCROLLBAR */}
+              <div className="flex items-center justify-between mb-1 px-1">
+                <div 
+                  className={`overflow-x-auto h-4 bg-zinc-100 border border-zinc-200 rounded-sm shrink-0 chart-top-scroll-container flex-1`} 
+                  onScroll={(e) => {
+                    const bottom = e.currentTarget.parentElement?.nextElementSibling?.querySelector('.chart-bottom-scroll-container');
+                    if (bottom) bottom.scrollLeft = e.currentTarget.scrollLeft;
+                  }}
+                >
+                  <div style={{ width: chartOrientation === 'landscape' ? '1100px' : '700px', height: '1px' }} />
+                </div>
+                {hiddenChemicalIds.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="xs" 
+                    onClick={() => setHiddenChemicalIds([])}
+                    className="ml-2 h-6 px-2 text-[8px] font-black text-indigo-400 hover:text-indigo-600 bg-indigo-50/50 uppercase"
+                  >
+                    Show {hiddenChemicalIds.length} Hidden
+                  </Button>
+                )}
+              </div>
+              
+              <div 
+                className="flex-1 overflow-auto border border-zinc-300 rounded-lg chart-bottom-scroll-container pb-4"
+                onScroll={(e) => {
+                  const top = e.currentTarget.parentElement?.querySelector('.chart-top-scroll-container');
+                  if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+                }}
+              >
                 <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[11px] min-w-[700px]'}`}>
-                  <thead>
+                  <thead className="sticky top-0 z-30 bg-white shadow-sm ring-1 ring-zinc-300">
                     <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
-                      <th rowSpan={2} className="p-1 border border-zinc-300 text-left w-[12%]">Product</th>
-                      <th colSpan={4} className="p-1 border border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Standard</th>
-                      <th colSpan={4} className="p-1 border border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Heavy Duty</th>
-                      <th colSpan={4} className="p-1 border border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Maintenance</th>
+                      <th rowSpan={2} className="p-1 border border-zinc-300 text-left w-[12%] sticky left-0 z-40 bg-zinc-100">Product</th>
+                      <th colSpan={4} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Standard</th>
+                      <th colSpan={4} className="p-1 border-x-4 border-zinc-400 text-center bg-zinc-100/50 text-zinc-700">Heavy Duty</th>
+                      <th colSpan={4} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Maintenance</th>
                     </tr>
                     <tr className="bg-zinc-50 text-[10px] text-center font-bold">
                       <th className="p-1 border border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
-                      <th className="p-1 border border-zinc-300">Ratio</th>
+                      <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
-                      <th className="p-1 border border-zinc-300">Ratio</th>
+                      <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredChemicals.map((c, i) => {
-                       const ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+                    {[...chemicals]
+                      .filter(c => {
+                        const baseFilter = !hiddenChemicalIds.includes(c.id);
+                        if (!baseFilter) return false;
+                        if (chartSort.startsWith('brand:')) {
+                           const target = chartSort.split(':')[1];
+                           if (target === 'Other') return !c.brand;
+                           return c.brand === target;
+                        }
+                        return true;
+                      })
+                      .sort((a,b) => {
+                        if (chartSort === 'brand' || chartSort.startsWith('brand:')) {
+                           const bA = (a.brand || '').toLowerCase();
+                           const bB = (b.brand || '').toLowerCase();
+                           if (bA !== bB) return bA.localeCompare(bB);
+                        }
+                        if (chartSort === 'low_stock') {
+                           const sA = a.currentStock / (a.threshold || 1);
+                           const sB = b.currentStock / (b.threshold || 1);
+                           if (sA !== sB) return sA - sB;
+                        }
+                        return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+                      })
+                      .map((c, i) => {
+                       const ratios = ((c as any).dilution_ratios && (c as any).dilution_ratios.length > 0) ? (c as any).dilution_ratios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
                        const sorted = [...ratios].sort((a,b) => {
                           const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                           const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                           return pA - pB;
                        });
-                       const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-                       const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : null);
-                       const light = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : null);
+                       const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || (sorted.length > 0 ? sorted[0] : null);
+                       const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : (sorted.length > 0 ? sorted[0] : null));
+                       const light = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : (sorted.length > 0 ? sorted[0] : null));
 
                        const renderEditableCell = (r: any, soilLevel: string, field: 'ratio' | 'chem' | 'water', ozSize?: number, extraClass: string = '') => {
                           const amts = r ? calculateAmounts(r.ratio, ozSize || 0) : null;
@@ -2316,12 +2405,26 @@ const InventoryControl = () => {
                             </td>
                           );
                        };
-
                        return (
-                         <tr key={i} className={i % 2 === 0 ? 'bg-white font-sans' : 'bg-zinc-50 font-sans'}>
-                           <td className="p-2 border border-zinc-300 align-bottom bg-white min-w-[140px]">
-                              <div className="font-bold text-zinc-900 leading-tight text-[12px] sm:text-[13px] mb-1">{c.name}</div>
-                              <div className="text-[9px] text-zinc-400 font-bold uppercase mb-3 tracking-wider">{c.brand || ''}</div>
+                          <tr 
+                            key={i} 
+                            className={`${i % 2 === 0 ? 'bg-white font-sans' : 'bg-zinc-50 font-sans'} ${hiddenChemicalIds.includes(c.id) ? 'hidden' : ''}`}
+                          >
+                            <td 
+                              className="p-1 border border-zinc-300 align-bottom bg-white min-w-[120px] cursor-pointer hover:bg-red-50 group/prod transition-colors"
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to hide "${c.name}" from the chart and printout?`)) {
+                                  setHiddenChemicalIds(prev => [...prev, c.id]);
+                                }
+                              }}
+                            >
+                               <div className="flex items-center justify-between">
+                                 <div className="font-bold text-zinc-900 leading-tight text-[12px] sm:text-[13px] mb-1">{c.name}</div>
+                                 <div className="opacity-0 group-hover/prod:opacity-100 text-red-500 transition-opacity">
+                                   <EyeOff className="w-3 h-3" />
+                                 </div>
+                               </div>
+                               <div className="text-[9px] text-zinc-400 font-bold uppercase mb-3 tracking-wider">{c.brand || ''}</div>
                               <div className="flex flex-col gap-0 text-[8px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 opacity-80">
                                  <div className="h-[16px] flex items-center justify-between">
                                     <span>CHEMICAL AMOUNT:</span>
@@ -2333,7 +2436,7 @@ const InventoryControl = () => {
                                  </div>
                               </div>
                            </td>
-                           <td className="p-0 border border-zinc-300 group align-middle">
+                           <td className="p-0 border-l-4 border-r border-zinc-300 group align-middle">
                               <input 
                                  defaultValue={standard ? transformRatio(standard.ratio) : '-'}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'standard', 'ratio', e.target.value)}
@@ -2342,20 +2445,20 @@ const InventoryControl = () => {
                            </td>
                            {renderOzCompoundCell(standard, 16, 'standard', 'bg-green-50/10')}
                            {renderOzCompoundCell(standard, 24, 'standard', 'bg-blue-50/10')}
-                           {renderOzCompoundCell(standard, 32, 'bg-purple-50/10 border-r-2 border-r-zinc-400')}
+                           {renderOzCompoundCell(standard, 32, 'standard', 'bg-purple-50/10 border-r-2 border-r-zinc-400')}
 
-                           <td className="p-0 border border-zinc-300 group align-middle">
+                           <td className="p-0 border-l-4 border-zinc-300 group align-middle bg-zinc-50/5">
                               <input 
                                  defaultValue={heavy ? transformRatio(heavy.ratio) : '-'}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'heavy', 'ratio', e.target.value)}
                                  className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(heavy as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />
                            </td>
-                           {renderOzCompoundCell(heavy, 16, 'heavy', 'bg-green-50/10')}
-                           {renderOzCompoundCell(heavy, 24, 'heavy', 'bg-blue-50/10')}
-                           {renderOzCompoundCell(heavy, 32, 'bg-purple-50/10 border-r-2 border-r-zinc-300')}
+                           {renderOzCompoundCell(heavy, 16, 'heavy', 'bg-orange-50/10')}
+                           {renderOzCompoundCell(heavy, 24, 'heavy', 'bg-orange-50/10')}
+                           {renderOzCompoundCell(heavy, 32, 'heavy', 'bg-orange-50/10 border-r-2 border-r-zinc-300')}
 
-                           <td className="p-0 border border-zinc-300 group align-middle">
+                           <td className="p-0 border-l-4 border-zinc-300 group align-middle bg-zinc-50/5">
                               <input 
                                  defaultValue={light ? transformRatio(light.ratio) : '-'}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'maintenance', 'ratio', e.target.value)}
@@ -2364,7 +2467,7 @@ const InventoryControl = () => {
                            </td>
                            {renderOzCompoundCell(light, 16, 'maintenance', 'bg-green-50/10')}
                            {renderOzCompoundCell(light, 24, 'maintenance', 'bg-blue-50/10')}
-                           {renderOzCompoundCell(light, 32, 'bg-purple-50/10')}
+                           {renderOzCompoundCell(light, 32, 'maintenance', 'bg-purple-50/10')}
                          </tr>
                        );
                     })}
@@ -2372,12 +2475,21 @@ const InventoryControl = () => {
                 </table>
               </div>
               <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-100 pt-4">
-                <div className="flex gap-6 text-[8px] font-bold uppercase text-zinc-400 tracking-widest">
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /> 16oz</div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500" /> 24oz</div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500" /> 32oz</div>
-                </div>
-                <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400 bg-indigo-500/5 px-3 py-1.5 rounded-full border border-indigo-500/10 uppercase tracking-tighter">
+                 <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest no-print">
+                   <div className="flex items-center gap-2 text-emerald-600">
+                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" /> 
+                     16oz
+                   </div>
+                   <div className="flex items-center gap-2 text-blue-600">
+                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" /> 
+                     24oz
+                   </div>
+                   <div className="flex items-center gap-2 text-purple-600">
+                     <div className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-[0_0_8px_rgba(147,51,234,0.3)]" /> 
+                     32oz
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400 bg-indigo-500/5 px-3 py-1.5 rounded-full border border-indigo-500/10 uppercase tracking-tighter no-print">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Editable Grid: Changes in Indigo are custom overrides
                 </div>
               </div>
