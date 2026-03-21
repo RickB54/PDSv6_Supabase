@@ -272,7 +272,7 @@ ${targetChem.surface_compatibility?.avoid?.length ? `**Avoid:** ${targetChem.sur
                             </Button>
                         </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto mt-2 sm:mt-0">
                         <Button 
                             variant="outline" 
                             onClick={() => navigate('/dilution-calculator')} 

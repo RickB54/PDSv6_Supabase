@@ -184,11 +184,11 @@ const InventoryControl = () => {
 
     const chart = params.get("chart");
     if (chart === "print" || chart === "pdf" || chart === "modal") {
-       setTimeout(() => {
-          if (chemicals.length > 0) setIsDilutionModalOpen(true);
-       }, 1500);
+       if (chemicals.length > 0) setIsDilutionModalOpen(true);
+    } else {
+       setIsDilutionModalOpen(false);
     }
-  }, [location.search, autoOpenedFromQuery, chemicals.length]);
+  }, [location.search, chemicals.length]);
 
   useEffect(() => {
     localStorage.setItem('inventory-date-filter', dateFilter);
@@ -2119,7 +2119,12 @@ const InventoryControl = () => {
         if (!val) {
           const params = new URLSearchParams(window.location.search);
           if (params.has("chart")) {
-            navigate(-1);
+            // Check if we can go back specifically to where we came from
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate("/chemical-training");
+            }
           }
         }
       }}>
@@ -2136,22 +2141,22 @@ const InventoryControl = () => {
           </div>
           <div className="flex-1 overflow-auto p-2 sm:p-6 bg-zinc-50/50">
             <div className="max-w-7xl mx-auto bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-2 sm:p-4">
-              <div className="overflow-x-auto border border-zinc-400 rounded-lg">
-                <table className="w-full border-collapse border-2 border-zinc-400 text-[20px] min-w-[1200px]">
+              <div className="overflow-x-auto border border-zinc-300 rounded-lg">
+                <table className="w-full border-collapse border border-zinc-300 text-[11px] min-w-[900px]">
                   <thead>
-                    <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-400">
-                      <th rowSpan={2} className="p-3 border-2 border-zinc-400 text-left w-[18%] text-[20px]">Product (Brand / Name)</th>
-                      <th colSpan={4} className="p-3 border-2 border-zinc-400 text-center bg-zinc-50 text-[20px]">Standard Dilution</th>
-                      <th colSpan={4} className="p-3 border-2 border-zinc-400 text-center bg-zinc-50 text-[20px]">More Conc (Heavy)</th>
-                      <th colSpan={4} className="p-3 border-2 border-zinc-400 text-center bg-zinc-50 text-[20px]">Less Conc (Light)</th>
+                    <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
+                      <th rowSpan={2} className="p-2 border border-zinc-300 text-left w-[18%] text-[11px]">Product (Brand / Name)</th>
+                      <th colSpan={4} className="p-2 border border-zinc-300 text-center bg-zinc-50 text-[11px]">Standard Dilution</th>
+                      <th colSpan={4} className="p-2 border border-zinc-300 text-center bg-zinc-50 text-[11px]">More Conc (Heavy)</th>
+                      <th colSpan={4} className="p-2 border border-zinc-300 text-center bg-zinc-50 text-[11px]">Less Conc (Light)</th>
                     </tr>
-                    <tr className="bg-zinc-50 text-[18px] text-center font-bold">
-                      <th className="p-2 border-2 border-zinc-400">Ratio</th>
-                      <th className="p-2 border-2 border-zinc-400">16oz</th><th className="p-2 border-2 border-zinc-400">24oz</th><th className="p-2 border-2 border-zinc-400">32oz</th>
-                      <th className="p-2 border-2 border-zinc-400">Ratio</th>
-                      <th className="p-2 border-2 border-zinc-400">16oz</th><th className="p-2 border-2 border-zinc-400">24oz</th><th className="p-2 border-2 border-zinc-400">32oz</th>
-                      <th className="p-2 border-2 border-zinc-400">Ratio</th>
-                      <th className="p-2 border-2 border-zinc-400">16oz</th><th className="p-2 border-2 border-zinc-400">24oz</th><th className="p-2 border-2 border-zinc-400">32oz</th>
+                    <tr className="bg-zinc-50 text-[10px] text-center font-bold">
+                      <th className="p-1 border border-zinc-300">Ratio</th>
+                      <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
+                      <th className="p-1 border border-zinc-300">Ratio</th>
+                      <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
+                      <th className="p-1 border border-zinc-300">Ratio</th>
+                      <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2169,11 +2174,11 @@ const InventoryControl = () => {
                        const renderCellModal = (r: any, oz: number, extraClass: string = '') => {
                           const amts = r ? calculateAmounts(r.ratio, oz) : null;
                           return (
-                            <td className={`p-0 border-2 border-zinc-400 text-center align-bottom ${extraClass}`}>
+                            <td className={`p-0 border border-zinc-300 text-center align-bottom ${extraClass}`}>
                                {amts ? (
                                  <>
-                                   <div className="h-[28px] flex items-center justify-center font-bold text-zinc-900 border-b-2 border-zinc-200 bg-white text-[18px]">{amts.chem}oz</div>
-                                   <div className="h-[28px] flex items-center justify-center font-bold text-zinc-900 bg-white text-[18px]">{amts.water}oz</div>
+                                   <div className="h-[14px] flex items-center justify-center font-bold text-zinc-900 border-b border-zinc-100 bg-white text-[11px]">{amts.chem}oz</div>
+                                   <div className="h-[14px] flex items-center justify-center font-bold text-zinc-900 bg-white text-[11px]">{amts.water}oz</div>
                                  </>
                                ) : '-'}
                             </td>
@@ -2182,25 +2187,25 @@ const InventoryControl = () => {
 
                        return (
                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-zinc-50'}>
-                           <td className="p-3 border-2 border-zinc-400 font-medium align-bottom text-[18px] sm:text-[20px]">
+                           <td className="p-2 border border-zinc-300 font-medium align-bottom text-[11px] sm:text-[12px]">
                               <div className="font-bold text-zinc-900 leading-tight mb-2 uppercase">{c.name}</div>
-                              <div className="text-[14px] text-zinc-500 uppercase mb-6 font-bold">{c.brand || ''}</div>
-                              <div className="flex flex-col gap-0 text-[14px] font-black text-zinc-500 border-t-2 border-zinc-200 pt-2">
-                                 <div className="h-[28px] flex items-center">CHEMICAL AMOUNT:</div>
-                                 <div className="h-[28px] flex items-center">WATER AMOUNT:</div>
+                              <div className="text-[9px] text-zinc-500 uppercase mb-4">{c.brand || ''}</div>
+                              <div className="flex flex-col gap-0 text-[8px] font-black text-zinc-400 border-t border-zinc-100 pt-1">
+                                 <div className="h-[14px] flex items-center">CHEMICAL AMOUNT:</div>
+                                 <div className="h-[14px] flex items-center">WATER AMOUNT:</div>
                               </div>
                            </td>
-                           <td className="p-1 border-2 border-zinc-400 text-center align-middle font-bold text-zinc-800 text-[20px]">{standard ? transformRatio(standard.ratio) : '-'}</td>
+                           <td className="p-1 border border-zinc-300 text-center align-middle font-bold text-zinc-600 text-[11px]">{standard ? transformRatio(standard.ratio) : '-'}</td>
                            {renderCellModal(standard, 16, 'bg-green-50/5')}
                            {renderCellModal(standard, 24, 'bg-blue-50/5')}
                            {renderCellModal(standard, 32, 'bg-purple-50/5 border-r-2 border-r-zinc-400')}
 
-                           <td className="p-1 border-2 border-zinc-400 text-center align-middle font-bold text-zinc-800 text-[20px]">{more ? transformRatio(more.ratio) : '-'}</td>
+                           <td className="p-1 border border-zinc-300 text-center align-middle font-bold text-zinc-600 text-[11px]">{more ? transformRatio(more.ratio) : '-'}</td>
                            {renderCellModal(more, 16, 'bg-green-50/5')}
                            {renderCellModal(more, 24, 'bg-blue-50/5')}
-                           {renderCellModal(more, 32, 'bg-purple-50/5 border-r-4 border-r-zinc-500')}
+                           {renderCellModal(more, 32, 'bg-purple-50/5 border-r-2 border-r-zinc-300')}
 
-                           <td className="p-1 border-2 border-zinc-400 text-center align-middle font-bold text-zinc-800 text-[20px]">{less ? transformRatio(less.ratio) : '-'}</td>
+                           <td className="p-1 border border-zinc-300 text-center align-middle font-bold text-zinc-600 text-[11px]">{less ? transformRatio(less.ratio) : '-'}</td>
                            {renderCellModal(less, 16, 'bg-green-50/5')}
                            {renderCellModal(less, 24, 'bg-blue-50/5')}
                            {renderCellModal(less, 32, 'bg-purple-50/5')}
