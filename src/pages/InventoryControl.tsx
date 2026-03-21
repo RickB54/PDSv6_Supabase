@@ -821,20 +821,25 @@ const InventoryControl = () => {
     };
   };
 
-  const downloadDilutionPDF = () => {
+    const downloadDilutionPDF = () => {
     try {
       const pdf = new jsPDF('landscape');
       const pageWidth = pdf.internal.pageSize.getWidth();
     
     // Header
-    pdf.setTextColor(133, 77, 14);
-    pdf.setFontSize(18);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(28);
     pdf.setFont('helvetica', 'bold');
-    pdf.text("Chemical Dilution Quick Reference Chart", pageWidth / 2, 22, { align: 'center' });
+    pdf.text("CHEMICAL DILUTION QUICK REFERENCE CHART", pageWidth / 2, 22, { align: 'center' });
     
+    // Yellow underline
+    pdf.setDrawColor(250, 204, 21);
+    pdf.setLineWidth(1.5);
+    pdf.line(pageWidth / 2 - 80, 25, pageWidth / 2 + 80, 25);
+
     pdf.setFontSize(9);
     pdf.setTextColor(150, 150, 150);
-    pdf.text(`Generated: ${new Date().toLocaleDateString()} - Spreadsheet Mode`, pageWidth / 2, 30, { align: 'center' });
+    pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 32, { align: 'center' });
 
     const rows = filteredChemicals.map(c => {
       let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
@@ -860,44 +865,44 @@ const InventoryControl = () => {
       const l32 = calculateAmounts(less?.ratio || '', 32);
 
       return [
-        { content: `${c.brand ? c.brand + ' - ' : ''}${c.name}\n\nChemical Amount:\nWater Amount:`, styles: { fontStyle: 'bold', fontSize: 6, valign: 'bottom' } },
+        { content: `${c.name}\n${c.brand || ''}\n\nChemical Amount:\nWater Amount:`, styles: { fontStyle: 'bold', fontSize: 8, valign: 'bottom' } },
         // Standard
-        { content: standard ? transformRatio(standard.ratio) : '-', styles: { valign: 'middle' } },
-        s16 ? { content: `${s16.chem}oz\n${s16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
-        s24 ? { content: `${s24.chem}oz\n${s24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
-        s32 ? { content: `${s32.chem}oz\n${s32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        { content: standard ? transformRatio(standard.ratio) : '-', styles: { valign: 'middle', fontSize: 10, fontStyle: 'bold' } },
+        s16 ? { content: `${s16.chem}oz\n${s16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        s24 ? { content: `${s24.chem}oz\n${s24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        s32 ? { content: `${s32.chem}oz\n${s32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
         // More
-        { content: more ? transformRatio(more.ratio) : '-', styles: { valign: 'middle' } },
-        m16 ? { content: `${m16.chem}oz\n${m16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
-        m24 ? { content: `${m24.chem}oz\n${m24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
-        m32 ? { content: `${m32.chem}oz\n${m32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
+        { content: more ? transformRatio(more.ratio) : '-', styles: { valign: 'middle', fontSize: 10, fontStyle: 'bold' } },
+        m16 ? { content: `${m16.chem}oz\n${m16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        m24 ? { content: `${m24.chem}oz\n${m24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        m32 ? { content: `${m32.chem}oz\n${m32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
         // Less
-        { content: less ? transformRatio(less.ratio) : '-', styles: { valign: 'middle' } },
-        l16 ? { content: `${l16.chem}oz\n${l16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
-        l24 ? { content: `${l24.chem}oz\n${l24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-',
-        l32 ? { content: `${l32.chem}oz\n${l32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold' } } : '-'
+        { content: less ? transformRatio(less.ratio) : '-', styles: { valign: 'middle', fontSize: 10, fontStyle: 'bold' } },
+        l16 ? { content: `${l16.chem}oz\n${l16.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        l24 ? { content: `${l24.chem}oz\n${l24.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-',
+        l32 ? { content: `${l32.chem}oz\n${l32.water}oz`, styles: { textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } } : '-'
       ];
     });
 
     autoTable(pdf, {
-      startY: 40,
+      startY: 42,
       head: [
         [
-          { content: 'Product', rowSpan: 2 },
-          { content: 'Standard Dilution', colSpan: 4, styles: { halign: 'center', fillColor: [248, 250, 252] } },
-          { content: 'More Conc (Heavy)', colSpan: 4, styles: { halign: 'center', fillColor: [255, 247, 237] } },
-          { content: 'Less Conc (Light)', colSpan: 4, styles: { halign: 'center', fillColor: [240, 249, 255] } }
+          { content: 'PRODUCT (BRAND / NAME)', rowSpan: 2, styles: { halign: 'left' } },
+          { content: 'STANDARD DILUTION', colSpan: 4, styles: { halign: 'center', fillColor: [248, 250, 252] } },
+          { content: 'MORE CONCENTRATED (HEAVY)', colSpan: 4, styles: { halign: 'center', fillColor: [255, 251, 235] } },
+          { content: 'LESS CONCENTRATED (LIGHT)', colSpan: 4, styles: { halign: 'center', fillColor: [240, 249, 255] } }
         ],
-        ['Ratio', '16oz', '24oz', '32oz', 'Ratio', '16oz', '24oz', '32oz', 'Ratio', '16oz', '24oz', '32oz']
+        ['RATIO', '16OZ', '24OZ', '32OZ', 'RATIO', '16OZ', '24OZ', '32OZ', 'RATIO', '16OZ', '24OZ', '32OZ']
       ],
       body: rows as any,
       theme: 'grid',
-      headStyles: { textColor: [0, 0, 0], fontSize: 6, fontStyle: 'bold' },
-      styles: { fontSize: 5, cellPadding: 1, valign: 'middle', halign: 'center' },
+      headStyles: { textColor: [0, 0, 0], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+      styles: { fontSize: 8, cellPadding: 2, valign: 'middle', halign: 'center', textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [200, 200, 200] },
       columnStyles: { 
-        0: { cellWidth: 35, halign: 'left', fontStyle: 'bold', lineWidth: { right: 0.5 } },
-        4: { lineWidth: { right: 0.5 } },
-        8: { lineWidth: { right: 0.5 } }
+        0: { cellWidth: 45, halign: 'left', fontStyle: 'bold', lineWidth: { right: 0.4 } },
+        4: { lineWidth: { right: 0.4 } },
+        8: { lineWidth: { right: 0.4 } }
       }
     });
 
@@ -907,7 +912,7 @@ const InventoryControl = () => {
     }
   };
 
-  const printDilutionChart = () => {
+   const printDilutionChart = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -918,41 +923,50 @@ const InventoryControl = () => {
         <style>
           body { font-family: sans-serif; background: #fff; padding: 20px; box-sizing: border-box; }
           @page { size: landscape; margin: 10mm; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .header h1 { font-weight: 900; size: 28px; margin: 0; text-transform: uppercase; color: #111; border-bottom: 4px solid #facc15; display: inline-block; padding-bottom: 5px; }
-          .header p { color: #666; font-size: 10px; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border: 1px solid #ddd; padding: 2px; text-align: center; }
-          th { background-color: #f4f4f5; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-          td { height: 40px; }
+          .header { text-align: center; margin-bottom: 25px; }
+          .header h1 { font-weight: 900; font-size: 32px; margin: 0; text-transform: uppercase; color: #111; border-bottom: 5px solid #facc15; display: inline-block; padding-bottom: 5px; }
+          .header p { color: #666; font-size: 11px; margin-top: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #ccc; }
+          th, td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; color: #000; }
+          th { background-color: #f4f4f5; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+          .product-cell { text-align: left; border-right: 2px solid #64748b; padding-left: 8px; vertical-align: bottom; }
+          .product-name { font-weight: bold; font-size: 13px; margin-bottom: 2px; text-transform: uppercase; }
+          .brand-name { font-size: 10px; color: #666; margin-bottom: 8px; }
+          .labels-block { font-size: 9px; font-weight: bold; color: #444; border-top: 1px solid #eee; padding-top: 4px; }
+          .labels-block div { height: 18px; display: flex; align-items: center; }
+          .ratio-cell { vertical-align: middle; font-weight: bold; font-size: 13px; }
+          .amount-cell { vertical-align: bottom; padding: 0; }
+          .amount-cell div { height: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+          .chem-row { border-bottom: 1px solid #f1f5f9; }
+          .thick-right { border-right: 2px solid #64748b; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>Chemical Dilution Quick Reference Chart</h1>
+          <h1>CHEMICAL DILUTION QUICK REFERENCE CHART</h1>
           <p>Generated: ${new Date().toLocaleDateString()}</p>
         </div>
         <table>
           <thead>
             <tr>
-              <th rowspan="2" style="width: 16%; font-size: 10px; border-right: 2px solid #94a3b8;">Product (Brand / Name)</th>
-              <th colspan="4" style="width: 28%; background-color: #f8fafc; text-align: center; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #94a3b8;">Standard Dilution</th>
-              <th colspan="4" style="width: 28%; background-color: #fff7ed; text-align: center; border-bottom: 2px solid #fdba74; border-right: 2px solid #94a3b8;">More Concentrated (Heavy)</th>
-              <th colspan="4" style="width: 28%; background-color: #f0f9ff; text-align: center; border-bottom: 2px solid #bae6fd;">Less Concentrated (Light)</th>
+              <th rowspan="2" class="product-cell">PRODUCT (BRAND / NAME)</th>
+              <th colspan="4" style="background-color: #f8fafc; border-bottom: 2px solid #94a3b8;" class="thick-right">STANDARD DILUTION</th>
+              <th colspan="4" style="background-color: #fffbeb; border-bottom: 2px solid #f59e0b;" class="thick-right">MORE CONCENTRATED (HEAVY)</th>
+              <th colspan="4" style="background-color: #f0f9ff; border-bottom: 2px solid #0ea5e9;">LESS CONCENTRATED (LIGHT)</th>
             </tr>
-            <tr style="font-size: 9px; text-align: center;">
-              <th style="background-color: #f8fafc;">Ratio</th>
-              <th style="background-color: #f0fdf4;">16oz</th>
-              <th style="background-color: #eff6ff;">24oz</th>
-              <th style="background-color: #f5f3ff; border-right: 2px solid #94a3b8;">32oz</th>
-              <th style="background-color: #fff7ed;">Ratio</th>
-              <th style="background-color: #f0fdf4;">16oz</th>
-              <th style="background-color: #eff6ff;">24oz</th>
-              <th style="background-color: #f5f3ff; border-right: 2px solid #94a3b8;">32oz</th>
-              <th style="background-color: #f0f9ff;">Ratio</th>
-              <th style="background-color: #f0fdf4;">16oz</th>
-              <th style="background-color: #eff6ff;">24oz</th>
-              <th style="background-color: #f5f3ff;">32oz</th>
+            <tr>
+              <th style="background-color: #f8fafc;">RATIO</th>
+              <th style="background-color: white;">16OZ</th>
+              <th style="background-color: white;">24OZ</th>
+              <th style="background-color: white;" class="thick-right">32OZ</th>
+              <th style="background-color: #fffbeb;">RATIO</th>
+              <th style="background-color: white;">16OZ</th>
+              <th style="background-color: white;">24OZ</th>
+              <th style="background-color: white;" class="thick-right">32OZ</th>
+              <th style="background-color: #f0f9ff;">RATIO</th>
+              <th style="background-color: white;">16OZ</th>
+              <th style="background-color: white;">24OZ</th>
+              <th style="background-color: white;">32OZ</th>
             </tr>
           </thead>
           <tbody>
@@ -967,35 +981,35 @@ const InventoryControl = () => {
                const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
                const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
 
-               const renderCellHtml = (r: any, oz: number, border: boolean = false) => {
+               const renderCellHtml = (r: any, oz: number, isLast: boolean = false) => {
                   const amts = r ? calculateAmounts(r.ratio, oz) : null;
                   return amts ? `
-                    <td style="vertical-align: bottom; padding: 0; line-height: 1; ${border ? 'border-right: 2px solid #94a3b8;' : ''}">
-                       <div style="height: 14px; font-weight: bold; color: #111; font-size: 10px;">${amts.chem}oz</div>
-                       <div style="height: 14px; font-weight: bold; color: #111; font-size: 10px; border-top: 1px solid #eee;">${amts.water}oz</div>
+                    <td class="amount-cell ${isLast ? 'thick-right' : ''}">
+                       <div class="chem-row">${amts.chem}oz</div>
+                       <div>${amts.water}oz</div>
                     </td>
-                  ` : `<td style="${border ? 'border-right: 2px solid #94a3b8;' : ''}">-</td>`;
+                  ` : `<td class="${isLast ? 'thick-right' : ''}">-</td>`;
                };
 
                return `
                  <tr>
-                    <td style="text-align: left; border-right: 2px solid #94a3b8; padding: 4px; vertical-align: bottom;">
-                       <div style="font-weight: bold; font-size: 11px; margin-bottom: 2px;">${c.name}</div>
-                       <div style="font-size: 8px; color: #888; margin-bottom: 6px;">${c.brand || ''}</div>
-                       <div style="font-size: 7px; font-weight: bold; color: #444; border-top: 1px solid #ccc; pt: 1px;">
-                          <div style="height: 14px;">Chemical Amount:</div>
-                          <div style="height: 14px;">Water Amount:</div>
+                    <td class="product-cell">
+                       <div class="product-name">${c.name}</div>
+                       <div class="brand-name">${c.brand || ''}</div>
+                       <div class="labels-block">
+                          <div>Chemical Amount:</div>
+                          <div>Water Amount:</div>
                        </div>
                     </td>
-                    <td style="vertical-align: middle; font-weight: bold;">${standard ? transformRatio(standard.ratio) : '-'}</td>
+                    <td class="ratio-cell">${standard ? transformRatio(standard.ratio) : '-'}</td>
                     ${renderCellHtml(standard, 16)}
                     ${renderCellHtml(standard, 24)}
                     ${renderCellHtml(standard, 32, true)}
-                    <td style="vertical-align: middle; font-weight: bold;">${more ? transformRatio(more.ratio) : '-'}</td>
+                    <td class="ratio-cell">${more ? transformRatio(more.ratio) : '-'}</td>
                     ${renderCellHtml(more, 16)}
                     ${renderCellHtml(more, 24)}
                     ${renderCellHtml(more, 32, true)}
-                    <td style="vertical-align: middle; font-weight: bold;">${less ? transformRatio(less.ratio) : '-'}</td>
+                    <td class="ratio-cell">${less ? transformRatio(less.ratio) : '-'}</td>
                     ${renderCellHtml(less, 16)}
                     ${renderCellHtml(less, 24)}
                     ${renderCellHtml(less, 32)}
