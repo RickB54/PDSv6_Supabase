@@ -104,7 +104,7 @@ const InventoryControl = () => {
   const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
-  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">("landscape");
+  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">(window.innerWidth < 768 ? "portrait" : "landscape");
   const [savingChart, setSavingChart] = useState(false);
   const [hiddenChemicalIds, setHiddenChemicalIds] = useState<string[]>([]);
   const [confirmHideId, setConfirmHideId] = useState<string | null>(null);
@@ -968,11 +968,11 @@ const InventoryControl = () => {
       body: rows as any,
       theme: 'grid',
       headStyles: { textColor: [0, 0, 0], fontSize: 8, fontStyle: 'bold', halign: 'center' },
-      styles: { fontSize: 8, cellPadding: 2, valign: 'middle', halign: 'center', textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [200, 200, 200] },
+      styles: { fontSize: 8, cellPadding: 2, valign: 'middle', halign: 'center', textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [150, 150, 150] },
       columnStyles: { 
-        0: { cellWidth: 45, halign: 'left', fontStyle: 'bold', lineWidth: { right: 0.4 } },
-        4: { lineWidth: { right: 0.4 } },
-        8: { lineWidth: { right: 0.4 } }
+        0: { cellWidth: 45, halign: 'left', fontStyle: 'bold', lineWidth: { top: 0.1, bottom: 0.1, left: 0.1, right: 0.5 } },
+        4: { lineWidth: { top: 0.1, bottom: 0.1, left: 0.1, right: 0.5 } },
+        8: { lineWidth: { top: 0.1, bottom: 0.1, left: 0.1, right: 0.5 } }
       }
     });
 
@@ -1041,7 +1041,7 @@ const InventoryControl = () => {
           </thead>
           <tbody>
             ${filteredChemicals.map(c => {
-               const ratios = (c.dilution_ratios && (c as any).dilution_ratios.length > 0) ? (c as any).dilution_ratios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+               const ratios = ((c as any).dilution_ratios && (c as any).dilution_ratios.length > 0) ? (c as any).dilution_ratios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
                const sorted = [...ratios].sort((a,b) => {
                   const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                   const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
@@ -2287,7 +2287,7 @@ const InventoryControl = () => {
                 {hiddenChemicalIds.length > 0 && (
                   <Button 
                     variant="ghost" 
-                    size="xs" 
+                    size="sm" 
                     onClick={() => setHiddenChemicalIds([])}
                     className="ml-2 h-6 px-2 text-[8px] font-black text-indigo-400 hover:text-indigo-600 bg-indigo-50/50 uppercase"
                   >
@@ -2303,16 +2303,16 @@ const InventoryControl = () => {
                   if (top) top.scrollLeft = e.currentTarget.scrollLeft;
                 }}
               >
-                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[11px] min-w-[700px]'}`}>
+                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[10px] min-w-[390px]'}`}>
                   <thead className="sticky top-0 z-30 bg-white shadow-sm ring-1 ring-zinc-300">
                     <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
-                      <th rowSpan={2} className="p-1 border border-zinc-300 text-left w-[12%] sticky left-0 z-40 bg-zinc-100">Product</th>
+                      <th rowSpan={2} className={`p-1 border border-zinc-300 text-left sticky left-0 z-40 bg-zinc-100 ${chartOrientation === 'landscape' ? 'w-[12%]' : 'w-[80px]'}`}>Product</th>
                       <th colSpan={4} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Standard</th>
                       <th colSpan={4} className="p-1 border-x-4 border-zinc-400 text-center bg-zinc-100/50 text-zinc-700">Heavy Duty</th>
                       <th colSpan={4} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Maintenance</th>
                     </tr>
                     <tr className="bg-zinc-50 text-[10px] text-center font-bold">
-                      <th className="p-1 border border-zinc-300">Ratio</th>
+                      <th className={`p-1 border border-zinc-300 ${chartOrientation === 'landscape' ? 'w-auto' : 'w-[45px]'}`}>Ratio</th>
                       <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300">16oz</th><th className="p-1 border border-zinc-300">24oz</th><th className="p-1 border border-zinc-300">32oz</th>
@@ -2411,7 +2411,7 @@ const InventoryControl = () => {
                             className={`${i % 2 === 0 ? 'bg-white font-sans' : 'bg-zinc-50 font-sans'} ${hiddenChemicalIds.includes(c.id) ? 'hidden' : ''}`}
                           >
                             <td 
-                              className="p-1 border border-zinc-300 align-bottom bg-white min-w-[120px] cursor-pointer hover:bg-red-50 group/prod transition-colors"
+                              className={`p-1 border border-zinc-300 align-bottom bg-white cursor-pointer hover:bg-red-50 group/prod transition-colors sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${chartOrientation === 'landscape' ? 'min-w-[120px]' : 'w-[80px]'}`}
                               onClick={() => {
                                 if (window.confirm(`Are you sure you want to hide "${c.name}" from the chart and printout?`)) {
                                   setHiddenChemicalIds(prev => [...prev, c.id]);
@@ -2425,14 +2425,12 @@ const InventoryControl = () => {
                                  </div>
                                </div>
                                <div className="text-[9px] text-zinc-400 font-bold uppercase mb-3 tracking-wider">{c.brand || ''}</div>
-                              <div className="flex flex-col gap-0 text-[8px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 opacity-80">
-                                 <div className="h-[16px] flex items-center justify-between">
-                                    <span>CHEMICAL AMOUNT:</span>
-                                    <span className="text-zinc-400 text-[7px] mr-1">(C)</span>
+                              <div className="flex flex-col gap-0 text-[8px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 opacity-80 overflow-hidden">
+                                 <div className="h-[14px] flex items-center justify-between whitespace-nowrap">
+                                    <span className="scale-[0.85] origin-left">CHEM AMOUNT:</span>
                                  </div>
-                                 <div className="h-[16px] flex items-center justify-between">
-                                    <span>WATER AMOUNT:</span>
-                                    <span className="text-zinc-400 text-[7px] mr-1">(W)</span>
+                                 <div className="h-[14px] flex items-center justify-between whitespace-nowrap">
+                                    <span className="scale-[0.85] origin-left">WATER AMOUNT:</span>
                                  </div>
                               </div>
                            </td>
