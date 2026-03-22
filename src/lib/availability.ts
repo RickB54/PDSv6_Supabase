@@ -301,6 +301,71 @@ export function formatTimeAMPM(time24: string): string {
 }
 
 /**
+ * Set bulk availability for a range of dates
+ * Each day config defines if morning/afternoon are OPEN
+ */
+export async function setBulkAvailability(
+    configs: Array<{ date: string; morningOpen: boolean; afternoonOpen: boolean }>,
+    reason?: string
+): Promise<void> {
+    const dates = configs.map(c => c.date);
+    
+    // 1. Clear all manual blocks for these dates
+    const { error: deleteError } = await supabase
+        .from('availability_blocks')
+        .delete()
+        .in('date', dates);
+        
+    if (deleteError) {
+        console.error('Error clearing blocks for bulk update:', deleteError);
+        throw deleteError;
+    }
+    
+    // 2. Prepare new blocks
+    const newBlocks: any[] = [];
+    
+    configs.forEach(config => {
+        if (!config.morningOpen && !config.afternoonOpen) {
+            // Both closed -> Full day block
+            newBlocks.push({
+                date: config.date,
+                reason: reason || 'Bulk blocked'
+            });
+        } else if (config.morningOpen && !config.afternoonOpen) {
+            // Morning open, Afternoon closed -> Block 12:00-16:00
+            newBlocks.push({
+                date: config.date,
+                start_time: '12:00:00',
+                end_time: '16:00:00',
+                reason: reason || 'Bulk partial block (Afternoon closed)'
+            });
+        } else if (!config.morningOpen && config.afternoonOpen) {
+            // Morning closed, Afternoon open -> Block 08:00-12:00
+            newBlocks.push({
+                date: config.date,
+                start_time: '08:00:00',
+                end_time: '12:00:00',
+                reason: reason || 'Bulk partial block (Morning closed)'
+            });
+        }
+        // If both open -> No block record needed
+    });
+    
+    if (newBlocks.length > 0) {
+        const { error: insertError } = await supabase
+            .from('availability_blocks')
+            .insert(newBlocks);
+            
+        if (insertError) {
+            console.error('Error inserting bulk blocks:', insertError);
+            throw insertError;
+        }
+    }
+    
+    window.dispatchEvent(new Event('availability-changed'));
+}
+
+/**
  * Block all weekends in a month
  */
 export async function blockWeekendsInMonth(year: number, month: number, reason?: string): Promise<void> {

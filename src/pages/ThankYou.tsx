@@ -13,6 +13,31 @@ export default function ThankYou() {
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .min-h-screen { background: white !important; padding: 0 !important; display: block !important; }
+          .max-w-3xl { max-width: 100% !important; margin: 0 !important; padding: 20px !important; }
+          .animate-pulse, .animate-ping, .animate-in { animation: none !important; }
+          .bg-red-600 { background-color: #dc2626 !important; color: white !important; }
+          .text-white { color: black !important; }
+          .text-red-600 { color: #dc2626 !important; }
+          .text-zinc-400, .text-zinc-500 { color: #3f3f46 !important; }
+          .bg-zinc-900\\/50 { background-color: #f4f4f5 !important; border: 1px solid #e4e4e7 !important; }
+          .bg-red-600\\/10 { background-color: #fee2e2 !important; }
+          .border-white\\/10, .border-white\\/5 { border-color: #e4e4e7 !important; }
+          .shadow-2xl, .shadow-3xl { shadow: none !important; box-shadow: none !important; }
+          .flex-col { margin-top: 20px !important; }
+          button, .sm\\:w-auto { display: none !important; }
+          .hidden-print { display: none !important; }
+          h1 { color: black !important; font-size: 32pt !important; }
+          p { color: #27272a !important; }
+          .italic { font-style: normal !important; }
+          /* Preserve some branding colors */
+          .bg-gradient-to-br.from-red-600 { background: #dc2626 !important; -webkit-print-color-adjust: exact; }
+          .CheckCircle2 { color: white !important; }
+        }
+      `}} />
       {/* Dynamic Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/10 rounded-full blur-[120px] animate-pulse" />

@@ -282,26 +282,13 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   // Using shared config to ensure Sidebar and Section Landing pages match
   const MENU_GROUPS = useMemo(() => {
-    // Count TODAY's bookings (not just tentative)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayBookings = allBookings.filter(b => {
-      const bookingDate = new Date(b.date);
-      bookingDate.setHours(0, 0, 0, 0);
-      return bookingDate.getTime() === today.getTime() &&
-        b.status !== 'confirmed' &&
-        b.status !== 'done';
-    });
+    // Count ALL TENTATIVE bookings
+    const tentativeBookings = allBookings.filter(b => b.status === 'tentative');
 
     // Check if there are unread booking alerts
     const bookingAlerts = getAdminAlerts().filter(a =>
       a.type === 'booking_created' && !a.read
     );
-
-    // Badge Logic: 
-    // 1. Unread Alerts > 0 -> RED Badge (Count = Unread)
-    // 2. Today's Bookings > 0 -> BLUE Badge (Count = Today's)
-    // 3. Otherwise -> BLUE Badge (Count = 0)
 
     let badgeCount = 0;
     let badgeColor: 'red' | 'blue' = 'blue';
@@ -310,11 +297,11 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       badgeCount = bookingAlerts.length;
       badgeColor = 'red';
     } else {
-      badgeCount = todayBookings.length;
+      badgeCount = tentativeBookings.length;
       badgeColor = 'blue';
     }
 
-    console.log(`[AppSidebar] Badge Logic -> Color: ${badgeColor}, Count: ${badgeCount} (Unread: ${bookingAlerts.length}, Today: ${todayBookings.length})`);
+    console.log(`[AppSidebar] Badge Logic -> Color: ${badgeColor}, Count: ${badgeCount} (Unread: ${bookingAlerts.length}, Tentative: ${tentativeBookings.length})`);
 
     return getMenuGroups({
       todoCount,

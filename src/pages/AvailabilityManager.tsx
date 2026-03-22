@@ -29,8 +29,16 @@ import {
     blockWeekendsInMonth,
     getDatesWithBlocks,
     BlockedTimeSlot,
-    formatTimeAMPM
+    formatTimeAMPM,
+    setBulkAvailability
 } from '@/lib/availability';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import { addDays, subDays } from 'date-fns';
 import {
     initGoogleCalendar,
     signInToGoogle,
@@ -41,7 +49,7 @@ import {
     CalendarConfig
 } from '@/lib/googleCalendar';
 import { getAvailabilityStatus } from '@/lib/hybridAvailability';
-import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw, Zap, CalendarCheck } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useBookingsStore } from '@/store/bookings';
@@ -113,6 +121,11 @@ export default function AvailabilityManager() {
     const [isBlocking, setIsBlocking] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Monthly Planner State
+    const [plannerStartDate, setPlannerStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [plannerDays, setPlannerDays] = useState<Array<{ date: string; morningOpen: boolean; afternoonOpen: boolean }>>([]);
+    const [isSavingPlanner, setIsSavingPlanner] = useState(false);
 
     // Google Config
     // Calendar navigation
@@ -266,6 +279,41 @@ export default function AvailabilityManager() {
             setIsRefreshing(false);
             toast({ title: 'Refreshed', description: 'Availability data reloaded' });
         }, 500);
+    };
+
+    const initPlanner = () => {
+        const start = new Date(plannerStartDate + 'T12:00:00');
+        const days = [];
+        for (let i = 0; i < 28; i++) {
+            const d = addDays(start, i);
+            days.push({
+                date: format(d, 'yyyy-MM-dd'),
+                morningOpen: false,
+                afternoonOpen: false
+            });
+        }
+        setPlannerDays(days);
+        toast({
+            title: 'Planner Prepared',
+            description: 'All 28 days initially blocked. Check the boxes to open specific slots.'
+        });
+    };
+
+    const handleSavePlanner = async () => {
+        setIsSavingPlanner(true);
+        try {
+            await setBulkAvailability(plannerDays, 'Set via Monthly Planner');
+            toast({
+                title: 'Schedule Updated',
+                description: 'Bulk availability has been applied successfully.'
+            });
+            await loadBlocks();
+        } catch (error) {
+            console.error('Planner Error:', error);
+            toast({ title: 'Failed to update schedule', variant: 'destructive' });
+        } finally {
+            setIsSavingPlanner(false);
+        }
     };
 
     const handleBlockFullDay = async () => {
@@ -631,6 +679,127 @@ export default function AvailabilityManager() {
                         </div>
                     </div>
                 </Card>
+
+                {/* 4-Week Planner Accordion */}
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="planner" className="border-none">
+                        <AccordionTrigger className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:no-underline group transition-all hover:bg-zinc-800/80">
+                            <div className="flex items-center gap-4 text-left">
+                                <div className="p-2 rounded-lg bg-orange-600/20 text-orange-500 group-hover:scale-110 transition-transform">
+                                    <Zap className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-black text-white uppercase tracking-tight flex items-center flex-wrap gap-2">
+                                        4-Week Availability Planner
+                                        {plannerDays.length > 0 && (
+                                            <span className="text-[10px] text-orange-400 font-bold border border-orange-500/30 px-2 py-0.5 rounded-full bg-orange-500/10 animate-pulse">
+                                                Active Range: {format(new Date(plannerDays[0].date + 'T12:00:00'), 'MMM d')} - {format(new Date(plannerDays[27].date + 'T12:00:00'), 'MMM d')}
+                                            </span>
+                                        )}
+                                    </h3>
+                                    <p className="text-xs text-zinc-400">Opt-in mode: Total control over what dates/slots are sent to the live website</p>
+                                </div>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4 px-1 pb-2">
+                            <Card className="p-6 bg-zinc-950 border-zinc-900 space-y-6 shadow-2xl">
+                                <div className="flex flex-col md:flex-row items-end gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50">
+                                    <div className="space-y-2">
+                                        <Label className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">Start Date</Label>
+                                        <Input
+                                            type="date"
+                                            className="bg-zinc-950 border-zinc-800 text-white w-48 h-10 ring-offset-zinc-950"
+                                            value={plannerStartDate}
+                                            onChange={(e) => setPlannerStartDate(e.target.value)}
+                                        />
+                                    </div>
+                                    <Button
+                                        onClick={initPlanner}
+                                        className="bg-orange-600 hover:bg-orange-700 text-white font-bold h-10 px-6 transition-all active:scale-95"
+                                    >
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Initialize Window
+                                    </Button>
+                                    {plannerDays.length > 0 && (
+                                        <Button
+                                            onClick={handleSavePlanner}
+                                            disabled={isSavingPlanner}
+                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest shadow-lg shadow-emerald-900/40 px-8 h-10 ml-auto transition-all active:scale-95 border-b-4 border-emerald-800 active:border-b-0"
+                                        >
+                                            {isSavingPlanner ? 'Sending to Live Site...' : 'Update Live Website Availability'}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {plannerDays.length > 0 ? (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 max-h-[450px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-zinc-800">
+                                            {plannerDays.map((day, idx) => (
+                                                <div key={day.date} className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg space-y-3 shadow-inner hover:border-zinc-700 transition-colors">
+                                                    <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
+                                                        <span className="font-bold text-white text-[11px] whitespace-nowrap">{format(new Date(day.date + 'T12:00:00'), 'EEE, MMM d')}</span>
+                                                        <span className="text-[9px] text-zinc-600 uppercase font-black">{idx + 1}/28</span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <button
+                                                            onClick={() => {
+                                                                const next = [...plannerDays];
+                                                                next[idx].morningOpen = !next[idx].morningOpen;
+                                                                setPlannerDays(next);
+                                                            }}
+                                                            className={cn(
+                                                                "w-full py-2 rounded-md text-[9px] font-black uppercase transition-all border flex items-center justify-center gap-1.5",
+                                                                day.morningOpen
+                                                                    ? "bg-emerald-900/40 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                                                                    : "bg-zinc-950 border-zinc-800 text-zinc-600 opacity-60 hover:opacity-100"
+                                                            )}
+                                                        >
+                                                            <div className={cn("w-1.5 h-1.5 rounded-full", day.morningOpen ? "bg-emerald-400" : "bg-zinc-800")} />
+                                                            {day.morningOpen ? 'Morning Open' : 'Morning Blocked'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const next = [...plannerDays];
+                                                                next[idx].afternoonOpen = !next[idx].afternoonOpen;
+                                                                setPlannerDays(next);
+                                                            }}
+                                                            className={cn(
+                                                                "w-full py-2 rounded-md text-[9px] font-black uppercase transition-all border flex items-center justify-center gap-1.5",
+                                                                day.afternoonOpen
+                                                                    ? "bg-sky-900/40 border-sky-500 text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.15)]"
+                                                                    : "bg-zinc-950 border-zinc-800 text-zinc-600 opacity-60 hover:opacity-100"
+                                                            )}
+                                                        >
+                                                            <div className={cn("w-1.5 h-1.5 rounded-full", day.afternoonOpen ? "bg-sky-400" : "bg-zinc-800")} />
+                                                            {day.afternoonOpen ? 'Afternoon Open' : 'Afternoon Blocked'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-blue-950/20 p-3 rounded-lg border border-blue-900/30">
+                                            <AlertCircle className="w-4 h-4 text-blue-400" />
+                                            <p className="text-[10px] text-blue-300 font-medium leading-relaxed">
+                                                <strong>Security Logic:</strong> Applying this schedule will overwrite existing manual blocks for these 28 dates to match exactly what you've selected above.
+                                                <span className="text-blue-400 ml-1">Confirmed customer bookings will always remain visible and respected on your calendar.</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-20 border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/40 group hover:bg-zinc-900/60 transition-colors">
+                                        <div className="bg-zinc-950 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-800 shadow-xl group-hover:scale-110 transition-transform">
+                                            <CalendarCheck className="w-10 h-10 text-zinc-700" />
+                                        </div>
+                                        <p className="text-zinc-300 text-sm font-black uppercase tracking-widest">Monthly Schedule Sweep</p>
+                                        <p className="text-zinc-500 max-w-xs mx-auto text-xs mt-2 leading-relaxed font-medium">
+                                            Perfect for when you want to stay mostly closed and only open up specific slots. Initialize to see your 4-week window.
+                                        </p>
+                                    </div>
+                                )}
+                            </Card>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
 
                 {/* Tabs */}
                 <Tabs defaultValue="manual" className="w-full">

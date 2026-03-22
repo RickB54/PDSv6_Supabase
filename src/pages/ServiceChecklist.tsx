@@ -601,7 +601,7 @@ const ServiceChecklist = () => {
           doc.text(toolText, 20, y);
           y += toolText.length * 6 + 8;
 
-          const pdfDataUrl = doc.output('datauristring');
+          const pdfDataUrl = doc.output('dataurlstring');
           const fileName = `Admin_Update_Materials_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
           savePDFToArchive('Admin Updates', 'Admin', `materials-${jobId}`, pdfDataUrl, { fileName, path: 'Admin Updates/' });
         }

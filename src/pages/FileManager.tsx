@@ -385,25 +385,49 @@ const FileManager = () => {
                                 setSelectedRecord(record);
                                 setViewerLoading(true);
                                 setViewerError(null);
+                                // Mark record as viewed
                                 markViewed("file", record.id);
-                                // Prefer local data/blob URL first, then backend URL
-                                const isInline = record.pdfData?.startsWith('data:application/pdf') || record.pdfData?.startsWith('blob:');
-                                if (isInline) {
-                                  setViewerSrc(record.pdfData);
-                                  setViewerLoading(false);
-                                } else {
-                                  const backendUrl = buildBackendUrl(record);
-                                  if (backendUrl) {
-                                    setViewerSrc(backendUrl);
+                                
+                                try {
+                                  // Prefer local data/blob URL first, then backend URL
+                                  const isDataUri = record.pdfData?.startsWith('data:application/pdf');
+                                  const isBlobUrl = record.pdfData?.startsWith('blob:');
+                                  
+                                  if (isDataUri) {
+                                    // Converting data: URI to Blob URL is much more stable in most browsers
+                                    const base64Content = record.pdfData.split(',')[1];
+                                    if (!base64Content) throw new Error("Empty PDF data content");
+                                    
+                                    const byteCharacters = atob(base64Content);
+                                    const byteNumbers = new Array(byteCharacters.length);
+                                    for (let i = 0; i < byteCharacters.length; i++) {
+                                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                    }
+                                    const byteArray = new Uint8Array(byteNumbers);
+                                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    
+                                    setViewerSrc(blobUrl);
+                                    setViewerLoading(false);
+                                  } else if (isBlobUrl) {
+                                    setViewerSrc(record.pdfData);
                                     setViewerLoading(false);
                                   } else {
-                                    setViewerSrc(null);
-                                    const msg = record.pdfData?.startsWith('blob:')
-                                      ? 'This PDF was saved as a temporary blob URL and cannot be displayed after reload. Please re-generate this document.'
-                                      : 'Unable to display PDF.';
-                                    setViewerError(msg);
-                                    setViewerLoading(false);
+                                    const backendUrl = buildBackendUrl(record);
+                                    if (backendUrl) {
+                                      setViewerSrc(backendUrl);
+                                      setViewerLoading(false);
+                                    } else {
+                                      setViewerSrc(null);
+                                      setViewerError("Unable to display PDF. Please check the file path or re-generate document.");
+                                      setViewerLoading(false);
+                                    }
                                   }
+                                } catch (err: any) {
+                                  console.error("PDF Preview Conversion Error:", err);
+                                  setViewerSrc(null);
+                                  setViewerError("PDF display error: " + (err.message || String(err)));
+                                  setViewerLoading(false);
                                 }
                               }}>
                                 <Eye className="h-4 w-4" />
@@ -491,25 +515,49 @@ const FileManager = () => {
                             setSelectedRecord(record);
                             setViewerLoading(true);
                             setViewerError(null);
+                            // Mark record as viewed
                             markViewed("file", record.id);
-                            // Prefer local data/blob URL first, then backend URL
-                            const isInline = record.pdfData?.startsWith('data:application/pdf') || record.pdfData?.startsWith('blob:');
-                            if (isInline) {
-                              setViewerSrc(record.pdfData);
-                              setViewerLoading(false);
-                            } else {
-                              const backendUrl = buildBackendUrl(record);
-                              if (backendUrl) {
-                                setViewerSrc(backendUrl);
+                            
+                            try {
+                              // Prefer local data/blob URL first, then backend URL
+                              const isDataUri = record.pdfData?.startsWith('data:application/pdf');
+                              const isBlobUrl = record.pdfData?.startsWith('blob:');
+                              
+                              if (isDataUri) {
+                                // Converting data: URI to Blob URL is much more stable in most browsers
+                                const base64Content = record.pdfData.split(',')[1];
+                                if (!base64Content) throw new Error("Empty PDF data content");
+                                
+                                const byteCharacters = atob(base64Content);
+                                const byteNumbers = new Array(byteCharacters.length);
+                                for (let i = 0; i < byteCharacters.length; i++) {
+                                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                }
+                                const byteArray = new Uint8Array(byteNumbers);
+                                const blob = new Blob([byteArray], { type: 'application/pdf' });
+                                const blobUrl = URL.createObjectURL(blob);
+                                
+                                setViewerSrc(blobUrl);
+                                setViewerLoading(false);
+                              } else if (isBlobUrl) {
+                                setViewerSrc(record.pdfData);
                                 setViewerLoading(false);
                               } else {
-                                setViewerSrc(null);
-                                const msg = record.pdfData?.startsWith('blob:')
-                                  ? 'This PDF was saved as a temporary blob URL and cannot be displayed after reload. Please re-generate this document.'
-                                  : 'Unable to display PDF.';
-                                setViewerError(msg);
-                                setViewerLoading(false);
+                                const backendUrl = buildBackendUrl(record);
+                                if (backendUrl) {
+                                  setViewerSrc(backendUrl);
+                                  setViewerLoading(false);
+                                } else {
+                                  setViewerSrc(null);
+                                  setViewerError("Unable to display PDF. Please check the file path or re-generate document.");
+                                  setViewerLoading(false);
+                                }
                               }
+                            } catch (err: any) {
+                              console.error("Mobile PDF Preview Conversion Error:", err);
+                              setViewerSrc(null);
+                              setViewerError("PDF display error: " + (err.message || String(err)));
+                              setViewerLoading(false);
                             }
                           }}>
                             <Eye className="h-4 w-4" />
