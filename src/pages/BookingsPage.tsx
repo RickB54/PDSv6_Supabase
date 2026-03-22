@@ -823,7 +823,7 @@ export default function BookingsPage() {
       doc.text(splitNotes, 20, y);
     }
 
-    const pdfDataUrl = doc.output('datauristring');
+    const pdfDataUrl = doc.output('dataurlstring');
     const safeName = formData.customer.replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `Booking_${safeName}_${new Date().getTime()}.pdf`;
 
@@ -2299,9 +2299,16 @@ export default function BookingsPage() {
                       if (dateFilter.start && dateFilter.end) {
                         customerBookings = customerBookings.filter(b => {
                           const d = parseISO(b.date);
-                          return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+                          const passesDate = isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+                          const passesArchive = showArchived || !b.isArchived;
+                          return passesDate && passesArchive;
                         });
-                      } else if (dateFilter.start) {
+                      } else {
+                        // Always respect showArchived even if no date filter active
+                        customerBookings = customerBookings.filter(b => showArchived || !b.isArchived);
+                      }
+                      
+                      if (dateFilter.start && !dateFilter.end) {
                         // Single day selection or partial range? Calendar range usually sets both if range
                         // If only start is set, maybe just match start?
                         // But range calendar might return undefined end while selecting

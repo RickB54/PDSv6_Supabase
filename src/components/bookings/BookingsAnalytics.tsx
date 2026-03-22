@@ -43,16 +43,33 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
 
     const handleArchiveToggle = (bookingId: string, currentStatus: boolean) => {
         update(bookingId, { isArchived: !currentStatus });
-        toast.message(currentStatus ? "Booking restored" : "Booking archived");
+        toast.success(currentStatus ? "Booking restored" : "Booking archived");
     };
+
+    // --- Unified Filtered Bookings ---
+    const filteredBookings = useMemo(() => {
+        let result = bookings;
+        if (!showArchived) {
+            result = result.filter(b => !b.isArchived);
+        }
+        if (dateFilter.start && dateFilter.end) {
+            result = result.filter(b => {
+                const d = parseISO(b.date);
+                return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+            });
+        } else if (dateFilter.start) {
+            result = result.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
+        }
+        return result;
+    }, [bookings, showArchived, dateFilter]);
 
     // --- Stats Calculation ---
     const stats = useMemo(() => {
-        const totalBookings = bookings.length;
-        const completed = bookings.filter(b => b.status === "done" || b.status === "completed").length;
-        const pending = bookings.filter(b => b.status === "pending" || b.status === "confirmed").length;
+        const totalBookings = filteredBookings.length;
+        const completed = filteredBookings.filter(b => b.status === "done" || b.status === "completed").length;
+        const pending = filteredBookings.filter(b => b.status === "pending" || b.status === "confirmed").length;
         return { totalBookings, completed, pending };
-    }, [bookings]);
+    }, [filteredBookings]);
 
     // --- Charts Data ---
     const barData = useMemo(() => {
@@ -63,14 +80,14 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
         }
         return months.map(date => {
             const name = format(date, "MMM");
-            const count = bookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
+            const count = filteredBookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
             return { name, bookings: count };
         });
-    }, [bookings]);
+    }, [filteredBookings]);
 
     const pieData = useMemo(() => {
         const counts: Record<string, number> = {};
-        bookings.forEach(b => {
+        filteredBookings.forEach(b => {
             const svc = b.title || "Unknown";
             counts[svc] = (counts[svc] || 0) + 1;
         });
@@ -78,12 +95,12 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 5);
-    }, [bookings]);
+    }, [filteredBookings]);
 
     // --- Reminder Frequency Data ---
     const frequencyData = useMemo(() => {
         const counts: Record<string, number> = { '1 Month': 0, '3 Months': 0, '4 Months': 0, '6 Months': 0, 'Custom': 0 };
-        bookings.filter(b => b.hasReminder).forEach(b => {
+        filteredBookings.filter(b => b.hasReminder).forEach(b => {
             if (b.reminderFrequency === 1) counts['1 Month']++;
             else if (b.reminderFrequency === 3) counts['3 Months']++;
             else if (b.reminderFrequency === 4) counts['4 Months']++;
@@ -91,7 +108,7 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
             else counts['Custom']++;
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
-    }, [bookings]);
+    }, [filteredBookings]);
 
     const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
@@ -99,21 +116,7 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
     const customerStats = useMemo(() => {
         const map = new Map<string, { name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string }>();
 
-        // Filter bookings first
-        let relevantBookings = bookings;
-        if (!showArchived) {
-            relevantBookings = relevantBookings.filter(b => !b.isArchived);
-        }
-        if (dateFilter.start && dateFilter.end) {
-            relevantBookings = relevantBookings.filter(b => {
-                const d = parseISO(b.date);
-                return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
-            });
-        } else if (dateFilter.start) {
-            relevantBookings = relevantBookings.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
-        }
-
-        relevantBookings.forEach(b => {
+        filteredBookings.forEach(b => {
             if (!b.customer) return;
             const existing = map.get(b.customer) || {
                 name: b.customer,
@@ -134,7 +137,7 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
             map.set(b.customer, existing);
         });
         return Array.from(map.values()).sort((a, b) => new Date(b.lastService).getTime() - new Date(a.lastService).getTime());
-    }, [bookings, customers]);
+    }, [filteredBookings, customers]);
 
     const handleCreateReminder = async () => {
         if (!selectedCustomerForReminder || !reminderDate) return;
@@ -191,7 +194,7 @@ export function BookingsAnalytics({ bookings, customers, defaultOpenAccordion }:
         setReminderOpen(true);
     };
 
-    const activeReminders = bookings.filter(b => b.hasReminder);
+    const activeReminders = filteredBookings.filter(b => b.hasReminder);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">

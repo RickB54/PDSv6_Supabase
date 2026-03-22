@@ -92,7 +92,7 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
     doc.text(`Service: ${booking.title}`, 20, 65);
     doc.text(`Scheduled: ${new Date(booking.date).toLocaleString()}`, 20, 75);
     doc.text(`Status: ${prevStatus} → ${nextStatus}`, 20, 90);
-    const dataUrl = doc.output('datauristring');
+    const dataUrl = doc.output('dataurlstring');
     const d = new Date(booking.date);
     const year = d.getFullYear();
     const monthName = d.toLocaleString(undefined, { month: 'long' });
@@ -212,7 +212,7 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
           logDoc.text(`Booking ID: ${booking.id}`, 20, 80);
           logDoc.text(`Status: SUCCESSFULLY SENT via Resend`, 20, 95);
 
-          const logDataUrl = logDoc.output('datauristring');
+          const logDataUrl = logDoc.output('dataurlstring');
           const logFileName = `EMAIL_CONFIRMATION_${booking.customer.replace(/\s/g, '_')}_${Date.now()}.pdf`;
           uploadToFileManager(logDataUrl, `Email Logs/${year}/${monthName}/`, booking, { service: "Email Confirmation Log" });
 
