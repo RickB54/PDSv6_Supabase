@@ -141,6 +141,24 @@ export async function blockDateRange(
 }
 
 /**
+ * Unblock multiple full days (date range)
+ */
+export async function unblockDateRange(
+    startDate: string,
+    endDate: string
+): Promise<void> {
+    const { error } = await supabase
+        .from('availability_blocks')
+        .delete()
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+    if (error) console.error('Error unblocking date range:', error);
+
+    window.dispatchEvent(new Event('availability-changed'));
+}
+
+/**
  * Unblock a specific slot (delete by ID)
  */
 export async function unblockSlot(id: string): Promise<void> {

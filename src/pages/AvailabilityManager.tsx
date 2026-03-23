@@ -7,7 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -26,6 +28,7 @@ import {
     unblockDay,
     unblockSlot,
     blockDateRange,
+    unblockDateRange,
     blockWeekendsInMonth,
     getDatesWithBlocks,
     BlockedTimeSlot,
@@ -51,13 +54,13 @@ import {
 import { getAvailabilityStatus } from '@/lib/hybridAvailability';
 import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw, Zap, CalendarCheck } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { useBookingsStore } from '@/store/bookings';
 import * as bookingsSvc from '@/services/supabase/bookings';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generateBookingPDF, uploadToFileManager } from '@/lib/bookingsSync';
-import api from '@/lib/api.js';
+import api from '@/lib/api';
+import localforage from 'localforage';
 
 /**
  * Admin Calendar Manager
@@ -89,6 +92,8 @@ export default function AvailabilityManager() {
     const [rangeStart, setRangeStart] = useState('');
     const [rangeEnd, setRangeEnd] = useState('');
     const [blockReason, setBlockReason] = useState('');
+    const [isUnblockMode, setIsUnblockMode] = useState(false);
+    const [rangeHistory, setRangeHistory] = useState<Array<{ start: string; end: string; reason?: string }>>([]);
 
     // Time block states
     const [timeStart, setTimeStart] = useState('09:00');
@@ -139,6 +144,52 @@ export default function AvailabilityManager() {
         const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
         return eachDayOfInterval({ start: startDate, end: endDate });
     }, [currentDate]);
+
+    // Compute contiguous blocked ranges from the currently loaded blockedSlots
+    const currentBlockedRanges = useMemo(() => {
+        // Filter for full-day blocks (no specific time)
+        const fullDayBlocks = blockedSlots
+            .filter(b => (!b.startTime && !b.endTime) || (b.startTime === '08:00' && b.endTime === '16:00'))
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        if (fullDayBlocks.length === 0) return [];
+
+        const ranges: Array<{ start: string; end: string; reason?: string }> = [];
+        let currentRange: { start: string; end: string; reason?: string } | null = null;
+
+        fullDayBlocks.forEach((block, idx) => {
+            if (!currentRange) {
+                currentRange = { start: block.date, end: block.date, reason: block.reason };
+            } else {
+                // Parse date in ISO format safely
+                const lastDate = parseISO(currentRange.end);
+                const thisDate = parseISO(block.date);
+                const diff = (thisDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+
+                // If consecutive AND same reason, extend the range
+                if (diff === 1 && block.reason === currentRange.reason) {
+                    currentRange.end = block.date;
+                } else {
+                    ranges.push(currentRange);
+                    currentRange = { start: block.date, end: block.date, reason: block.reason };
+                }
+            }
+            if (idx === fullDayBlocks.length - 1 && currentRange) {
+                ranges.push(currentRange);
+            }
+        });
+
+        // Dedup / sort by start date
+        return ranges.sort((a, b) => a.start.localeCompare(b.start));
+    }, [blockedSlots]);
+
+    useEffect(() => {
+        const loadHistory = async () => {
+            const history = await localforage.getItem<any[]>('range-blocking-history');
+            if (history) setRangeHistory(history.slice(0, 10));
+        };
+        loadHistory();
+    }, []);
 
     useEffect(() => {
         loadBlocks();
@@ -386,6 +437,15 @@ export default function AvailabilityManager() {
 
         try {
             await blockDateRange(rangeStart, rangeEnd, blockReason || 'Date range blocked');
+            
+            // Save to history
+            const newRange = { start: rangeStart, end: rangeEnd, reason: blockReason };
+            setRangeHistory(prev => {
+                const next = [newRange, ...prev.filter(r => !(r.start === newRange.start && r.end === newRange.end))].slice(0, 10);
+                localforage.setItem('range-blocking-history', next);
+                return next;
+            });
+
             toast({
                 title: '✓ Date range blocked',
                 description: `${rangeStart} to ${rangeEnd}`
@@ -396,6 +456,35 @@ export default function AvailabilityManager() {
             await loadBlocks();
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to block range', variant: 'destructive' });
+        } finally {
+            setTimeout(() => setIsBlocking(false), 500);
+        }
+    };
+
+    const handleUnblockRange = async () => {
+        if (!rangeStart || !rangeEnd) {
+            toast({ title: 'Enter start and end dates', variant: 'destructive' });
+            return;
+        }
+
+        if (isBlocking) {
+            toast({ title: 'Please wait', description: 'Processing previous request...', variant: 'destructive' });
+            return;
+        }
+
+        setIsBlocking(true);
+
+        try {
+            await unblockDateRange(rangeStart, rangeEnd);
+            toast({
+                title: '✓ Date range unblocked',
+                description: `Cleared all blocks from ${rangeStart} to ${rangeEnd}`
+            });
+            setRangeStart('');
+            setRangeEnd('');
+            await loadBlocks();
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to unblock range', variant: 'destructive' });
         } finally {
             setTimeout(() => setIsBlocking(false), 500);
         }
@@ -1117,11 +1206,62 @@ export default function AvailabilityManager() {
 
                                 {/* Block Date Range */}
                                 <Card className="p-6 bg-zinc-900 border-zinc-800">
-                                    <h4 className="font-bold text-white mb-4 uppercase tracking-tight text-sm">Block Date Range</h4>
-                                    <div className="space-y-3">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="font-bold text-white uppercase tracking-tight text-sm">
+                                            {isUnblockMode ? 'Unblock' : 'Block'} Date Range
+                                        </h4>
+                                        <div className="flex items-center gap-2 bg-zinc-950 p-1 px-2 rounded-full border border-zinc-800">
+                                            <span className={cn("text-[10px] font-black tracking-widest", !isUnblockMode ? "text-red-500" : "text-zinc-500")}>BLOCK</span>
+                                            <Switch
+                                                checked={isUnblockMode}
+                                                onCheckedChange={setIsUnblockMode}
+                                                className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-red-700 h-5 w-9 scale-90"
+                                            />
+                                            <span className={cn("text-[10px] font-black tracking-widest", isUnblockMode ? "text-emerald-500" : "text-zinc-500")}>UNBLOCK</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {(currentBlockedRanges.length > 0 || rangeHistory.length > 0) && (
+                                            <div className="space-y-2 animate-in slide-in-from-top-1 duration-300">
+                                                <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-tight">Select Predefined Range</Label>
+                                                <Select onValueChange={(val) => {
+                                                    const [start, end, reason] = val.split('|');
+                                                    setRangeStart(start);
+                                                    setRangeEnd(end);
+                                                    if (reason && reason !== 'undefined') setBlockReason(reason);
+                                                }}>
+                                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-300 text-xs h-9">
+                                                        <SelectValue placeholder="Quick select a date range..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                                                        {currentBlockedRanges.length > 0 && (
+                                                            <SelectGroup>
+                                                                <SelectLabel className="text-emerald-500 text-[10px] uppercase">Active Blocked Ranges</SelectLabel>
+                                                                {currentBlockedRanges.map((r, i) => (
+                                                                    <SelectItem key={`curr-${i}`} value={`${r.start}|${r.end}|${r.reason}`} className="text-xs">
+                                                                        {format(parseISO(r.start), 'MMM d')} - {format(parseISO(r.end), 'MMM d')} {r.reason ? `(${r.reason})` : ''}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectGroup>
+                                                        )}
+                                                        {rangeHistory.some(h => !currentBlockedRanges.some(c => c.start === h.start && c.end === h.end)) && (
+                                                            <SelectGroup>
+                                                                <SelectLabel className="text-blue-500 text-[10px] uppercase">Recent History</SelectLabel>
+                                                                {rangeHistory.filter(h => !currentBlockedRanges.some(c => c.start === h.start && c.end === h.end)).map((r, i) => (
+                                                                    <SelectItem key={`hist-${i}`} value={`${r.start}|${r.end}|${r.reason}`} className="text-xs">
+                                                                        {format(parseISO(r.start), 'MMM d')} - {format(parseISO(r.end), 'MMM d')} {r.reason ? `(${r.reason})` : ''}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectGroup>
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-2">
-                                                <Label className="text-zinc-400 text-xs uppercase">Start Date</Label>
+                                                <Label className="text-zinc-400 text-xs uppercase font-bold">Start Date</Label>
                                                 <Input
                                                     type="date"
                                                     className="bg-zinc-950 border-zinc-800 text-white"
@@ -1130,7 +1270,7 @@ export default function AvailabilityManager() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-zinc-400 text-xs uppercase">End Date</Label>
+                                                <Label className="text-zinc-400 text-xs uppercase font-bold">End Date</Label>
                                                 <Input
                                                     type="date"
                                                     className="bg-zinc-950 border-zinc-800 text-white"
@@ -1139,11 +1279,30 @@ export default function AvailabilityManager() {
                                                 />
                                             </div>
                                         </div>
+                                        
+                                        {!isUnblockMode && (
+                                            <div className="space-y-2 animate-in fade-in duration-300">
+                                                <Label className="text-zinc-400 text-xs uppercase font-bold">Reason (optional)</Label>
+                                                <Input
+                                                    className="bg-zinc-950 border-zinc-800 text-white"
+                                                    value={blockReason}
+                                                    onChange={(e) => setBlockReason(e.target.value)}
+                                                    placeholder="Vacation, seasonal closure..."
+                                                />
+                                            </div>
+                                        )}
+
                                         <Button
-                                            onClick={handleBlockRange}
-                                            className="w-full bg-red-700 hover:bg-red-800"
+                                            onClick={isUnblockMode ? handleUnblockRange : handleBlockRange}
+                                            disabled={isBlocking}
+                                            className={cn(
+                                                "w-full font-bold uppercase tracking-widest transition-all",
+                                                isUnblockMode 
+                                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                                                    : "bg-red-700 hover:bg-red-800 text-white"
+                                            )}
                                         >
-                                            Block Date Range
+                                            {isBlocking ? 'Processing...' : `${isUnblockMode ? 'Unblock' : 'Block'} Date Range`}
                                         </Button>
                                     </div>
                                 </Card>
@@ -1388,12 +1547,14 @@ export default function AvailabilityManager() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteSelectedDates}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? 'Clearing...' : 'Yes, Delete Selection'}
+                        <AlertDialogAction asChild>
+                            <Button
+                                onClick={handleDeleteSelectedDates}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Clearing...' : 'Yes, Delete Selection'}
+                            </Button>
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
