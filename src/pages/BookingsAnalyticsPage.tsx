@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { BookingsAnalytics } from "@/components/bookings/BookingsAnalytics";
 import { useBookingsStore } from "@/store/bookings";
-import localforage from "localforage";
+import { getUnifiedCustomers } from "@/lib/customers";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function BookingsAnalyticsPage() {
@@ -13,7 +13,7 @@ export default function BookingsAnalyticsPage() {
         refresh();
         const fetchCustomers = async () => {
             try {
-                const custs = (await localforage.getItem<any[]>('customers')) || [];
+                const custs = await getUnifiedCustomers();
                 setCustomers(custs);
             } catch (err) {
                 console.error('Failed to fetch customers:', err);
