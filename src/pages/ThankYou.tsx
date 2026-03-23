@@ -15,27 +15,72 @@ export default function ThankYou() {
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 relative overflow-hidden font-sans">
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .min-h-screen { background: white !important; padding: 0 !important; display: block !important; }
-          .max-w-3xl { max-width: 100% !important; margin: 0 !important; padding: 20px !important; }
-          .animate-pulse, .animate-ping, .animate-in { animation: none !important; }
-          .bg-red-600 { background-color: #dc2626 !important; color: white !important; }
-          .text-white { color: black !important; }
+          @page { margin: 0; size: auto; }
+          html, body { 
+            height: 100%; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            overflow: hidden !important; 
+            background: white !important; 
+          }
+          .min-h-screen { 
+            background: white !important; 
+            min-height: 0 !important; 
+            height: 100vh !important; 
+            padding: 1.5cm !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+          }
+          .max-w-3xl { 
+            max-width: 100% !important; 
+            width: 100% !important;
+            margin: 0 !important; 
+            padding: 0 !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Nuclear Hide for Background elements & UI Buttons */
+          .absolute, .pointer-events-none, .flex-col.sm\\:flex-row, button, a { 
+            display: none !important; 
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* Typography Color Fixes */
+          h1 { color: #111827 !important; font-size: 32pt !important; line-height: 1 !important; margin-top: 0 !important; }
+          h1 span.text-red-600 { color: #dc2626 !important; }
+          .text-white { color: #111827 !important; }
+          .text-zinc-400, .text-zinc-500 { color: #4b5563 !important; }
+          .text-zinc-600 { color: #9ca3af !important; }
+          
+          /* Card Styling */
+          .bg-zinc-900\\/50 { 
+            background: #f9fafb !important; 
+            border: 2px solid #e5e7eb !important; 
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            margin: 20px 0 !important;
+            padding: 2rem !important;
+          }
+          
+          /* Branding Accents */
+          .bg-red-600\\/10 { background: #fee2e2 !important; }
+          .border-white\\/5 { border-top: 1px solid #e5e7eb !important; }
           .text-red-600 { color: #dc2626 !important; }
-          .text-zinc-400, .text-zinc-500 { color: #3f3f46 !important; }
-          .bg-zinc-900\\/50 { background-color: #f4f4f5 !important; border: 1px solid #e4e4e7 !important; }
-          .bg-red-600\\/10 { background-color: #fee2e2 !important; }
-          .border-white\\/10, .border-white\\/5 { border-color: #e4e4e7 !important; }
-          .shadow-2xl, .shadow-3xl { shadow: none !important; box-shadow: none !important; }
-          .flex-col { margin-top: 20px !important; }
-          button, .sm\\:w-auto { display: none !important; }
-          .hidden-print { display: none !important; }
-          h1 { color: black !important; font-size: 32pt !important; }
-          p { color: #27272a !important; }
-          .italic { font-style: normal !important; }
-          /* Preserve some branding colors */
-          .bg-gradient-to-br.from-red-600 { background: #dc2626 !important; -webkit-print-color-adjust: exact; }
-          .CheckCircle2 { color: white !important; }
+          .text-blue-600 { color: #2563eb !important; }
+          
+          /* Icon Visibility */
+          .bg-red-600 .text-white, .bg-gradient-to-br .text-white { color: white !important; }
+          .relative.bg-gradient-to-br { background: #dc2626 !important; box-shadow: none !important; }
+          
+          /* Disable all animations completely */
+          * { animation: none !important; transition: none !important; }
         }
       `}} />
       {/* Dynamic Background Elements */}
