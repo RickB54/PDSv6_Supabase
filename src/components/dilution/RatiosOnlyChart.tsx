@@ -296,17 +296,19 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         
-        pdf.setFillColor(241, 245, 249);
-        pdf.rect(0, 0, pageWidth, 26, 'F');
-        pdf.setFontSize(24);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(15, 23, 42);
-        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 13, { align: 'center' });
+        // Header Background
+        pdf.setFillColor(15, 23, 42); // Dark slate
+        pdf.rect(0, 0, pageWidth, 28, 'F');
+
+        pdf.setFontSize(22);
+        pdf.setFont('helvetica', 'bolditalic');
+        pdf.setTextColor(255, 255, 255);
+        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 14, { align: 'center' });
         
-        pdf.setFontSize(9);
+        pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(100, 116, 139);
-        pdf.text("PROFESSIONAL BOTTLE BREAKDOWN • OZ & ML REFERENCE CHART", pageWidth / 2, 20, { align: 'center' });
+        pdf.setTextColor(200, 200, 200);
+        pdf.text("PROFESSIONAL BOTTLE BREAKDOWN • OZ & ML REFERENCE CHART", pageWidth / 2, 21, { align: 'center' });
 
         const headers = [['Ratio', '16oz', '24oz', '32oz', `${gallonSize}oz`]];
         const body = sortedRatios.map(ratioStr => [
@@ -318,23 +320,46 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         ]);
 
         autoTable(pdf, {
-            startY: 26,
+            startY: 28,
             head: headers,
             body: body,
             theme: 'grid',
-            styles: { fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 3, textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [200, 200, 200] },
-            headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', lineWidth: 0.2, lineColor: [0, 0, 0] },
+            styles: { 
+                fontSize: 9, 
+                halign: 'center', 
+                valign: 'middle', 
+                cellPadding: 3, 
+                textColor: [30, 41, 59],
+                lineWidth: 0.1,
+                lineColor: [200, 200, 200]
+            },
+            headStyles: { 
+                fillColor: [241, 245, 249], 
+                textColor: [15, 23, 42], 
+                fontStyle: 'bold', 
+                lineWidth: 0.2, 
+                lineColor: [0, 0, 0]
+            },
             columnStyles: { 
                 0: { 
                     fontStyle: 'bolditalic', 
-                    fontSize: 20, 
+                    fontSize: 22, 
                     cellWidth: 35, 
                     fillColor: [248, 250, 252],
-                    textColor: [11, 11, 11]
+                    textColor: [15, 23, 42]
                 } 
             },
             didParseCell: (data) => {
-                if (data.section === 'head' && data.column.index > 0) {
+                if (data.section === 'head') {
+                    if (data.column.index === 1) data.cell.styles.textColor = [5, 150, 105]; // Emerald
+                    if (data.column.index === 2) data.cell.styles.textColor = [37, 99, 235]; // Blue
+                    if (data.column.index === 3) data.cell.styles.textColor = [124, 58, 237]; // Purple
+                    if (data.column.index === 4) data.cell.styles.textColor = [217, 119, 6];  // Amber
+                }
+                
+                // Color the values in rows
+                if (data.section === 'body' && data.column.index > 0) {
+                    const text = data.cell.raw as string;
                     if (data.column.index === 1) data.cell.styles.textColor = [5, 150, 105];
                     if (data.column.index === 2) data.cell.styles.textColor = [37, 99, 235];
                     if (data.column.index === 3) data.cell.styles.textColor = [124, 58, 237];
@@ -343,10 +368,13 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
             }
         });
 
+        // Legend/Footer
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text("C = CHEMICAL  |  W = WATER  •  PRIME DETAILING PROFESSIONAL SYSTEMS", 14, pageHeight - 8);
-        pdf.save(`Prime_Dilution_Master_Reference.pdf`);
+        pdf.text("C = CHEMICAL  |  W = WATER  •  PROFESSIONAL VOLUMETRIC CALCULATIONS", 14, pageHeight - 10);
+        pdf.text("PRIME DETAILING SYSTEMS", pageWidth - 14, pageHeight - 10, { align: 'right' });
+
+        pdf.save(`Prime_Dilution_Map_${gallonSize}oz.pdf`);
     };
 
     return (
@@ -449,10 +477,10 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
 
                 <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between no-print shrink-0">
                     <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
-                        <div className="flex items-center gap-2 text-emerald-500"><div className="w-3 h-3 rounded-full bg-emerald-500" /> 16oz</div>
-                        <div className="flex items-center gap-2 text-blue-500"><div className="w-3 h-3 rounded-full bg-blue-500" /> 24oz</div>
-                        <div className="flex items-center gap-2 text-purple-500"><div className="w-3 h-3 rounded-full bg-purple-500" /> 32oz</div>
-                        <div className="flex items-center gap-2 text-amber-500"><div className="w-3 h-3 rounded-full bg-amber-500" /> {gallonSize}oz</div>
+                        <div className="flex items-center gap-2 text-emerald-500"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" /> 16oz</div>
+                        <div className="flex items-center gap-2 text-blue-500"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/20" /> 24oz</div>
+                        <div className="flex items-center gap-2 text-purple-500"><div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/20" /> 32oz</div>
+                        <div className="flex items-center gap-2 text-amber-500"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-lg shadow-amber-500/20" /> {gallonSize}oz</div>
                     </div>
                     <div className="flex items-center gap-6 text-[10px] text-zinc-400 font-black uppercase tracking-widest">
                         <span>C = Chemical</span>
