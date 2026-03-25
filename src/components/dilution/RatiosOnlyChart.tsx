@@ -14,7 +14,8 @@ import {
     ChevronDown,
     Settings2,
     MonitorSmartphone,
-    AlertCircle
+    AlertCircle,
+    FlaskConical
 } from "lucide-react";
 import { generateTemplate } from "@/lib/chemical-ai";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { getReferenceRatios, upsertReferenceRatio, deleteReferenceRatio } from "@/lib/dilution-ratios";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface RatiosOnlyChartProps {
     open: boolean;
@@ -34,6 +36,7 @@ interface RatiosOnlyChartProps {
 const GALLON_KEY = "pds_custom_gallon_v1";
 const LOCAL_CUSTOM_KEY = "pds_custom_ratios_v1";
 const LOCAL_HIDDEN_KEY = "pds_hidden_ratios_v1";
+const LOCAL_UNIT_KEY = "pds_unit_mode_v1";
 
 const normalizeRatio = (r: string) => {
     if (!r) return "";
@@ -96,27 +99,31 @@ const calculateAmounts = (ratioStr: string, bottleOz: number) => {
     };
 };
 
+type UnitMode = 'oz' | 'ml' | 'both';
+
 export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyChartProps) => {
     const { toast } = useToast();
     const [customRatios, setCustomRatios] = useState<string[]>([]);
     const [hiddenRatios, setHiddenRatios] = useState<string[]>([]);
     const [gallonSize, setGallonSize] = useState<number>(128);
+    const [unitMode, setUnitMode] = useState<UnitMode>('both');
     const [newRatio, setNewRatio] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'landscape' | 'portrait'>('portrait');
     const [dbError, setDbError] = useState(false);
 
     // Persistence & Hybrid Sync
     useEffect(() => {
         const load = async () => {
             try {
-                // 1. Load Local Fallbacks first for fast UI
+                // 1. Load Local
                 const localSaved = await localforage.getItem<string[]>(LOCAL_CUSTOM_KEY);
                 if (localSaved) setCustomRatios(localSaved);
                 const localHidden = await localforage.getItem<string[]>(LOCAL_HIDDEN_KEY);
                 if (localHidden) setHiddenRatios(localHidden);
+                const localUnit = await localforage.getItem<UnitMode>(LOCAL_UNIT_KEY);
+                if (localUnit) setUnitMode(localUnit);
 
-                // 2. Try loading from Supabase
+                // 2. Try Supabase
                 const supaRatios = await getReferenceRatios();
                 if (supaRatios.length > 0) {
                     setCustomRatios(supaRatios.filter(r => !r.is_hidden).map(r => normalizeRatio(r.ratio)));
@@ -196,6 +203,13 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         }
     };
 
+    const handleUnitChange = async (val: string) => {
+        if (val) {
+            setUnitMode(val as UnitMode);
+            await localforage.setItem(LOCAL_UNIT_KEY, val);
+        }
+    };
+
     // Calculate unique sorted ratios with AI Suggestion Fallback
     const sortedRatios = useMemo(() => {
         const allSet = new Set<string>();
@@ -240,6 +254,10 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         tableClone.querySelectorAll('.no-print').forEach(el => el.remove());
         tableClone.querySelectorAll('button').forEach(el => el.remove());
         
+        // Hide elements based on mode
+        if (unitMode === 'oz') tableClone.querySelectorAll('.val-ml-box').forEach(el => el.remove());
+        if (unitMode === 'ml') tableClone.querySelectorAll('.val-oz-box').forEach(el => el.remove());
+
         const style = `
             <style>
                 @page { size: portrait; margin: 0.25in; }
@@ -257,10 +275,10 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                     font-style: italic !important;
                     letter-spacing: -2px !important;
                 }
-                .label-stack { position: absolute; right: 5px; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-around; font-size: 8px; font-weight: 950; color: #94a3b8; }
-                .indicator-c::after { content: 'C'; font-size: 10px; font-weight: 950; color: #94a3b8; position: absolute; top: 2px; right: 4px; }
-                .indicator-w::after { content: 'W'; font-size: 10px; font-weight: 950; color: #94a3b8; position: absolute; bottom: 2px; right: 4px; }
-                .val-oz { font-weight: 950; font-size: 18px; }
+                .label-stack { position: absolute; right: 8px; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-around; font-size: 8px; font-weight: 950; color: #94a3b8; }
+                .indicator-c::after { content: 'C'; font-size: 10px; font-weight: 950; color: #cbd5e1; position: absolute; top: 2px; right: 4px; }
+                .indicator-w::after { content: 'W'; font-size: 10px; font-weight: 950; color: #cbd5e1; position: absolute; bottom: 2px; right: 4px; }
+                .val-oz { font-weight: 950; font-size: 20px; }
                 .val-ml { font-size: 11px; color: #64748b; margin-left: 6px; font-weight: 700; background: #eee; padding: 1px 4px; border-radius: 4px; }
                 
                 .text-emerald { color: #059669 !important; }
@@ -268,21 +286,27 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                 .text-purple { color: #7c3aed !important; }
                 .text-amber { color: #d97706 !important; }
                 
-                .header-title { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #000; padding-bottom: 12px; }
-                .header-title h1 { margin: 0; font-size: 28px; font-weight: 950; text-transform: uppercase; font-style: italic; }
-                .header-title p { margin: 4px 0; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+                .header-title { text-align: center; margin-bottom: 25px; border-bottom: 3px solid #000; padding-bottom: 15px; }
+                .header-title h1 { margin: 0; font-size: 32px; font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: -1.5px; }
+                .header-title p { margin: 4px 0; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 2px; }
+                
+                .footer { margin-top: 20px; font-size: 9px; font-weight: 950; text-transform: uppercase; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 15px; }
             </style>
         `;
 
         printWindow.document.write(`
             <html>
-                <head><title>Prime Dilution Master Reference</title>${style}</head>
+                <head><title>Prime Dilution Chart (${unitMode.toUpperCase()})</title>${style}</head>
                 <body>
                     <div class="header-title">
                         <h1>Prime Dilution Master Reference</h1>
-                        <p>Professional Bottle Breakdown • Oz & ML Reference Chart</p>
+                        <p>Professional Bottle Breakdown • Units: ${unitMode.toUpperCase()}</p>
                     </div>
                     ${tableClone.outerHTML}
+                    <div class="footer">
+                        <span>C = Chemical Part | W = Water Part</span>
+                        <span>Prime Detailing Professional Systems</span>
+                    </div>
                 </body>
             </html>
         `);
@@ -296,26 +320,28 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         
-        // Header Background
         pdf.setFillColor(15, 23, 42); // Dark slate
         pdf.rect(0, 0, pageWidth, 28, 'F');
-
         pdf.setFontSize(22);
         pdf.setFont('helvetica', 'bolditalic');
         pdf.setTextColor(255, 255, 255);
-        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 14, { align: 'center' });
+        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 13, { align: 'center' });
         
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(200, 200, 200);
-        pdf.text("PROFESSIONAL BOTTLE BREAKDOWN • OZ & ML REFERENCE CHART", pageWidth / 2, 21, { align: 'center' });
+        pdf.text(`PROFESSIONAL BOTTLE BREAKDOWN • UNITS: ${unitMode.toUpperCase()}`, pageWidth / 2, 20, { align: 'center' });
 
         const headers = [['Ratio', '16oz', '24oz', '32oz', `${gallonSize}oz`]];
         const body = sortedRatios.map(ratioStr => [
             transformRatio(ratioStr),
             ...[...standardSizes, gallonSize].map(size => {
                 const amts = calculateAmounts(ratioStr, size);
-                return `C: ${amts?.chem}oz (${amts?.mlChem}ml)\nW: ${amts?.water}oz (${amts?.mlWater}ml)`;
+                const ozPart = `${amts?.chem}oz / ${amts?.water}oz`;
+                const mlPart = `${amts?.mlChem}ml / ${amts?.mlWater}ml`;
+                if (unitMode === 'oz') return ozPart;
+                if (unitMode === 'ml') return mlPart;
+                return `OZ: ${ozPart}\nML: ${mlPart}`;
             })
         ]);
 
@@ -324,42 +350,13 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
             head: headers,
             body: body,
             theme: 'grid',
-            styles: { 
-                fontSize: 9, 
-                halign: 'center', 
-                valign: 'middle', 
-                cellPadding: 3, 
-                textColor: [30, 41, 59],
-                lineWidth: 0.1,
-                lineColor: [200, 200, 200]
-            },
-            headStyles: { 
-                fillColor: [241, 245, 249], 
-                textColor: [15, 23, 42], 
-                fontStyle: 'bold', 
-                lineWidth: 0.2, 
-                lineColor: [0, 0, 0]
-            },
+            styles: { fontSize: 8, halign: 'center', valign: 'middle', cellPadding: 3, textColor: [15, 23, 42], lineWidth: 0.1 },
+            headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
             columnStyles: { 
-                0: { 
-                    fontStyle: 'bolditalic', 
-                    fontSize: 22, 
-                    cellWidth: 35, 
-                    fillColor: [248, 250, 252],
-                    textColor: [15, 23, 42]
-                } 
+                0: { fontStyle: 'bolditalic', fontSize: 18, cellWidth: 35, fillColor: [248, 250, 252] } 
             },
             didParseCell: (data) => {
-                if (data.section === 'head') {
-                    if (data.column.index === 1) data.cell.styles.textColor = [5, 150, 105]; // Emerald
-                    if (data.column.index === 2) data.cell.styles.textColor = [37, 99, 235]; // Blue
-                    if (data.column.index === 3) data.cell.styles.textColor = [124, 58, 237]; // Purple
-                    if (data.column.index === 4) data.cell.styles.textColor = [217, 119, 6];  // Amber
-                }
-                
-                // Color the values in rows
-                if (data.section === 'body' && data.column.index > 0) {
-                    const text = data.cell.raw as string;
+                if (data.section === 'head' && data.column.index > 0) {
                     if (data.column.index === 1) data.cell.styles.textColor = [5, 150, 105];
                     if (data.column.index === 2) data.cell.styles.textColor = [37, 99, 235];
                     if (data.column.index === 3) data.cell.styles.textColor = [124, 58, 237];
@@ -368,13 +365,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
             }
         });
 
-        // Legend/Footer
-        pdf.setFontSize(7);
-        pdf.setTextColor(148, 163, 184);
-        pdf.text("C = CHEMICAL  |  W = WATER  •  PROFESSIONAL VOLUMETRIC CALCULATIONS", 14, pageHeight - 10);
-        pdf.text("PRIME DETAILING SYSTEMS", pageWidth - 14, pageHeight - 10, { align: 'right' });
-
-        pdf.save(`Prime_Dilution_Map_${gallonSize}oz.pdf`);
+        pdf.save(`Prime_Dilution_${unitMode.toUpperCase()}.pdf`);
     };
 
     return (
@@ -387,25 +378,36 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                         </div>
                         <div className="flex flex-col">
                             <DialogTitle className="text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">Prime Dilution Master Reference</DialogTitle>
-                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] leading-none text-left">Professional Bottle Breakdown • Oz & ML Reference Chart</span>
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] leading-none text-left">Professional Bottle Breakdown</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-zinc-800/50 p-1.5 rounded-xl border border-zinc-700/50">
-                        {dbError && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] font-black uppercase text-amber-500 animate-pulse">
-                                <AlertCircle className="h-3 w-3" /> SQL Sync Off
-                            </div>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => setIsAddOpen(true)} className="h-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-[10px] font-bold uppercase tracking-widest px-3">
-                            <Plus className="h-3.5 w-3.5 mr-1" /> Add Ratio
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handlePrint} className="h-8 text-zinc-300 hover:text-white hover:bg-zinc-700 px-3">
-                            <Printer className="h-4 w-4 mr-2" /> Print Map
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={downloadPDF} className="h-8 text-zinc-300 hover:text-white hover:bg-zinc-700 px-3">
-                            <Download className="h-4 w-4 mr-2" /> Export PDF
-                        </Button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center gap-1.5 no-print">
+                            <span className="text-[8px] font-black uppercase text-zinc-500 tracking-[0.2em]">Measurement Units</span>
+                            <ToggleGroup type="single" value={unitMode} onValueChange={handleUnitChange} className="bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
+                                <ToggleGroupItem value="oz" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest data-[state=on]:bg-indigo-500 data-[state=on]:text-white">Oz</ToggleGroupItem>
+                                <ToggleGroupItem value="ml" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest data-[state=on]:bg-indigo-500 data-[state=on]:text-white">Ml</ToggleGroupItem>
+                                <ToggleGroupItem value="both" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest data-[state=on]:bg-indigo-500 data-[state=on]:text-white">Both</ToggleGroupItem>
+                            </ToggleGroup>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-zinc-800/50 p-1.5 rounded-xl border border-zinc-700/50">
+                            {dbError && (
+                                <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] font-black uppercase text-amber-500">
+                                    <AlertCircle className="h-3 w-3" /> SQL Off
+                                </div>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => setIsAddOpen(true)} className="h-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-[10px] font-bold uppercase tracking-widest px-3">
+                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Ratio
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handlePrint} className="h-8 text-zinc-300 hover:text-white hover:bg-zinc-700 px-3">
+                                <Printer className="h-4 w-4 mr-2" /> Print Map
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={downloadPDF} className="h-8 text-zinc-300 hover:text-white hover:bg-zinc-700 px-3">
+                                <Download className="h-4 w-4 mr-2" /> Export PDF
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -455,14 +457,30 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                                                 <td key={`${ratioStr}-${size}`} className={`p-2 border border-slate-200 text-center relative ${isCustom ? 'bg-amber-500/5 border-l-2 border-slate-300' : ''}`}>
                                                     <div className="flex flex-col gap-1 py-1 relative">
                                                         <div className="flex items-center justify-center gap-1 border-b border-slate-100 py-1 relative indicator-c">
-                                                            <span className={`text-base font-black ${colorClass}`}>{amts?.chem}oz</span>
-                                                            <span className="text-[9px] text-slate-400 font-bold ml-1">{amts?.mlChem}ml</span>
-                                                            <span className="absolute top-0 right-0 text-[8px] font-black text-slate-200 pointer-events-none no-print">C</span>
+                                                            {unitMode !== 'ml' && (
+                                                                <div className="val-oz-box">
+                                                                    <span className={`text-base font-black ${colorClass} val-oz`}>{amts?.chem}oz</span>
+                                                                </div>
+                                                            )}
+                                                            {unitMode !== 'oz' && (
+                                                                <div className="val-ml-box">
+                                                                    <span className="text-[9px] text-slate-400 font-bold ml-1 val-ml">{amts?.mlChem}ml</span>
+                                                                </div>
+                                                            )}
+                                                            <span className="absolute top-0 right-0 text-[8px] font-black text-zinc-200 pointer-events-none no-print">C</span>
                                                         </div>
                                                         <div className="flex items-center justify-center gap-1 py-1 opacity-70 relative indicator-w">
-                                                            <span className={`text-[12px] font-bold ${colorClass}`}>{amts?.water}oz</span>
-                                                            <span className="text-[9px] text-slate-400 font-bold ml-1">{amts?.mlWater}ml</span>
-                                                            <span className="absolute bottom-0 right-0 text-[8px] font-black text-slate-200 pointer-events-none no-print">W</span>
+                                                            {unitMode !== 'ml' && (
+                                                                <div className="val-oz-box">
+                                                                    <span className={`text-[12px] font-bold ${colorClass} val-oz`}>{amts?.water}oz</span>
+                                                                </div>
+                                                            )}
+                                                            {unitMode !== 'oz' && (
+                                                                <div className="val-ml-box">
+                                                                    <span className="text-[9px] text-slate-400 font-bold ml-1 val-ml">{amts?.mlWater}ml</span>
+                                                                </div>
+                                                            )}
+                                                            <span className="absolute bottom-0 right-0 text-[8px] font-black text-zinc-200 pointer-events-none no-print">W</span>
                                                         </div>
                                                     </div>
                                                 </td>
