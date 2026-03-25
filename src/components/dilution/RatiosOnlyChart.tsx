@@ -15,7 +15,8 @@ import {
     Settings2,
     MonitorSmartphone,
     AlertCircle,
-    FlaskConical
+    FlaskConical,
+    LayoutGrid
 } from "lucide-react";
 import { generateTemplate } from "@/lib/chemical-ai";
 import { Input } from "@/components/ui/input";
@@ -26,11 +27,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { getReferenceRatios, upsertReferenceRatio, deleteReferenceRatio } from "@/lib/dilution-ratios";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RatiosOnlyChartProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     chemicals: any[];
+    onOpenCalculator?: () => void;
 }
 
 const GALLON_KEY = "pds_custom_gallon_v1";
@@ -101,7 +104,7 @@ const calculateAmounts = (ratioStr: string, bottleOz: number) => {
 
 type UnitMode = 'oz' | 'ml' | 'both';
 
-export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyChartProps) => {
+export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculator }: RatiosOnlyChartProps) => {
     const { toast } = useToast();
     const [customRatios, setCustomRatios] = useState<string[]>([]);
     const [hiddenRatios, setHiddenRatios] = useState<string[]>([]);
@@ -370,66 +373,96 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[95vw] 2xl:max-w-[1200px] w-full h-[90vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-none shadow-2xl rounded-2xl">
-                <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-zinc-900 border-b border-zinc-800 gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center border border-white/10 shadow-lg">
-                            <TableIcon className="h-5 w-5 text-white" />
+            <DialogContent className="max-w-[98vw] 2xl:max-w-[1240px] w-full h-[98vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-none shadow-2xl rounded-2xl">
+                {/* Responsive Header - Compact */}
+                <div className="flex flex-col sm:flex-row items-center justify-between p-3 sm:p-4 bg-zinc-900 border-b border-zinc-800 gap-3 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 overflow-hidden">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center border border-white/10 shadow-lg shrink-0">
+                            <TableIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                         </div>
-                        <div className="flex flex-col">
-                            <DialogTitle className="text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">Prime Dilution Master Reference</DialogTitle>
-                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] leading-none text-left">Professional Bottle Breakdown</span>
+                        <div className="flex flex-col min-w-0">
+                            <DialogTitle className="text-sm sm:text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-0.5 sm:mb-1 truncate">Prime Dilution</DialogTitle>
+                            <span className="text-[7px] sm:text-[10px] text-zinc-500 font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] leading-none truncate">Reference Chart</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center gap-1.5 no-print">
-                            <span className="text-[8px] font-black uppercase text-zinc-500 tracking-[0.2em]">Measurement Units</span>
-                            <ToggleGroup type="single" value={unitMode} onValueChange={handleUnitChange} className="bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
-                                <ToggleGroupItem value="oz" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest data-[state=on]:bg-indigo-500 data-[state=on]:text-white">Oz</ToggleGroupItem>
-                                <ToggleGroupItem value="ml" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest data-[state=on]:bg-indigo-500 data-[state=on]:text-white">Ml</ToggleGroupItem>
-                                <ToggleGroupItem value="both" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest data-[state=on]:bg-indigo-500 data-[state=on]:text-white">Both</ToggleGroupItem>
+                    <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                        {/* Units Toggle - Compact icons */}
+                        <div className="flex flex-col items-center gap-1 no-print shrink-0">
+                            <span className="text-[7px] font-black uppercase text-zinc-400 tracking-widest hidden sm:block">Units</span>
+                            <ToggleGroup type="single" value={unitMode} onValueChange={handleUnitChange} className="bg-zinc-800/80 p-0.5 rounded-lg border border-zinc-700">
+                                <ToggleGroupItem value="oz" className="h-6 px-2 text-[9px] font-black data-[state=on]:bg-indigo-500 data-[state=on]:text-white">OZ</ToggleGroupItem>
+                                <ToggleGroupItem value="ml" className="h-6 px-2 text-[9px] font-black data-[state=on]:bg-indigo-500 data-[state=on]:text-white">ML</ToggleGroupItem>
+                                <ToggleGroupItem value="both" className="h-6 px-2 text-[9px] font-black data-[state=on]:bg-indigo-500 data-[state=on]:text-white">ALL</ToggleGroupItem>
                             </ToggleGroup>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-zinc-800/50 p-1.5 rounded-xl border border-zinc-700/50">
-                            {dbError && (
-                                <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] font-black uppercase text-amber-500">
-                                    <AlertCircle className="h-3 w-3" /> SQL Off
-                                </div>
-                            )}
-                            <Button variant="ghost" size="sm" onClick={() => setIsAddOpen(true)} className="h-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-[10px] font-bold uppercase tracking-widest px-3">
-                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Ratio
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={handlePrint} className="h-8 text-zinc-300 hover:text-white hover:bg-zinc-700 px-3">
-                                <Printer className="h-4 w-4 mr-2" /> Print Map
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={downloadPDF} className="h-8 text-zinc-300 hover:text-white hover:bg-zinc-700 px-3">
-                                <Download className="h-4 w-4 mr-2" /> Export PDF
-                            </Button>
-                        </div>
+                        {/* Action Buttons - ICON ONLY as requested */}
+                        <TooltipProvider>
+                            <div className="flex items-center gap-1 bg-zinc-800/80 p-1 rounded-xl border border-zinc-700">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => setIsAddOpen(true)} className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Add Custom Ratio</TooltipContent>
+                                </Tooltip>
+
+                                <div className="w-px h-4 bg-zinc-700 mx-1" />
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={handlePrint} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-700">
+                                            <Printer className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Print Portrait Map</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={downloadPDF} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-700">
+                                            <Download className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Export PDF</TooltipContent>
+                                </Tooltip>
+
+                                <div className="w-px h-4 bg-zinc-700 mx-1" />
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={onOpenCalculator} className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
+                                            <Calculator className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Open Dilution Calculator</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </TooltipProvider>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto bg-white p-4">
-                    <div className="max-w-4xl mx-auto shadow-2xl rounded-xl overflow-hidden border-2 border-slate-200">
-                        <table id="dilution-reference-table" className="w-full border-collapse border-b-2 border-slate-400">
+                <div className="flex-1 overflow-auto bg-white p-2">
+                    <div className="min-w-full lg:max-w-4xl lg:mx-auto shadow-2xl rounded-xl overflow-x-auto border-2 border-slate-200">
+                        <table id="dilution-reference-table" className="w-full border-collapse border-b-2 border-slate-400 min-w-[500px]">
                             <thead>
                                 <tr className="bg-slate-100 border-b-2 border-slate-400 uppercase font-black tracking-tighter text-slate-700">
-                                    <th className="p-4 border-2 border-slate-300 text-left bg-slate-100 text-lg w-[140px]">Ratio</th>
-                                    <th className="p-4 border-2 border-slate-300 text-center text-emerald-600 font-black">16oz</th>
-                                    <th className="p-4 border-2 border-slate-300 text-center text-blue-600 font-black">24oz</th>
-                                    <th className="p-4 border-2 border-slate-300 text-center text-purple-600 font-black">32oz</th>
-                                    <th className="p-4 border-2 border-slate-300 text-center bg-amber-500/10 w-[140px] relative">
+                                    <th className="p-3 sm:p-4 border-2 border-slate-300 text-left bg-slate-100 text-base sm:text-lg w-[80px] sm:w-[120px] sticky left-0 z-30 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Ratio</th>
+                                    <th className="p-3 sm:p-4 border-2 border-slate-300 text-center text-emerald-600 font-black">16oz</th>
+                                    <th className="p-3 sm:p-4 border-2 border-slate-300 text-center text-blue-600 font-black">24oz</th>
+                                    <th className="p-3 sm:p-4 border-2 border-slate-300 text-center text-purple-600 font-black">32oz</th>
+                                    <th className="p-4 border-2 border-slate-300 text-center bg-amber-500/10 w-[100px] sm:w-[120px] relative">
                                         <div className="flex flex-col items-center">
                                             <Input 
                                                 type="number" 
                                                 defaultValue={gallonSize}
                                                 onChange={(e) => handleGallonChange(e.target.value)}
-                                                className="h-8 w-16 text-center font-black border-none bg-transparent text-amber-900 focus-visible:ring-0 text-lg p-0 no-print"
+                                                className="h-6 w-14 text-center font-black border-none bg-transparent text-amber-900 focus-visible:ring-0 text-sm sm:text-base p-0 no-print"
                                             />
-                                            <span className="hidden print:block font-black text-amber-900">{gallonSize}oz</span>
-                                            <span className="text-[8px] font-black text-amber-700/50 uppercase leading-none">Custom Oz</span>
+                                            <span className="hidden print:block font-black text-amber-900">{gallonSize}</span>
+                                            <span className="text-[7px] font-black text-amber-700/50 uppercase leading-none">Custom</span>
                                         </div>
                                     </th>
                                 </tr>
@@ -437,15 +470,19 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                             <tbody>
                                 {sortedRatios.map((ratioStr, idx) => (
                                     <tr key={ratioStr} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-indigo-50/50 transition-colors group border-b border-slate-200`}>
-                                        <td className="p-4 border-2 border-slate-300 font-black text-slate-900 text-4xl italic tracking-tighter sticky left-0 z-20 bg-inherit group/ratio relative ratio-cell">
+                                        <td className="p-3 sm:p-4 border-2 border-slate-300 font-black text-slate-900 text-xl sm:text-4xl italic tracking-tighter sticky left-0 z-30 bg-white group/ratio relative ratio-cell shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
                                             {transformRatio(ratioStr)}
-                                            <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-center gap-4 text-[8px] font-black text-slate-400 pointer-events-none uppercase label-stack">
+                                            <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-3 text-[7px] sm:text-[8px] font-black text-slate-400 pointer-events-none uppercase label-stack">
                                                 <span>C</span>
                                                 <span>W</span>
                                             </div>
                                             <button 
                                                 onClick={() => handleDeleteRatio(ratioStr)}
-                                                className="absolute top-1 right-8 opacity-0 group-hover/ratio:opacity-100 text-red-500/30 hover:text-red-600 transition-all no-print"
+                                                className="absolute top-1 right-1 opacity-0 group-hover/ratio:opacity-100 text-red-500/30 hover:text-red-600 transition-all no-print sm:hidden"
+                                            ><Trash2 className="h-3 w-3" /></button>
+                                            <button 
+                                                onClick={() => handleDeleteRatio(ratioStr)}
+                                                className="absolute top-1 right-8 opacity-0 group-hover/ratio:opacity-100 text-red-500/30 hover:text-red-600 transition-all no-print hidden sm:block"
                                             ><X className="h-4 w-4" /></button>
                                         </td>
                                         {[...standardSizes, gallonSize].map((size, sIdx) => {
@@ -454,33 +491,31 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                                             const colorClass = size === 16 ? 'text-emerald-700' : size === 24 ? 'text-blue-700' : size === 32 ? 'text-purple-700' : 'text-amber-800';
                                             
                                             return (
-                                                <td key={`${ratioStr}-${size}`} className={`p-2 border border-slate-200 text-center relative ${isCustom ? 'bg-amber-500/5 border-l-2 border-slate-300' : ''}`}>
-                                                    <div className="flex flex-col gap-1 py-1 relative">
-                                                        <div className="flex items-center justify-center gap-1 border-b border-slate-100 py-1 relative indicator-c">
+                                                <td key={`${ratioStr}-${size}`} className={`p-1.5 sm:p-2 border border-slate-200 text-center relative ${isCustom ? 'bg-amber-500/5 border-l-2 border-slate-300' : ''}`}>
+                                                    <div className="flex flex-col gap-0.5 sm:gap-1 py-0.5 sm:py-1 relative">
+                                                        <div className="flex flex-col items-center justify-center border-b border-slate-100 py-0.5 relative indicator-c min-h-[1.5rem] sm:min-h-[2rem]">
                                                             {unitMode !== 'ml' && (
                                                                 <div className="val-oz-box">
-                                                                    <span className={`text-base font-black ${colorClass} val-oz`}>{amts?.chem}oz</span>
+                                                                    <span className={`text-[12px] sm:text-base font-black ${colorClass} val-oz`}>{amts?.chem}oz</span>
                                                                 </div>
                                                             )}
                                                             {unitMode !== 'oz' && (
                                                                 <div className="val-ml-box">
-                                                                    <span className="text-[9px] text-slate-400 font-bold ml-1 val-ml">{amts?.mlChem}ml</span>
+                                                                    <span className="text-[7px] sm:text-[9px] text-slate-400 font-bold val-ml">{amts?.mlChem}ml</span>
                                                                 </div>
                                                             )}
-                                                            <span className="absolute top-0 right-0 text-[8px] font-black text-zinc-200 pointer-events-none no-print">C</span>
                                                         </div>
-                                                        <div className="flex items-center justify-center gap-1 py-1 opacity-70 relative indicator-w">
+                                                        <div className="flex flex-col items-center justify-center py-0.5 opacity-70 relative indicator-w min-h-[1.5rem] sm:min-h-[2rem]">
                                                             {unitMode !== 'ml' && (
                                                                 <div className="val-oz-box">
-                                                                    <span className={`text-[12px] font-bold ${colorClass} val-oz`}>{amts?.water}oz</span>
+                                                                    <span className={`text-[10px] sm:text-[12px] font-bold ${colorClass} val-oz`}>{amts?.water}oz</span>
                                                                 </div>
                                                             )}
                                                             {unitMode !== 'oz' && (
                                                                 <div className="val-ml-box">
-                                                                    <span className="text-[9px] text-slate-400 font-bold ml-1 val-ml">{amts?.mlWater}ml</span>
+                                                                    <span className="text-[7px] sm:text-[9px] text-slate-400 font-bold val-ml">{amts?.mlWater}ml</span>
                                                                 </div>
                                                             )}
-                                                            <span className="absolute bottom-0 right-0 text-[8px] font-black text-zinc-200 pointer-events-none no-print">W</span>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -493,17 +528,16 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                     </div>
                 </div>
 
-                <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between no-print shrink-0">
-                    <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
-                        <div className="flex items-center gap-2 text-emerald-500"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" /> 16oz</div>
-                        <div className="flex items-center gap-2 text-blue-500"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/20" /> 24oz</div>
-                        <div className="flex items-center gap-2 text-purple-500"><div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/20" /> 32oz</div>
-                        <div className="flex items-center gap-2 text-amber-500"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-lg shadow-amber-500/20" /> {gallonSize}oz</div>
+                <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between no-print shrink-0 gap-2 sm:gap-4">
+                    <div className="flex flex-wrap justify-center gap-3 sm:gap-8 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em]">
+                        <div className="flex items-center gap-1.5 text-emerald-500"><div className="w-2 h-2 rounded-full bg-emerald-500" /> 16oz</div>
+                        <div className="flex items-center gap-1.5 text-blue-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> 24oz</div>
+                        <div className="flex items-center gap-2 text-purple-500"><div className="w-2 h-2 rounded-full bg-purple-500" /> 32oz</div>
+                        <div className="flex items-center gap-2 text-amber-500"><div className="w-2 h-2 rounded-full bg-amber-500" /> {gallonSize}oz</div>
                     </div>
-                    <div className="flex items-center gap-6 text-[10px] text-zinc-400 font-black uppercase tracking-widest">
-                        <span>C = Chemical</span>
-                        <div className="w-1 h-1 bg-zinc-700 rounded-full" />
-                        <span>W = Water</span>
+                    <div className="flex items-center gap-4 text-[8px] text-zinc-400 font-black uppercase tracking-widest hidden sm:flex">
+                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Chemical</span>
+                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-zinc-600" /> Water</span>
                     </div>
                 </div>
             </DialogContent>
