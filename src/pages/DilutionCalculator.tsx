@@ -355,7 +355,8 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
             <RatiosOnlyChart 
                 open={isRatiosOnlyOpen} 
                 onOpenChange={setIsRatiosOnlyOpen} 
-                chemicals={chemicals} 
+                chemicals={chemicals}
+                onOpenCalculator={() => setIsRatiosOnlyOpen(false)}
             />
             </div>
         </div>

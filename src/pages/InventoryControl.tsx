@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -2234,6 +2234,18 @@ const InventoryControl = () => {
                 >
                     <Eye className="h-4 w-4" />
                 </Button>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-indigo-400 hover:text-white hover:bg-indigo-600/20 ml-2" 
+                    onClick={() => {
+                        setIsDilutionModalOpen(false);
+                        navigate('/dilution-calculator');
+                    }}
+                    title="Open Calculator"
+                >
+                    <Calculator className="h-4 w-4" />
+                </Button>
                 <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none">Generated: {new Date().toLocaleDateString()} — Prime Auto Detail</div>
               </div>
               <div className="flex items-center gap-2 ml-0 md:ml-6 bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
@@ -2540,7 +2552,11 @@ const InventoryControl = () => {
       <RatiosOnlyChart 
         open={isRatiosOnlyModalOpen} 
         onOpenChange={setIsRatiosOnlyModalOpen} 
-        chemicals={chemicals} 
+        chemicals={chemicals}
+        onOpenCalculator={() => {
+          setIsRatiosOnlyModalOpen(false);
+          navigate('/dilution-calculator');
+        }}
       />
     </div >
   );
