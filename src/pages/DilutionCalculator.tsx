@@ -10,9 +10,12 @@ import {
     ArrowLeftRight,
     ArrowRight,
     HelpCircle,
-    BookOpen
+    BookOpen,
+    Eye
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { RatiosOnlyChart } from "@/components/dilution/RatiosOnlyChart";
+import * as inventoryData from "@/lib/inventory-data";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Tooltip,
@@ -34,6 +37,16 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
     const [calcType, setCalcType] = useState<'total' | 'product'>('total');
     
     const [result, setResult] = useState({ product: 0, water: 0 });
+    const [isRatiosOnlyOpen, setIsRatiosOnlyOpen] = useState(false);
+    const [chemicals, setChemicals] = useState<any[]>([]);
+
+    useEffect(() => {
+        const load = async () => {
+            const data = await inventoryData.getChemicals();
+            setChemicals(data);
+        };
+        load();
+    }, []);
 
     const calculate = () => {
         if (!containerSize || isNaN(containerSize)) {
@@ -144,6 +157,18 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                             title="Masterclass"
                         >
                             <HelpCircle className="w-6 h-6" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-indigo-400 hover:text-white hover:bg-indigo-600/20 active:scale-90 transition-transform" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsRatiosOnlyOpen(true);
+                            }}
+                            title="Popular Ratios"
+                        >
+                            <Eye className="w-6 h-6" />
                         </Button>
                         <Button 
                             variant="ghost" 
@@ -326,6 +351,11 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                 onOpenChange={setShowHelp} 
                 role="admin"
                 initialTopicId="prime-dilution-masterclass"
+            />
+            <RatiosOnlyChart 
+                open={isRatiosOnlyOpen} 
+                onOpenChange={setIsRatiosOnlyOpen} 
+                chemicals={chemicals} 
             />
             </div>
         </div>

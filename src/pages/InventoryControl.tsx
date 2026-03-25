@@ -33,6 +33,7 @@ import { generateTemplate } from "@/lib/chemical-ai";
 
 import { Chemical as LibraryChemical } from "@/types/chemicals";
 import { ChemicalLabelMaker } from "@/components/chemicals/ChemicalLabelMaker";
+import { RatiosOnlyChart } from "@/components/dilution/RatiosOnlyChart";
 
 // Import types from inventory-data
 type Chemical = inventoryData.Chemical;
@@ -109,6 +110,7 @@ const InventoryControl = () => {
   const [hiddenChemicalIds, setHiddenChemicalIds] = useState<string[]>([]);
   const [confirmHideId, setConfirmHideId] = useState<string | null>(null);
   const [chartSort, setChartSort] = useState<string>('brand');
+  const [isRatiosOnlyModalOpen, setIsRatiosOnlyModalOpen] = useState(false);
 
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
@@ -2223,6 +2225,15 @@ const InventoryControl = () => {
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-indigo-400" />
                 <DialogTitle className="text-lg font-bold text-white tracking-tight leading-none mb-0.5">Interactive Dilution Chart</DialogTitle>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-indigo-400 hover:text-white hover:bg-indigo-600/20 ml-2" 
+                    onClick={() => setIsRatiosOnlyModalOpen(true)}
+                    title="Show Ratios Only"
+                >
+                    <Eye className="h-4 w-4" />
+                </Button>
                 <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none">Generated: {new Date().toLocaleDateString()} — Prime Auto Detail</div>
               </div>
               <div className="flex items-center gap-2 ml-0 md:ml-6 bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
@@ -2525,6 +2536,12 @@ const InventoryControl = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RatiosOnlyChart 
+        open={isRatiosOnlyModalOpen} 
+        onOpenChange={setIsRatiosOnlyModalOpen} 
+        chemicals={chemicals} 
+      />
     </div >
   );
 }
