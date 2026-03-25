@@ -103,7 +103,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
     const [gallonSize, setGallonSize] = useState<number>(128);
     const [newRatio, setNewRatio] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'landscape' | 'portrait'>('landscape');
+    const [viewMode, setViewMode] = useState<'landscape' | 'portrait'>('portrait');
     const [dbError, setDbError] = useState(false);
 
     // Persistence & Hybrid Sync
@@ -242,17 +242,35 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         
         const style = `
             <style>
-                @page { size: landscape; margin: 0.5in; }
-                body { font-family: sans-serif; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                table { width: 100%; border-collapse: collapse; border: 2px solid #333; }
-                th, td { border: 1px solid #ccc; padding: 12px 8px; text-align: center; font-size: 11px; position: relative; }
-                th { background-color: #f4f4f4 !important; font-weight: 900; text-transform: uppercase; }
-                .ratio-cell { font-weight: 900; font-size: 32px; text-align: left; background-color: #eee !important; border-right: 2px solid #333; }
-                .indicator-c::after { content: 'C'; font-size: 7px; font-weight: 900; color: #999; position: absolute; top: 2px; right: 4px; }
-                .indicator-w::after { content: 'W'; font-size: 7px; font-weight: 900; color: #999; position: absolute; bottom: 2px; right: 4px; }
-                .val-oz { font-weight: 900; font-size: 14px; }
-                .val-ml { font-size: 10px; color: #666; margin-left: 4px; }
-                .header-title { text-align: center; margin-bottom: 20px; }
+                @page { size: portrait; margin: 0.25in; }
+                body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                table { width: 100%; border-collapse: collapse; border: 3px solid #000; table-layout: fixed; }
+                th, td { border: 1.5px solid #ccc; padding: 12px 8px; text-align: center; position: relative; }
+                th { background-color: #f1f5f9 !important; font-weight: 950; text-transform: uppercase; font-size: 14px; border: 2px solid #000; }
+                .ratio-cell { 
+                    font-weight: 950 !important; 
+                    font-size: 38px !important; 
+                    text-align: left !important; 
+                    background-color: #f8fafc !important; 
+                    border-right: 3px solid #000 !important; 
+                    padding: 10px !important;
+                    font-style: italic !important;
+                    letter-spacing: -2px !important;
+                }
+                .label-stack { position: absolute; right: 5px; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-around; font-size: 8px; font-weight: 950; color: #94a3b8; }
+                .indicator-c::after { content: 'C'; font-size: 10px; font-weight: 950; color: #94a3b8; position: absolute; top: 2px; right: 4px; }
+                .indicator-w::after { content: 'W'; font-size: 10px; font-weight: 950; color: #94a3b8; position: absolute; bottom: 2px; right: 4px; }
+                .val-oz { font-weight: 950; font-size: 18px; }
+                .val-ml { font-size: 11px; color: #64748b; margin-left: 6px; font-weight: 700; background: #eee; padding: 1px 4px; border-radius: 4px; }
+                
+                .text-emerald { color: #059669 !important; }
+                .text-blue { color: #2563eb !important; }
+                .text-purple { color: #7c3aed !important; }
+                .text-amber { color: #d97706 !important; }
+                
+                .header-title { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #000; padding-bottom: 12px; }
+                .header-title h1 { margin: 0; font-size: 28px; font-weight: 950; text-transform: uppercase; font-style: italic; }
+                .header-title p { margin: 4px 0; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
             </style>
         `;
 
@@ -261,8 +279,8 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                 <head><title>Prime Dilution Master Reference</title>${style}</head>
                 <body>
                     <div class="header-title">
-                        <h1 style="margin:0; font-weight:900;">Prime Dilution Master Reference</h1>
-                        <p style="margin:5px 0;">Professional Bottle Breakdown • Oz & ML Reference Chart</p>
+                        <h1>Prime Dilution Master Reference</h1>
+                        <p>Professional Bottle Breakdown • Oz & ML Reference Chart</p>
                     </div>
                     ${tableClone.outerHTML}
                 </body>
@@ -270,26 +288,27 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         `);
         
         printWindow.document.close();
-        setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 800);
     };
 
     const downloadPDF = () => {
-        const pdf = new jsPDF('l', 'mm', 'a4');
+        const pdf = new jsPDF('p', 'mm', 'a4');
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         
-        pdf.setFillColor(30, 30, 30);
-        pdf.rect(0, 0, pageWidth, 22, 'F');
-        pdf.setFontSize(22);
+        pdf.setFillColor(241, 245, 249);
+        pdf.rect(0, 0, pageWidth, 26, 'F');
+        pdf.setFontSize(24);
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(255, 255, 255);
-        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 12, { align: 'center' });
+        pdf.setTextColor(15, 23, 42);
+        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 13, { align: 'center' });
         
-        pdf.setFontSize(8);
-        pdf.setTextColor(180, 180, 180);
-        pdf.text("PROFESSIONAL BOTTLE BREAKDOWN • OZ & ML REFERENCE CHART", pageWidth / 2, 18, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(100, 116, 139);
+        pdf.text("PROFESSIONAL BOTTLE BREAKDOWN • OZ & ML REFERENCE CHART", pageWidth / 2, 20, { align: 'center' });
 
-        const headers = [['Ratio', '16oz Bottle', '24oz Bottle', '32oz Bottle', `${gallonSize}oz Custom`]];
+        const headers = [['Ratio', '16oz', '24oz', '32oz', `${gallonSize}oz`]];
         const body = sortedRatios.map(ratioStr => [
             transformRatio(ratioStr),
             ...[...standardSizes, gallonSize].map(size => {
@@ -299,32 +318,40 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
         ]);
 
         autoTable(pdf, {
-            startY: 22,
+            startY: 26,
             head: headers,
             body: body,
             theme: 'grid',
-            styles: { fontSize: 8, halign: 'center', valign: 'middle', cellPadding: 2 },
-            headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255] },
-            columnStyles: { 0: { fontStyle: 'bold', fontSize: 16, cellWidth: 35, fillColor: [245, 245, 245] } },
+            styles: { fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 3, textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [200, 200, 200] },
+            headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', lineWidth: 0.2, lineColor: [0, 0, 0] },
+            columnStyles: { 
+                0: { 
+                    fontStyle: 'bolditalic', 
+                    fontSize: 20, 
+                    cellWidth: 35, 
+                    fillColor: [248, 250, 252],
+                    textColor: [11, 11, 11]
+                } 
+            },
             didParseCell: (data) => {
                 if (data.section === 'head' && data.column.index > 0) {
-                    if (data.column.index === 1) data.cell.styles.textColor = [16, 185, 129];
-                    if (data.column.index === 2) data.cell.styles.textColor = [59, 130, 246];
-                    if (data.column.index === 3) data.cell.styles.textColor = [139, 92, 246];
-                    if (data.column.index === 4) data.cell.styles.textColor = [245, 158, 11];
+                    if (data.column.index === 1) data.cell.styles.textColor = [5, 150, 105];
+                    if (data.column.index === 2) data.cell.styles.textColor = [37, 99, 235];
+                    if (data.column.index === 3) data.cell.styles.textColor = [124, 58, 237];
+                    if (data.column.index === 4) data.cell.styles.textColor = [217, 119, 6];
                 }
             }
         });
 
         pdf.setFontSize(7);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text("LEGEND: C = CHEMICAL PART | W = WATER PART. ALL CALCULATIONS BASED ON VOLUMETRIC TOTALS.", 14, pageHeight - 10);
-        pdf.save(`Prime_Dilution_Ratios.pdf`);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text("C = CHEMICAL  |  W = WATER  •  PRIME DETAILING PROFESSIONAL SYSTEMS", 14, pageHeight - 8);
+        pdf.save(`Prime_Dilution_Master_Reference.pdf`);
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[95vw] 2xl:max-w-[1400px] w-full h-[90vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-none shadow-2xl rounded-2xl">
+            <DialogContent className="max-w-[95vw] 2xl:max-w-[1200px] w-full h-[90vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-none shadow-2xl rounded-2xl">
                 <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-zinc-900 border-b border-zinc-800 gap-4">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center border border-white/10 shadow-lg">
@@ -355,15 +382,15 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                 </div>
 
                 <div className="flex-1 overflow-auto bg-white p-4">
-                    <div className="max-w-6xl mx-auto shadow-2xl rounded-xl overflow-hidden border-2 border-zinc-200">
-                        <table id="dilution-reference-table" className="w-full border-collapse border-b-2 border-zinc-400">
+                    <div className="max-w-4xl mx-auto shadow-2xl rounded-xl overflow-hidden border-2 border-slate-200">
+                        <table id="dilution-reference-table" className="w-full border-collapse border-b-2 border-slate-400">
                             <thead>
-                                <tr className="bg-zinc-100 border-b-2 border-zinc-400 uppercase font-black tracking-tighter text-zinc-700">
-                                    <th className="p-4 border-2 border-zinc-400 text-left bg-zinc-200 text-lg w-[120px]">Ratio</th>
-                                    <th className="p-4 border-2 border-zinc-400 text-center text-emerald-600">16oz</th>
-                                    <th className="p-4 border-2 border-zinc-400 text-center text-blue-600">24oz</th>
-                                    <th className="p-4 border-2 border-zinc-400 text-center text-purple-600">32oz</th>
-                                    <th className="p-4 border-2 border-zinc-400 text-center bg-amber-500/10 w-[140px] relative">
+                                <tr className="bg-slate-100 border-b-2 border-slate-400 uppercase font-black tracking-tighter text-slate-700">
+                                    <th className="p-4 border-2 border-slate-300 text-left bg-slate-100 text-lg w-[140px]">Ratio</th>
+                                    <th className="p-4 border-2 border-slate-300 text-center text-emerald-600 font-black">16oz</th>
+                                    <th className="p-4 border-2 border-slate-300 text-center text-blue-600 font-black">24oz</th>
+                                    <th className="p-4 border-2 border-slate-300 text-center text-purple-600 font-black">32oz</th>
+                                    <th className="p-4 border-2 border-slate-300 text-center bg-amber-500/10 w-[140px] relative">
                                         <div className="flex flex-col items-center">
                                             <Input 
                                                 type="number" 
@@ -379,10 +406,10 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                             </thead>
                             <tbody>
                                 {sortedRatios.map((ratioStr, idx) => (
-                                    <tr key={ratioStr} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-zinc-50'} hover:bg-indigo-50/50 transition-colors group border-b border-zinc-300`}>
-                                        <td className="p-4 border-2 border-zinc-400 font-black text-zinc-900 text-4xl italic tracking-tighter sticky left-0 z-20 bg-inherit shadow-[3px_0_10px_rgba(0,0,0,0.1)] group/ratio relative">
+                                    <tr key={ratioStr} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-indigo-50/50 transition-colors group border-b border-slate-200`}>
+                                        <td className="p-4 border-2 border-slate-300 font-black text-slate-900 text-4xl italic tracking-tighter sticky left-0 z-20 bg-inherit group/ratio relative ratio-cell">
                                             {transformRatio(ratioStr)}
-                                            <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-center gap-4 text-[8px] font-black text-zinc-300 pointer-events-none uppercase">
+                                            <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-center gap-4 text-[8px] font-black text-slate-400 pointer-events-none uppercase label-stack">
                                                 <span>C</span>
                                                 <span>W</span>
                                             </div>
@@ -397,17 +424,17 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals }: RatiosOnlyCha
                                             const colorClass = size === 16 ? 'text-emerald-700' : size === 24 ? 'text-blue-700' : size === 32 ? 'text-purple-700' : 'text-amber-800';
                                             
                                             return (
-                                                <td key={`${ratioStr}-${size}`} className={`p-2 border border-zinc-200 text-center relative ${isCustom ? 'bg-amber-500/5 border-l-2 border-zinc-400' : ''}`}>
+                                                <td key={`${ratioStr}-${size}`} className={`p-2 border border-slate-200 text-center relative ${isCustom ? 'bg-amber-500/5 border-l-2 border-slate-300' : ''}`}>
                                                     <div className="flex flex-col gap-1 py-1 relative">
-                                                        <div className="flex items-center justify-center gap-1 border-b border-zinc-100 py-1 relative indicator-c">
+                                                        <div className="flex items-center justify-center gap-1 border-b border-slate-100 py-1 relative indicator-c">
                                                             <span className={`text-base font-black ${colorClass}`}>{amts?.chem}oz</span>
-                                                            <span className="text-[9px] text-zinc-400 font-bold ml-1">{amts?.mlChem}ml</span>
-                                                            <span className="absolute top-0 right-0 text-[8px] font-black text-zinc-200 pointer-events-none">C</span>
+                                                            <span className="text-[9px] text-slate-400 font-bold ml-1">{amts?.mlChem}ml</span>
+                                                            <span className="absolute top-0 right-0 text-[8px] font-black text-slate-200 pointer-events-none no-print">C</span>
                                                         </div>
                                                         <div className="flex items-center justify-center gap-1 py-1 opacity-70 relative indicator-w">
-                                                            <span className={`text-[12px] font-black ${colorClass}`}>{amts?.water}oz</span>
-                                                            <span className="text-[9px] text-zinc-400 font-bold ml-1">{amts?.mlWater}ml</span>
-                                                            <span className="absolute bottom-0 right-0 text-[8px] font-black text-zinc-200 pointer-events-none">W</span>
+                                                            <span className={`text-[12px] font-bold ${colorClass}`}>{amts?.water}oz</span>
+                                                            <span className="text-[9px] text-slate-400 font-bold ml-1">{amts?.mlWater}ml</span>
+                                                            <span className="absolute bottom-0 right-0 text-[8px] font-black text-slate-200 pointer-events-none no-print">W</span>
                                                         </div>
                                                     </div>
                                                 </td>
