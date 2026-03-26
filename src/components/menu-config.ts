@@ -118,6 +118,16 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
+            title: "Chemicals", icon: Beaker,
+            items: [
+                { title: "Interactive Dilution Chart", url: "/inventory-control?chart=interactive", key: "dilution-chart-interactive", icon: Printer },
+                { title: "Prime Dilution Reference Chart", url: "/inventory-control?chart=reference", key: "dilution-chart-reference", icon: Printer },
+                { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker },
+                { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
+                { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer },
+            ]
+        },
+        {
             title: "Inventory & Assets", icon: Package,
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package },
@@ -129,11 +139,8 @@ export const getMenuGroups = (counts: {
             title: "Prime Training Center", icon: GraduationCap,
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
-                { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker },
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
-                { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
-                { title: "Dilution Ref Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
             ]
         },

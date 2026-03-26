@@ -194,12 +194,11 @@ const InventoryControl = () => {
       setUpdatesModalOpen(true);
       setAutoOpenedFromQuery(true);
     }
-
     const chart = params.get("chart");
-    if (chart === "print" || chart === "pdf" || chart === "modal") {
+    if (chart === "interactive" || chart === "modal" || chart === "print" || chart === "pdf") {
        if (chemicals.length > 0) setIsDilutionModalOpen(true);
-    } else {
-       setIsDilutionModalOpen(false);
+    } else if (chart === "reference") {
+       if (chemicals.length > 0) setIsRatiosOnlyModalOpen(true);
     }
   }, [location.search, chemicals.length]);
 
