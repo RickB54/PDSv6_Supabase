@@ -200,9 +200,11 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
 
     const handleGallonChange = async (val: string) => {
         const num = parseFloat(val);
-        if (!isNaN(num) && num > 0) {
-            setGallonSize(num);
-            await localforage.setItem(GALLON_KEY, num);
+        if (!isNaN(num) && num >= 0) {
+            // Store total OZ in state for calculation, but user inputs Gallons
+            const totalOz = num * 128;
+            setGallonSize(totalOz);
+            await localforage.setItem(GALLON_KEY, totalOz);
         }
     };
 
@@ -335,7 +337,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
         pdf.setTextColor(200, 200, 200);
         pdf.text(`PROFESSIONAL BOTTLE BREAKDOWN • UNITS: ${unitMode.toUpperCase()}`, pageWidth / 2, 20, { align: 'center' });
 
-        const headers = [['Ratio', '16oz', '24oz', '32oz', `${gallonSize}oz`]];
+        const headers = [['Ratio', '16oz', '24oz', '32oz', `${(gallonSize / 128).toFixed(1)} GAL`]];
         const body = sortedRatios.map(ratioStr => [
             transformRatio(ratioStr),
             ...[...standardSizes, gallonSize].map(size => {
@@ -455,14 +457,18 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
                                     <th className="p-3 sm:p-4 border-2 border-slate-300 text-center text-purple-600 font-black">32oz</th>
                                     <th className="p-4 border-2 border-slate-300 text-center bg-amber-500/10 w-[100px] sm:w-[120px] relative">
                                         <div className="flex flex-col items-center">
-                                            <Input 
-                                                type="number" 
-                                                value={gallonSize}
-                                                onChange={(e) => handleGallonChange(e.target.value)}
-                                                className="h-6 w-14 text-center font-black border-none bg-transparent text-amber-900 focus-visible:ring-0 text-sm sm:text-base p-0 no-print"
-                                            />
-                                            <span className="hidden print:block font-black text-amber-900">{gallonSize}</span>
-                                            <span className="text-[7px] font-black text-amber-700/50 uppercase leading-none">Custom</span>
+                                            <div className="flex items-baseline gap-0.5">
+                                                <Input 
+                                                    type="number" 
+                                                    step="0.1"
+                                                    value={gallonSize / 128}
+                                                    onChange={(e) => handleGallonChange(e.target.value)}
+                                                    className="h-6 w-12 text-right font-black border-none bg-transparent text-amber-900 focus-visible:ring-0 text-sm sm:text-base p-0 no-print"
+                                                />
+                                                <span className="text-[9px] font-black text-amber-900/60 no-print italic ml-0.5">GAL</span>
+                                            </div>
+                                            <span className="hidden print:block font-black text-amber-900">{(gallonSize/128).toFixed(1)} GAL</span>
+                                            <span className="text-[7px] font-black text-amber-700/50 uppercase leading-none">Custom Size</span>
                                         </div>
                                     </th>
                                 </tr>
@@ -533,7 +539,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
                         <div className="flex items-center gap-1.5 text-emerald-500">16oz</div>
                         <div className="flex items-center gap-1.5 text-blue-500">24oz</div>
                         <div className="flex items-center gap-2 text-purple-500">32oz</div>
-                        <div className="flex items-center gap-2 text-amber-500">{gallonSize}oz</div>
+                        <div className="flex items-center gap-2 text-amber-500">{gallonSize / 128} GAL</div>
                     </div>
                     <div className="flex items-center gap-4 text-[8px] sm:text-[9px] text-zinc-400 font-black uppercase tracking-widest hidden sm:flex">
                         <span className="flex items-center gap-1.5">
