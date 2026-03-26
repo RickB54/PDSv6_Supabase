@@ -457,7 +457,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
                                         <div className="flex flex-col items-center">
                                             <Input 
                                                 type="number" 
-                                                defaultValue={gallonSize}
+                                                value={gallonSize}
                                                 onChange={(e) => handleGallonChange(e.target.value)}
                                                 className="h-6 w-14 text-center font-black border-none bg-transparent text-amber-900 focus-visible:ring-0 text-sm sm:text-base p-0 no-print"
                                             />
@@ -530,14 +530,18 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
 
                 <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between no-print shrink-0 gap-2 sm:gap-4">
                     <div className="flex flex-wrap justify-center gap-3 sm:gap-8 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em]">
-                        <div className="flex items-center gap-1.5 text-emerald-500"><div className="w-2 h-2 rounded-full bg-emerald-500" /> 16oz</div>
-                        <div className="flex items-center gap-1.5 text-blue-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> 24oz</div>
-                        <div className="flex items-center gap-2 text-purple-500"><div className="w-2 h-2 rounded-full bg-purple-500" /> 32oz</div>
-                        <div className="flex items-center gap-2 text-amber-500"><div className="w-2 h-2 rounded-full bg-amber-500" /> {gallonSize}oz</div>
+                        <div className="flex items-center gap-1.5 text-emerald-500">16oz</div>
+                        <div className="flex items-center gap-1.5 text-blue-500">24oz</div>
+                        <div className="flex items-center gap-2 text-purple-500">32oz</div>
+                        <div className="flex items-center gap-2 text-amber-500">{gallonSize}oz</div>
                     </div>
-                    <div className="flex items-center gap-4 text-[8px] text-zinc-400 font-black uppercase tracking-widest hidden sm:flex">
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Chemical</span>
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-zinc-600" /> Water</span>
+                    <div className="flex items-center gap-4 text-[8px] sm:text-[9px] text-zinc-400 font-black uppercase tracking-widest hidden sm:flex">
+                        <span className="flex items-center gap-1.5">
+                            <span className="text-indigo-400 font-black italic">C</span> = Chemical
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="text-zinc-500 font-black italic">W</span> = Water
+                        </span>
                     </div>
                 </div>
             </DialogContent>
