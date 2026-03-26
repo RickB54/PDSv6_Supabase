@@ -43,6 +43,14 @@ export interface Tool {
     createdAt?: string;
 }
 
+export interface SetupMedia {
+    id: string;
+    type: 'image' | 'video';
+    url: string;
+    caption?: string;
+    createdAt?: string;
+}
+
 export interface UsageHistory {
     id: string;
     chemicalId?: string;
@@ -339,6 +347,59 @@ export async function saveUsageHistory(usage: Partial<UsageHistory>): Promise<vo
 export async function deleteUsageHistory(id: string): Promise<void> {
     const { error } = await supabase
         .from('usage_history')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+}
+
+// ============================================
+// MOBILE SETUP MEDIA
+// ============================================
+
+export async function getSetupMedia(): Promise<SetupMedia[]> {
+    const { data, error } = await supabase
+        .from('mobile_setup_media')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error loading setup media:', error);
+        return [];
+    }
+
+    return (data || []).map(item => ({
+        id: item.id,
+        type: item.type,
+        url: item.url,
+        caption: item.caption,
+        createdAt: item.created_at
+    }));
+}
+
+export async function saveSetupMedia(media: SetupMedia): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
+
+    const dbData = {
+        id: media.id,
+        type: media.type,
+        url: media.url,
+        caption: media.caption,
+        user_id: session.user.id,
+        updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+        .from('mobile_setup_media')
+        .upsert(dbData);
+
+    if (error) throw error;
+}
+
+export async function deleteSetupMedia(id: string): Promise<void> {
+    const { error } = await supabase
+        .from('mobile_setup_media')
         .delete()
         .eq('id', id);
 
