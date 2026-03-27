@@ -97,7 +97,7 @@ export async function getChemicals(): Promise<Chemical[]> {
     }));
 }
 
-export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean = false): Promise<void> {
+export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean = false, skipLibrarySync: boolean = false): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
@@ -121,6 +121,19 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         .upsert(dbData);
 
     if (error) throw error;
+
+    // 2. UNIVERSAL SYNC: Update Chemical Library if linked
+    if (!skipLibrarySync && chemical.chemicalLibraryId && chemical.dilutionRatios) {
+        try {
+            const { updateChemicalPartial } = await import('./chemicals');
+            await updateChemicalPartial(chemical.chemicalLibraryId, {
+                dilution_ratios: chemical.dilutionRatios,
+                brand: chemical.brand 
+            }, true); // Important: skipInventorySync
+        } catch (syncErr) {
+            console.error("Failed to sync inventory update back to library:", syncErr);
+        }
+    }
 
     // Record as expense in budget if this is a new purchase
     if (isNew && chemical.costPerBottle && chemical.currentStock) {

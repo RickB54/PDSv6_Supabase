@@ -190,7 +190,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
                         currentStock: 1,
                         chemicalLibraryId: data.id,
                         dilutionRatios: data.dilution_ratios || []
-                    }, false);
+                    }, false, true); // skipLibrarySync
                 } catch (invErr) {
                     console.error('Failed to auto-create inventory item:', invErr);
                     // Don't fail the whole operation if inventory sync fails, but log it
@@ -214,7 +214,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
                             ...item,
                             chemicalLibraryId: data.id,
                             dilutionRatios: data.dilution_ratios || []
-                        }, false);
+                        }, false, true); // skipLibrarySync
                     }
                 } catch (syncErr) {
                     console.error('Failed to sync existing inventory items:', syncErr);
@@ -228,7 +228,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
     }
 }
 
-export async function updateChemicalPartial(id: string, updates: Partial<Chemical>): Promise<{ error: any; data: Chemical | null }> {
+export async function updateChemicalPartial(id: string, updates: Partial<Chemical>, skipInventorySync: boolean = false): Promise<{ error: any; data: Chemical | null }> {
     try {
         const payload = {
             ...updates,
@@ -242,7 +242,7 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
             .select()
             .single();
 
-        if (!error && data && updates.dilution_ratios) {
+        if (!error && data && updates.dilution_ratios && !skipInventorySync) {
             try {
                 const inventoryItems = await getInventoryChemicals();
                 const matching = inventoryItems.filter(inv => inv.chemicalLibraryId === id);
@@ -250,7 +250,7 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
                     await saveInventoryChemical({
                         ...item,
                         dilutionRatios: data.dilution_ratios || []
-                    }, false);
+                    }, false, true); // Important: skipLibrarySync
                 }
             } catch (syncErr) {
                 console.error('Failed to sync inventory ratios on partial update:', syncErr);
@@ -271,7 +271,7 @@ export async function deleteChemical(id: string): Promise<boolean> {
             await saveInventoryChemical({
                 ...item,
                 chemicalLibraryId: undefined
-            }, false);
+            }, false, true); // skipLibrarySync
         }
     } catch (e) {
         console.warn("Failed to unlink inventory items during deletion", e);
