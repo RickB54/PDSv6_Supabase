@@ -181,7 +181,11 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
 
         const norm = normalizeRatio(ratioStr);
         const fromInventory = chemicals.some(c => {
-            const rs = (c.dilution_ratios && c.dilution_ratios.length > 0) ? c.dilution_ratios : (c.dilutionRatios || []);
+            const rs = (c.dilutionRatios && c.dilutionRatios.length > 0) 
+                ? c.dilutionRatios 
+                : (c.dilution_ratios && c.dilution_ratios.length > 0) 
+                    ? c.dilution_ratios 
+                    : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
             return rs.some((rr: any) => normalizeRatio(rr.ratio) === norm);
         });
 
@@ -220,10 +224,10 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
         const allSet = new Set<string>();
         
         chemicals.forEach(c => {
-            const ratios = (c.dilution_ratios && c.dilution_ratios.length > 0) 
-                ? c.dilution_ratios 
-                : (c.dilutionRatios && c.dilutionRatios.length > 0) 
-                    ? c.dilutionRatios 
+            const ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) 
+                ? c.dilutionRatios 
+                : (c.dilution_ratios && c.dilution_ratios.length > 0) 
+                    ? c.dilution_ratios 
                     : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
 
             ratios.forEach((r: any) => {

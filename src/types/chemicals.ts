@@ -34,6 +34,7 @@ export interface Chemical {
 
     // Technical Data
     dilution_ratios: DilutionRatio[];
+    dilutionRatios?: DilutionRatio[]; // Inventory override (camelCase)
     application_guide: ApplicationGuide;
 
     // Safety & compatibility

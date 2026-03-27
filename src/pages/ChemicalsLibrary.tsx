@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCombinedSelectableProducts, deleteChemical } from "@/lib/chemicals";
 import { Chemical, ChemicalCategory } from "@/types/chemicals";
-import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles } from "lucide-react";
+import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
@@ -29,6 +30,7 @@ export default function ChemicalsLibrary() {
     const [mixedLabelMakerOpen, setMixedLabelMakerOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editingChemical, setEditingChemical] = useState<Partial<Chemical> | null>(null);
+    const [sort, setSort] = useState<string>("brand");
 
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -58,17 +60,37 @@ export default function ChemicalsLibrary() {
 
     const categories = ["All", "Exterior", "Interior", "Dual-Use"];
 
-    const filtered = chemicals.filter(c => {
-        const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
-            c.used_for.some(u => u.toLowerCase().includes(search.toLowerCase()));
+    const sortedAndFiltered = [...chemicals]
+        .filter(c => {
+            const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
+                (c.brand && c.brand.toLowerCase().includes(search.toLowerCase())) ||
+                c.used_for.some(u => u.toLowerCase().includes(search.toLowerCase()));
 
-        // Show Dual-Use chemicals in both Exterior and Interior views
-        const matchesCat = filter === "All" ||
-            c.category === filter ||
-            (c.category === "Dual-Use" && (filter === "Exterior" || filter === "Interior"));
+            // Show Dual-Use chemicals in both Exterior and Interior views
+            const matchesCat = filter === "All" ||
+                c.category === filter ||
+                (c.category === "Dual-Use" && (filter === "Exterior" || filter === "Interior"));
 
-        return matchesSearch && matchesCat;
-    });
+            // BRAND FILTERING
+            if (sort.startsWith('brand:')) {
+                const targetBrand = sort.split(':')[1];
+                if ((c.brand || "Other / No Brand") !== targetBrand) return false;
+            }
+
+            return matchesSearch && matchesCat;
+        })
+        .sort((a, b) => {
+            if (sort === "brand" || sort.startsWith('brand:')) {
+                const brandA = (a.brand || "Z").toLowerCase();
+                const brandB = (b.brand || "Z").toLowerCase();
+                if (brandA !== brandB) return brandA.localeCompare(brandB);
+                return a.name.localeCompare(b.name);
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+    // Extract unique brands for jump-to
+    const uniqueBrands = Array.from(new Set(chemicals.map(c => c.brand || "Other / No Brand"))).sort();
 
     const handleCardClick = (c: Chemical) => {
         // If this is a new "Inventory Only" product, go straight to Edit modal
@@ -119,7 +141,7 @@ export default function ChemicalsLibrary() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin', topicId: 'chemical-workflow' } }))}
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin', topicId: 'chemical-cards-guide' } }))}
                             className="text-zinc-600 hover:text-blue-400 h-10 w-10 shrink-0"
                             title="Help Guide"
                         >
@@ -163,7 +185,31 @@ export default function ChemicalsLibrary() {
                                     onClick={() => setMixedLabelMakerOpen(true)} 
                                     className="h-9 px-1 sm:px-3 sm:h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] sm:text-[10px] shadow-lg shadow-indigo-600/20"
                                 >
-                                    <Printer className="w-3.5 h-3.5 mr-1" /> Mixed
+                                    <Plus className="w-4 h-4 mr-1" /> Mixed
+                                </Button>
+                                <Button 
+                                    variant="outline"
+                                    onClick={() => {
+                                        if (sortedAndFiltered.length === 0) {
+                                            toast({ title: "No Chemicals", description: "There are no chemicals in the current view to print.", variant: "destructive" });
+                                            return;
+                                        }
+                                        
+                                        import('jspdf').then(({ default: jsPDF }) => {
+                                            import('@/lib/print-chemical').then(({ printChemicalCard }) => {
+                                                const doc = new jsPDF();
+                                                sortedAndFiltered.forEach((c, idx) => {
+                                                    if (idx > 0) doc.addPage();
+                                                    printChemicalCard(c, doc, 20);
+                                                });
+                                                doc.save(`Prime_Chemical_Cards_Batch_${new Date().toLocaleDateString()}.pdf`);
+                                                toast({ title: "Print Generated", description: `Prepared ${sortedAndFiltered.length} chemical cards for printing.`, className: "bg-indigo-900 border-indigo-800 text-white" });
+                                            });
+                                        });
+                                    }} 
+                                    className="h-9 px-1 sm:px-3 sm:h-10 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 border font-bold text-[11px] sm:text-xs"
+                                >
+                                    <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2" /> PDF All
                                 </Button>
                                 <Button 
                                     onClick={() => {
@@ -203,6 +249,34 @@ export default function ChemicalsLibrary() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
+                    
+                    {/* NEW: Sort Controls (Matches Inventory Style) */}
+                    <div className="flex items-center gap-3 no-print">
+                        <div className="bg-zinc-900 border border-zinc-800 h-10 px-3 rounded-lg flex items-center gap-2">
+                             <Select value={sort} onValueChange={(val: string) => setSort(val)}>
+                                <SelectTrigger className="w-[120px] sm:w-[160px] border-none bg-transparent hover:bg-transparent text-zinc-400 font-bold uppercase text-[9px] tracking-widest h-auto p-0 shadow-none focus-visible:ring-0">
+                                   <div className="flex items-center gap-1.5">
+                                        <TrendingUp className="h-3 w-3 text-indigo-400" />
+                                        <span className="truncate uppercase">{sort === 'brand' ? 'By Brand' : (sort === 'name' ? 'A-Z Name' : sort.split(':')[1])}</span>
+                                   </div>
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-950 border-zinc-900 text-white max-h-[300px]">
+                                    <SelectItem value="brand" className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">By Brand (All) <span className="ml-1 text-zinc-500">({chemicals.length})</span></SelectItem>
+                                    <SelectItem value="name" className="text-[10px] font-bold uppercase tracking-widest">A-Z List</SelectItem>
+                                    <div className="px-2 py-1.5 text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] border-t border-zinc-900 mt-1 italic">Jump to Brand</div>
+                                    {uniqueBrands.map(b => {
+                                        const count = chemicals.filter(c => (c.brand || "Other / No Brand") === b).length;
+                                        return (
+                                            <SelectItem key={b} value={`brand:${b}`} className="text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:text-white">
+                                                {b} <span className="ml-1 text-zinc-500 font-normal">({count})</span>
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                             </Select>
+                        </div>
+                    </div>
+
                     <Tabs value={filter} onValueChange={setFilter} className="w-full md:w-auto">
                         <TabsList className="bg-zinc-900 border border-zinc-800">
                             {categories.map(cat => (
@@ -219,7 +293,7 @@ export default function ChemicalsLibrary() {
                     <div className="text-center py-20 text-zinc-500">Loading chemicals...</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filtered.map(c => (
+                        {sortedAndFiltered.map(c => (
                             <ChemicalCard
                                 key={c.id}
                                 chemical={c}
@@ -229,7 +303,7 @@ export default function ChemicalsLibrary() {
                                 onUpdate={handleChemicalUpdate}
                             />
                         ))}
-                        {filtered.length === 0 && (
+                        {sortedAndFiltered.length === 0 && (
                             <div className="col-span-full text-center py-20 text-zinc-500 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/20 backdrop-blur-sm">
                                 <Search className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
                                 <p className="text-zinc-400 font-bold">No results found matching "{search}"</p>

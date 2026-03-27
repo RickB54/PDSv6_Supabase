@@ -8,6 +8,27 @@ export type HelpTopic = {
   section?: 'menu' | 'dashboard' | 'chemicals';
 };
 
+export const masterSourceOfTruthItem: HelpTopic = {
+  id: 'dilution-source-of-truth',
+  title: 'Master Ratio: Source of Truth',
+  summary: 'Learn which settings control your chemical ratios and how they sync across the shop.',
+  content: [
+    '**Where is the "Master" Ratio?**: To ensure your shop always uses the correct mix, the system follows a 3-tier hierarchy of priority:',
+    '',
+    '🥇 **TIER 1 (The Master): Inventory Overrides**',
+    'Any change you make in the **Prime Dilution Chart** (under Inventory) is saved directly to your specific shop stock. This is the **highest priority**—it overrides the library and any templates. Update this chart to change ratios shop-wide.',
+    '',
+    '🥈 **TIER 2: Chemical Library (Cards)**',
+    'If you haven\'t set a specific override in your inventory, the system pulls ratios from the **Chemical Cards** in the Knowledge Base. These are your "Global Standards".',
+    '',
+    '🥉 **TIER 3: AI Template Fallback**',
+    'If neither the inventory nor the library has data, our detailing logic creates a professional "AI Recommendation" based on the chemical\'s category (Interior/Exterior/etc.).',
+    '',
+    '🔄 **Automatic Sync**: When you update a ratio in the **Prime Dilution Chart**, it instantly propagates to the **Label Maker**, **Mobile Setup Equipment**, and **Chemical Detail Cards**. You only ever need to update the Master Chart to stay in sync!',
+  ],
+  section: 'chemicals',
+};
+
 export const checklistToolsGuide: HelpTopic = {
   id: 'checklist-tools-guide',
   title: 'Checklist Tools Guide',
@@ -30,6 +51,7 @@ export const checklistToolsGuide: HelpTopic = {
 
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
+  masterSourceOfTruthItem,
   checklistToolsGuide,
   {
     id: 'chemical-decision-system',
@@ -246,6 +268,24 @@ export const adminMenuTopics: HelpTopic[] = [
       '🎯 **Where to Find It**: Access the chart via the **REF CHART** button in the Chemical Cards, Label Maker, or Inventory Control pages.',
     ],
     route: '/inventory-control?chart=modal',
+    section: 'chemicals',
+  },
+  {
+    id: 'chemical-cards-guide',
+    title: 'Chemical Cards (Knowledge Base)',
+    summary: 'Master every product in your arsenal with safety data, professional guides, and high-precision sorting.',
+    content: [
+      '**The Knowledge Base**: This is your shop\'s digital encyclopedia for every chemical you use.',
+      '',
+      '🔍 **Finding Products**: Use the search bar to find products by Name, Brand, or Usage. Use the **Jump to Brand** dropdown to quickly isolate all products from a single manufacturer like Meguiar\'s or P & S.',
+      '',
+      '📏 **Dilution Standards**: Ratios shown here are pulled from the **Master Source of Truth**. While these cards show your global standards, any specific overrides you set in the **Prime Dilution Chart** (Inventory) will take precedence here.',
+      '',
+      '🖨️ **Bulk Printing**: Click **"PDF ALL"** to generate a complete shop manual containing every chemical card in our official 2-page training format. Great for training binders!',
+      '',
+      '🤖 **AI Integration**: Click the "AI" icon on any card to automatically generate professional descriptions, usage guides, and safety warnings based on the product name.',
+    ],
+    route: '/chemicals',
     section: 'chemicals',
   },
 

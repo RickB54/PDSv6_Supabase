@@ -178,19 +178,24 @@ const MobileSetup = () => {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3 w-full sm:w-auto mt-4 sm:mt-0">
             <input 
               type="file" 
               ref={fileInputRef} 
               className="hidden" 
               accept="image/*,video/*"
+              capture="environment"
               onChange={handleMediaUpload}
             />
             <Button 
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl"
+              onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.click();
+                }
+              }}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-6 h-12 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all w-full sm:w-auto"
             >
-              <Plus className="mr-2 h-4 w-4" /> Add Setup View
+              <Plus className="mr-2 h-5 w-5" /> Add View
             </Button>
           </div>
         </div>

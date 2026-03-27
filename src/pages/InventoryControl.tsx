@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { useAlertsStore } from "@/store/alerts";
@@ -30,8 +31,7 @@ import { getChemicalById, getChemicals as getLibraryChemicals } from "@/lib/chem
 import { InventoryImportModal } from "@/components/inventory/InventoryImportModal";
 import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
 import { generateTemplate } from "@/lib/chemical-ai";
-
-import { Chemical as LibraryChemical } from "@/types/chemicals";
+import { Chemical as LibraryChemical, DilutionRatio } from "@/types/chemicals";
 import { ChemicalLabelMaker } from "@/components/chemicals/ChemicalLabelMaker";
 import { RatiosOnlyChart } from "@/components/dilution/RatiosOnlyChart";
 
@@ -111,6 +111,7 @@ const InventoryControl = () => {
   const [confirmHideId, setConfirmHideId] = useState<string | null>(null);
   const [chartSort, setChartSort] = useState<string>('brand');
   const [isRatiosOnlyModalOpen, setIsRatiosOnlyModalOpen] = useState(false);
+  const [gallonSize, setGallonSize] = useState<number>(128);
 
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
@@ -196,11 +197,11 @@ const InventoryControl = () => {
     }
     const chart = params.get("chart");
     if (chart === "interactive" || chart === "modal" || chart === "print" || chart === "pdf") {
-       if (chemicals.length > 0) setIsDilutionModalOpen(true);
+      setIsDilutionModalOpen(true);
     } else if (chart === "reference") {
-       if (chemicals.length > 0) setIsRatiosOnlyModalOpen(true);
+      setIsRatiosOnlyModalOpen(true);
     }
-  }, [location.search, chemicals.length]);
+  }, [location.search]);
 
   useEffect(() => {
     localStorage.setItem('inventory-date-filter', dateFilter);
@@ -837,6 +838,24 @@ const InventoryControl = () => {
     };
   };
 
+  const getMasterRatios = (c: Chemical): DilutionRatio[] => {
+    // 1. Check for manual overrides in the Inventory (The Master Chart edits)
+    // Map View and Inventory edits specifically update dilutionRatios (camelCase)
+    const inventoryRatios = c.dilutionRatios && c.dilutionRatios.length > 0 ? c.dilutionRatios : (c as any).dilution_ratios;
+    if (inventoryRatios && inventoryRatios.length > 0) return inventoryRatios;
+    
+    // 2. Fallback to Library technical card (if linked)
+    const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
+    if (libCard) {
+      const libRatios = libCard.dilutionRatios || libCard.dilution_ratios;
+      if (libRatios && libRatios.length > 0) return libRatios;
+    }
+    
+    // 3. Last resort AI Template
+    const template = generateTemplate(c.name, (c as any).category || 'Exterior');
+    return (template.dilution_ratios || (template as any).dilutionRatios || []) as DilutionRatio[];
+  };
+
   const handleChartCellEdit = async (chemicalId: string, soilLevel: string, field: 'ratio' | 'chem' | 'water', newValue: string, ozSize?: number) => {
     const chem = chemicals.find(c => c.id === chemicalId);
     if (!chem) return;
@@ -1042,7 +1061,7 @@ const InventoryControl = () => {
           </thead>
           <tbody>
             ${filteredChemicals.map(c => {
-               const ratios = ((c as any).dilution_ratios && (c as any).dilution_ratios.length > 0) ? (c as any).dilution_ratios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+               const ratios = getMasterRatios(c);
                const sorted = [...ratios].sort((a,b) => {
                   const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                   const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
@@ -1211,8 +1230,7 @@ const InventoryControl = () => {
         <div className="flex flex-col">
           <span>{c.brand ? `${c.brand} / ${c.name}` : c.name}</span>
           {(() => {
-            const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
-            const ratios = (libCard?.dilution_ratios && libCard.dilution_ratios.length > 0) ? libCard.dilution_ratios : c.dilutionRatios;
+            const ratios = getMasterRatios(c);
             if (!ratios || ratios.length === 0) return null;
             return (
               <div className="flex flex-wrap gap-1 mt-1">
@@ -1289,8 +1307,7 @@ const InventoryControl = () => {
           </div>
           <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
           {(() => {
-            const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
-            const ratios = (libCard?.dilution_ratios && libCard.dilution_ratios.length > 0) ? libCard.dilution_ratios : (c.dilutionRatios || []);
+            const ratios = getMasterRatios(c);
             if (ratios.length === 0) return null;
             return (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -2218,79 +2235,91 @@ const InventoryControl = () => {
           }
         }
       }}>
-        <DialogContent className={`${chartOrientation === 'landscape' ? 'max-w-[98vw] 2xl:max-w-[1700px] p-1' : 'max-w-[800px]'} w-full h-[95vh] flex flex-col p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl`}>
-          <div className="flex items-center justify-between p-3 bg-zinc-900 border-b border-zinc-800">
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-indigo-400" />
-                <DialogTitle className="text-lg font-bold text-white tracking-tight leading-none mb-0.5">Prime Dilution Chart</DialogTitle>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 text-indigo-400 hover:text-white hover:bg-indigo-600/20 ml-2" 
-                    onClick={() => setIsRatiosOnlyModalOpen(true)}
-                    title="Show Ratios Only"
-                >
-                    <Eye className="h-4 w-4" />
-                </Button>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 text-indigo-400 hover:text-white hover:bg-indigo-600/20 ml-2" 
-                    onClick={() => {
-                        setIsDilutionModalOpen(false);
-                        navigate('/dilution-calculator');
-                    }}
-                    title="Open Calculator"
-                >
-                    <Calculator className="h-4 w-4" />
-                </Button>
-                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none">Generated: {new Date().toLocaleDateString()} — Prime Auto Detail</div>
-              </div>
-              <div className="flex items-center gap-2 ml-0 md:ml-6 bg-zinc-800/50 p-1 rounded-lg border border-zinc-700/50">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setChartOrientation('landscape')}
-                  className={`h-7 px-3 text-[10px] font-black uppercase transition-all ${chartOrientation === 'landscape' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
-                >
-                  <TrendingUp className="h-3 w-3 mr-1 rotate-90" /> Landscape
-                </Button>
-                <Button 
-                   variant="ghost" 
-                   size="sm" 
-                   onClick={() => setChartOrientation('portrait')}
-                   className={`h-7 px-3 text-[10px] font-black uppercase transition-all ${chartOrientation === 'portrait' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
-                 >
-                   <TrendingUp className="h-3 w-3 mr-1" /> Portrait
-                 </Button>
-               </div>
-               
-               <div className="flex items-center gap-2 ml-0 md:ml-2">
-                 <Select value={chartSort} onValueChange={setChartSort}>
-                   <SelectTrigger className="w-[180px] h-7 bg-zinc-800/80 border-zinc-700 text-zinc-100 font-bold uppercase tracking-wider text-[10px] rounded-lg focus:ring-indigo-500/30">
-                     <div className="flex items-center gap-2">
-                       <TrendingUp className="h-3 w-3 text-indigo-400" />
-                       <span>Sort: {chartSort === 'brand' ? 'By Brand' : chartSort === 'name' ? 'A-Z List' : chartSort === 'low_stock' ? 'Low Stock' : chartSort.startsWith('brand:') ? chartSort.split(':')[1] : 'Custom'}</span>
-                     </div>
-                   </SelectTrigger>
-                   <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
-                     <SelectItem value="brand" className="text-xs font-bold uppercase tracking-wider focus:bg-zinc-800 hover:text-indigo-400">By Brand (All)</SelectItem>
-                     <SelectItem value="name" className="text-xs font-bold uppercase tracking-wider focus:bg-zinc-800 hover:text-indigo-400">A-Z List</SelectItem>
-                     <SelectItem value="low_stock" className="text-xs font-bold uppercase tracking-wider focus:bg-zinc-800 hover:text-indigo-400 text-red-400">Low Threshold</SelectItem>
-                     
-                     <div className="px-2 py-1.5 text-[10px] font-black text-indigo-400 border-t border-zinc-800 mt-1 uppercase tracking-widest">Jump to Brand</div>
-                     {Array.from(new Set(chemicals.map(c => c.brand).filter(Boolean))).sort().map(brand => (
-                       <SelectItem key={brand as string} value={`brand:${brand}`} className="text-xs font-semibold focus:bg-zinc-800 hover:text-indigo-400">{brand as string}</SelectItem>
-                     ))}
-                     <SelectItem value="brand:Other" className="text-xs font-semibold focus:bg-zinc-800 hover:text-indigo-400">Other / No Brand</SelectItem>
-                   </SelectContent>
-                 </Select>
-               </div>
-             </div>
-             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={printDilutionChart} className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 group"><Printer className="h-4 w-4 mr-2 text-indigo-400 group-hover:text-white" /> Print</Button>
-              <Button variant="outline" size="sm" onClick={downloadDilutionPDF} className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 group"><Download className="h-4 w-4 mr-2 text-indigo-400 group-hover:text-white" /> PDF</Button>
+        <DialogContent className="max-w-[98vw] 2xl:max-w-[1700px] w-full h-[98vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-none shadow-2xl rounded-2xl">
+          {/* PREMIUM DARK HEADER (Matching Dilution Ratio Chart style) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between p-3 sm:p-4 bg-zinc-900 border-b border-zinc-800 gap-3 shrink-0 uppercase">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0 overflow-hidden">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center border border-white/10 shadow-lg shrink-0">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                    <DialogTitle className="text-sm sm:text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-0.5 sm:mb-1 truncate">Prime Dilution Chart</DialogTitle>
+                </div>
+                <div className="hidden sm:block px-2 text-[8px] font-black text-zinc-600 border-l border-zinc-800 ml-2 uppercase tracking-[0.2em] italic">Generated: ${new Date().toLocaleDateString()}</div>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end no-print">
+                <div className="flex flex-col items-center gap-0.5 shrink-0 opacity-80">
+                    <span className="text-[6px] font-black uppercase text-zinc-500 tracking-widest leading-none">Units</span>
+                    <div className="bg-zinc-800/80 p-1 rounded-md border border-zinc-700 h-6 flex items-center px-2 text-[8px] font-black text-indigo-400">OZ ONLY</div>
+                </div>
+
+                <div className="flex items-center gap-1 bg-zinc-800/50 p-1 rounded-xl border border-zinc-800">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => setChartOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800">
+                            {chartOrientation === 'landscape' ? <Smartphone className="h-4 w-4" /> : <MonitorSmartphone className="h-4 w-4 rotate-90" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Switch Orientation</TooltipContent>
+                      </Tooltip>
+
+                      <div className="w-px h-4 bg-zinc-800 mx-1" />
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => setIsRatiosOnlyModalOpen(true)} className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Show Ratios Only</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => { if (typeof printDilutionChart === 'function') printDilutionChart(); }} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-800">
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Print Chart</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => { if (typeof downloadDilutionPDF === 'function') downloadDilutionPDF(); }} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-800">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Export PDF</TooltipContent>
+                      </Tooltip>
+
+                      <div className="w-px h-4 bg-zinc-800 mx-1" />
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => { setIsDilutionModalOpen(false); navigate('/dilution-calculator'); }} className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
+                            <Calculator className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Open Calculator</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                </div>
+                
+                <Select value={chartSort} onValueChange={setChartSort}>
+                    <SelectTrigger className="w-[110px] sm:w-[140px] h-8 bg-zinc-900 border-zinc-800 text-zinc-400 font-bold uppercase text-[9px] tracking-widest rounded-lg hover:bg-zinc-800 hover:text-white">
+                        <div className="flex items-center gap-1.5">
+                             <TrendingUp className="h-3 w-3 text-indigo-400" />
+                             <span className="truncate uppercase">{chartSort.startsWith('brand:') ? chartSort.split(':')[1] : 'SORT'}</span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-950 border-zinc-900 text-white">
+                        <SelectItem value="brand" className="text-[10px] font-bold uppercase tracking-widest">Brand</SelectItem>
+                        <SelectItem value="name" className="text-[10px] font-bold uppercase tracking-widest">A-Z Name</SelectItem>
+                        <SelectItem value="low_stock" className="text-[10px] font-bold uppercase tracking-widest text-red-500">Low Stock</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
           </div>
           <div className="flex-1 p-1 sm:p-2 bg-zinc-50/50 flex flex-col min-h-0 overflow-hidden">
@@ -2329,23 +2358,51 @@ const InventoryControl = () => {
                   <thead className="sticky top-0 z-30 bg-white shadow-sm ring-1 ring-zinc-300">
                     <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
                       <th rowSpan={2} className={`p-1 border border-zinc-300 text-left sticky left-0 z-40 bg-zinc-100 ${chartOrientation === 'landscape' ? 'w-[12%]' : 'w-[80px]'}`}>Product</th>
-                      <th colSpan={4} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Standard</th>
-                      <th colSpan={4} className="p-1 border-x-4 border-zinc-400 text-center bg-zinc-100/50 text-zinc-700">Heavy Duty</th>
-                      <th colSpan={4} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Maintenance</th>
+                      <th colSpan={5} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Standard</th>
+                      <th colSpan={5} className="p-1 border-x-4 border-zinc-400 text-center bg-zinc-100/50 text-zinc-700">Heavy Duty</th>
+                      <th colSpan={5} className="p-1 border-l-4 border-r border-zinc-300 text-center bg-zinc-100/50 text-zinc-700">Maintenance</th>
                     </tr>
                     <tr className="bg-zinc-50 text-[10px] text-center font-bold">
                       <th className={`p-1 border border-zinc-300 ${chartOrientation === 'landscape' ? 'w-auto' : 'w-[45px]'}`}>Ratio</th>
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[50px] sm:min-w-[60px]">
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <div className="flex items-center no-print">
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={gallonSize / 128}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val >= 0) {
+                                   const next = val * 128;
+                                   setGallonSize(next);
+                                   localforage.setItem("pds_custom_gallon_v1", next);
+                                }
+                              }}
+                              className="w-8 sm:w-10 bg-transparent border-none text-[9px] sm:text-[11px] font-black text-amber-900 p-0 text-center focus:ring-0"
+                            />
+                            <span className="text-[7px] font-bold text-amber-800/60 no-print">GAL</span>
+                          </div>
+                          <span className="text-[6px] font-black text-amber-700 leading-none pb-0.5">CUSTOM</span>
+                        </div>
+                      </th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10">
+                        <span className="text-[9px] font-black text-amber-900 leading-none">{gallonSize/128}G</span>
+                      </th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10">
+                        <span className="text-[9px] font-black text-amber-900 leading-none">{gallonSize/128}G</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2374,7 +2431,7 @@ const InventoryControl = () => {
                         return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
                       })
                       .map((c, i) => {
-                       const ratios = ((c as any).dilution_ratios && (c as any).dilution_ratios.length > 0) ? (c as any).dilution_ratios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+                       const ratios = getMasterRatios(c);
                        const sorted = [...ratios].sort((a,b) => {
                           const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                           const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
@@ -2495,7 +2552,8 @@ const InventoryControl = () => {
                            </td>
                            {renderOzCompoundCell(standard, 16, 'standard', 'bg-green-50/10')}
                            {renderOzCompoundCell(standard, 24, 'standard', 'bg-blue-50/10')}
-                           {renderOzCompoundCell(standard, 32, 'standard', 'bg-purple-50/10 border-r-2 border-r-zinc-400')}
+                           {renderOzCompoundCell(standard, 32, 'standard', 'bg-purple-50/10')}
+                           {renderOzCompoundCell(standard, gallonSize, 'standard', 'bg-amber-500/10 border-r-2 border-r-zinc-400')}
 
                            <td className="p-0 border-l-4 border-zinc-300 group align-middle bg-zinc-50/5">
                               <input 
@@ -2506,7 +2564,8 @@ const InventoryControl = () => {
                            </td>
                            {renderOzCompoundCell(heavy, 16, 'heavy', 'bg-orange-50/10')}
                            {renderOzCompoundCell(heavy, 24, 'heavy', 'bg-orange-50/10')}
-                           {renderOzCompoundCell(heavy, 32, 'heavy', 'bg-orange-50/10 border-r-2 border-r-zinc-300')}
+                           {renderOzCompoundCell(heavy, 32, 'heavy', 'bg-orange-50/10')}
+                           {renderOzCompoundCell(heavy, gallonSize, 'heavy', 'bg-amber-500/10 border-r-2 border-r-zinc-300')}
 
                            <td className="p-0 border-l-4 border-zinc-300 group align-middle bg-zinc-50/5">
                               <input 
@@ -2518,6 +2577,7 @@ const InventoryControl = () => {
                            {renderOzCompoundCell(light, 16, 'maintenance', 'bg-green-50/10')}
                            {renderOzCompoundCell(light, 24, 'maintenance', 'bg-blue-50/10')}
                            {renderOzCompoundCell(light, 32, 'maintenance', 'bg-purple-50/10')}
+                           {renderOzCompoundCell(light, gallonSize, 'maintenance', 'bg-amber-500/10')}
                          </tr>
                        );
                     })}
@@ -2538,6 +2598,9 @@ const InventoryControl = () => {
                      <div className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-[0_0_8px_rgba(147,51,234,0.3)]" /> 
                      32oz
                    </div>
+                    <div className="flex items-center gap-2 text-amber-600">
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" /> ${(gallonSize/128).toFixed(2)} GAL
+                    </div>
                  </div>
                  <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400 bg-indigo-500/5 px-3 py-1.5 rounded-full border border-indigo-500/10 uppercase tracking-tighter no-print">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Editable Grid: Changes in Indigo are custom overrides

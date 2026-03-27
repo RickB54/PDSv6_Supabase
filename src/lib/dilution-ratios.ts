@@ -59,3 +59,35 @@ export async function deleteReferenceRatio(ratio: string): Promise<void> {
         throw error;
     }
 }
+
+export interface DilutionRatio {
+    method: string;
+    ratio: string;
+    soil_level: string;
+    notes?: string;
+}
+
+/**
+ * MASTER RESOLUTION LOGIC:
+ * Resolves the source of truth for chemical dilution ratios.
+ * Priority: 1. Inventory Overrides -> 2. Global Library Record -> 3. AI Template Fallback
+ */
+export function getMasterRatios(
+  c: { name: string; category?: string; dilutionRatios?: DilutionRatio[] }, 
+  libMap: Record<string, any> = {}
+): DilutionRatio[] {
+  // 1. Check Specific Inventory Overrides
+  if (c.dilutionRatios && c.dilutionRatios.length > 0) return c.dilutionRatios;
+
+  // 2. Check Global Reference Library
+  const libId = (c as any).chemicalLibraryId;
+  if (libId && libMap[libId]) {
+    const libCard = libMap[libId];
+    const libRatios = libCard.dilutionRatios || libCard.dilution_ratios;
+    if (libRatios && libRatios.length > 0) return libRatios;
+  }
+  
+  // 3. Last resort AI Template (Mock logic or dynamic generation)
+  // Note: We'd need to import generateTemplate or define a fallback
+  return []; 
+}

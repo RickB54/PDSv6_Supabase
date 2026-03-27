@@ -318,10 +318,11 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             addLine(chemical.why_to_use || 'Not specified.', margin + 2, 9);
 
             //=== DILUTION RATIOS ===
-            if (chemical.dilution_ratios && chemical.dilution_ratios.length > 0) {
+            const masterRatios = chemical.dilutionRatios || (chemical as any).dilution_ratios || [];
+            if (masterRatios.length > 0) {
                 checkNewPage();
                 addSection('DILUTION RATIOS', [255, 200, 100]);
-                chemical.dilution_ratios.forEach((d: any) => {
+                masterRatios.forEach((d: any) => {
                     pdf.setTextColor(60, 60, 70);
                     pdf.setFontSize(10);
                     pdf.setFont('helvetica', 'bold');
@@ -556,10 +557,11 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             addLine(chemical.why_to_use || 'Not specified.', margin + 2, 9);
 
             //=== DILUTION RATIOS ===
-            if (chemical.dilution_ratios && chemical.dilution_ratios.length > 0) {
+            const masterRatiosPrint = chemical.dilutionRatios || (chemical as any).dilution_ratios || [];
+            if (masterRatiosPrint.length > 0) {
                 checkNewPage();
                 addSection('DILUTION RATIOS', [200, 100, 0]);
-                chemical.dilution_ratios.forEach((d: any) => {
+                masterRatiosPrint.forEach((d: any) => {
                     pdf.setTextColor(60, 60, 60);
                     pdf.setFontSize(10);
                     pdf.setFont('helvetica', 'bold');
@@ -997,24 +999,26 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-zinc-800">
-                                            {chemical.dilution_ratios?.length ? (
-                                                chemical.dilution_ratios.map((d: DilutionRatio, i: number) => (
-                                                    <tr key={i} className="hover:bg-zinc-800/30">
-                                                        <td className="px-4 py-3 font-medium text-white">{d.method}</td>
-                                                        <td className="px-4 py-3">{d.soil_level}</td>
-                                                        <td className="px-4 py-3 text-purple-400 font-bold font-mono text-base">{transformRatio(d.ratio)}</td>
-                                                        <td
-                                                            className="px-4 py-3 text-zinc-400 text-xs cursor-pointer hover:text-blue-400 hover:underline transition-colors"
-                                                            onClick={() => d.notes && setViewingDilutionNote({ method: d.method, note: d.notes || '' })}
-                                                            title={d.notes ? "Click to view full notes" : "No notes"}
-                                                        >
-                                                            {d.notes || <span className="text-zinc-600 italic">—</span>}
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr><td colSpan={4} className="px-4 py-6 text-center text-zinc-500 italic">No dilution data available (Use full strength or strictly per label).</td></tr>
-                                            )}
+                                            {(() => {
+                                                const displayRatios = chemical.dilutionRatios || (chemical as any).dilution_ratios || [];
+                                                if (displayRatios.length) {
+                                                    return displayRatios.map((d: DilutionRatio, i: number) => (
+                                                        <tr key={i} className="hover:bg-zinc-800/30">
+                                                            <td className="px-4 py-3 font-medium text-white">{d.method}</td>
+                                                            <td className="px-4 py-3">{d.soil_level}</td>
+                                                            <td className="px-4 py-3 text-purple-400 font-bold font-mono text-base">{transformRatio(d.ratio)}</td>
+                                                            <td
+                                                                className="px-4 py-3 text-zinc-400 text-xs cursor-pointer hover:text-blue-400 hover:underline transition-colors"
+                                                                onClick={() => d.notes && setViewingDilutionNote({ method: d.method, note: d.notes || '' })}
+                                                                title={d.notes ? "Click to view full notes" : "No notes"}
+                                                            >
+                                                                {d.notes || <span className="text-zinc-600 italic">—</span>}
+                                                            </td>
+                                                        </tr>
+                                                    ));
+                                                }
+                                                return <tr><td colSpan={4} className="px-4 py-6 text-center text-zinc-500 italic">No dilution data available (Use full strength or strictly per label).</td></tr>;
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
