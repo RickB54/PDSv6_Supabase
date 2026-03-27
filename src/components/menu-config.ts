@@ -121,7 +121,7 @@ export const getMenuGroups = (counts: {
             title: "Chemicals", icon: Beaker,
             items: [
                 { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package },
-                { title: "Prime Dilution Reference Chart", url: "/inventory-control?chart=reference", key: "dilution-chart-reference", icon: Printer },
+                { title: "Dilution Ratio Chart", url: "/inventory-control?chart=reference", key: "dilution-chart-reference", icon: Printer },
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker },
                 { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer },
             ]
@@ -130,7 +130,7 @@ export const getMenuGroups = (counts: {
             title: "Inventory & Assets", icon: Package,
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package },
-                { title: "Interactive Dilution Chart", url: "/inventory-control?chart=interactive", key: "dilution-chart-interactive", icon: Printer },
+                { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", key: "dilution-chart-interactive", icon: Printer },
                 { title: "Mobile Setup", url: "/mobile-setup", role: "admin", key: "mobile-setup", icon: Package },
                 { title: "Detailing Vendors", url: "/detailing-vendors", role: "admin", key: "detailing-vendors", icon: Users },
             ]

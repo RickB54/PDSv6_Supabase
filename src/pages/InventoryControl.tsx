@@ -2223,7 +2223,7 @@ const InventoryControl = () => {
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-indigo-400" />
-                <DialogTitle className="text-lg font-bold text-white tracking-tight leading-none mb-0.5">Interactive Dilution Chart</DialogTitle>
+                <DialogTitle className="text-lg font-bold text-white tracking-tight leading-none mb-0.5">Prime Dilution Chart</DialogTitle>
                 <Button 
                     variant="ghost" 
                     size="icon" 

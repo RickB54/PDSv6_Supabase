@@ -301,10 +301,10 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
 
         printWindow.document.write(`
             <html>
-                <head><title>Prime Dilution Chart (${unitMode.toUpperCase()})</title>${style}</head>
+                <head><title>Dilution Ratio Chart (${unitMode.toUpperCase()})</title>${style}</head>
                 <body>
                     <div class="header-title">
-                        <h1>Prime Dilution Master Reference</h1>
+                        <h1>Dilution Ratio Chart</h1>
                         <p>Professional Bottle Breakdown • Units: ${unitMode.toUpperCase()}</p>
                     </div>
                     ${tableClone.outerHTML}
@@ -330,7 +330,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
         pdf.setFontSize(22);
         pdf.setFont('helvetica', 'bolditalic');
         pdf.setTextColor(255, 255, 255);
-        pdf.text("PRIME DILUTION MASTER REFERENCE", pageWidth / 2, 13, { align: 'center' });
+        pdf.text("DILUTION RATIO CHART", pageWidth / 2, 13, { align: 'center' });
         
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
@@ -370,7 +370,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
             }
         });
 
-        pdf.save(`Prime_Dilution_${unitMode.toUpperCase()}.pdf`);
+        pdf.save(`Dilution_Ratio_Chart_${unitMode.toUpperCase()}.pdf`);
     };
 
     return (
@@ -383,8 +383,7 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
                             <TableIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <DialogTitle className="text-sm sm:text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-0.5 sm:mb-1 truncate">Prime Dilution</DialogTitle>
-                            <span className="text-[7px] sm:text-[10px] text-zinc-500 font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] leading-none truncate">Reference Chart</span>
+                            <DialogTitle className="text-sm sm:text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-0.5 sm:mb-1 truncate">Dilution Ratio Chart</DialogTitle>
                         </div>
                     </div>
 
