@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/hooks/use-toast";
+import { cleanupInventoryDuplicates } from "@/lib/inventory-data";
+import { Loader2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ChemicalEditForm } from "@/components/chemicals/ChemicalEditForm";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +35,8 @@ export default function ChemicalsLibrary() {
     const [sort, setSort] = useState<string>("brand");
 
     const [isAdmin, setIsAdmin] = useState(false);
+
+    const [isCleaning, setIsCleaning] = useState(false);
 
     useEffect(() => {
         const user = getCurrentUser();
@@ -90,6 +94,27 @@ export default function ChemicalsLibrary() {
         });
 
     // Extract unique brands for jump-to
+    const handleCleanup = async () => {
+        if (!isAdmin) return;
+        if (!window.confirm("This will merge duplicate inventory items and prioritize cards with AI data/ratios. Proceed?")) return;
+        
+        setIsCleaning(true);
+        try {
+            const { deleted, linked } = await cleanupInventoryDuplicates();
+            toast({ 
+                title: "Deduplication Complete", 
+                description: `Merged ${deleted} duplicates and linked ${linked} products.`,
+                className: "bg-green-600 text-white"
+            });
+            handleChemicalUpdate(); // Re-fetch cards
+        } catch (err) {
+            console.error("Cleanup failed", err);
+            toast({ title: "Cleanup Failed", variant: "destructive" });
+        } finally {
+            setIsCleaning(false);
+        }
+    };
+
     const uniqueBrands = Array.from(new Set(chemicals.map(c => c.brand || "Other / No Brand"))).sort();
 
     const handleCardClick = (c: Chemical) => {
@@ -173,7 +198,28 @@ export default function ChemicalsLibrary() {
                             </Button>
                         </div>
                         {isAdmin && (
-                            <div className="grid grid-cols-3 sm:flex sm:w-auto gap-2">
+                            <div className="grid grid-cols-4 sm:flex sm:w-auto gap-2">
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleCleanup}
+                                        disabled={isCleaning}
+                                        className="h-9 px-1 sm:px-3 sm:h-10 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 border font-bold text-[11px] sm:text-xs"
+                                        title="Cleanup Duplicate Inventory Items"
+                                    >
+                                        {isCleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1 sm:mr-2" /> : <Trash2 className="w-3.5 h-3.5 mr-1 sm:mr-2" />}
+                                        Fix Duplicates (?)
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => window.alert("Smart Sync: Fix Duplicates\n\nThis tool merges duplicate records by prioritizing your ratio data, and automatically links unlinked items to their Knowledge Base cards.\n\nSee Help > Smart Sync for full details.")}
+                                        className="h-9 w-6 text-amber-500/50 hover:text-amber-400"
+                                    >
+                                        <HelpCircle className="w-4 h-4" />
+                                    </Button>
+                                </div>
                                 <Button 
                                     variant="outline" 
                                     onClick={() => setLabelMakerOpen(true)} 
@@ -261,14 +307,16 @@ export default function ChemicalsLibrary() {
                                    </div>
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-950 border-zinc-900 text-white max-h-[300px]">
-                                    <SelectItem value="brand" className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">By Brand (All) <span className="ml-1 text-zinc-500">({chemicals.length})</span></SelectItem>
+                                    <SelectItem value="brand" className="group text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+                                        By Brand (All) <span className="ml-1 text-zinc-500 group-data-[highlighted]:text-white transition-colors">({chemicals.length})</span>
+                                    </SelectItem>
                                     <SelectItem value="name" className="text-[10px] font-bold uppercase tracking-widest">A-Z List</SelectItem>
                                     <div className="px-2 py-1.5 text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] border-t border-zinc-900 mt-1 italic">Jump to Brand</div>
                                     {uniqueBrands.map(b => {
                                         const count = chemicals.filter(c => (c.brand || "Other / No Brand") === b).length;
                                         return (
-                                            <SelectItem key={b} value={`brand:${b}`} className="text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:text-white">
-                                                {b} <span className="ml-1 text-zinc-500 font-normal">({count})</span>
+                                            <SelectItem key={b} value={`brand:${b}`} className="group text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:text-white">
+                                                {b} <span className="ml-1 text-zinc-500 group-data-[highlighted]:text-zinc-200 font-normal transition-colors">({count})</span>
                                             </SelectItem>
                                         );
                                     })}

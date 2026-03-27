@@ -178,19 +178,36 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
             .single();
 
         if (!error && data) {
-            // SYNC TO INVENTORY: If it's a new chemical, automatically add it to inventory (shelf)
+            // SYNC TO INVENTORY: check if it already exists there first to avoid duplicates
             if (isNew) {
                 try {
-                    await saveInventoryChemical({
-                        name: data.name,
-                        brand: data.brand,
-                        bottleSize: '16 oz', // Default
-                        costPerBottle: 0,
-                        threshold: 1,
-                        currentStock: 1,
-                        chemicalLibraryId: data.id,
-                        dilutionRatios: data.dilution_ratios || []
-                    }, false, true); // skipLibrarySync
+                    const inventoryItems = await getInventoryChemicals();
+                    // 1. Check for name + brand match
+                    const existingInv = inventoryItems.find(inv => 
+                        inv.name.toLowerCase().trim() === data.name.toLowerCase().trim() && 
+                        (inv.brand || '').toLowerCase().trim() === (data.brand || '').toLowerCase().trim()
+                    );
+                    
+                    if (existingInv) {
+                        // UPDATE EXISTING: link it instead of creating a new one
+                        await saveInventoryChemical({
+                            ...existingInv,
+                            chemicalLibraryId: data.id,
+                            dilutionRatios: data.dilution_ratios || []
+                        }, false, true); // skipLibrarySync
+                    } else {
+                        // CREATE NEW: only if it doesn't exist
+                        await saveInventoryChemical({
+                            name: data.name,
+                            brand: data.brand,
+                            bottleSize: '16 oz', 
+                            costPerBottle: 0,
+                            threshold: 1,
+                            currentStock: 1,
+                            chemicalLibraryId: data.id,
+                            dilutionRatios: data.dilution_ratios || []
+                        }, true, true); // isNew=true, skipLibrarySync=true
+                    }
                 } catch (invErr) {
                     console.error('Failed to auto-create inventory item:', invErr);
                     // Don't fail the whole operation if inventory sync fails, but log it

@@ -156,6 +156,106 @@ export async function deleteChemical(id: string): Promise<void> {
     if (error) throw error;
 }
 
+export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; linked: number }> {
+    const { data: inventory, error: invErr } = await supabase.from('chemicals').select('*');
+    const { data: library, error: libErr } = await supabase.from('chemical_library').select('*');
+    
+    if (invErr || libErr) throw invErr || libErr;
+
+    const toDelete: string[] = [];
+    const toUpdate: any[] = [];
+    let deletedCount = 0;
+    let linkedCount = 0;
+
+    const groups: Record<string, any[]> = {};
+    (inventory || []).forEach(inv => {
+        const key = `${inv.name.toLowerCase().trim()}|${(inv.brand || '').toLowerCase().trim()}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(inv);
+    });
+
+    for (const key in groups) {
+        const items = groups[key];
+        let master = items[0];
+
+        if (items.length > 1) {
+            // Find best candidate to keep (Data Richness first)
+            master = [...items].sort((a,b) => {
+                const getScore = (item: any) => {
+                    let s = 0;
+                    s += (item.dilution_ratios?.length || 0) * 1000; // Power-up for ratios
+                    if (item.chemical_library_id) s += 100;
+                    if (item.current_stock > 0) s += 10;
+                    return s;
+                };
+                return getScore(b) - getScore(a);
+            })[0];
+
+            // Mark others for deletion
+            items.forEach(item => {
+                if (item.id !== master.id) toDelete.push(item.id);
+            });
+        }
+
+        // FULL AUTO-LINK (Check master against library card)
+        if (!master.chemical_library_id) {
+            const [name, brand] = key.split('|');
+            const match = (library || []).find(l => {
+                const libName = l.name.toLowerCase().trim();
+                const libBrand = (l.brand || '').toLowerCase().trim();
+                
+                // 1. Perfect Match
+                if (libName === name && libBrand === brand) return true;
+                
+                // 2. Hyper-Fuzzy Match (Strip brands, symbols, and whitespace)
+                // This handles cases like "Brand / Product" vs "Product"
+                // We use word-boundary matching for the brand to avoid stripping parts of other words
+                const regBrand = new RegExp(`\\b${brand.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+                const regLibBrand = new RegExp(`\\b${libBrand.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+                
+                const sInv = name.toLowerCase().replace(regBrand, '').replace(/[^a-z0-9]/g, '').trim();
+                const sLib = libName.toLowerCase().replace(regLibBrand, '').replace(/[^a-z0-9]/g, '').trim();
+                
+                // Match if core names are identical or one contains the other (e.g. "Clay Bar" vs "Clay Bar Kit")
+                if (sInv.length > 2 && sLib.length > 2 && (sInv === sLib || sInv.includes(sLib) || sLib.includes(sInv))) return true;
+                
+                // 3. Fallback: Full string comparison after brand and symbol stripping
+                const fInv = (name + brand).toLowerCase().replace(/[^a-z0-9]/g, '');
+                const fLib = (libName + libBrand).toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (fInv === fLib) return true;
+
+                return false;
+            });
+
+            if (match) {
+                toUpdate.push({ 
+                    id: master.id, 
+                    chemical_library_id: match.id, 
+                    // Update ratios ONLY if inventory was empty to avoid overwriting overrides
+                    dilution_ratios: (master.dilution_ratios?.length > 0) ? master.dilution_ratios : (match.dilution_ratios || [])
+                });
+                linkedCount++;
+            }
+        }
+    }
+
+    // Process updates first (linking)
+    if (toUpdate.length > 0) {
+        for (const up of toUpdate) {
+            await supabase.from('chemicals').update(up).eq('id', up.id);
+        }
+    }
+
+    // Process deletions
+    if (toDelete.length > 0) {
+        const { error: delErr } = await supabase.from('chemicals').delete().in('id', toDelete);
+        if (delErr) console.error("Deduplication delete error:", delErr);
+        else deletedCount = toDelete.length;
+    }
+
+    return { deleted: deletedCount, linked: linkedCount };
+}
+
 // ============================================
 // MATERIALS
 // ============================================

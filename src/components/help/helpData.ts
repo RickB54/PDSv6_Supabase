@@ -15,16 +15,38 @@ export const masterSourceOfTruthItem: HelpTopic = {
   content: [
     '**Where is the "Master" Ratio?**: To ensure your shop always uses the correct mix, the system follows a 3-tier hierarchy of priority:',
     '',
-    '🥇 **TIER 1 (The Master): Inventory Overrides**',
-    'Any change you make in the **Prime Dilution Chart** (under Inventory) is saved directly to your specific shop stock. This is the **highest priority**—it overrides the library and any templates. Update this chart to change ratios shop-wide.',
+    '🥇 **UNIVERSAL BIDIRECTIONAL SYNC**',
+    'Any change you make ANYWHERE—in the **Prime Dilution Chart**, on a **Chemical Detail Card**, or in the **Inventory Table**—instantly propagates everywhere. Every linked view is now a mirror of the others.',
     '',
-    '🥈 **TIER 2: Chemical Library (Cards)**',
-    'If you haven\'t set a specific override in your inventory, the system pulls ratios from the **Chemical Cards** in the Knowledge Base. These are your "Global Standards".',
+    '• **The Master Chart**: Update here for shop-wide training guides.',
+    '• **Chemical Cards**: Fix ratios here to update your library and shelf inventory simultaneously.',
+    '• **Inventory Table**: Quick edits in the list view flow back to the parent card.',
     '',
-    '🥉 **TIER 3: AI Template Fallback**',
-    'If neither the inventory nor the library has data, our detailing logic creates a professional "AI Recommendation" based on the chemical\'s category (Interior/Exterior/etc.).',
+    '🔄 **Automatic Linking**: When you create a card in the **Knowledge Base**, it automatically finds and links itself to any matching inventory on your shelf. You only ever need to update the ratio once to stay in sync!',
+  ],
+  section: 'chemicals',
+};
+
+export const inventoryCleanupTopic: HelpTopic = {
+  id: 'inventory-cleanup-tool',
+  title: 'Smart Sync: Fix Duplicates',
+  summary: 'Learn how the automated inventory cleanup and linking tool keeps your shop organized.',
+  content: [
+    '**The Smart Sync Engine**: This pro-grade tool performs two critical tasks to maintain your shop\'s data integrity:',
     '',
-    '🔄 **Automatic Sync**: When you update a ratio in the **Prime Dilution Chart**, it instantly propagates to the **Label Maker**, **Mobile Setup Equipment**, and **Chemical Detail Cards**. You only ever need to update the Master Chart to stay in sync!',
+    '🧹 **1. Intelligent Deduplication**',
+    'The system scans for products with the same **Name and Brand**. If duplicates are found:',
+    '• **Data Priority**: It identifies which record has the most **Dilution Ratio** data (your work) and keeps it as the "Master."',
+    '• **Safety**: It then safely removes the empty or redundant placeholder records while preserving your formulas.',
+    '',
+    '🔗 **2. Global Bulk Linking**',
+    'The tool doesn\'t just fix duplicates—it also audits your entire shop for unlinked items:',
+    '• **Auto-Match**: It cross-references your shelf inventory against the **Chemical Knowledge Base** (Cards).',
+    '• **Instant Link**: Any item matching a professional card will be linked automatically. This pulls in all AI-generated dilution ratios, safety data, and application guides instantly.',
+    '',
+    '💡 **How to Use**: Click the **"Fix Duplicates (?)"** button in the **Chemical Library** toolbar. It will run a full shop audit and report how many items were merged and linked. Use this whenever your inventory feels "cluttered" or you see too many "Link" buttons.',
+    '',
+    '⚠️ **Why Link?**: A "Linked" item is a "Smart" item. It automatically stays in sync with our professional library, meaning one update to a card fixes every bottle label and reference chart in the building.',
   ],
   section: 'chemicals',
 };
@@ -52,6 +74,7 @@ export const checklistToolsGuide: HelpTopic = {
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
   masterSourceOfTruthItem,
+  inventoryCleanupTopic,
   checklistToolsGuide,
   {
     id: 'chemical-decision-system',
@@ -1216,6 +1239,7 @@ export const employeeMenuTopics: HelpTopic[] = [
     route: '/chemical-training',
     section: 'chemicals',
   },
+  inventoryCleanupTopic,
   checklistToolsGuide,
   {
     id: 'website',
