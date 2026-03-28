@@ -5,18 +5,17 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // Load Stripe secret from Supabase environment variables
 const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY");
-if (!stripeSecret) {
-  console.error("❌ STRIPE_SECRET_KEY is NOT set in Supabase!");
-}
 
-const stripe = new Stripe(stripeSecret!, {
+const stripe = stripeSecret ? new Stripe(stripeSecret, {
   apiVersion: "2023-10-16",
-});
+}) : null;
 
 // Use SITE_URL env (if provided) otherwise default to production domain
 const siteUrl = Deno.env.get("SITE_URL") || "https://primeautodetail.net";
 
-serve(async (req) => {
+serve(async (req: Request) => {
+  console.log(`🚀 [create-checkout] Function called! Method: ${req.method}`);
+  
   // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -28,19 +27,27 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let body: any = {};
   try {
-    const body = await req.json().catch(() => ({}));
+    if (!stripeSecret) {
+      console.error("❌ Missing STRIPE_SECRET_KEY in environment!");
+    }
+    if (!stripe) {
+      throw new Error("STRIPE_SECRET_KEY is not configured in Supabase. Please set it using 'supabase secrets set STRIPE_SECRET_KEY=sk_test_...'");
+    }
+
+    body = await req.json().catch(() => ({}));
+    console.log("📦 Request body:", JSON.stringify(body));
     const customerEmail: string | undefined = body.customerEmail || undefined;
+    const clientUrl: string | undefined = body.clientUrl || siteUrl;
     const priceId: string | undefined = body.priceId || undefined;
     const mode: "payment" = "payment";
 
-    // Support dynamic line items; fallback to a default priceId when none provided
+    // Support dynamic line items from Checkout.tsx;
+    // Fallback to a priceId if one is passed but not lineItems.
     const rawItems: Array<{ name?: string; amount?: number; quantity?: number }> = Array.isArray(body.lineItems)
       ? body.lineItems
       : [];
-
-    // Fallback is still there but marked as test-only
-    const PRICE_ID = priceId || "price_1SUqfeAx5DEMIPk4YbyLjL6L";
 
     const line_items = rawItems.length > 0
       ? rawItems
@@ -53,31 +60,47 @@ serve(async (req) => {
           },
           quantity: i.quantity && i.quantity > 0 ? i.quantity : 1,
         }))
-      : [
-        {
-          price: PRICE_ID,
-          quantity: 1,
-        },
-      ];
+      : priceId 
+        ? [
+            {
+              price: priceId,
+              quantity: 1,
+            },
+          ]
+        : [];
+
+    if (line_items.length === 0) {
+      throw new Error("No cart items or price information provided. Checkout session cannot be created.");
+    }
 
     const session = await stripe.checkout.sessions.create({
-      automatic_payment_methods: {
-        enabled: true,
-      },
       mode,
       customer_email: customerEmail,
       line_items,
-      success_url: `${siteUrl}/payment-success`,
-      cancel_url: `${siteUrl}/payment-canceled`,
+      metadata: body.metadata || {},
+      success_url: `${clientUrl}/payment-success`,
+      cancel_url: `${clientUrl}/payment-canceled`,
     });
 
+    console.log("✅ Checkout session created successfully!");
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("❌ Checkout error:", err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error("❌ Checkout error:", err.message);
+    const errorResponse = {
+      error: (err as Error).message,
+      stack: (err as Error).stack,
+      context: {
+        hasStripe: !!stripe,
+        hasSecret: !!stripeSecret,
+        secretPrefix: stripeSecret ? stripeSecret.substring(0, 7) : 'none',
+        bodyType: typeof body,
+        hasLineItems: !!body?.lineItems
+      }
+    };
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

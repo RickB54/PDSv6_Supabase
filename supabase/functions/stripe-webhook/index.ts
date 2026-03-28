@@ -71,37 +71,67 @@ serve(async (req) => {
 });
 
 // ---------------------------
-// 5. SAVE PAYMENT TO DATABASE
+// 5. SAVE PAYMENT AND UPDATE DB
 // ---------------------------
 async function savePaymentToDB({ session, lineItems }) {
-  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/payments`, {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  
+  const headers = {
+    "Content-Type": "application/json",
+    "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
+    "Authorization": `Bearer ${supabaseServiceKey}`,
+  };
+
+  // 1. Insert Payment Record
+  const paymentRes = await fetch(`${supabaseUrl}/rest/v1/payments`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
-      "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}`,
-    },
+    headers,
     body: JSON.stringify({
       stripe_session_id: session.id,
-      customer_email: session.customer_details.email,
-      amount_total: session.amount_total,
+      stripe_payment_intent_id: session.payment_intent,
+      customer_email: session.customer_details?.email,
+      amount_total: session.amount_total / 100, // Convert to dollars
       currency: session.currency,
       payment_status: session.payment_status,
+      metadata: session.metadata,
       items: lineItems.data.map((item) => ({
         description: item.description,
         quantity: item.quantity,
-        price_id: item.price.id,
-        product_id: item.price.product,
-        amount_subtotal: item.amount_subtotal,
-        amount_total: item.amount_total,
+        amount_total: item.amount_total / 100,
       })),
     }),
   });
 
-  if (!res.ok) {
-    console.error("❌ Error saving payment to DB", await res.text());
+  if (!paymentRes.ok) {
+    console.error("❌ Error saving payment to DB:", await paymentRes.text());
   } else {
     console.log("✅ Payment saved to Supabase DB");
+  }
+
+  // 2. Handle metadata (e.g., mark invoices as paid)
+  const invoiceIdsString = session.metadata?.invoiceIds;
+  if (invoiceIdsString) {
+    const ids = invoiceIdsString.split(',').filter(id => id.length > 0);
+    console.log(`📑 Processing ${ids.length} invoices for payment confirmation...`);
+    
+    for (const id of ids) {
+      const updateRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          status: 'paid',
+          paid_amount: session.amount_total / 100, // This is simplified (entire total on first invoice)
+          paid_date: new Date().toISOString().split('T')[0]
+        }),
+      });
+      
+      if (updateRes.ok) {
+        console.log(`✅ Invoice ${id} marked as PAID`);
+      } else {
+        console.error(`❌ Failed to update invoice ${id}:`, await updateRes.text());
+      }
+    }
   }
 }
 

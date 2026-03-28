@@ -123,7 +123,17 @@ const Checkout = () => {
 
       // Use supabase.functions.invoke for standard auth and compatibility
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { mode: "payment", lineItems, customerEmail: user?.email }
+        body: { 
+          mode: "payment", 
+          lineItems, 
+          customerEmail: user?.email,
+          clientUrl: window.location.origin,
+          metadata: {
+            invoiceIds: selectedInvoiceIds.join(','),
+            userId: user?.id,
+            total: grandTotal.toFixed(2)
+          }
+        }
       });
 
       if (error) {
