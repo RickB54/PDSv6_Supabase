@@ -1749,6 +1749,8 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 createdAt: b.created_at || meta.created_at,
 
                 hasReminder: b.has_reminder || meta.has_reminder,
+                reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
+                customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
                 isArchived: b.is_archived || meta.is_archived || false
             };
         });
@@ -1770,7 +1772,11 @@ export const upsertSupabaseBooking = async (booking: any) => {
             notes: booking.notes,
             service_price: Number(booking.price || booking.service_price || 0),
             add_ons: booking.addons || [],
-            booking_vehicle: booking.vehicle_info || booking.booking_vehicle || null,
+            booking_vehicle: {
+              ...(booking.vehicle_info || booking.booking_vehicle || {}),
+              reminder_frequency: booking.reminderFrequency,
+              custom_reminder_date: booking.customReminderDate
+            },
             is_archived: booking.isArchived || false,
             created_at: booking.createdAt || new Date().toISOString()
         };

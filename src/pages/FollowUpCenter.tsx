@@ -118,16 +118,17 @@ export default function FollowUpCenter() {
 
     return Object.values(latestByCustomer).map(booking => {
       const lastService = new Date(booking.date);
-      const freqValue = booking.reminderFrequency || "6";
+      const freqValue = booking.reminderFrequency ?? "6"; // Use nullish coalescing
       
       // Handle "0" as Manual/Anytime
       if (Number(freqValue) === 0) {
+          const targetDate = booking.customReminderDate ? new Date(booking.customReminderDate) : new Date();
           return {
               ...booking,
               lastServiceDate: lastService,
-              dueDate: new Date(),
-              isDue: true, // Always show as ready for follow-up
-              daysRemaining: 0,
+              dueDate: targetDate,
+              isDue: isBefore(targetDate, new Date()), 
+              daysRemaining: differenceInDays(targetDate, new Date()),
               frequencyLabel: 'Anytime / Manual',
               frequencyMonths: 0
           };
@@ -158,6 +159,17 @@ export default function FollowUpCenter() {
       };
     }).sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [allBookings]);
+
+  const handleUpdateCustomDate = async (customerId: string, newDate: string) => {
+    const booking = allBookings.find(b => b.id === customerId);
+    if (!booking) return;
+    try {
+      await updateBooking(customerId, { ...booking, customReminderDate: newDate });
+      toast.success("Engagement date updated.");
+    } catch (e) {
+      toast.error("Failed to update date.");
+    }
+  };
 
   // Combined Search Filtering
   const filteredOpportunities = customerFollowUps.filter(c => 
@@ -328,127 +340,133 @@ export default function FollowUpCenter() {
         </div>
       </div>
 
-      <Tabs defaultValue="opportunities" className="space-y-8">
-        <TabsList className="bg-zinc-900 border border-zinc-800 p-1.5 rounded-2xl h-16 w-full md:w-auto">
-          <TabsTrigger value="opportunities" className="rounded-xl px-8 font-black uppercase tracking-widest text-[9px] h-13 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all shadow-lg">
-             <Activity className="h-4 w-4 mr-2" />
+      <Tabs defaultValue="opportunities" className="space-y-12">
+        <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-2 rounded-[2rem] h-20 w-fit backdrop-blur-3xl shadow-2xl">
+          <TabsTrigger value="opportunities" className="rounded-[1.5rem] px-10 font-black uppercase tracking-[0.2em] text-[11px] h-16 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all flex items-center gap-3">
+             <Activity className="h-5 w-5" />
              Client Retention
+             <Badge className="bg-black/40 text-blue-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{stats.dueNow}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="prospects" className="rounded-xl px-8 font-black uppercase tracking-widest text-[9px] h-13 data-[state=active]:bg-purple-600 data-[state=active]:text-white transition-all shadow-lg">
-             <Users2 className="h-4 w-4 mr-2" />
+          <TabsTrigger value="prospects" className="rounded-[1.5rem] px-10 font-black uppercase tracking-[0.2em] text-[11px] h-16 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all flex items-center gap-3 border-l border-zinc-800">
+             <Users2 className="h-5 w-5" />
              Potential Leads
+             <Badge className="bg-black/40 text-purple-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{stats.prospects}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl px-8 font-black uppercase tracking-widest text-[9px] h-13 data-[state=active]:bg-zinc-800 data-[state=active]:text-white transition-all shadow-lg">
-             <History className="h-4 w-4 mr-2" />
+          <TabsTrigger value="history" className="rounded-[1.5rem] px-10 font-black uppercase tracking-[0.2em] text-[11px] h-16 data-[state=active]:bg-zinc-800 data-[state=active]:text-white transition-all flex items-center gap-3 border-l border-zinc-800">
+             <History className="h-5 w-5" />
              Engagement History
           </TabsTrigger>
         </TabsList>
 
         {/* SEARCH BAR (FIXED AT TOP OF ALL TABS) */}
-        <div className="relative max-w-2xl">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-600" />
+        <div className="relative max-w-4xl">
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-[2.5rem] blur opacity-25" />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-500 z-10" />
           <Input 
             placeholder="DYNAMIC SEARCH: EMAILS, NAMES, VEHICLES OR SERVICES..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-14 bg-zinc-900/60 border-zinc-800 h-16 rounded-[2rem] text-lg font-bold placeholder:text-zinc-700 placeholder:uppercase focus:ring-blue-500/20 focus:bg-zinc-900/90 transition-all border-2"
+            className="pl-16 bg-zinc-900/80 border-zinc-800/50 h-20 rounded-[2.5rem] text-xl font-black placeholder:text-zinc-700 placeholder:uppercase focus:ring-blue-500/20 focus:bg-zinc-900 focus:border-blue-500/40 transition-all border-2 relative z-10"
           />
         </div>
 
-        <TabsContent value="opportunities" className="mt-0">
+        <TabsContent value="opportunities" className="mt-0 outline-none">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <Card className="bg-zinc-900/40 border-zinc-800 border-l-4 border-l-blue-500 backdrop-blur-xl group">
-               <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Service Network</p>
-                    <Users className="h-4 w-4 text-blue-400 group-hover:scale-125 transition-transform" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <Card className="bg-zinc-900/40 border-zinc-800 border-l-[6px] border-l-blue-500 backdrop-blur-3xl shadow-2xl group overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl rounded-full" />
+               <CardContent className="pt-8 pb-8 px-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Service Network</p>
+                    <Users className="h-5 w-5 text-blue-500 group-hover:scale-125 transition-transform" />
                   </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-black">{stats.total}</span>
-                    <span className="text-zinc-500 text-[10px] font-black uppercase mb-1.5 opacity-60">Verified Clients</span>
-                  </div>
-               </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900/40 border-zinc-800 backdrop-blur-xl border-l-4 border-l-red-500 group">
-               <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Retention Alerts</p>
-                    <Clock className="h-4 w-4 text-red-500 group-hover:animate-pulse" />
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-black text-red-500">{stats.dueNow}</span>
-                    <span className="text-zinc-500 text-[10px] font-black uppercase mb-1.5 italic text-red-500/80">Require Outreach</span>
+                  <div className="flex items-end gap-3">
+                    <span className="text-4xl font-black leading-none">{stats.total}</span>
+                    <span className="text-zinc-500 text-[11px] font-black uppercase mb-1 opacity-60">Verified Active Clients</span>
                   </div>
                </CardContent>
             </Card>
 
-            <Card className="bg-zinc-900/40 border-zinc-800 backdrop-blur-xl group border-l-4 border-l-emerald-500">
-               <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Monthly Success</p>
-                    <Star className="h-4 w-4 text-emerald-400 fill-emerald-400/20" />
+            <Card className="bg-zinc-900/40 border-zinc-800 backdrop-blur-3xl shadow-2xl border-l-[6px] border-l-red-500 group overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 blur-3xl rounded-full" />
+               <CardContent className="pt-8 pb-8 px-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Retention Alerts</p>
+                    <Clock className="h-5 w-5 text-red-500 group-hover:animate-pulse" />
                   </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-black text-emerald-500">{stats.sentThisMonth}</span>
-                    <span className="text-zinc-500 text-[10px] font-black uppercase mb-1.5">Conversions Initiated</span>
+                  <div className="flex items-end gap-3">
+                    <span className="text-4xl font-black text-red-500 leading-none">{stats.dueNow}</span>
+                    <span className="text-zinc-500 text-[11px] font-black uppercase mb-1 italic text-red-500/80">Require Strategic Precise Tasking</span>
+                  </div>
+               </CardContent>
+            </Card>
+
+            <Card className="bg-zinc-900/40 border-zinc-800 backdrop-blur-3xl shadow-2xl group border-l-[6px] border-l-emerald-500 overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600/5 blur-3xl rounded-full" />
+               <CardContent className="pt-8 pb-8 px-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Monthly Success</p>
+                    <Star className="h-5 w-5 text-emerald-400 fill-emerald-400/20" />
+                  </div>
+                  <div className="flex items-end gap-3">
+                    <span className="text-4xl font-black text-emerald-500 leading-none">{stats.sentThisMonth}</span>
+                    <span className="text-zinc-500 text-[11px] font-black uppercase mb-1">Total Outreach Conversions</span>
                   </div>
                </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {filteredOpportunities.length > 0 ? (
               filteredOpportunities.map((customer) => (
                 <div 
                   key={customer.id} 
                   className={cn(
-                    "group relative overflow-hidden bg-zinc-900/30 border border-zinc-800/40 rounded-[2.5rem] p-8 transition-all hover:bg-zinc-900/60 hover:border-zinc-700",
-                    customer.isDue && "border-l-4 border-l-red-500/80"
+                    "group relative overflow-hidden bg-zinc-900/30 border border-zinc-800/50 rounded-[3.5rem] p-10 transition-all hover:bg-zinc-900/60 hover:border-zinc-700 shadow-xl",
+                    customer.isDue && "border-l-8 border-l-red-500/60"
                   )}
                 >
-                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
-                      <div className="flex items-start gap-8">
+                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 relative z-10">
+                      <div className="flex items-start gap-10">
                          <div className={cn(
-                           "h-20 w-20 rounded-3xl flex items-center justify-center border-2 transition-all duration-700 group-hover:scale-105 group-hover:rotate-6",
+                           "h-24 w-24 rounded-[2rem] flex items-center justify-center border-2 transition-all duration-700 group-hover:scale-110 group-hover:rotate-6 shadow-2xl",
                            customer.isDue 
-                             ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]" 
-                             : "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                             ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-red-900/10" 
+                             : "bg-blue-500/10 border-blue-500/20 text-blue-500 shadow-blue-900/10"
                          )}>
-                            <User className="h-10 w-10" />
+                            <User className={cn("h-12 w-12", customer.isDue && "animate-pulse")} />
                          </div>
                          
-                         <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                               <h3 className="text-2xl font-black uppercase tracking-tighter">{customer.customer}</h3>
+                         <div className="space-y-3">
+                            <div className="flex items-center gap-4">
+                               <h3 className="text-3xl font-black uppercase tracking-tighter italic">{customer.customer}</h3>
                                {customer.isDue && (
-                                 <Badge className="bg-red-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border-none shadow-lg">Engagement Due</Badge>
+                                 <Badge className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full border-none shadow-[0_0_20px_rgba(239,68,68,0.4)]">Action Required</Badge>
                                )}
                             </div>
-                            <p className="text-zinc-500 font-bold text-sm tracking-tight flex items-center gap-2">
-                                <Mail className="h-3.5 w-3.5 opacity-50" /> {customer.customerEmail}
+                            <p className="text-zinc-500 font-bold text-base tracking-tight flex items-center gap-2">
+                                <Mail className="h-4 w-4 opacity-50 text-blue-500" /> {customer.customerEmail}
                             </p>
-                            <div className="flex flex-wrap items-center gap-4 mt-4">
-                               <div className="flex items-center gap-2 text-[10px] font-black text-zinc-200 uppercase tracking-widest bg-zinc-800 px-4 py-2 rounded-2xl border border-zinc-700/50">
-                                  <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                            <div className="flex flex-wrap items-center gap-5 mt-6">
+                               <div className="flex items-center gap-2 text-[10px] font-black text-zinc-300 uppercase tracking-widest bg-zinc-800/80 px-5 py-2.5 rounded-2xl border border-zinc-700/50 shadow-lg">
+                                  <Sparkles className="h-4 w-4 text-blue-500" />
                                   Last: {customer.title}
                                </div>
-                               <div className="flex items-center gap-2 text-[10px] font-black text-zinc-200 uppercase tracking-widest bg-zinc-800 px-4 py-2 rounded-2xl border border-zinc-700/50">
-                                  <CalendarDays className="h-3.5 w-3.5 text-emerald-500" />
+                               <div className="flex items-center gap-2 text-[10px] font-black text-zinc-300 uppercase tracking-widest bg-zinc-800/80 px-5 py-2.5 rounded-2xl border border-zinc-700/50 shadow-lg">
+                                  <CalendarDays className="h-4 w-4 text-emerald-500" />
                                   {format(customer.lastServiceDate, 'MMM dd, yyyy')}
                                </div>
                                
-                               <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-950 border-2 border-zinc-800 rounded-2xl">
-                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-tight">Cycle:</span>
+                               <div className="flex items-center gap-3 px-5 py-2 bg-zinc-950/80 border-2 border-zinc-800 rounded-2xl shadow-inner group/select">
+                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.15em]">Interval:</span>
                                 <Select 
                                  value={String(customer.frequencyMonths)} 
                                  onValueChange={(v) => handleUpdateFrequency(customer.id, v)}
                                 >
-                                  <SelectTrigger className="h-6 w-40 border-0 bg-transparent text-blue-400 p-0 focus:ring-0 text-[11px] font-black uppercase tracking-widest">
+                                  <SelectTrigger className="h-8 w-44 border-0 bg-transparent text-blue-400 p-0 focus:ring-0 text-[12px] font-black uppercase tracking-[0.1em] hover:text-white transition-colors">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                                  <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200 rounded-2xl shadow-2xl">
                                     <SelectItem value="0" className="font-black text-amber-500">Anytime / Manual</SelectItem>
                                     <SelectItem value="1">Monthly</SelectItem>
                                     <SelectItem value="2">Bi-Monthly</SelectItem>
@@ -463,20 +481,34 @@ export default function FollowUpCenter() {
                          </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-center gap-10">
-                         <div className="text-right">
-                            <p className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mb-2">Next Target Date:</p>
-                            <p className={cn(
-                              "text-2xl font-black tracking-tighter leading-none mb-1",
-                              customer.isDue ? "text-red-500" : "text-white"
-                            )}>
-                               {format(customer.dueDate, 'MMM dd, yyyy')}
-                            </p>
-                            <p className="text-[11px] text-zinc-500 font-black uppercase tracking-tight">
-                               {customer.isDue 
-                                 ? `${Math.abs(customer.daysRemaining)} Days Lagging` 
-                                 : `Approx. ${customer.daysRemaining} Days Out`}
-                            </p>
+                      <div className="flex flex-col sm:flex-row items-center gap-12">
+                         <div className="text-right flex flex-col items-end">
+                            <p className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mb-3">Engagement Window:</p>
+                            {Number(customer.frequencyMonths) === 0 ? (
+                               <div className="space-y-2 flex flex-col items-end">
+                                 <Input 
+                                   type="date"
+                                   value={customer.customReminderDate ? customer.customReminderDate.split('T')[0] : new Date().toISOString().split('T')[0]}
+                                   onChange={(e) => handleUpdateCustomDate(customer.id, new Date(e.target.value).toISOString())}
+                                   className="h-10 w-44 bg-zinc-950 border-2 border-zinc-800 text-amber-400 font-black text-sm rounded-xl focus:ring-amber-500/20 text-center uppercase shadow-lg border-amber-500/10"
+                                 />
+                                 <p className="text-[10px] text-amber-500/60 font-black uppercase tracking-[0.2em]">Manual Override Active</p>
+                               </div>
+                            ) : (
+                               <>
+                                 <p className={cn(
+                                   "text-4xl font-black tracking-tighter leading-none mb-2",
+                                   customer.isDue ? "text-red-500" : "text-white"
+                                 )}>
+                                    {format(customer.dueDate, 'MMM dd, yyyy')}
+                                 </p>
+                                 <p className="text-[12px] text-zinc-500 font-black uppercase tracking-widest italic">
+                                    {customer.isDue 
+                                      ? `${Math.abs(customer.daysRemaining)} Days Lagging` 
+                                      : `Approx. ${customer.daysRemaining} Days Until Due`}
+                                 </p>
+                               </>
+                            )}
                          </div>
 
                          <Button 

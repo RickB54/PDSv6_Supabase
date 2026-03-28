@@ -34,6 +34,7 @@ export interface Booking {
   bookedBy?: string;
   hasReminder?: boolean;
   reminderFrequency?: number; // months: 1, 3, 4, 6
+  customReminderDate?: string; // For manual anytime scheduling
   isArchived?: boolean;
   vehicleId?: string;
 }
