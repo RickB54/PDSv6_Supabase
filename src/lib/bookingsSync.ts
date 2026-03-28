@@ -154,6 +154,22 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
               </div>
             </div>
             
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 25px; margin: 25px 0;">
+              <h3 style="margin-top: 0; font-size: 16px; color: #166534;">💳 Secure Payment Options</h3>
+              <p style="font-size: 14px; color: #166534; margin: 10px 0;">You have the flexibility to pay for your service however you prefer:</p>
+              <div style="font-size: 14px; color: #166534; line-height: 1.5;">
+                • <strong>Pay in Full:</strong> Settle the balance now for a contactless experience.<br>
+                • <strong>Partial Deposit:</strong> Pay any amount now to secure your spot.<br>
+                • <strong>Pay Later:</strong> No pressure! You can pay in person once the job is completed to your satisfaction.
+              </div>
+              <div style="text-align: center; margin-top: 25px;">
+                <a href="${window.location.origin}/checkout?bookingId=${booking.id}&email=${encodeURIComponent(booking.customerEmail || '')}&amount=${booking.price || ''}" 
+                   style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                   View Payment Options
+                </a>
+              </div>
+            </div>
+            
             <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
               <p style="margin: 0; font-size: 14px; color: #854d0e; line-height: 1.5;">
                 <strong>Note:</strong> If you need to make any changes or cancel your appointment, please contact us at least 24 hours in advance.
@@ -227,5 +243,156 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
     }
   } catch (e) {
     console.error('Failed to generate/upload status change PDF', e);
+  }
+}
+
+export async function onBookingCancelled(booking: Booking, reason: string) {
+  try {
+    const formattedDate = formatETDate(booking.date);
+    const formattedTime = formatETTime(booking.date);
+    const year = new Date().getFullYear();
+
+    if (booking.customerEmail) {
+      console.log(`🚀 Sending cancellation email to: ${booking.customerEmail}`);
+
+      const cancellationHtml = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #fee2e2; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
+          <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
+          <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Appointment Cancelled</h1>
+          <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Notification regarding your upcoming service.</p>
+        </div>
+        
+        <div style="padding: 30px;">
+          <p style="font-size: 18px; color: #111827; margin-top: 0;">Hi <strong>${booking.customer}</strong>,</p>
+          <p style="color: #4b5563; line-height: 1.6;">This email is to inform you that your scheduled appointment for <strong>${booking.title}</strong> has been cancelled.</p>
+          
+          <div style="background-color: #fffaf0; border: 1px solid #feebc8; border-radius: 12px; padding: 25px; margin: 25px 0;">
+            <h3 style="margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #c05621;">Reason for Cancellation</h3>
+            <p style="color: #744210; font-weight: 500; font-style: italic; margin-bottom: 0;">"${reason}"</p>
+          </div>
+
+          <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; padding: 25px; margin: 25px 0;">
+            <h3 style="margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b;">Original Appointment Info</h3>
+            
+            <div style="display: flex; margin-bottom: 12px;">
+              <span style="color: #94a3b8; width: 30px;">📅</span>
+              <span style="color: #334155;">Original Date: <strong>${formattedDate}</strong></span>
+            </div>
+            
+            <div style="display: flex; margin-bottom: 12px;">
+              <span style="color: #94a3b8; width: 30px;">⏰</span>
+              <span style="color: #334155;">Original Time: <strong>${formattedTime}</strong></span>
+            </div>
+            
+            <div style="display: flex; margin-bottom: 12px;">
+              <span style="color: #94a3b8; width: 30px;">🔧</span>
+              <span style="color: #334155;">Service: <strong>${booking.title}</strong></span>
+            </div>
+
+            <div style="border-top: 1px dashed #e2e8f0; margin: 15px 0; padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-weight: 500;">Original Estimate:</span>
+              <span style="color: #111827; font-size: 18px; font-weight: 800;">$${booking.price?.toLocaleString() || '0.00'}</span>
+            </div>
+          </div>
+          
+          <p style="color: #4b5563; line-height: 1.6;">If you would like to reschedule or have any questions, please reply to this email or call us directly.</p>
+          <p style="color: #4b5563; line-height: 1.6; margin-bottom: 30px;">We apologize for the inconvenience and hope to serve you in the future.</p>
+          
+          <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 30px;">
+            <p style="margin: 0; color: #111827; font-weight: 700;">Prime Auto Detail</p>
+            <p style="margin: 5px 0 0; color: #6b7280; font-size: 14px;">Professional Detailing Solutions</p>
+          </div>
+        </div>
+        
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #9ca3af; font-size: 12px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+      await supabase.functions.invoke('send-booking-email', {
+        body: {
+          to: booking.customerEmail,
+          subject: `⚠️ Cancellation: Your Booking with Prime Auto Detail`,
+          html: cancellationHtml
+        }
+      });
+      
+      console.log(`✅ Cancellation email sent to ${booking.customerEmail}`);
+    }
+  } catch (e) {
+    console.error('Failed to process booking cancellation sync', e);
+  }
+}
+
+export async function onSendReminderEmail(booking: Booking, frequencyLabel: string) {
+  try {
+    const year = new Date().getFullYear();
+
+    if (booking.customerEmail) {
+      console.log(`🚀 Sending follow-up reminder to: ${booking.customerEmail}`);
+
+      const reminderHtml = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
+          <div style="font-size: 48px; margin-bottom: 15px;">✨</div>
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Keep That Shine!</h1>
+          <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">It's time for your vehicle's maintenance.</p>
+        </div>
+        
+        <div style="padding: 30px;">
+          <p style="font-size: 18px; color: #111827; margin-top: 0;">Hi <strong>${booking.customer}</strong>,</p>
+          <p style="color: #4b5563; line-height: 1.6;">It has been <strong>${frequencyLabel}</strong> since your last professional detail with Prime Auto Detail, and we wanted to check in.</p>
+          
+          <div style="background-color: #f0f9ff; border: 1px solid #e0f2fe; border-radius: 12px; padding: 25px; margin: 25px 0;">
+             <p style="margin: 0; color: #0369a1; font-weight: 600;">Last Service Activity:</p>
+             <p style="margin: 5px 0 0; color: #0c4a6e;">${booking.title} — ${new Date(booking.date).toLocaleDateString()}</p>
+          </div>
+
+          <p style="color: #4b5563; line-height: 1.6;">Regular maintenance is the key to preserving your vehicle's value and aesthetic. To keep your vehicle in peak condition, you might also be interested in our other premium services:</p>
+          
+          <ul style="color: #4b5563; line-height: 1.8; padding-left: 20px;">
+            <li>🛡️ <strong>Ceramic Coatings:</strong> Long-term protection and incredible gloss.</li>
+            <li>🧼 <strong>Full Interior Sanitization:</strong> Deep steam cleaning and odor removal.</li>
+            <li>💡 <strong>Headlight Restoration:</strong> Improve visibility and look of your car.</li>
+          </ul>
+
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${window.location.origin}/services" 
+               style="display: inline-block; background-color: #1d4ed8; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 4px 6px rgba(29, 78, 216, 0.2);">
+               Book Your Next Appointment
+            </a>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center; font-style: italic;">
+            "Our goal is always to provide you with a premium experience that exceeds your expectations."
+          </p>
+          
+          <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 30px; margin-top: 30px;">
+            <p style="margin: 0; color: #111827; font-weight: 700;">Prime Auto Detail</p>
+            <p style="margin: 5px 0 0; color: #6b7280; font-size: 14px;">Professional Detailing Solutions</p>
+          </div>
+        </div>
+        
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #9ca3af; font-size: 11px;">You are receiving this because you opted in for service reminders during your last booking.</p>
+          <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+      await supabase.functions.invoke('send-booking-email', {
+        body: {
+          to: booking.customerEmail,
+          subject: `✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
+          html: reminderHtml
+        }
+      });
+      
+      console.log(`✅ Follow-up reminder sent to ${booking.customerEmail}`);
+    }
+  } catch (e) {
+    console.error('Failed to send follow-up reminder', e);
   }
 }

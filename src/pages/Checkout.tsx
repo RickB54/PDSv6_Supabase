@@ -34,6 +34,19 @@ const Checkout = () => {
   const user = getCurrentUser();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const amountParam = params.get("amount");
+
+    if (amountParam && !prepayAmount) {
+      setPrepayAmount(amountParam);
+      toast({ 
+        title: "Payment Information Found", 
+        description: `Pre-filling the estimate amount of $${amountParam}.`,
+      });
+    }
+  }, []);
+
   // Coupon states
   const { refresh: refreshCoupons } = useCouponsStore();
   const [couponCode, setCouponCode] = useState("");
@@ -121,17 +134,23 @@ const Checkout = () => {
         lineItems.push({ name: "Prepayment", amount: prepay, quantity: 1 });
       }
 
+      // Read search params for guest tracking
+      const params = new URLSearchParams(window.location.search);
+      const guestBookingId = params.get("bookingId");
+      const guestEmail = params.get("email");
+
       // Use supabase.functions.invoke for standard auth and compatibility
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { 
           mode: "payment", 
           lineItems, 
-          customerEmail: user?.email,
+          customerEmail: user?.email || guestEmail || undefined,
           clientUrl: window.location.origin,
           metadata: {
             invoiceIds: selectedInvoiceIds.join(','),
             userId: user?.id,
-            total: grandTotal.toFixed(2)
+            total: grandTotal.toFixed(2),
+            bookingId: guestBookingId || undefined
           }
         }
       });

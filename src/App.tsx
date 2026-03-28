@@ -97,6 +97,7 @@ import Availability from "./pages/Availability";
 import MileageTracking from "./pages/MileageTracking";
 import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
+import FollowUpCenter from "./pages/FollowUpCenter";
 
 
 const queryClient = new QueryClient();
@@ -346,6 +347,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
           <Route path="/blog" element={<PrimeBlog />} />
+          <Route path="/follow-up-center" element={<ProtectedRoute allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><BlogReorder /></ProtectedRoute>} />
           <Route path="/f150-setup" element={<PrimeBlog />} />
 

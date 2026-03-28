@@ -110,28 +110,42 @@ async function savePaymentToDB({ session, lineItems }) {
   }
 
   // 2. Handle metadata (e.g., mark invoices as paid)
-  const invoiceIdsString = session.metadata?.invoiceIds;
-  if (invoiceIdsString) {
-    const ids = invoiceIdsString.split(',').filter(id => id.length > 0);
+  if (session.metadata?.invoiceIds) {
+    const ids = session.metadata.invoiceIds.split(',').filter(id => id.length > 0);
     console.log(`📑 Processing ${ids.length} invoices for payment confirmation...`);
     
     for (const id of ids) {
-      const updateRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${id}`, {
+      await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${id}`, {
         method: "PATCH",
         headers,
         body: JSON.stringify({
           status: 'paid',
-          paid_amount: session.amount_total / 100, // This is simplified (entire total on first invoice)
+          paid_amount: session.amount_total / 100,
           paid_date: new Date().toISOString().split('T')[0]
         }),
       });
-      
-      if (updateRes.ok) {
-        console.log(`✅ Invoice ${id} marked as PAID`);
-      } else {
-        console.error(`❌ Failed to update invoice ${id}:`, await updateRes.text());
-      }
     }
+  }
+
+  // 3. Handle booking metadata (Link payment to booking)
+  if (session.metadata?.bookingId) {
+    const bId = session.metadata.bookingId;
+    console.log(`🚗 Linking payment to booking: ${bId}`);
+    
+    await fetch(`${supabaseUrl}/rest/v1/payments`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        booking_id: bId,
+        stripe_payment_intent_id: session.payment_intent,
+        amount: session.amount_total / 100,
+        currency: session.currency || 'usd',
+        status: session.payment_status,
+        created_at: new Date().toISOString()
+      }),
+    });
+
+    console.log(`✅ Payment linked to booking ${bId}`);
   }
 }
 

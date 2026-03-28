@@ -15,6 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Save, LogOut } from "lucide-react";
 import { useBookingsStore, type Booking } from "@/store/bookings";
 import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
@@ -96,6 +98,10 @@ export default function BookingsPage() {
     status: "confirmed" as BookingStatus,
     vehicleId: undefined as string | undefined
   });
+
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'payment-success' | 'reminder'>('confirmation');
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -681,6 +687,26 @@ export default function BookingsPage() {
     setSelectedCustomer(null);
     setSelectedCustomer(null);
     setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3", status: "confirmed", vehicleId: undefined });
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+    
+    try {
+      update(selectedBooking.id, { status: 'cancelled' as any, notes: `${formData.notes}\n\n[CANCELLED]: ${cancelReason}` });
+      
+      // Trigger sync logic for cancellation email
+      const { onBookingCancelled } = await import("@/lib/bookingsSync");
+      await onBookingCancelled(selectedBooking, cancelReason);
+      
+      toast.success("Booking cancelled and customer notified.");
+      setIsCancelConfirmOpen(false);
+      setIsAddModalOpen(false);
+      setCancelReason("");
+    } catch (err) {
+      console.error("Failed to cancel booking:", err);
+      toast.error("Failed to cancel booking. Please try again.");
+    }
   };
 
   const handleDelete = () => {
@@ -1431,10 +1457,10 @@ export default function BookingsPage() {
         {/* Booking Dialog */}
         <Dialog open={isAddModalOpen} onOpenChange={(open) => { if (!open) { setSelectedBooking(null); setSelectedCustomer(null); } setIsAddModalOpen(open); }}>
           <DialogContent className="w-[95vw] max-w-[500px] max-h-[85vh] flex flex-col bg-zinc-950 border-zinc-800 p-0">
-            <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
-              <div className="flex items-center justify-between">
-                <DialogTitle className="text-xl font-bold flex items-center justify-between gap-2 w-full">
-                  <div className="flex items-center gap-2">
+            <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0 border-b border-zinc-800/50 bg-zinc-900/20">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <DialogTitle className="text-xl font-bold flex items-center gap-2">
                     {selectedBooking ? 'Edit Booking' : 'New Booking'}
                     {window.location.hostname === 'localhost' && !selectedBooking && (
                       <Button
@@ -1468,24 +1494,59 @@ export default function BookingsPage() {
                         [Fill Mock]
                       </Button>
                     )}
+                  </DialogTitle>
+                  <div className="flex items-center gap-2 mt-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500">Scheduled Date:</label>
+                    <Input
+                      type="date"
+                      className="w-32 h-7 text-xs bg-zinc-900 border-zinc-800"
+                      value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const [year, month, day] = e.target.value.split('-').map(Number);
+                          const newDate = new Date(year, month - 1, day);
+                          setSelectedDate(newDate);
+                        }
+                      }}
+                    />
                   </div>
-                </DialogTitle>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-muted-foreground">Date:</label>
-                  <Input
-                    type="date"
-                    className="w-40 h-8 bg-zinc-900 border-zinc-800"
-                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-MM-dd")}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        // Parse YYYY-MM-DD manually to create local date at midnight explicitly
-                        // preventing any timezone/UTC conversion issues
-                        const [year, month, day] = e.target.value.split('-').map(Number);
-                        const newDate = new Date(year, month - 1, day);
-                        setSelectedDate(newDate);
-                      }
-                    }}
-                  />
+                </div>
+
+                {/* HEADER ACTIONS (CLEANER SAVE/CLOSE) */}
+                <div className="flex items-center gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleSave}
+                          className="h-10 w-10 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                        >
+                          <Save className="h-6 w-6" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Save Changes</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {
+                            if (window.confirm("Close without saving?")) {
+                              setIsAddModalOpen(false);
+                            }
+                          }}
+                          className="h-10 w-10 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          <X className="h-6 w-6" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Close Modal</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </DialogHeader>
@@ -1943,41 +2004,79 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            <DialogFooter className="flex justify-between sm:justify-between gap-2 overflow-x-auto pb-2">
-              <div className="flex gap-2 min-w-max">
-                {selectedBooking && (
-                  <Button variant="destructive" size="icon" onClick={handleDelete} className="bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-900 shrink-0">
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={() => setShowEmailPreview(true)} className="gap-1 border-zinc-700 hover:bg-zinc-800 text-zinc-300">
-                  <Mail className="h-3.5 w-3.5" /> Preview Email
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleStartJob} className="gap-1">
-                  <Wrench className="h-3.5 w-3.5" /> Start Job
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => handleDuplicate(selectedBooking)} className="gap-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700">
-                  <Copy className="h-3.5 w-3.5" /> Duplicate
-                </Button>
-                {selectedBooking?.status === 'tentative' && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      if (selectedBooking) {
-                        update(selectedBooking.id, { status: 'confirmed' });
-                        toast.success('Booking confirmed!');
-                        setIsAddModalOpen(false);
-                      }
-                    }}
-                    className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+            <DialogFooter className="px-4 sm:px-6 py-4 shrink-0 border-t border-zinc-800 bg-zinc-900/50 mt-auto">
+              <div className="flex flex-wrap items-center gap-2 w-full">
+                {selectedBooking && selectedBooking.status !== 'cancelled' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsCancelConfirmOpen(true)}
+                    className="text-orange-400 border-orange-950/50 hover:bg-orange-950/20 hover:text-orange-300 h-9 font-bold px-3"
                   >
-                    ✓ Confirm
+                    <X className="mr-1.5 h-4 w-4" /> Cancel Job
                   </Button>
                 )}
-              </div>
-              <div className="flex gap-2 min-w-max">
-                <Button variant="outline" size="sm" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                <Button size="sm" onClick={handleSave} className="bg-primary hover:bg-primary/90">Save</Button>
+                
+                {selectedBooking && (
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    onClick={handleDelete} 
+                    className="bg-red-950/40 hover:bg-red-900 text-red-200 border border-red-900/50 h-9 w-9"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 h-9 px-3"
+                    >
+                      <Mail className="mr-1.5 h-4 w-4" /> Previews <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56">
+                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Customer Communication</DropdownMenuLabel>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('confirmation'); setShowEmailPreview(true); }}>
+                      <Check className="mr-2 h-4 w-4 text-emerald-500" /> Booking Approved
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('request'); setShowEmailPreview(true); }}>
+                      <Clock className="mr-2 h-4 w-4 text-amber-500" /> Request Received
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('cancelled'); setShowEmailPreview(true); }}>
+                      <X className="mr-2 h-4 w-4 text-red-500" /> Job Cancelled
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('reminder'); setShowEmailPreview(true); }}>
+                      <Bell className="mr-2 h-4 w-4 text-blue-500" /> 6-Month Reminder
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Sales & Billing</DropdownMenuLabel>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('payment-success'); setShowEmailPreview(true); }}>
+                      <Package className="mr-2 h-4 w-4 text-green-500" /> Payment Success
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleStartJob} 
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
+                >
+                  <Wrench className="mr-1.5 h-4 w-4 text-purple-400" /> Start Job
+                </Button>
+
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => handleDuplicate(selectedBooking)} 
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
+                >
+                  <Copy className="mr-1.5 h-4 w-4 opacity-50" /> Duplicate
+                </Button>
               </div>
             </DialogFooter>
           </DialogContent>
@@ -2016,114 +2115,111 @@ export default function BookingsPage() {
         <Dialog open={showEmailPreview} onOpenChange={setShowEmailPreview}>
           <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white border-zinc-200 p-0 text-black">
             <DialogHeader className="p-4 bg-zinc-100 border-b border-zinc-200 sticky top-0 z-10">
-              <DialogTitle className="text-zinc-900 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between w-full">
+                <DialogTitle className="text-zinc-900 flex items-center gap-2">
                   <Mail className="h-5 w-5 text-blue-600" />
-                  Customer Email Preview
+                  Email Preview: {
+                    emailPreviewType === 'confirmation' ? 'Booking Approved' :
+                    emailPreviewType === 'request' ? 'Request Received' :
+                    emailPreviewType === 'cancelled' ? 'Job Cancelled' :
+                    emailPreviewType === 'reminder' ? '6-Month Follow-up' :
+                    'Payment Success'
+                  }
+                </DialogTitle>
+                <div className="flex items-center gap-2 pr-8">
+                   <Badge variant="outline" className={cn(
+                     "capitalize",
+                     emailPreviewType === 'confirmation' ? "border-green-500 text-green-700" :
+                     emailPreviewType === 'cancelled' ? "border-red-500 text-red-700" :
+                     "border-blue-500 text-blue-700"
+                   )}>
+                     Live Environment
+                   </Badge>
                 </div>
-                <Badge variant="outline" className={cn("ml-2 capitalize", formData.status === 'confirmed' ? "border-green-500 text-green-700" : "border-amber-500 text-amber-700")}>
-                  {formData.status === 'confirmed' ? 'Confirmed Layout' : 'Request Layout'}
-                </Badge>
-              </DialogTitle>
+              </div>
             </DialogHeader>
             <div className="p-6 bg-zinc-50 min-h-[400px]">
               <div className="max-w-[600px] mx-auto bg-white shadow-xl rounded-xl border border-zinc-200 overflow-hidden text-left">
-                {/* Email Header */}
-                <div className="bg-gradient-to-r from-blue-800 to-blue-600 p-8 text-center text-white">
-                  <div className="text-4xl mb-3">🚗</div>
-                  <h1 className="m-0 text-2xl font-extrabold uppercase tracking-tight">
-                    {formData.status === 'confirmed' || formData.status === 'done' ? 'Booking Confirmed!' : 'Booking Request Received'}
-                  </h1>
-                  <p className="m-0 mt-2 text-sm opacity-90 italic">
-                    {formData.status === 'confirmed' || formData.status === 'done'
-                      ? "We've officially set your appointment."
-                      : "We've received your request and will contact you shortly."}
-                  </p>
-                </div>
-
-                {/* Email Body */}
-                <div className="p-8">
-                  <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
-                  <p className="text-zinc-600 leading-relaxed">
-                    {formData.status === 'confirmed' || formData.status === 'done'
-                      ? `Great news! Your booking for ${formData.service || 'Service Package'} has been confirmed. Our team is excited to service your vehicle and provide a premium experience.`
-                      : `We have received your request for ${formData.service || 'Service Package'}. Our team is reviewing the schedule to ensure we can provide you with the best experience.`}
-                  </p>
-
-                  {/* Info Box */}
-                  <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-6 my-6">
-                    <h3 className="mt-0 mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Appointment Details</h3>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-zinc-400 w-5 text-center">📅</span>
-                        <span className="text-zinc-800 font-semibold">
-                          {selectedDate ? formatETDate(selectedDate) : "TBD"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-zinc-400 w-5 text-center">⏰</span>
-                        <span className="text-zinc-800 font-semibold">
-                          {formData.time ? formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`) : "TBD"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-zinc-400 w-5 text-center">🔧</span>
-                        <span className="text-zinc-800 font-semibold">{formData.service || "Unnamed Package"}</span>
-                      </div>
-
-                      {(formData.vehicleYear || formData.vehicleMake) && (
-                        <div className="flex items-center gap-3">
-                          <span className="text-zinc-400 w-5 text-center">🚙</span>
-                          <span className="text-zinc-800 font-semibold">
-                            {formData.vehicleYear} {formData.vehicleMake} {formData.vehicleModel}
-                          </span>
+                
+                {/* TEMPLATE: CANCELLATION */}
+                {emailPreviewType === 'cancelled' ? (
+                  <>
+                    <div style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '15px' }}>⚠️</div>
+                      <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, textTransform: 'uppercase' }}>Appointment Cancelled</h1>
+                      <p style={{ margin: '10px 0 0', opacity: 0.9 }}>Notification regarding your upcoming service.</p>
+                    </div>
+                    <div className="p-8">
+                       <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                       <p className="text-zinc-600 leading-relaxed">This email is to inform you that your scheduled appointment for <strong>{formData.service}</strong> has been cancelled.</p>
+                       <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 my-6 italic text-orange-900">
+                          "Due to unforeseen scheduling conflicts, we need to cancel your appointment. We apologize for any inconvenience..."
+                       </div>
+                       <p className="text-zinc-500 text-sm mt-8 border-t pt-4">Prime Auto Detail Team</p>
+                    </div>
+                  </>
+                ) : emailPreviewType === 'payment-success' ? (
+                  <>
+                    <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '15px' }}>💰</div>
+                      <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>Payment Received!</h1>
+                      <p style={{ margin: '10px 0 0', opacity: 0.9 }}>Thank you for your business.</p>
+                    </div>
+                    <div className="p-8">
+                       <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                       <p className="text-zinc-600 leading-relaxed">We have successfully processed your payment for <strong>{formData.service}</strong>.</p>
+                       <div className="bg-zinc-50 rounded-xl p-6 my-6 border border-zinc-100 flex justify-between items-center">
+                          <span className="font-bold">Total Processed:</span>
+                          <span className="text-2xl font-black text-emerald-600">${selectedBooking?.price?.toFixed(2) || '90.00'}</span>
+                       </div>
+                       <p className="text-zinc-400 text-xs text-center italic">A receipt has been sent to your primary email address.</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* ORIGINAL TEMPLATES (Approved/Request) */}
+                    <div className={cn("p-8 text-center text-white", emailPreviewType === 'confirmation' ? "bg-gradient-to-r from-blue-800 to-blue-600" : "bg-gradient-to-r from-amber-700 to-amber-500")}>
+                      <div className="text-4xl mb-3">🚗</div>
+                      <h1 className="m-0 text-2xl font-extrabold uppercase tracking-tight">
+                        {emailPreviewType === 'confirmation' ? 'Booking Confirmed!' : 'Request Received'}
+                      </h1>
+                      <p className="m-0 mt-2 text-sm opacity-90 italic">
+                        {emailPreviewType === 'confirmation' 
+                          ? "We've officially set your appointment."
+                          : "We've received your request and are reviewing it."}
+                      </p>
+                    </div>
+                    <div className="p-8">
+                      <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                      <p className="text-zinc-600 leading-relaxed">
+                        {emailPreviewType === 'confirmation'
+                          ? `Great news! Your booking for ${formData.service} has been confirmed.`
+                          : `We have received your request for ${formData.service}. Our team will contact you shortly.`}
+                      </p>
+                      <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-6 my-6">
+                        <h3 className="mt-0 mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Appointment Details</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3"><span className="text-zinc-400">📅</span> <strong>{selectedDate ? formatETDate(selectedDate) : "TBD"}</strong></div>
+                          <div className="flex items-center gap-3"><span className="text-zinc-400">⏰</span> <strong>{formData.time || "09:00 AM"}</strong></div>
+                          <div className="flex items-center gap-3"><span className="text-zinc-400">🔧</span> <strong>{formData.service}</strong></div>
                         </div>
-                      )}
-
-                      <div className="pt-4 border-t border-dashed border-zinc-200 mt-4 flex justify-between items-center">
-                        <span className="text-zinc-500 font-medium">Total Estimate:</span>
-                        <span className="text-emerald-600 text-2xl font-black">
-                          ${selectedBooking?.price ? selectedBooking.price.toLocaleString() : '0.00'}
-                        </span>
                       </div>
+                      
+                      {emailPreviewType === 'confirmation' && (
+                         <div className="bg-green-50 rounded-xl p-6 border border-green-100 text-center">
+                            <p className="text-sm text-green-800 font-bold mb-4">💳 Secure Payment Options Available</p>
+                            <div className="inline-block bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold text-sm">VIEW PAYMENT OPTIONS</div>
+                         </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Status Dependent Note */}
-                  {formData.status !== 'confirmed' && formData.status !== 'done' ? (
-                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
-                      <p className="m-0 text-sm text-blue-800 leading-relaxed">
-                        <strong>Note:</strong> We have received your request. A representative will review the details and contact you within <strong>24 hours</strong> to confirm your appointment.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mb-6">
-                      <p className="m-0 text-sm text-amber-800 leading-relaxed">
-                        <strong>Important:</strong> If you need to change or cancel, please let us know at least 24 hours in advance.
-                      </p>
-                    </div>
-                  )}
-
-                  <p className="text-zinc-600 mb-8">We look forward to seeing you soon!</p>
-
-                  <div className="text-center pt-8 border-t border-zinc-100">
-                    <p className="m-0 font-bold text-zinc-900">Prime Auto Detail</p>
-                    <p className="m-0 mt-1 text-zinc-500 text-sm">Professional Detailing Solutions</p>
-                  </div>
-                </div>
-
-                {/* Email Footer */}
-                <div className="bg-zinc-50 p-6 text-center border-t border-zinc-200">
-                  <p className="m-0 text-zinc-400 text-xs">&copy; {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
+                  </>
+                )}
+                
+                <div style={{ backgroundColor: '#f9fafb', padding: '20px', textAlign: 'center', borderTop: '1px solid #e5e7eb' }}>
+                  <p style={{ margin: 0, color: '#9ca3af', fontSize: '12px' }}>&copy; {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
                 </div>
               </div>
             </div>
-            <DialogFooter className="p-4 bg-zinc-50 border-t border-zinc-200">
-              <Button onClick={() => setShowEmailPreview(false)} className="bg-zinc-900 text-white">Close Preview</Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -2522,6 +2618,38 @@ export default function BookingsPage() {
           </div>
         </Card>
       </div>
+      <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800 max-w-[500px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-orange-500">Cancel Appointment?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400 text-base">
+              This will mark the job as <strong>Cancelled</strong> and send an official notification to <strong>{formData.customer || 'the customer'}</strong> with the reason you provide below.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 px-1">
+            <label className="text-sm font-medium text-zinc-300 mb-2 block">
+              Cancellation Reason (sent to customer)
+            </label>
+            <textarea
+              className="w-full min-h-[120px] bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              placeholder="e.g. Due to unforeseen scheduling conflicts, we need to cancel your appointment. We apologize for any inconvenience..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-none">Keep Appointment</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelBooking}
+              disabled={!cancelReason.trim()}
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
+            >
+              Confirm Cancellation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
