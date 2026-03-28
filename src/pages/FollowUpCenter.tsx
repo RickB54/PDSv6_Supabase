@@ -29,7 +29,9 @@ import {
   Zap,
   Star,
   Shield,
-  RotateCcw
+  RotateCcw,
+  HelpCircle,
+  ExternalLink
 } from "lucide-react";
 import { format, addMonths, isBefore, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -119,7 +121,7 @@ export default function FollowUpCenter() {
       const freqValue = booking.reminderFrequency || "6";
       
       // Handle "0" as Manual/Anytime
-      if (freqValue === 0) {
+      if (Number(freqValue) === 0) {
           return {
               ...booking,
               lastServiceDate: lastService,
@@ -296,11 +298,32 @@ export default function FollowUpCenter() {
         <div className="flex items-center gap-3">
            <Button 
              variant="outline" 
+             onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'retention-hub' } }))}
+             className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl px-6"
+           >
+             <HelpCircle className="mr-2 h-4 w-4" />
+             Hub Guide
+           </Button>
+           
+           <Button 
+             variant="outline" 
              onClick={loadProspects}
              className="bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 border-zinc-800 font-bold uppercase tracking-tight h-12 rounded-xl"
            >
              <RotateCcw className={cn("mr-2 h-4 w-4", loadingProspects && "animate-spin")} />
              Sync All Data
+           </Button>
+
+           <div className="hidden md:block h-8 w-[1px] bg-zinc-800 mx-2" />
+
+           <Button 
+             variant="ghost" 
+             onClick={() => window.dispatchEvent(new CustomEvent('open-help'))}
+             className="text-zinc-600 hover:text-white text-[9px] font-black uppercase tracking-[0.2em] transition-all flex flex-col items-center gap-1 group"
+           >
+             <span className="group-hover:translate-x-1 transition-transform flex items-center">
+               Main Help <ExternalLink className="ml-2 h-3 w-3" />
+             </span>
            </Button>
         </div>
       </div>
