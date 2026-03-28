@@ -577,7 +577,12 @@ export default function FollowUpCenter() {
                    <div className="mt-8 grid grid-cols-2 gap-4">
                       <div className="bg-black/40 p-4 rounded-2xl border border-zinc-800/50">
                          <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">Inquiry Vehicle</p>
-                         <p className="text-sm font-black text-zinc-300">{prospect.vehicle || prospect.vehicle_info || 'Not Specified'}</p>
+                         <p className="text-sm font-black text-zinc-300">
+                             {typeof prospect.vehicle === 'string' && prospect.vehicle ? prospect.vehicle : 
+                              (typeof prospect.vehicle_info === 'object' && prospect.vehicle_info 
+                                ? `${prospect.vehicle_info.year || ''} ${prospect.vehicle_info.make || ''} ${prospect.vehicle_info.model || ''}`.trim() || 'Not Specified'
+                                : (prospect.vehicle_info || 'Not Specified'))}
+                         </p>
                       </div>
                       <div className="bg-black/40 p-4 rounded-2xl border border-zinc-800/50">
                          <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">Source</p>
