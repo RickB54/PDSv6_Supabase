@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 
 const b_import = { supabase };
 
-export type BookingStatus = "pending" | "confirmed" | "in_progress" | "done" | "tentative" | "blocked" | "completed";
+export type BookingStatus = "pending" | "confirmed" | "in_progress" | "done" | "tentative" | "blocked" | "completed" | "cancelled";
 
 export interface Booking {
   id: string;

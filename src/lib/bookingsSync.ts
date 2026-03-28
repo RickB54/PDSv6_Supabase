@@ -326,58 +326,74 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
   }
 }
 
-export async function onSendReminderEmail(booking: Booking, frequencyLabel: string) {
+export async function onSendReminderEmail(booking: Booking, frequencyLabel: string, options?: { customNote?: string; couponCode?: string; discountLabel?: string }) {
   try {
     const year = new Date().getFullYear();
 
     if (booking.customerEmail) {
-      console.log(`🚀 Sending follow-up reminder to: ${booking.customerEmail}`);
+      console.log(`🚀 Sending personalized follow-up reminder to: ${booking.customerEmail}`);
 
       const reminderHtml = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
           <div style="font-size: 48px; margin-bottom: 15px;">✨</div>
-          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Keep That Shine!</h1>
-          <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">It's time for your vehicle's maintenance.</p>
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">A Personalized Note from Prime</h1>
+          <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Professional Maintenance Reminder</p>
         </div>
         
         <div style="padding: 30px;">
           <p style="font-size: 18px; color: #111827; margin-top: 0;">Hi <strong>${booking.customer}</strong>,</p>
-          <p style="color: #4b5563; line-height: 1.6;">It has been <strong>${frequencyLabel}</strong> since your last professional detail with Prime Auto Detail, and we wanted to check in.</p>
+          
+          ${options?.customNote ? `
+            <div style="background-color: #f8fafc; border-left: 4px solid #1d4ed8; padding: 20px; margin: 20px 0; color: #334155; font-style: italic; line-height: 1.6;">
+              "${options.customNote}"
+            </div>
+          ` : `
+            <p style="color: #4b5563; line-height: 1.6;">It has been <strong>${frequencyLabel}</strong> since your last professional detail with us, and we wanted to check in to see how your vehicle is looking.</p>
+          `}
           
           <div style="background-color: #f0f9ff; border: 1px solid #e0f2fe; border-radius: 12px; padding: 25px; margin: 25px 0;">
-             <p style="margin: 0; color: #0369a1; font-weight: 600;">Last Service Activity:</p>
-             <p style="margin: 5px 0 0; color: #0c4a6e;">${booking.title} — ${new Date(booking.date).toLocaleDateString()}</p>
+             <p style="margin: 0; color: #0369a1; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">Your Last Service:</p>
+             <p style="margin: 5px 0 0; color: #0c4a6e; font-weight: 700; font-size: 18px;">${booking.title}</p>
+             <p style="margin: 2px 0 0; color: #64748b; font-size: 13px;">Completed on ${new Date(booking.date).toLocaleDateString()}</p>
           </div>
 
-          <p style="color: #4b5563; line-height: 1.6;">Regular maintenance is the key to preserving your vehicle's value and aesthetic. To keep your vehicle in peak condition, you might also be interested in our other premium services:</p>
+          ${options?.couponCode ? `
+            <div style="background: linear-gradient(to right, #fdf2f2, #fff); border: 2px dashed #f87171; border-radius: 12px; padding: 25px; margin: 30px 0; text-align: center;">
+              <p style="margin: 0; color: #991b1b; font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em;">Special Loyalty Offer</p>
+              <h2 style="margin: 10px 0; color: #dc2626; font-size: 28px; font-weight: 900;">${options.discountLabel || 'SPECIAL DISCOUNT'}</h2>
+              <div style="display: inline-block; background-color: #ffffff; border: 1px solid #fee2e2; padding: 8px 20px; border-radius: 6px; font-family: monospace; font-size: 20px; font-weight: bold; color: #b91c1c; margin-top: 5px;">
+                ${options.couponCode}
+              </div>
+              <p style="margin: 15px 0 0; color: #7f1d1d; font-size: 13px;">Use this code at checkout to claim your offer!</p>
+            </div>
+          ` : ''}
+
+          <p style="color: #4b5563; line-height: 1.6;">Regular maintenance is the key to preserving your vehicle's value and aesthetic. To keep your vehicle in showroom condition, we recommend a refresh every ${frequencyLabel}.</p>
           
-          <ul style="color: #4b5563; line-height: 1.8; padding-left: 20px;">
-            <li>🛡️ <strong>Ceramic Coatings:</strong> Long-term protection and incredible gloss.</li>
-            <li>🧼 <strong>Full Interior Sanitization:</strong> Deep steam cleaning and odor removal.</li>
-            <li>💡 <strong>Headlight Restoration:</strong> Improve visibility and look of your car.</li>
+          <p style="color: #4b5563; font-weight: 600; margin-top: 25px; margin-bottom: 10px;">Our Premium Add-ons for returning clients:</p>
+          <ul style="color: #4b5563; line-height: 1.8; padding-left: 20px; margin-bottom: 30px;">
+            <li>🛡️ <strong>Ceramic Maintenance:</strong> Boost your coating's hydrophobicity.</li>
+            <li>🧼 <strong>Engine Bay Detailing:</strong> Keep the heart of your car looking new.</li>
+            <li>💡 <strong>Headlight Restoration:</strong> Restore clarity and safety.</li>
           </ul>
 
           <div style="text-align: center; margin: 35px 0;">
             <a href="${window.location.origin}/services" 
-               style="display: inline-block; background-color: #1d4ed8; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 4px 6px rgba(29, 78, 216, 0.2);">
-               Book Your Next Appointment
+               style="display: inline-block; background-color: #1d4ed8; color: #ffffff; padding: 16px 36px; border-radius: 8px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 4px 6px rgba(29, 78, 216, 0.2);">
+               Book Your Re-Appointment
             </a>
           </div>
 
-          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center; font-style: italic;">
-            "Our goal is always to provide you with a premium experience that exceeds your expectations."
-          </p>
-          
-          <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 30px; margin-top: 30px;">
-            <p style="margin: 0; color: #111827; font-weight: 700;">Prime Auto Detail</p>
-            <p style="margin: 5px 0 0; color: #6b7280; font-size: 14px;">Professional Detailing Solutions</p>
+          <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 30px; margin-top: 40px;">
+            <p style="margin: 0; color: #111827; font-weight: 700;">Prime Auto Detail Team</p>
+            <p style="margin: 5px 0 0; color: #6b7280; font-size: 14px;">"Your Vehicle, Our Passion"</p>
           </div>
         </div>
         
-        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="margin: 0; color: #9ca3af; font-size: 11px;">You are receiving this because you opted in for service reminders during your last booking.</p>
-          <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
+        <div style="background-color: #f9fafb; padding: 25px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #9ca3af; font-size: 11px; line-height: 1.5;">This maintenance reminder is part of your professional detailing journey with Prime Auto Detail. If you have any questions about your vehicle's care, simply reply to this email.</p>
+          <p style="margin: 8px 0 0; color: #9ca3af; font-size: 11px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
         </div>
       </div>
     `;
@@ -385,14 +401,123 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
       await supabase.functions.invoke('send-booking-email', {
         body: {
           to: booking.customerEmail,
-          subject: `✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
+          subject: options?.couponCode 
+            ? `🎁 A Special Gift from Prime Auto Detail for ${booking.customer}`
+            : `✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
           html: reminderHtml
         }
       });
       
-      console.log(`✅ Follow-up reminder sent to ${booking.customerEmail}`);
+      console.log(`✅ Professional follow-up reminder sent to ${booking.customerEmail}`);
     }
   } catch (e) {
     console.error('Failed to send follow-up reminder', e);
+  }
+}
+
+export async function onSendProspectEmail(prospect: any, options?: { customNote?: string; couponCode?: string; discountLabel?: string }) {
+  try {
+    const year = new Date().getFullYear();
+
+    if (prospect.email) {
+      console.log(`🚀 Sending professional intro to prospect: ${prospect.email}`);
+
+      const prospectHtml = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); padding: 45px 20px; text-align: center; color: #ffffff;">
+          <div style="font-size: 48px; margin-bottom: 20px;">💎</div>
+          <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Welcome to Prime</h1>
+          <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Professional Detailing Solutions</p>
+        </div>
+        
+        <div style="padding: 35px 30px;">
+          <p style="font-size: 19px; color: #111827; margin-top: 0;">Hi <strong>${prospect.name}</strong>,</p>
+          
+          <p style="color: #4b5563; line-height: 1.7; font-size: 15px;">Thank you for your interest in <strong>Prime Auto Detail</strong>. We pride ourselves on delivering a showroom-quality finish and absolute protection for every vehicle we touch.</p>
+
+          ${options?.customNote ? `
+            <div style="background-color: #f5f3ff; border-left: 4px solid #7c3aed; padding: 25px; margin: 30px 0; color: #4338ca; font-style: italic; font-size: 17px; line-height: 1.6; border-radius: 4px;">
+              "${options.customNote}"
+            </div>
+          ` : `
+            <p style="color: #4b5563; line-height: 1.7; font-size: 15px;">I noticed you were looking for premium car care, and I'd love to discuss how our signature detailing and ceramic protection packages can keep your vehicle looking its absolute best.</p>
+          `}
+          
+          <div style="background-color: #fafafa; border: 1px solid #f3f4f6; border-radius: 16px; padding: 25px; margin: 30px 0;">
+             <h3 style="margin-top: 0; font-size: 15px; color: #1f2937; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #6366f1; display: inline-block; padding-bottom: 4px;">The Prime Difference:</h3>
+             <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px;">
+                  <span style="font-size: 18px;">✨</span>
+                  <div>
+                    <strong style="color: #111827; display: block;">Precision Detailing:</strong>
+                    <span style="color: #6b7280; font-size: 13px;">Advanced techniques for an immaculate finish, inside and out.</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px;">
+                  <span style="font-size: 18px;">🛡️</span>
+                  <div>
+                    <strong style="color: #111827; display: block;">Superior Protection:</strong>
+                    <span style="color: #6b7280; font-size: 13px;">Ceramic coatings and paint sealants that defy the elements.</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                  <span style="font-size: 18px;">👨‍🔧</span>
+                  <div>
+                    <strong style="color: #111827; display: block;">Expert Craftsmanship:</strong>
+                    <span style="color: #6b7280; font-size: 13px;">Highly trained specialists who treat every car like their own.</span>
+                  </div>
+                </div>
+             </div>
+          </div>
+
+          ${options?.couponCode ? `
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; padding: 35px; margin: 40px 0; text-align: center; color: #ffffff;">
+              <p style="margin: 0; font-weight: 800; text-transform: uppercase; font-size: 13px; letter-spacing: 0.15em; opacity: 0.9;">Exclusive First-Time Offer</p>
+              <h2 style="margin: 15px 0; font-size: 32px; font-weight: 900; letter-spacing: -0.02em;">${options.discountLabel || 'SPECIAL OFFER'}</h2>
+              <div style="display: inline-block; background-color: rgba(255,255,255,0.2); border: 2px solid #ffffff; padding: 12px 30px; border-radius: 10px; font-family: 'Courier New', Courier, monospace; font-size: 26px; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                ${options.couponCode}
+              </div>
+              <p style="margin: 20px 0 0; font-size: 14px; font-weight: 500;">Enter this code when booking to claim your welcome discount.</p>
+            </div>
+          ` : ''}
+
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${window.location.origin}/book" 
+               style="display: inline-block; background: #4f46e5; color: #ffffff; padding: 18px 45px; border-radius: 12px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);">
+               Secure Your Appointment
+            </a>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center; margin-top: 40px;">If you have any questions about our processes or what your vehicle might need, I'm here to help.</p>
+
+          <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 35px; margin-top: 45px;">
+            <p style="margin: 0; color: #111827; font-weight: 800; font-size: 17px;">Prime Auto Detail Team</p>
+            <p style="margin: 5px 0 0; color: #9ca3af; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Your Vehicle, Reimagined</p>
+            <div style="margin-top: 25px;">
+              <a href="${window.location.origin}" style="text-decoration: none; color: #4f46e5; font-size: 13px; font-weight: 700; margin: 0 15px;">View Gallery</a>
+              <a href="${window.location.origin}/faq" style="text-decoration: none; color: #4f46e5; font-size: 13px; font-weight: 700; margin: 0 15px;">How It Works</a>
+            </div>
+          </div>
+        </div>
+        
+        <div style="background-color: #111827; padding: 30px; text-align: center; color: #6b7280;">
+          <p style="margin: 0; font-size: 11px; line-height: 1.5;">You are receiving this introductory outreach because you've expressed interest in Prime Auto Detail services. We value your privacy and our relationship.</p>
+          <p style="margin: 10px 0 0; color: #4b5563; font-size: 11px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
+        </div>
+      </div>
+      `;
+
+      await supabase.functions.invoke('send-booking-email', {
+        body: {
+          to: prospect.email,
+          subject: `✨ A Special Welcome to Prime Auto Detail for ${prospect.name}`,
+          html: prospectHtml
+        }
+      });
+      
+      console.log(`✅ Professional prospect intro sent to ${prospect.email}`);
+    }
+  } catch (e) {
+    console.error('Failed to send prospect outreach', e);
   }
 }

@@ -686,7 +686,7 @@ export default function BookingsPage() {
     setSelectedBooking(null);
     setSelectedCustomer(null);
     setSelectedCustomer(null);
-    setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "3", status: "confirmed", vehicleId: undefined });
+    setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "6", status: "confirmed", vehicleId: undefined });
   };
 
   const handleCancelBooking = async () => {
@@ -1991,10 +1991,13 @@ export default function BookingsPage() {
                           value={formData.reminderFrequency}
                           onChange={(e) => setFormData({ ...formData, reminderFrequency: e.target.value })}
                         >
-                          <option value="1">1 Month</option>
-                          <option value="3">3 Months</option>
+                          <option value="0">Anytime / Manual</option>
+                          <option value="1">Monthly</option>
+                          <option value="2">Bi-Monthly</option>
+                          <option value="3">Quarterly</option>
                           <option value="4">4 Months</option>
                           <option value="6">6 Months</option>
+                          <option value="12">Yearly</option>
                           <option value="custom">Custom</option>
                         </select>
                       </div>
