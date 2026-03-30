@@ -1875,44 +1875,44 @@ export default function PackagePricing() {
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Button size="lg" variant={view === 'packages' ? 'default' : 'outline'} onClick={() => setView('packages')}>Show ALL Packages</Button>
-                  <Button size="lg" variant={view === 'addons' ? 'default' : 'outline'} onClick={() => setView('addons')}>Show ALL Add-Ons</Button>
-                  <Button size="lg" variant={view === 'both' ? 'default' : 'outline'} onClick={() => setView('both')}>Show ALL Services</Button>
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="border-blue-500 text-blue-500 hover:bg-blue-600 hover:text-white"
-                    onClick={() => {
-                      setView('both');
-                      setShowArchived(false);
-                      toast.info("Showing live services only");
-                    }}
-                  >
-                    Show Live Packages Only
-                  </Button>
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Button size="lg" variant={view === 'packages' ? 'default' : 'outline'} onClick={() => setView('packages')}>Show Packages</Button>
+                    <Button size="lg" variant={view === 'addons' ? 'default' : 'outline'} onClick={() => setView('addons')}>Show Add-Ons</Button>
+                    <Button size="lg" variant={view === 'both' ? 'default' : 'outline'} onClick={() => setView('both')}>Show Both</Button>
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      className="border-blue-500 text-blue-500 hover:bg-blue-600 hover:text-white"
+                      onClick={() => {
+                        setView('both');
+                        setShowArchived(false);
+                        toast.info("Showing live services only");
+                      }}
+                    >
+                      Show Live Packages Only
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800 w-fit">
+                    <Switch
+                      id="show-archived"
+                      checked={showArchived}
+                      onCheckedChange={setShowArchived}
+                    />
+                    <Label htmlFor="show-archived" className="text-white font-medium cursor-pointer">
+                      Show Archived (Hidden) Packages & Add-Ons
+                    </Label>
+                    {showArchived && (
+                      <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded border border-red-600/30 font-bold uppercase tracking-wider animate-pulse-subtle">
+                        Viewing All
+                      </span>
+                    )}
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-
-          <div className="mt-8 pt-6 border-t border-zinc-800">
-            <div className="flex items-center gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800 w-fit">
-              <Switch
-                id="show-archived"
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-              />
-              <Label htmlFor="show-archived" className="text-white font-medium cursor-pointer">
-                Show Archived (Hidden) Packages & Add-Ons
-              </Label>
-              {showArchived && (
-                <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded border border-red-600/30 font-bold uppercase tracking-wider animate-pulse-subtle">
-                  Viewing All
-                </span>
-              )}
-            </div>
-          </div>
 
           {/* Action Buttons */}
           <div className="mt-6 flex items-center gap-4 flex-wrap">
