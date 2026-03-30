@@ -1718,67 +1718,7 @@ export default function PackagePricing() {
           </h2>
           <p className="text-zinc-400 mb-6 ml-3">Changes apply everywhere, including the live website.</p>
 
-          {/* Vehicle Type Selector - Front and Center */}
-          <div className="mb-6 flex items-center gap-4">
-            <Label className="text-white text-lg font-semibold">Vehicle Type:</Label>
-            <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
-              <SelectTrigger className="w-64 bg-zinc-900 border-zinc-700 text-white text-lg">
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 text-white">
-                {vehicleOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{vehicleLabels[opt] || opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            {/* Package Mode Toggle - Disabling for now to avoid confusion as logic is only partially implemented */}
-            {/* 
-            <div className="ml-auto flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-lg border border-zinc-700">
-              <Label className="text-white font-semibold">Public Site Shows:</Label>
-              <Button
-                size="sm"
-                variant={packageMode === "3-pack" ? "default" : "outline"}
-                className={packageMode === "3-pack" ? "bg-blue-600 hover:bg-blue-700" : ""}
-                onClick={async () => {
-                  setPackageMode("3-pack");
-                  localStorage.setItem('packageMode', '3-pack');
-
-                  // Manually update the JSON file
-                  const blob = new Blob([JSON.stringify({ mode: '3-pack' }, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'package-mode.json';
-
-                  toast.success("✅ Set to 3 packages. Click below to download the config file, then place it in the 'public' folder and refresh.");
-                }}
-              >
-                3 Packages
-              </Button>
-              <Button
-                size="sm"
-                variant={packageMode === "6-pack" ? "default" : "outline"}
-                className={packageMode === "6-pack" ? "bg-green-600 hover:bg-green-700" : ""}
-                onClick={async () => {
-                  setPackageMode("6-pack");
-                  localStorage.setItem('packageMode', '6-pack');
-
-                  // Manually update the JSON file
-                  const blob = new Blob([JSON.stringify({ mode: '6-pack' }, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'package-mode.json';
-
-                  toast.success("✅ Set to 6 packages. Click below to download the config file, then place it in the 'public' folder and refresh.");
-                }}
-              >
-                6 Packages
-              </Button>
-            </div>
-            */}
-          </div>
 
           <Accordion type="multiple" className="space-y-4">
             {/* Increase % Section */}
@@ -1945,6 +1885,21 @@ export default function PackagePricing() {
               Restore All Prices
             </Button>
           </div>
+        </div>
+
+        {/* Vehicle Type Selector - Front and Center above the services */}
+        <div className="flex items-center gap-4 bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 shadow-lg">
+          <Label className="text-white text-xl font-black uppercase tracking-tight">Active Vehicle Pricing Category:</Label>
+          <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
+            <SelectTrigger className="w-80 bg-black border-red-600/30 text-white text-lg font-bold h-12 hover:border-red-600 transition-colors">
+              <SelectValue placeholder="Select vehicle" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+              {vehicleOptions.map((opt) => (
+                <SelectItem key={opt} value={opt} className="font-bold">{vehicleLabels[opt] || opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Packages grid */}
