@@ -62,7 +62,7 @@ export default function PrimeBlog() {
 
     const [formData, setFormData] = useState<Partial<LibraryItem>>({
         category: 'General',
-        type: 'image',
+        type: 'article',
         is_published: false,
         is_verified: false
     });
@@ -152,7 +152,7 @@ export default function PrimeBlog() {
         setUploadStatus({ step: 'idle', message: '' });
         setFormData({
             category: category,
-            type: type,
+            type: type === 'image' ? 'article' : type,
             title: '',
             description: '',
             resource_url: '',
@@ -199,7 +199,7 @@ export default function PrimeBlog() {
 
         if (file.type.startsWith('image/')) {
             const previewUrl = URL.createObjectURL(file);
-            setFormData(prev => ({ ...prev, resource_url: previewUrl, thumbnail_url: previewUrl, type: 'image' }));
+            setFormData(prev => ({ ...prev, resource_url: previewUrl, thumbnail_url: previewUrl, type: 'article' }));
         }
 
         try {
@@ -242,7 +242,7 @@ export default function PrimeBlog() {
             created_by: (!formData.created_by && user?.email) ? user.email : formData.created_by,
             title: formData.title || '',
             description: formData.description || '',
-            type: formData.type || 'image',
+            type: formData.type || 'article',
             category: formData.category || 'General',
             resource_url: finalResourceUrl,
             thumbnail_url: formData.thumbnail_url || finalResourceUrl,

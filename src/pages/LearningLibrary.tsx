@@ -251,7 +251,7 @@ export default function LearningLibrary() {
                 ...prev,
                 resource_url: previewUrl,
                 thumbnail_url: previewUrl,
-                type: 'image'
+                type: 'article'
             }));
         }
 
@@ -285,7 +285,7 @@ export default function LearningLibrary() {
                 ...prev,
                 resource_url: publicUrl,
                 thumbnail_url: file.type.startsWith('image') ? publicUrl : prev.thumbnail_url,
-                type: file.type.startsWith('image') ? 'image' : prev.type // Auto-set type
+                type: file.type.startsWith('image') ? 'article' : prev.type // Auto-set type to article for images
             }));
 
             setUploadStatus({ step: 'done', message: 'Ready to save!' });
@@ -606,7 +606,7 @@ export default function LearningLibrary() {
                                     </SelectTrigger>
                                     <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                         <SelectItem value="video">Video</SelectItem>
-                                        <SelectItem value="image">Image</SelectItem>
+                                        <SelectItem value="article">Image/Asset</SelectItem>
                                         <SelectItem value="pdf">PDF Document</SelectItem>
                                         <SelectItem value="article">Article</SelectItem>
                                     </SelectContent>
