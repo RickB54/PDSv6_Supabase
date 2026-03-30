@@ -233,9 +233,10 @@ const Settings = () => {
       if (data.customPackages) localStorage.setItem('customServicePackages', JSON.stringify(data.customPackages));
       if (data.customAddOns) localStorage.setItem('customAddOns', JSON.stringify(data.customAddOns));
       if (data.customServices) localStorage.setItem('customServices', JSON.stringify(data.customServices));
+      const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'http://localhost:6066/api' : '/api';
       await postFullSync();
       await postServicesFullSync();
-      try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      try { await fetch(`${API_BASE}/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
       toast({ title: "Pricing restored from backup — live site updated" });
     } catch (error) {
       toast({ title: "Restore Failed", description: "Could not restore pricing.", variant: "destructive" });

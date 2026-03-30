@@ -18,7 +18,8 @@ import { contentService } from "@/lib/content";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X } from "lucide-react";
+import localforage from "localforage";
+import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X, RefreshCw } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
@@ -362,12 +363,42 @@ const CustomerPortal = () => {
         </div>
 
         {/* Step 2 Header */}
-        <div className="mb-8 pt-8 border-t border-blue-100">
+        <div className="mb-8 pt-8 border-t border-blue-100 flex flex-col md:flex-row items-center justify-between gap-4">
           <h3 className={`text-2xl font-black uppercase tracking-tight transition-colors
             ${activeStep === 2 ? 'text-blue-700 animate-blink' : 'text-blue-900/40'}
           `}>
             Step 2: Select your package below
           </h3>
+          <button 
+            onClick={async () => {
+              const confirm = window.confirm("This will clear all local settings and force a fresh sync from the cloud. Proceed?");
+              if (!confirm) return;
+              
+              // Clear all relevant local storage keys
+              const keys = [
+                'servicePackageMeta', 'serviceAddOnMeta', 
+                'servicePricingOverrides', 'addOnPricingOverrides',
+                'packageMeta', 'addOnMeta', 'savedPrices'
+              ];
+              keys.forEach(k => {
+                localStorage.removeItem(k);
+                sessionStorage.removeItem(k);
+              });
+              
+              try {
+                await localforage.removeItem('packageMeta');
+                await localforage.removeItem('addOnMeta');
+                await localforage.removeItem('savedPrices');
+              } catch (e) { console.warn("localforage clear skipped", e); }
+              
+              // Force hard reload
+              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+            }}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-md hover:bg-black active:scale-95"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Sync with Cloud
+          </button>
         </div>
 
         {/* Premium 6-Box Service Grid */}

@@ -1365,7 +1365,7 @@ export default function PackagePricing() {
     setCurrentPrices(restored);
     // Also refresh regular backup to match restored values
     await saveBackupPrices(restored);
-    try { await fetch("http://localhost:6066/api/packages/sync", { method: "POST" }); } catch { }
+    try { await fetch(`${API_BASE}/packages/sync`, { method: "POST" }); } catch { }
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
