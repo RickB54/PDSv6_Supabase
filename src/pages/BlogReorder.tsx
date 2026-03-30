@@ -33,9 +33,11 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare } from "lucide-react";
+import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare, Sparkles, Rocket, Facebook } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { BlogSocialBlast } from "@/components/BlogSocialBlast";
+import { BlogAIAssistant } from "@/components/BlogAIAssistant";
 
 export default function BlogReorder() {
     const { toast } = useToast();
@@ -48,6 +50,9 @@ export default function BlogReorder() {
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [formData, setFormData] = useState<Partial<LibraryItem>>({});
     const [isUploading, setIsUploading] = useState(false);
+    const [isSocialBlastOpen, setIsSocialBlastOpen] = useState(false);
+    const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+    const [socialItem, setSocialItem] = useState<LibraryItem | null>(null);
     
     // Comment management state
     const [comments, setComments] = useState<LibraryComment[]>([]);
@@ -246,7 +251,7 @@ export default function BlogReorder() {
                             </span>
                         </h2>
                         <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
-                            DRAG AND DROP TO DEFINE THE FRONT-PAGE EXPERIENCE
+                            EDIT · REORDER · AI WRITE · SOCIAL BLAST
                         </p>
                     </div>
 
@@ -269,6 +274,14 @@ export default function BlogReorder() {
                             )}
                         </div>
                         <Button
+                            onClick={() => setIsAIAssistantOpen(true)}
+                            className="bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-500 text-indigo-400 hover:text-white font-black rounded-2xl h-14 px-5 transition-all w-full sm:w-auto"
+                            title="AI Content Strategist"
+                        >
+                            <Sparkles className="w-5 h-5 mr-2" />
+                            AI WRITE
+                        </Button>
+                        <Button
                             onClick={handleSaveOrder}
                             disabled={isSaving || isLoading}
                             className="bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl h-14 px-8 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all w-full sm:w-auto"
@@ -278,7 +291,7 @@ export default function BlogReorder() {
                             ) : (
                                 <Save className="w-5 h-5 mr-2" />
                             )}
-                            SAVE NEW ORDER
+                            SAVE ORDER
                         </Button>
                     </div>
                 </div>
@@ -314,6 +327,7 @@ export default function BlogReorder() {
                                             onDelete={() => handleDelete(item.id)}
                                             onArchive={() => handleArchiveToggle(item)}
                                             onPin={() => handlePinToggle(item)}
+                                            onSocialBlast={() => { setSocialItem(item); setIsSocialBlastOpen(true); }}
                                         />
                                     ))}
                                 </div>
@@ -357,7 +371,17 @@ export default function BlogReorder() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">THE STORY / CONTENT</Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="uppercase text-[10px] font-black tracking-widest text-zinc-500 ml-1">THE STORY / CONTENT</Label>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setIsAIAssistantOpen(true)}
+                                    className="h-7 px-3 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white hover:bg-indigo-600/20 rounded-lg border border-indigo-500/20"
+                                >
+                                    <Sparkles className="w-3 h-3 mr-1" /> AI Write
+                                </Button>
+                            </div>
                             <Textarea
                                 value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -488,7 +512,14 @@ export default function BlogReorder() {
                         )}
                     </div>
 
-                    <DialogFooter className="p-8 bg-zinc-900/30 border-t border-zinc-800 shrink-0 gap-4">
+                    <DialogFooter className="p-8 bg-zinc-900/30 border-t border-zinc-800 shrink-0 gap-3 flex-wrap">
+                        <Button
+                            variant="ghost"
+                            onClick={() => { if (editingItem) { setSocialItem(editingItem); setIsSocialBlastOpen(true); } }}
+                            className="h-14 px-5 rounded-2xl font-black text-[#1877F2] border border-[#1877F2]/30 hover:bg-[#1877F2]/10"
+                        >
+                            <Facebook className="w-5 h-5 mr-2" /> POST TO SOCIAL
+                        </Button>
                         <Button variant="ghost" onClick={() => setIsEditModalOpen(false)} className="rounded-2xl h-14 px-8 font-bold text-zinc-500 hover:text-white">
                             CANCEL
                         </Button>
@@ -499,17 +530,34 @@ export default function BlogReorder() {
                 </DialogContent>
             </Dialog>
 
+            {/* Social Blast Engine */}
+            <BlogSocialBlast
+                isOpen={isSocialBlastOpen}
+                onOpenChange={setIsSocialBlastOpen}
+                item={socialItem}
+            />
+
+            {/* AI Content Strategist */}
+            <BlogAIAssistant
+                isOpen={isAIAssistantOpen}
+                onOpenChange={setIsAIAssistantOpen}
+                onApplySuggestion={(text) => setFormData(prev => ({ ...prev, description: text }))}
+                currentTitle={formData.title as string}
+                currentDescription={formData.description as string}
+            />
+
             <Footer />
         </div>
     );
 }
 
-function SortableItem({ item, onEdit, onDelete, onArchive, onPin }: {
+function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast }: {
     item: LibraryItem,
     onEdit: () => void,
     onDelete: () => void,
     onArchive: () => void,
-    onPin: () => void
+    onPin: () => void,
+    onSocialBlast: () => void,
 }) {
     const {
         attributes,
@@ -601,6 +649,16 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin }: {
                 </Button>
 
                 <div className="w-px h-6 bg-zinc-800 mx-1" />
+
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onSocialBlast}
+                    className="h-9 w-9 rounded-xl text-[#1877F2]/60 hover:text-[#1877F2] hover:bg-[#1877F2]/10 transition-all"
+                    title="Social Blast"
+                >
+                    <Rocket className="w-4 h-4" />
+                </Button>
 
                 <Button
                     variant="ghost"

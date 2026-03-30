@@ -1,2 +1,2 @@
 git add -A
-git commit -m "feat: Social Blast + AI Strategist docs in AppManual; fix modal responsive layout"
+git commit -m "feat: Upgrade Visual Architect - AI Write + Social Blast on every card and edit dialog"
