@@ -63,6 +63,7 @@ export default function BlogReorder() {
     const [isUploading, setIsUploading] = useState(false);
     const [isSocialBlastOpen, setIsSocialBlastOpen] = useState(false);
     const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+    const [isNewAIPost, setIsNewAIPost] = useState(false);
     const [socialItem, setSocialItem] = useState<LibraryItem | null>(null);
     const [showHistory, setShowHistory] = useState(false);
     const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
@@ -269,14 +270,6 @@ export default function BlogReorder() {
                         <div className="flex items-center gap-3 mb-2">
                             <Button
                                 variant="ghost"
-                                className="text-zinc-500 hover:text-white p-0 h-auto"
-                                onClick={() => navigate('/section/company-blog')}
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2" /> BACK
-                            </Button>
-                            <div className="w-px h-4 bg-zinc-800" />
-                            <Button
-                                variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-indigo-400 hover:text-white hover:bg-indigo-500/10 rounded-full"
                                 onClick={() => navigate('/app-manual#visual-architect')}
@@ -332,7 +325,12 @@ export default function BlogReorder() {
                             )}
                         </Button>
                         <Button
-                            onClick={() => setIsAIAssistantOpen(true)}
+                            onClick={() => {
+                                setIsNewAIPost(true);
+                                setEditingItem(null);
+                                setFormData({ id: '', title: '', description: '', category: 'General Detailing', is_published: false, is_pinned: false });
+                                setIsAIAssistantOpen(true);
+                            }}
                             className="bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-500 text-indigo-400 hover:text-white font-black rounded-2xl h-14 px-5 transition-all w-full sm:w-auto"
                             title="AI Content Strategist"
                         >
@@ -699,10 +697,42 @@ export default function BlogReorder() {
             {/* AI Content Strategist */}
             <BlogAIAssistant
                 isOpen={isAIAssistantOpen}
-                onOpenChange={setIsAIAssistantOpen}
-                onApplySuggestion={(text) => setFormData(prev => ({ ...prev, description: text }))}
-                currentTitle={formData.title as string}
-                currentDescription={formData.description as string}
+                onOpenChange={(open) => {
+                    setIsAIAssistantOpen(open);
+                    if (!open) setIsNewAIPost(false);
+                }}
+                isNewPost={isNewAIPost}
+                onApplySuggestion={async (text, imageUrl) => {
+                    if (isNewAIPost) {
+                        const newPost: Partial<LibraryItem> = {
+                            title: text.split('\n')[0].substring(0, 50) + "...",
+                            description: text,
+                            category: "General Detailing",
+                            is_published: false,
+                            resource_url: imageUrl || "",
+                            thumbnail_url: imageUrl || "",
+                            sort_order: (items[0]?.sort_order || 0) + 1
+                        };
+                        const res = await upsertLibraryItem(newPost as LibraryItem);
+                        if (res.success) {
+                            await logActivity('ai_write', res.data as LibraryItem, "Created new post via AI");
+                            toast({ title: "New AI Post Created" });
+                            loadItems();
+                        }
+                    } else if (editingItem) {
+                        setFormData(prev => ({ 
+                            ...prev, 
+                            description: text,
+                            resource_url: imageUrl || prev.resource_url,
+                            thumbnail_url: imageUrl || prev.thumbnail_url
+                        }));
+                        setIsEditModalOpen(true);
+                    }
+                    setIsAIAssistantOpen(false);
+                    setIsNewAIPost(false);
+                }}
+                currentTitle={formData.title}
+                currentDescription={formData.description}
             />
 
             <Footer />
@@ -739,55 +769,57 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 ${isDragging
+            className={`flex flex-col md:flex-row md:items-center gap-2 md:gap-5 p-4 md:p-5 rounded-3xl border transition-all duration-300 ${isDragging
                 ? 'bg-indigo-600/20 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.2)] scale-[1.02]'
                 : 'bg-zinc-900/30 border-zinc-900 hover:border-zinc-800'
                 }`}
         >
-            <div
-                {...attributes}
-                {...listeners}
-                className="cursor-grab active:cursor-grabbing p-2 hover:bg-white/5 rounded-xl transition-colors"
-                title="Drag to reorder"
-            >
-                <GripVertical className="w-6 h-6 text-zinc-700" />
-            </div>
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-2 hover:bg-white/5 rounded-xl transition-colors shrink-0"
+                    title="Drag to reorder"
+                >
+                    <GripVertical className="w-6 h-6 text-zinc-700" />
+                </div>
 
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black shrink-0 border border-zinc-800">
-                {item.type === 'video' ? (
-                    <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-500 text-xs">VIDEO</div>
-                ) : (
-                    <img
-                        src={item.resource_url}
-                        className="w-full h-full object-cover"
-                        alt={item.title}
-                        onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "/logo-3inch.png";
-                            target.className = "w-full h-full object-contain p-2 opacity-20 grayscale";
-                        }}
-                    />
-                )}
-            </div>
-
-            <div className="flex-1 min-w-0 text-left">
-                <h4 className="font-black text-sm text-white truncate uppercase tracking-tighter">{item.title}</h4>
-                <div className="flex items-center gap-2 mt-1">
-                    {item.is_pinned && <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black border border-indigo-500/20 flex items-center gap-1"><Pin className="w-2.5 h-2.5 fill-indigo-400" /> PINNED</span>}
-                    <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">{item.category}</span>
-                    <span className="text-[10px] text-zinc-600 font-bold flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(item.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                    {item.sort_order !== undefined && (
-                        <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full font-black border border-indigo-500/10">
-                            ORDER: #{item.sort_order}
-                        </span>
+                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black shrink-0 border border-zinc-800 shadow-inner">
+                    {item.type === 'video' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-500 text-[10px] font-black tracking-tighter">VIDEO</div>
+                    ) : (
+                        <img
+                            src={item.resource_url}
+                            className="w-full h-full object-cover"
+                            alt={item.title}
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = "/logo-3inch.png";
+                                target.className = "w-full h-full object-contain p-2 opacity-20 grayscale";
+                            }}
+                        />
                     )}
+                </div>
+
+                <div className="flex-1 min-w-0 text-left space-y-1">
+                    <h4 className="font-black text-sm md:text-base text-white truncate uppercase tracking-tighter leading-none">{item.title}</h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {item.is_pinned && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black border border-indigo-500/20 flex items-center gap-1"><Pin className="w-2.5 h-2.5 fill-indigo-400" /> PINNED</span>}
+                        <span className="text-[9px] text-indigo-400/80 font-black uppercase tracking-widest">{item.category}</span>
+                        <span className="text-[9px] text-zinc-600 font-bold flex items-center gap-1 shrink-0">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(item.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        {item.sort_order !== undefined && (
+                            <span className="text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded-full font-black border border-indigo-500/10">
+                                #{item.sort_order}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 pr-4">
+            <div className="flex items-center justify-end gap-1 md:gap-2 pl-12 md:pl-0 md:border-t-0 md:pt-0 pb-1 md:pb-0">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -805,7 +837,7 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
                     className={`h-9 w-9 rounded-xl transition-all ${item.is_published ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-amber-500 hover:bg-amber-500/10'}`}
                     title={item.is_published ? "Unpublish (Archive)" : "Publish"}
                 >
-                    {item.is_published ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                    {item.is_published ? <Globe className="w-4 h-4 ml-0.5" /> : <Lock className="w-4 h-4" />}
                 </Button>
 
                 <Button
@@ -822,11 +854,13 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
                     variant="ghost"
                     size="icon"
                     onClick={onSocialBlast}
-                    className="h-9 w-9 rounded-xl text-[#1877F2]/60 hover:text-[#1877F2] hover:bg-[#1877F2]/10 transition-all"
+                    className="h-10 w-10 md:h-9 md:w-9 rounded-xl text-[#1877F2]/60 hover:text-[#1877F2] hover:bg-[#1877F2]/10 transition-all bg-[#1877F2]/5 md:bg-transparent"
                     title="Social Blast"
                 >
                     <Rocket className="w-4 h-4" />
                 </Button>
+
+                <div className="w-px h-6 bg-zinc-800 mx-1 hidden md:block" />
 
                 <Button
                     variant="ghost"

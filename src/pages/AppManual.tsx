@@ -4,10 +4,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music, Newspaper, GripVertical, Edit2, History as HistoryIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Search, Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music, Newspaper, GripVertical, Edit2, History as HistoryIcon, Zap, ExternalLink } from "lucide-react";
+import { 
+    adminMenuTopics, 
+    employeeMenuTopics, 
+    employeeDashboardTopics, 
+    customerTopics,
+    HelpTopic 
+} from "@/components/help/helpData";
 
 export default function AppManual() {
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const [searchQuery, setSearchQuery] = useState("");
+    
+    // Flatten all topics from helpData
+    const allTopics: HelpTopic[] = [
+        ...adminMenuTopics,
+        ...employeeMenuTopics,
+        ...employeeDashboardTopics,
+        ...customerTopics
+    ];
+
+    // Remove duplicates by ID (just in case)
+    const uniqueTopics = allTopics.filter((topic, index, self) =>
+        index === self.findIndex((t) => t.id === topic.id)
+    );
+
+    const filteredTopics = uniqueTopics.filter(t => 
+        (t.title + ' ' + t.summary + ' ' + t.content.join(' ')).toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handlePrint = () => {
         window.print();
@@ -49,6 +78,7 @@ export default function AppManual() {
                                     { id: "social-blast", label: "🚀 Social Blast Engine" },
                                     { id: "visual-architect", label: "🛠️ Visual Architect & Activity Log" },
                                     { id: "admin-workflow", label: "Admin Workflows" },
+                                    { id: "technical-reference", label: "📚 Technical Reference Guide" },
                                     { id: "tips", label: "Best Practices" },
                                 ].map((item) => (
                                     <Button
@@ -92,6 +122,7 @@ export default function AppManual() {
                                     { id: "social-blast", label: "🚀 Social Blast" },
                                     { id: "visual-architect", label: "🛠️ Visual Architect" },
                                     { id: "admin-workflow", label: "Admin" },
+                                    { id: "technical-reference", label: "Reference" },
                                     { id: "tips", label: "Tips" },
                                 ].map((item) => (
                                     <Button key={item.id} variant="outline" size="sm" className="justify-start border-zinc-700 text-zinc-300" onClick={() => scrollTo(item.id)}>{item.label}</Button>
@@ -428,6 +459,72 @@ export default function AppManual() {
                                 <li><strong>Data Reset:</strong> "Danger Zone" allows clearing mock data or factory resetting the app (Password Protected).</li>
                                 <li><strong>Mock Data:</strong> Use the "Mock Data System" in Admin Dashboard to seed test jobs/employees for training purposes.</li>
                             </ul>
+                        </Card>
+                    </section>
+
+                    <section id="technical-reference" className="scroll-mt-20">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                            <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2">
+                                <BookOpen className="h-6 w-6" /> 12. 📚 Technical Reference Guide
+                            </h2>
+                            <div className="relative group flex-1 max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-sky-400 transition-colors" />
+                                <Input 
+                                    placeholder="Search 50+ technical topics..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="bg-zinc-900 border-zinc-700 pl-10 focus:ring-sky-500/50"
+                                />
+                            </div>
+                        </div>
+                        
+                        <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none space-y-6">
+                            <p className="text-zinc-400 text-sm italic">
+                                This section contains the complete "Source of Truth" technical documentation from the main help guide. Use the search bar above to drill down into specific details.
+                            </p>
+
+                            <Accordion type="single" collapsible className="space-y-3">
+                                {filteredTopics.map((topic, idx) => (
+                                    <AccordionItem key={topic.id} value={topic.id} className="border border-zinc-800 rounded-2xl overflow-hidden bg-zinc-950/30">
+                                        <AccordionTrigger className="px-5 py-4 hover:bg-zinc-800/50 hover:no-underline text-left">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-400 font-black text-xs">
+                                                    {idx + 1}
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <div className="text-sm font-black uppercase tracking-tight text-white">{topic.title}</div>
+                                                    <div className="text-[10px] text-zinc-500 font-medium line-clamp-1">{topic.summary}</div>
+                                                </div>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-5 pb-5 pt-2 text-zinc-300 leading-relaxed space-y-4">
+                                            <div className="text-xs font-black text-sky-500/70 mb-2 flex items-center gap-2">
+                                                <Info className="w-3 h-3" /> TECHNICAL BRIEFING
+                                            </div>
+                                            {topic.content.map((p, i) => (
+                                                <p key={i} className="text-sm">{p}</p>
+                                            ))}
+                                            {topic.route && (
+                                                <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
+                                                    <Badge variant="outline" className="text-[9px] border-zinc-700 text-zinc-500 font-mono">
+                                                        Ref: {topic.route}
+                                                    </Badge>
+                                                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black text-sky-400 hover:text-white hover:bg-sky-500 mr-1">
+                                                        <ExternalLink className="w-3 h-3 mr-1" /> JUMP TO SECTION
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
+
+                            {filteredTopics.length === 0 && (
+                                <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-3xl">
+                                    <Search className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+                                    <p className="text-zinc-500 font-bold uppercase tracking-widest text-sm">No matching technical topics found</p>
+                                </div>
+                            )}
                         </Card>
                     </section>
 

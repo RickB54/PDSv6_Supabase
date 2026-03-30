@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 interface BlogAIAssistantProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    onApplySuggestion: (text: string) => void;
+    onApplySuggestion: (text: string, imageUrl?: string) => void;
     currentTitle?: string;
     currentDescription?: string;
+    isNewPost?: boolean;
 }
 
 export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, currentTitle, currentDescription }: BlogAIAssistantProps) {
@@ -22,8 +23,10 @@ export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, curre
     const [suggestion, setSuggestion] = useState("");
     const [prompt, setPrompt] = useState("");
     const [showHelp, setShowHelp] = useState(false);
+    const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-    const generateIdeas = async (type: 'title' | 'story' | 'hook') => {
+    const generateIdeas = async (type: 'title' | 'story' | 'hook' | 'new_post') => {
         setIsGenerating(true);
         // Simulate AI intelligence
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -31,21 +34,52 @@ export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, curre
         let result = "";
         if (type === 'title') {
             result = "Unveiling the Gloss: A Ceramic Coating Masterclass on the 2024 Porsche 911";
-        } else if (type === 'story') {
-            result = "The client arrived with a heavy heart—their pride and joy had lost its luster. Through a 3-stage correction and professional-grade sealing, we didn't just restore a car; we restored a legacy. Witness the mirror-like reflections that define the Prime standard.";
+        } else if (type === 'story' || type === 'new_post') {
+            const isOwnerAudience = Math.random() > 0.5;
+            if (isOwnerAudience) {
+                result = `Running a detailing business isn't just about the tools you use; it's about the systems that keep your shop profitable while maintaining laboratory-grade standards. Many shop owners focus solely on the 'elbow grease,' but the real magic happens in the chemical chemistry and workflow efficiency. 
+
+By implementing high-precision dilution ratios and standardized prep checklists, you can reduce waste by up to 30% while ensuring every vehicle leaves with a consistent, show-room finish. This level of professionalism doesn't just improve your margins—it builds a reputation that allows you to charge premium rates for your expertise.
+
+In today's competitive market, being 'just a detailer' isn't enough. You need to be a chemical consultant for your clients, explaining the technical risk factors of clear-coat depletion and the scientific benefits of ceramic longevity. This post explores the top 5 systems every successful shop must master to stay ahead of the curve.`;
+            } else {
+                result = `Most car owners see a wash as just soap and water, but to a professional, it's a delicate decontamination process designed to preserve your vehicle's value for years to come. When you see those mirror-like reflections on a freshly corrected hood, you're seeing the result of hours of specialized surfactants breaking down organic sap, industrial fallout, and traffic film that standard car washes simply can't touch.
+
+The difference lies in the 'Safe Wash' method—a multi-stage process that prioritizes paint safety. From PH-neutral snow foams that lift abrasive dirt to the final application of a hydrophobic sealant, every step is calculated to prevent micro-marring and swirl marks. Protecting your investment requires more than a weekend bucket; it requires an understanding of how environment and chemistry interact on your paint's surface.
+
+We believe that every client deserves to understand the 'why' behind our work. Whether it's the technical bonding of a ceramic coating or the deep-pore extraction of a leather treatment, our goal is to provide a service that makes your daily driver feel like a luxury asset. Follow along as we dive deep into the science of automotive preservation.`;
+            }
         } else {
             result = "🚨 TRANSFORM ALERT: You won't believe the 'Before' state of this luxury SUV. Click to see how we saved the paint! 🛡️";
         }
         
         setSuggestion(result);
         setIsGenerating(false);
-        toast({ title: "AI Intelligence Ready", description: "Fresh ideas generated for your blog post." });
+        toast({ title: "AI Content Generated", description: "A comprehensive, detailing-focused story is ready." });
+    };
+
+    const generateImage = async () => {
+        setIsGeneratingImage(true);
+        // Simulate DALL-E generation
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const images = [
+            "https://images.unsplash.com/photo-1601362840469-51e4d8d59085?auto=format&fit=crop&q=80&w=1200", // Porsche 911 gloss
+            "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&q=80&w=1200", // Detailer working
+            "https://images.unsplash.com/photo-1552933529-e359b2477262?auto=format&fit=crop&q=80&w=1200", // Foam wash
+            "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&q=80&w=1200"  // Luxury car reflections
+        ];
+        
+        setGeneratedImage(images[Math.floor(Math.random() * images.length)]);
+        setIsGeneratingImage(false);
+        toast({ title: "AI Magic Complete", description: "A high-fidelity detailing visual has been generated." });
     };
 
     const handleApply = () => {
-        onApplySuggestion(suggestion);
+        onApplySuggestion(suggestion, generatedImage || undefined);
         onOpenChange(false);
         setSuggestion("");
+        setGeneratedImage(null);
     };
 
     return (
@@ -144,6 +178,52 @@ export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, curre
                                 )}
                             </div>
                         </div>
+
+                        {suggestion && (
+                            <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Wand2 className="w-4 h-4 text-purple-400" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AI Visual Generation</span>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={generateImage}
+                                            disabled={isGeneratingImage}
+                                            className="h-7 px-3 bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-600 hover:text-white rounded-lg text-[9px] font-black"
+                                        >
+                                            {isGeneratingImage ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                                            {generatedImage ? "RE-GENERATE PIC" : "DRAW PIC FOR ME"}
+                                        </Button>
+                                    </div>
+
+                                    {isGeneratingImage ? (
+                                        <div className="aspect-video w-full bg-zinc-950 rounded-xl border border-zinc-800 flex flex-col items-center justify-center space-y-2">
+                                            <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                                            <p className="text-[8px] font-black uppercase text-purple-400 animate-pulse tracking-tighter">AI Artist is drawing detailing magic...</p>
+                                        </div>
+                                    ) : generatedImage ? (
+                                        <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-zinc-800 shadow-lg group/img">
+                                            <img src={generatedImage} alt="AI Generated Detailing" className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                                                <Badge className="bg-purple-600 text-[8px] font-black px-1.5 py-0">AI ARTIST V3</Badge>
+                                                <span className="text-[9px] text-white/50 font-medium">4K Detailing Render</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="py-2 flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-zinc-950 border border-zinc-900 flex items-center justify-center">
+                                                <Sparkles className="w-4 h-4 text-zinc-800" />
+                                            </div>
+                                            <p className="text-[10px] text-zinc-500 font-medium leading-tight">Need a professional photo? Click "DRAW PIC FOR ME" to have AI create a custom detailing visual for this post.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-3">
