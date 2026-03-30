@@ -1,2 +1,2 @@
-git add src/components/BlogAIAssistant.tsx
-git commit -m "feat: Add help icon with step-by-step guide to AI Content Strategist modal"
+git add -A
+git commit -m "feat: Social Blast Engine - real FB Graph API draft posting, Instagram/TikTok/custom platforms"
