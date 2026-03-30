@@ -558,7 +558,27 @@ export default function PrimeBlog() {
                                         <RotateCcw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
                                     </Button>
                                     
-                                {isAdmin && (<Button variant=outline size=icon onClick={() => setIsAIAssistantOpen(true)} className=ml-2 bg-indigo-600/10 border-indigo-500/30 hover:bg-indigo-500 hover:text-white text-indigo-400 rounded-2xl h-12 w-12 title=AI Writing Assistant><Sparkles className=w-5 h-5 /></Button>)}
+                                    {isAdmin && (
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => setIsAIAssistantOpen(true)}
+                                            className="ml-2 bg-indigo-600/10 border-indigo-500/30 hover:bg-indigo-500 hover:text-white text-indigo-400 rounded-2xl h-12 w-12"
+                                            title="AI Writing Assistant"
+                                        >
+                                            <Sparkles className="w-5 h-5" />
+                                        </Button>
+                                    )}
+                                    {isAuth && isAdmin && (
+                                        <Button
+                                            onClick={() => handleAddNew('image')}
+                                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-8 h-12 rounded-2xl shadow-xl shadow-indigo-500/10 transition-all hover:scale-105 active:scale-95 group"
+                                        >
+                                            <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
+                                            SHARE YOUR WORK
+                                        </Button>
+                                    )}
+                                </div>
                                 {!isAuth ? (
                                     <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] animate-pulse pr-2 flex items-center gap-2">
                                         <Lock className="w-3 h-3" /> Sign in required to share
