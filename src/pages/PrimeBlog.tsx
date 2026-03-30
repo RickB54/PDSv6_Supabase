@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
+import { BlogSocialBlast } from "@/components/BlogSocialBlast";
+import { BlogAIAssistant } from "@/components/BlogAIAssistant";
 import { PageHeader } from "@/components/PageHeader";
 import { Footer } from "@/components/Footer";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -12,7 +14,7 @@ import {
     Play, Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Video,
     Newspaper, User, RotateCcw, Settings, X, ChevronLeft, MessageSquare,
     Send, CheckCircle2, Globe, EyeOff, ShieldCheck, Download, ExternalLink,
-    Lock, Share2, Filter, ArrowLeft, CalendarDays, Pin
+    Lock, Share2, Filter, ArrowLeft, CalendarDays, Pin, Rocket, Sparkles, Facebook, Instagram, Music
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from 'react-router-dom';
@@ -49,6 +51,9 @@ export default function PrimeBlog() {
     const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
     const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isSocialBlastOpen, setIsSocialBlastOpen] = useState(false);
+    const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+    const [socialItem, setSocialItem] = useState<LibraryItem | null>(null);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [visibleCount, setVisibleCount] = useState(9);
@@ -552,14 +557,8 @@ export default function PrimeBlog() {
                                     >
                                         <RotateCcw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
                                     </Button>
-                                    <Button
-                                        onClick={() => handleAddNew('image')}
-                                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-8 h-12 rounded-2xl shadow-xl shadow-indigo-500/10 transition-all hover:scale-105 active:scale-95 group"
-                                    >
-                                        <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
-                                        SHARE YOUR WORK
-                                    </Button>
-                                </div>
+                                    
+                                {isAdmin && (<Button variant=outline size=icon onClick={() => setIsAIAssistantOpen(true)} className=ml-2 bg-indigo-600/10 border-indigo-500/30 hover:bg-indigo-500 hover:text-white text-indigo-400 rounded-2xl h-12 w-12 title=AI Writing Assistant><Sparkles className=w-5 h-5 /></Button>)}
                                 {!isAuth ? (
                                     <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] animate-pulse pr-2 flex items-center gap-2">
                                         <Lock className="w-3 h-3" /> Sign in required to share
@@ -749,6 +748,17 @@ export default function PrimeBlog() {
                                                             onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 rounded-xl bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all"
+                                                            onClick={(e) => { e.stopPropagation(); setSocialItem(item); setIsSocialBlastOpen(true); }}
+                                                            title="Social Media Blast"
+                                                        >
+                                                            <Rocket className="w-3.5 h-3.5" />
                                                         </Button>
                                                     )}
                                                 </div>
@@ -1164,6 +1174,13 @@ export default function PrimeBlog() {
                     </DialogContent>
                 </Dialog>
 
+
+                {/* Social Blast Engine */}
+                <BlogSocialBlast isOpen={isSocialBlastOpen} onOpenChange={setIsSocialBlastOpen} item={socialItem} />
+
+                {/* AI Content Assistant */}
+<BlogAIAssistant isOpen={isAIAssistantOpen} onOpenChange={setIsAIAssistantOpen} onApplySuggestion={(text) => setFormData(prev => ({ ...prev, description: text }))} currentTitle={formData.title} currentDescription={formData.description} />
+
                 {/* Admin Blog Config Modal - Massive Upgrade */}
                 <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
                     <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-6xl w-[95vw] h-[90vh] rounded-[40px] p-0 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col">
@@ -1564,4 +1581,6 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
         </div>
     );
 }
+
+
 
