@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Wand2, Lightbulb, Send, Loader2, RefreshCw, ChevronRight, MessageSquare, Newspaper, Star } from "lucide-react";
+import { Sparkles, Wand2, Lightbulb, Send, Loader2, Newspaper, Star, HelpCircle, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BlogAIAssistantProps {
@@ -21,6 +21,7 @@ export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, curre
     const [isGenerating, setIsGenerating] = useState(false);
     const [suggestion, setSuggestion] = useState("");
     const [prompt, setPrompt] = useState("");
+    const [showHelp, setShowHelp] = useState(false);
 
     const generateIdeas = async (type: 'title' | 'story' | 'hook') => {
         setIsGenerating(true);
@@ -51,16 +52,52 @@ export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, curre
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-[550px] rounded-[40px] p-0 overflow-hidden shadow-2xl">
                 <DialogHeader className="p-8 pb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                            <Sparkles className="w-6 h-6 text-white" />
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                <Sparkles className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="space-y-1">
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">AI CONTENT STRATEGIST</DialogTitle>
+                                <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Prime Blog Architect v2.5</DialogDescription>
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">AI CONTENT STRATEGIST</DialogTitle>
-                            <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Prime Blog Architect v2.5</DialogDescription>
-                        </div>
+                        <button
+                            onClick={() => setShowHelp(h => !h)}
+                            className="w-9 h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center transition-all group"
+                            title="How to use"
+                        >
+                            <HelpCircle className="w-4 h-4 text-indigo-400 group-hover:text-white" />
+                        </button>
                     </div>
                 </DialogHeader>
+
+                {showHelp && (
+                    <div className="mx-8 mb-0 mt-2 bg-indigo-950/40 border border-indigo-500/20 rounded-[24px] p-5 space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                            <HelpCircle className="w-4 h-4 text-indigo-400" />
+                            <span className="text-xs font-black uppercase tracking-widest text-indigo-300">How This Works</span>
+                        </div>
+                        <div className="space-y-2">
+                            {[
+                                { step: '1', text: 'Open or create a blog post first (click SHARE YOUR WORK).' },
+                                { step: '2', text: 'Come back here and pick Viral Titles, Story Draft, or Social Hook.' },
+                                { step: '3', text: 'Or type a custom request below (e.g. "Black BMW, ceramic coat") and hit Send.' },
+                                { step: '4', text: 'Review the AI suggestion in the output box above.' },
+                                { step: '5', text: 'Hit APPLY TO POST — it fills the Description field in your open post editor.' },
+                                { step: '6', text: 'Then Save / Publish your post to make it live!' },
+                            ].map(({ step, text }) => (
+                                <div key={step} className="flex items-start gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-[9px] font-black text-white shrink-0 mt-0.5">{step}</div>
+                                    <p className="text-xs text-zinc-300 font-medium leading-relaxed">{text}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="pt-2 border-t border-indigo-500/10">
+                            <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">💡 TIP: The suggestion is NOT saved until you Apply it and then Save the post.</p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-3 gap-3">
