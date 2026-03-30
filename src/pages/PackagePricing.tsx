@@ -168,10 +168,12 @@ export default function PackagePricing() {
     return base * (1 + pct / 100);
   };
 
+  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:6066/api' : '/api';
+
   async function getSavedPrices(): Promise<PriceMap> {
     const local = (await localforage.getItem<PriceMap>("savedPrices")) || {};
     try {
-      const res = await fetch(`http://localhost:6066/api/packages/prices?v=${Date.now()}`, {
+      const res = await fetch(`${API_BASE}/packages/prices?v=${Date.now()}`, {
         headers: { 'Cache-Control': 'no-cache' }
       });
       if (res.ok) {
@@ -229,7 +231,7 @@ export default function PackagePricing() {
 
   async function saveToBackend(updated: PriceMap) {
     try {
-      await fetch("http://localhost:6066/api/packages/prices", {
+      await fetch(`${API_BASE}/packages/prices`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
@@ -277,10 +279,19 @@ export default function PackagePricing() {
           is_active: getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted,
         }));
 
-        try { await supaPkgs.upsert(pkgRows); } catch { }
-        try { await supaAddOns.upsert(addRows); } catch { }
+        try { 
+          // Upsert packages individually to ensure we don't fail the whole batch if one ID is problematic
+          for (const row of pkgRows) {
+            await supaPkgs.upsert([row]);
+          }
+        } catch (e) { console.error("Pkg upsert failure", e); }
+        try { 
+          for (const row of addRows) {
+            await supaAddOns.upsert([row]);
+          }
+        } catch (e) { console.error("Addon upsert failure", e); }
       }
-    } catch { }
+    } catch (e) { console.error("saveToBackend failed", e); }
   }
 
   async function saveToLocalforage(updated: PriceMap) {
@@ -1144,7 +1155,7 @@ export default function PackagePricing() {
   useEffect(() => {
     const loadVehicleTypes = async () => {
       try {
-        const res = await fetch(`http://localhost:6066/api/vehicle-types/live?v=${Date.now()}`, {
+        const res = await fetch(`${API_BASE}/vehicle-types/live?v=${Date.now()}`, {
           headers: { 'Cache-Control': 'no-cache' }
         });
         if (res.ok) {
@@ -1329,7 +1340,7 @@ export default function PackagePricing() {
     savePersistentBackup(rounded);
     
     // 4. SYNC & REFRESH
-    await fetch("http://localhost:6066/api/packages/sync", { method: "POST" });
+    await fetch(`${API_BASE}/packages/sync`, { method: "POST" });
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
