@@ -72,7 +72,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Info } from "lucide-react";
+import { Trash2, Info, RefreshCw } from "lucide-react";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
@@ -1879,6 +1879,18 @@ export default function PackagePricing() {
                   <Button size="lg" variant={view === 'packages' ? 'default' : 'outline'} onClick={() => setView('packages')}>Show Packages</Button>
                   <Button size="lg" variant={view === 'addons' ? 'default' : 'outline'} onClick={() => setView('addons')}>Show Add-Ons</Button>
                   <Button size="lg" variant={view === 'both' ? 'default' : 'outline'} onClick={() => setView('both')}>Show Both</Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="border-blue-500 text-blue-500 hover:bg-blue-600 hover:text-white"
+                    onClick={() => {
+                      setView('both');
+                      setShowArchived(false);
+                      toast.info("Showing live services only");
+                    }}
+                  >
+                    Show Live Packages Only
+                  </Button>
                 </div>
               </AccordionContent>
             </AccordionItem>
