@@ -1876,9 +1876,9 @@ export default function PackagePricing() {
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <Button size="lg" variant={view === 'packages' ? 'default' : 'outline'} onClick={() => setView('packages')}>Show Packages</Button>
-                  <Button size="lg" variant={view === 'addons' ? 'default' : 'outline'} onClick={() => setView('addons')}>Show Add-Ons</Button>
-                  <Button size="lg" variant={view === 'both' ? 'default' : 'outline'} onClick={() => setView('both')}>Show Both</Button>
+                  <Button size="lg" variant={view === 'packages' ? 'default' : 'outline'} onClick={() => setView('packages')}>Show ALL Packages</Button>
+                  <Button size="lg" variant={view === 'addons' ? 'default' : 'outline'} onClick={() => setView('addons')}>Show ALL Add-Ons</Button>
+                  <Button size="lg" variant={view === 'both' ? 'default' : 'outline'} onClick={() => setView('both')}>Show ALL Services</Button>
                   <Button 
                     size="lg" 
                     variant="outline" 
