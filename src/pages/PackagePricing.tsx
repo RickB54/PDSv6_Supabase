@@ -1659,28 +1659,28 @@ export default function PackagePricing() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Package Pricing">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              if (confirm("Sync all data fresh from the cloud? This will resolve any discrepancies between your browser and the database.")) {
-                window.location.reload();
-              }
-            }}
-            className="border-blue-500 text-blue-500 hover:bg-blue-500/10 font-black uppercase tracking-widest text-[10px]"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" /> Sync with Cloud
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setComparisonMatrixOpen(true)}
-            className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px]"
-          >
-            <Info className="w-4 h-4 mr-2" /> Show Services
-          </Button>
-        </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (confirm("Sync all data fresh from the cloud? This will resolve any discrepancies between your browser and the database.")) {
+                  window.location.reload();
+                }
+              }}
+              className="border-blue-500 text-blue-500 hover:bg-blue-500/10 font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+            >
+              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> <span className="hidden xs:inline">Sync with </span>Cloud
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setComparisonMatrixOpen(true)}
+              className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+            >
+              <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> Services
+            </Button>
+          </div>
       </PageHeader>
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
@@ -1692,17 +1692,17 @@ export default function PackagePricing() {
               <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Package Pricing</h1>
               <p className="text-zinc-400 max-w-xl">Manage your service menu, adjust pricing globally, and control website visibility.</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-6">
+            <div className="flex flex-row gap-4 sm:gap-8 justify-end">
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{activePkgs}</div>
-                <div className="text-[10px] uppercase tracking-widest font-black text-red-500">Active Packages</div>
-                <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1">{archivedPkgs} Archived</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white mb-0.5">{activePkgs}</div>
+                <div className="text-[8px] sm:text-[10px] uppercase tracking-widest font-black text-red-500 leading-tight">Active<br className="sm:hidden" /> Pkgs</div>
+                <div className="text-[8px] sm:text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1 whitespace-nowrap">{archivedPkgs} Arc.</div>
               </div>
-              <div className="w-px h-12 bg-zinc-800 hidden sm:block"></div>
+              <div className="w-px h-10 bg-zinc-800"></div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{activeAddons}</div>
-                <div className="text-[10px] uppercase tracking-widest font-black text-red-500">Active Add-Ons</div>
-                <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1">{archivedAddons} Archived</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white mb-0.5">{activeAddons}</div>
+                <div className="text-[8px] sm:text-[10px] uppercase tracking-widest font-black text-red-500 leading-tight">Active<br className="sm:hidden" /> Addons</div>
+                <div className="text-[8px] sm:text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1 whitespace-nowrap">{archivedAddons} Arc.</div>
               </div>
             </div>
           </div>
