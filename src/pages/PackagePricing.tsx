@@ -162,7 +162,16 @@ export default function PackagePricing() {
 
   const getProjectedPrice = (type: 'package' | 'addon', id: string, size: string) => {
     const key = getKey(type, id, size);
-    const base = parseFloat(currentPrices[key]) || 0;
+    let base = parseFloat(currentPrices[key]) || 0;
+    
+    // Fallback to built-in/custom definition if not found or 0
+    if (base === 0) {
+      const item = type === 'package' 
+        ? [...builtInPackages, ...getCustomPackages()].find(p => p.id === id)
+        : [...builtInAddOns, ...getCustomAddOns()].find(a => a.id === id);
+      base = (item?.pricing as any)?.[size] || 0;
+    }
+
     const pct = type === 'package' ? scenarioProj.pkg : scenarioProj.addon;
     if (pct === 0) return base;
     return base * (1 + pct / 100);
@@ -2353,8 +2362,9 @@ export default function PackagePricing() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {[...builtInPackages, ...getCustomPackages()]
-                    .filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false)
+                    .filter(p => !getPackageMeta(p.id)?.deleted)
                     .map(p => {
+                      const isArchived = getPackageMeta(p.id)?.visible === false;
                       // Uses helper for projection
                       const price = getProjectedPrice('package', p.id, comparisonVehicle);
                       const isSelected = !!comparisonSelection[p.id];
@@ -2375,8 +2385,10 @@ export default function PackagePricing() {
                         <div
                           key={p.id}
                           className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between gap-3 relative group/item
-                                    ${isSelected ? 'bg-red-950/30 border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'}`}
+                                    ${isSelected ? 'bg-red-950/30 border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'}
+                                    ${isArchived ? 'opacity-60 border-dashed border-zinc-700 grayscale-[0.3]' : ''}`}
                         >
+                          {isArchived && <div className="absolute -top-2 -right-1 z-10 text-[7px] bg-zinc-800 text-zinc-400 px-1 border border-zinc-700 rounded font-black uppercase tracking-tighter">Archived</div>}
                           <div className="flex items-center gap-3 flex-1" onClick={() => setComparisonSelection(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-600 border-red-600 text-white' : 'border-zinc-600'}`}>
                               {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
@@ -2414,8 +2426,9 @@ export default function PackagePricing() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {[...builtInAddOns, ...getCustomAddOns()]
-                    .filter(a => !getAddOnMeta(a.id)?.deleted && getAddOnMeta(a.id)?.visible !== false)
+                    .filter(a => !getAddOnMeta(a.id)?.deleted)
                     .map(a => {
+                      const isArchived = getAddOnMeta(a.id)?.visible === false;
                       // Uses helper for projection
                       const price = getProjectedPrice('addon', a.id, comparisonVehicle);
                       const isSelected = !!comparisonSelection[a.id];
@@ -2437,8 +2450,10 @@ export default function PackagePricing() {
                         <div
                           key={a.id}
                           className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between gap-3 relative group/item
-                                    ${isSelected ? 'bg-blue-950/30 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'}`}
+                                    ${isSelected ? 'bg-blue-950/30 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'}
+                                    ${isArchived ? 'opacity-60 border-dashed border-zinc-700 grayscale-[0.3]' : ''}`}
                         >
+                          {isArchived && <div className="absolute -top-2 -right-1 z-10 text-[7px] bg-zinc-800 text-zinc-400 px-1 border border-zinc-700 rounded font-black uppercase tracking-tighter">Archived</div>}
                           <div className="flex items-center gap-3 flex-1" onClick={() => setComparisonSelection(prev => ({ ...prev, [a.id]: !prev[a.id] }))}>
                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-zinc-600'}`}>
                               {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
