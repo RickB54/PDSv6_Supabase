@@ -33,11 +33,22 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare, Sparkles, Rocket, Facebook } from "lucide-react";
+import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare, Sparkles, Rocket, Facebook, History, Filter, ChevronDown, Clock, Share2, Wand2, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
 import { BlogAIAssistant } from "@/components/BlogAIAssistant";
+import localforage from "localforage";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface ActivityLog {
+    id: string;
+    postId: string;
+    postTitle: string;
+    action: 'edit' | 'social' | 'publish' | 'unpublish' | 'pin' | 'unpin' | 'delete' | 'reorder' | 'ai_write';
+    detail: string;
+    timestamp: string;
+}
 
 export default function BlogReorder() {
     const { toast } = useToast();
@@ -53,6 +64,9 @@ export default function BlogReorder() {
     const [isSocialBlastOpen, setIsSocialBlastOpen] = useState(false);
     const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
     const [socialItem, setSocialItem] = useState<LibraryItem | null>(null);
+    const [showHistory, setShowHistory] = useState(false);
+    const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
+    const [historyFilter, setHistoryFilter] = useState<ActivityLog['action'] | 'all'>('all');
     
     // Comment management state
     const [comments, setComments] = useState<LibraryComment[]>([]);
@@ -68,7 +82,26 @@ export default function BlogReorder() {
 
     useEffect(() => {
         loadItems();
+        localforage.getItem<ActivityLog[]>('prime_blog_activity').then(d => {
+            if (d) setActivityLog(d);
+        });
     }, []);
+
+    const logActivity = async (action: ActivityLog['action'], item: LibraryItem | null, detail?: string) => {
+        if (!item) return;
+        const entry: ActivityLog = {
+            id: crypto.randomUUID(),
+            postId: item.id,
+            postTitle: item.title,
+            action,
+            detail: detail || '',
+            timestamp: new Date().toISOString(),
+        };
+        const prev = await localforage.getItem<ActivityLog[]>('prime_blog_activity') || [];
+        const updated = [entry, ...prev].slice(0, 200); // keep last 200
+        await localforage.setItem('prime_blog_activity', updated);
+        setActivityLog(updated);
+    };
 
     const loadItems = async () => {
         setIsLoading(true);
@@ -117,28 +150,18 @@ export default function BlogReorder() {
     const handleSaveOrder = async () => {
         setIsSaving(true);
         try {
-            // Update each item with its new sort_order
             const results = await Promise.all(items.map((item, index) => {
-                return upsertLibraryItem({
-                    ...item,
-                    sort_order: index + 1 // 1-based index
-                });
+                return upsertLibraryItem({ ...item, sort_order: index + 1 });
             }));
-
             const failures = results.filter(r => !r.success);
             if (failures.length > 0) {
-                console.error("Some updates failed:", failures);
-                toast({ 
-                    title: "Partial Success", 
-                    description: `Successfully updated ${results.length - failures.length} posts, but ${failures.length} failed. Check database schema.`,
-                    variant: "destructive"
-                });
+                toast({ title: "Partial Success", description: `${results.length - failures.length} updated, ${failures.length} failed.`, variant: "destructive" });
             } else {
-                toast({ title: "Order saved successfully", description: "The blog display sequence has been updated." });
+                await logActivity('reorder', items[0], `Reordered ${items.length} posts`);
+                toast({ title: "Order saved successfully" });
             }
-            await loadItems(); // Refresh to ensure everything is in sync
+            await loadItems();
         } catch (error) {
-            console.error("Failed to save order:", error);
             toast({ title: "Error saving order", variant: "destructive" });
         } finally {
             setIsSaving(false);
@@ -155,10 +178,11 @@ export default function BlogReorder() {
         setComments(postComments);
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: string, item: LibraryItem) => {
         if (!confirm("Are you sure you want to delete this post?")) return;
         const success = await deleteLibraryItem(id);
         if (success) {
+            await logActivity('delete', item, 'Post permanently deleted');
             toast({ title: "Post Deleted" });
             setItems(prev => prev.filter(i => i.id !== id));
         } else {
@@ -170,6 +194,8 @@ export default function BlogReorder() {
         const updatedStatus = !item.is_published;
         const res = await upsertLibraryItem({ ...item, is_published: updatedStatus });
         if (res.success) {
+            await logActivity(updatedStatus ? 'publish' : 'unpublish', item,
+                updatedStatus ? 'Published — now visible to customers' : 'Unpublished — moved to drafts');
             toast({
                 title: updatedStatus ? "Post Published" : "Post Archived/Unpublished",
                 description: updatedStatus ? "It is now visible to customers." : "It has been moved to drafts."
@@ -182,6 +208,8 @@ export default function BlogReorder() {
         const updatedStatus = !item.is_pinned;
         const res = await upsertLibraryItem({ ...item, is_pinned: updatedStatus });
         if (res.success) {
+            await logActivity(updatedStatus ? 'pin' : 'unpin', item,
+                updatedStatus ? 'Pinned to top of feed' : 'Unpinned from top');
             toast({ title: updatedStatus ? "Post Pinned" : "Post Unpinned" });
             setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pinned: updatedStatus } : i));
         }
@@ -193,6 +221,7 @@ export default function BlogReorder() {
         try {
             const res = await upsertLibraryItem(formData as LibraryItem);
             if (res.success) {
+                await logActivity('edit', editingItem, `Title: "${formData.title}"`);
                 toast({ title: "Post Updated" });
                 setIsEditModalOpen(false);
                 await loadItems();
@@ -274,6 +303,23 @@ export default function BlogReorder() {
                             )}
                         </div>
                         <Button
+                            onClick={() => setShowHistory(h => !h)}
+                            className={`h-14 px-5 rounded-2xl font-black transition-all w-full sm:w-auto border ${
+                                showHistory
+                                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                                    : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                            }`}
+                            title="Activity History"
+                        >
+                            <History className="w-5 h-5 mr-2" />
+                            HISTORY
+                            {activityLog.length > 0 && (
+                                <span className="ml-2 bg-amber-500 text-black text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center">
+                                    {activityLog.length > 99 ? '99+' : activityLog.length}
+                                </span>
+                            )}
+                        </Button>
+                        <Button
                             onClick={() => setIsAIAssistantOpen(true)}
                             className="bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-500 text-indigo-400 hover:text-white font-black rounded-2xl h-14 px-5 transition-all w-full sm:w-auto"
                             title="AI Content Strategist"
@@ -295,6 +341,106 @@ export default function BlogReorder() {
                         </Button>
                     </div>
                 </div>
+
+                {/* ── Activity History Panel ── */}
+                {showHistory && (
+                    <div className="mb-8 bg-zinc-900/40 border border-zinc-800 rounded-[28px] overflow-hidden">
+                        {/* Header & Filters */}
+                        <div className="p-5 border-b border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <History className="w-5 h-5 text-amber-400" />
+                                <span className="font-black text-sm uppercase tracking-widest text-white">Activity History</span>
+                                <span className="text-[10px] text-zinc-600 font-bold">{activityLog.length} events</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 items-center">
+                                {([
+                                    { key: 'all', label: 'All' },
+                                    { key: 'edit', label: 'Edits' },
+                                    { key: 'social', label: 'Social Blasts' },
+                                    { key: 'publish', label: 'Published' },
+                                    { key: 'unpublish', label: 'Unpublished' },
+                                    { key: 'pin', label: 'Pinned' },
+                                    { key: 'reorder', label: 'Reorders' },
+                                    { key: 'ai_write', label: 'AI Writes' },
+                                    { key: 'delete', label: 'Deleted' },
+                                ] as const).map(f => (
+                                    <button
+                                        key={f.key}
+                                        onClick={() => setHistoryFilter(f.key)}
+                                        className={`px-3 h-7 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                            historyFilter === f.key
+                                                ? 'bg-amber-500 border-amber-500 text-black'
+                                                : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                                        }`}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('Clear all history?')) {
+                                            await localforage.removeItem('prime_blog_activity');
+                                            setActivityLog([]);
+                                        }
+                                    }}
+                                    className="px-3 h-7 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Log Entries */}
+                        <ScrollArea className="max-h-[320px]">
+                            <div className="divide-y divide-zinc-800/50">
+                                {(() => {
+                                    const filtered = historyFilter === 'all'
+                                        ? activityLog
+                                        : activityLog.filter(e => e.action === historyFilter);
+
+                                    if (filtered.length === 0) return (
+                                        <div className="py-12 text-center text-zinc-600 text-xs font-black uppercase tracking-widest">
+                                            No {historyFilter === 'all' ? '' : historyFilter} activity yet
+                                        </div>
+                                    );
+
+                                    const actionConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+                                        edit:      { label: 'Edited',     color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',  icon: <Edit2 className="w-3 h-3" /> },
+                                        social:    { label: 'Social Blast', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30',      icon: <Rocket className="w-3 h-3" /> },
+                                        publish:   { label: 'Published',  color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: <Globe className="w-3 h-3" /> },
+                                        unpublish: { label: 'Unpublished', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30',    icon: <Lock className="w-3 h-3" /> },
+                                        pin:       { label: 'Pinned',     color: 'bg-purple-500/20 text-purple-300 border-purple-500/30',  icon: <Pin className="w-3 h-3" /> },
+                                        unpin:     { label: 'Unpinned',   color: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',        icon: <Pin className="w-3 h-3" /> },
+                                        delete:    { label: 'Deleted',    color: 'bg-red-500/20 text-red-300 border-red-500/30',           icon: <Trash2 className="w-3 h-3" /> },
+                                        reorder:   { label: 'Reordered',  color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',        icon: <RotateCcw className="w-3 h-3" /> },
+                                        ai_write:  { label: 'AI Write',   color: 'bg-pink-500/20 text-pink-300 border-pink-500/30',        icon: <Sparkles className="w-3 h-3" /> },
+                                    };
+
+                                    return filtered.map(entry => {
+                                        const cfg = actionConfig[entry.action] || actionConfig.edit;
+                                        const date = new Date(entry.timestamp);
+                                        return (
+                                            <div key={entry.id} className="flex items-start gap-4 px-5 py-3 hover:bg-zinc-800/20 transition-colors">
+                                                <div className={`shrink-0 mt-0.5 flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${cfg.color}`}>
+                                                    {cfg.icon}
+                                                    <span className="ml-1">{cfg.label}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-black text-white truncate">{entry.postTitle}</p>
+                                                    {entry.detail && <p className="text-[10px] text-zinc-500 mt-0.5">{entry.detail}</p>}
+                                                </div>
+                                                <div className="shrink-0 text-right">
+                                                    <p className="text-[9px] text-zinc-600 font-bold">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                                    <p className="text-[9px] text-zinc-700">{date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        </ScrollArea>
+                    </div>
+                )}
 
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-32 space-y-4">
@@ -324,10 +470,10 @@ export default function BlogReorder() {
                                             key={item.id}
                                             item={item}
                                             onEdit={() => handleEdit(item)}
-                                            onDelete={() => handleDelete(item.id)}
+                                            onDelete={() => handleDelete(item.id, item)}
                                             onArchive={() => handleArchiveToggle(item)}
                                             onPin={() => handlePinToggle(item)}
-                                            onSocialBlast={() => { setSocialItem(item); setIsSocialBlastOpen(true); }}
+                                            onSocialBlast={() => { setSocialItem(item); setIsSocialBlastOpen(true); logActivity('social', item, 'Social Blast opened'); }}
                                         />
                                     ))}
                                 </div>
