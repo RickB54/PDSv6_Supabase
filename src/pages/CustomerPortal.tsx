@@ -118,7 +118,10 @@ const CustomerPortal = () => {
     // Priority 1: Cloud / Supabase (The Real Source of Truth)
     if (isSupabaseEnabled()) {
       try {
-        const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+        const [pkgs, addons] = await Promise.all([
+          supaPkgs.getAll(), 
+          supaAddOns.getAll()
+        ]);
 
         const newPackageMeta: Record<string, any> = { ...getAllPackageMeta() };
         const newSavedPrices: Record<string, string> = {};
@@ -258,7 +261,9 @@ const CustomerPortal = () => {
     .filter((p: any) => {
       // Check metadata visibility (admin toggle)
       const meta = packageMetaLive[p.id];
-      return meta ? meta.visible !== false : true;
+      // STRICT: Must be visible AND NOT deleted/archived
+      const isVisible = meta ? (meta.visible !== false && meta.deleted !== true) : true;
+      return isVisible;
     })
     .filter((p: any) => p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')) // Strictly Prime tiers
     .map((p: any) => {
