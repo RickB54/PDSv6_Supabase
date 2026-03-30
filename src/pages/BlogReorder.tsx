@@ -33,7 +33,7 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare, Sparkles, Rocket, Facebook, History, Filter, ChevronDown, Clock, Share2, Wand2, RotateCcw } from "lucide-react";
+import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare, Sparkles, Rocket, Facebook, History, Filter, ChevronDown, Clock, Share2, Wand2, RotateCcw, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
@@ -266,13 +266,25 @@ export default function BlogReorder() {
             <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="space-y-2 text-left w-full sm:w-auto">
-                        <Button
-                            variant="ghost"
-                            className="text-zinc-500 hover:text-white mb-2 p-0 h-auto"
-                            onClick={() => navigate('/section/company-blog')}
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" /> BACK TO DASHBOARD
-                        </Button>
+                        <div className="flex items-center gap-3 mb-2">
+                            <Button
+                                variant="ghost"
+                                className="text-zinc-500 hover:text-white p-0 h-auto"
+                                onClick={() => navigate('/section/company-blog')}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" /> BACK
+                            </Button>
+                            <div className="w-px h-4 bg-zinc-800" />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-indigo-400 hover:text-white hover:bg-indigo-500/10 rounded-full"
+                                onClick={() => navigate('/app-manual#visual-architect')}
+                                title="Page Help"
+                            >
+                                <HelpCircle className="w-4 h-4" />
+                            </Button>
+                        </div>
                         <h2 className="text-4xl font-black tracking-tighter uppercase italic flex items-center gap-3">
                             VISUAL ARCHITECT
                             <span className="text-xl font-black text-indigo-500/50">
@@ -474,6 +486,7 @@ export default function BlogReorder() {
                                             onArchive={() => handleArchiveToggle(item)}
                                             onPin={() => handlePinToggle(item)}
                                             onSocialBlast={() => { setSocialItem(item); setIsSocialBlastOpen(true); logActivity('social', item, 'Social Blast opened'); }}
+                                            onAIAssist={() => { setEditingItem(item); setFormData({ ...item }); setIsAIAssistantOpen(true); }}
                                         />
                                     ))}
                                 </div>
@@ -697,13 +710,14 @@ export default function BlogReorder() {
     );
 }
 
-function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast }: {
+function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast, onAIAssist }: {
     item: LibraryItem,
     onEdit: () => void,
     onDelete: () => void,
     onArchive: () => void,
     onPin: () => void,
     onSocialBlast: () => void,
+    onAIAssist: () => void,
 }) {
     const {
         attributes,
@@ -794,7 +808,15 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast 
                     {item.is_published ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                 </Button>
 
-                <div className="w-px h-6 bg-zinc-800 mx-1" />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onAIAssist}
+                    className="h-9 w-9 rounded-xl text-indigo-400/60 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                    title="AI Assistant"
+                >
+                    <Sparkles className="w-4 h-4" />
+                </Button>
 
                 <Button
                     variant="ghost"

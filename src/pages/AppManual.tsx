@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music } from "lucide-react";
+import { Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music, Newspaper, GripVertical, Edit2, History as HistoryIcon } from "lucide-react";
 
 export default function AppManual() {
     const contentRef = useRef<HTMLDivElement>(null);
@@ -47,6 +47,7 @@ export default function AppManual() {
                                     { id: "ai-assistant", label: "Scenario: Chemical AI Consultant" },
                                     { id: "blog-ai", label: "✨ Blog AI Content Strategist" },
                                     { id: "social-blast", label: "🚀 Social Blast Engine" },
+                                    { id: "visual-architect", label: "🛠️ Visual Architect & Activity Log" },
                                     { id: "admin-workflow", label: "Admin Workflows" },
                                     { id: "tips", label: "Best Practices" },
                                 ].map((item) => (
@@ -89,6 +90,7 @@ export default function AppManual() {
                                     { id: "ai-assistant", label: "AI Consultant" },
                                     { id: "blog-ai", label: "✨ Blog AI" },
                                     { id: "social-blast", label: "🚀 Social Blast" },
+                                    { id: "visual-architect", label: "🛠️ Visual Architect" },
                                     { id: "admin-workflow", label: "Admin" },
                                     { id: "tips", label: "Tips" },
                                 ].map((item) => (
@@ -340,6 +342,77 @@ export default function AppManual() {
 
                             <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase border-t border-zinc-800 pt-4">
                                 <Info className="h-3 w-3 text-blue-400" /> TIP: Click the ❓ help icon inside the Social Blast modal for quick step-by-step instructions at any time.
+                            </div>
+                        </Card>
+                    </section>
+
+                    <section id="visual-architect" className="scroll-mt-20">
+                        <h2 className="text-2xl font-bold text-amber-400 mb-4 flex items-center gap-2">
+                            <Newspaper className="h-6 w-6" /> 11. 🛠️ Visual Architect & Activity Log
+                        </h2>
+                        <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none space-y-6">
+                            <p className="text-zinc-300 print:text-black">
+                                The <strong>Visual Architect</strong> is your command center for managing the Prime Blog. It allows you to reorder posts, use AI for quick edits, push posts to social media, and track every single action taken on your content.
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-black uppercase text-white flex items-center gap-2 mb-2">
+                                        <GripVertical className="w-4 h-4 text-zinc-500" /> Reordering Posts
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 leading-relaxed">
+                                        Simply grab the drag handle (vertical dots) and move any post to change its front-page position. Click <strong>"SAVE ORDER"</strong> to apply changes.
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-black uppercase text-white flex items-center gap-2 mb-2">
+                                        <HistoryIcon className="w-4 h-4 text-amber-400" /> Activity History
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 leading-relaxed">
+                                        Click the <strong>HISTORY</strong> button to see a full log of every edit, social blast, publication, and pin. Filter by action type to find exactly what you're looking for.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Separator className="bg-zinc-800" />
+
+                            <div>
+                                <h3 className="text-sm font-black uppercase text-white flex items-center gap-2 mb-4">
+                                    Icon Actions (On Each Post)
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex gap-4 items-start">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                                            <Sparkles className="w-4 h-4 text-indigo-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-white">AI WRITING ASSISTANT</p>
+                                            <p className="text-[10px] text-zinc-500">Opens the AI Strategist for this specific post to generate titles or descriptions.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4 items-start">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
+                                            <Rocket className="w-4 h-4 text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-white">SOCIAL BLAST</p>
+                                            <p className="text-[10px] text-zinc-500">Push this post directly to Facebook, Instagram, or TikTok.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4 items-start">
+                                        <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-700">
+                                            <Edit2 className="w-4 h-4 text-zinc-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-white">QUICK EDIT</p>
+                                            <p className="text-[10px] text-zinc-500">Modify the post title, category, and content without leaving the page.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase border-t border-zinc-800 pt-4">
+                                <Info className="h-3 w-3 text-amber-400" /> TIP: Pin posts to keep them at the top of your feed regardless of the sort order.
                             </div>
                         </Card>
                     </section>
