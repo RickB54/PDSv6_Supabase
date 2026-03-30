@@ -1659,7 +1659,7 @@ export default function PackagePricing() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Package Pricing">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -1668,17 +1668,21 @@ export default function PackagePricing() {
                   window.location.reload();
                 }
               }}
-              className="border-blue-500 text-blue-500 hover:bg-blue-500/10 font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+              className="border-blue-500 text-blue-500 hover:bg-blue-500/10 font-black uppercase tracking-widest text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+              title="Sync with Cloud"
             >
-              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> <span className="hidden xs:inline">Sync with </span>Cloud
+              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" /> 
+              <span className="hidden sm:inline">Sync with Cloud</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setComparisonMatrixOpen(true)}
-              className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[9px] sm:text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+              className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+              title="Show Services"
             >
-              <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> Services
+              <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" /> 
+              <span className="hidden sm:inline">Services</span>
             </Button>
           </div>
       </PageHeader>
