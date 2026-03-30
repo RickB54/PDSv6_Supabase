@@ -769,12 +769,12 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex flex-col md:flex-row md:items-center gap-2 md:gap-5 p-4 md:p-5 rounded-3xl border transition-all duration-300 ${isDragging
+            className={`flex flex-col md:flex-row md:items-center gap-0 md:gap-5 p-3 md:p-5 rounded-3xl border transition-all duration-300 ${isDragging
                 ? 'bg-indigo-600/20 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.2)] scale-[1.02]'
                 : 'bg-zinc-900/30 border-zinc-900 hover:border-zinc-800'
                 }`}
         >
-            <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                 <div
                     {...attributes}
                     {...listeners}
@@ -784,7 +784,7 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
                     <GripVertical className="w-6 h-6 text-zinc-700" />
                 </div>
 
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black shrink-0 border border-zinc-800 shadow-inner">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden bg-black shrink-0 border border-zinc-800 shadow-inner">
                     {item.type === 'video' ? (
                         <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-500 text-[10px] font-black tracking-tighter">VIDEO</div>
                     ) : (
@@ -801,9 +801,9 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
                     )}
                 </div>
 
-                <div className="flex-1 min-w-0 text-left space-y-1">
-                    <h4 className="font-black text-sm md:text-base text-white truncate uppercase tracking-tighter leading-none">{item.title}</h4>
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="flex-1 min-w-0 text-left space-y-0">
+                    <h4 className="font-black text-sm md:text-base text-white truncate uppercase tracking-tighter leading-none mb-1">{item.title}</h4>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         {item.is_pinned && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black border border-indigo-500/20 flex items-center gap-1"><Pin className="w-2.5 h-2.5 fill-indigo-400" /> PINNED</span>}
                         <span className="text-[9px] text-indigo-400/80 font-black uppercase tracking-widest">{item.category}</span>
                         <span className="text-[9px] text-zinc-600 font-bold flex items-center gap-1 shrink-0">
@@ -819,7 +819,7 @@ function SortableItem({ item, onEdit, onDelete, onArchive, onPin, onSocialBlast,
                 </div>
             </div>
 
-            <div className="flex items-center justify-end gap-1 md:gap-2 pl-12 md:pl-0 md:border-t-0 md:pt-0 pb-1 md:pb-0">
+            <div className="flex items-center justify-end gap-1 md:gap-2 pl-12 md:pl-0 mt-[-10px] md:mt-0 pb-1 md:pb-0">
                 <Button
                     variant="ghost"
                     size="icon"
