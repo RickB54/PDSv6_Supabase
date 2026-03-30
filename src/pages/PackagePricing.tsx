@@ -1252,46 +1252,55 @@ export default function PackagePricing() {
       const value = Math.ceil(parseFloat(currentPrices[key]) || 0).toString();
       updated[key] = value;
     });
+    
     // Apply any pending visibility change for the entity corresponding to the keys
+    // We determine the sample ID (e.g. 'prime-essential-exterior') from the keys provided
     const sample = keys[0];
     const parts = sample.split(":");
-    const type = parts[0] as 'package' | 'addon';
-    const id = parts[1];
-    if (type === 'package') {
-      const pend = pendingVisibilityPkg[id];
-      if (typeof pend !== 'undefined') { setPackageMeta(id, { visible: pend }); delete pendingVisibilityPkg[id]; setPendingVisibilityPkg({ ...pendingVisibilityPkg }); }
-    } else {
-      const pend = pendingVisibilityAddon[id];
-      if (typeof pend !== 'undefined') { setAddOnMeta(id, { visible: pend }); delete pendingVisibilityAddon[id]; setPendingVisibilityAddon({ ...pendingVisibilityAddon }); }
+    if (parts.length >= 2) {
+      const type = parts[0] as 'package' | 'addon';
+      const id = parts[1];
+      
+      if (type === 'package') {
+        const pend = pendingVisibilityPkg[id];
+        if (typeof pend !== 'undefined') { 
+          setPackageMeta(id, { visible: pend }); 
+          setPendingVisibilityPkg(prev => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }
+      } else {
+        const pend = pendingVisibilityAddon[id];
+        if (typeof pend !== 'undefined') { 
+          setAddOnMeta(id, { visible: pend }); 
+          setPendingVisibilityAddon(prev => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }
+      }
     }
+    
+    // NOW save to backend, it will pick up the freshly saved meta visibility (visible: pend)
     await saveToBackend(updated);
     await saveToLocalforage(updated);
     setSavedPrices(updated);
     setCurrentPrices(updated);
+    
     const label = keys.length === 1 ? keys[0] : `${keys[0].split(":")[0]}:${keys[0].split(":")[1]}`;
-    // Full live sync after a price save
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
-    toast.success(`${label} → prices saved as NEW BASELINE`);
-    try {
-      pushAdminAlert('pricing_update', `Pricing updated: ${label}`, 'system', { recordType: 'Pricing', keys });
-    } catch { }
+    toast.success(`${label} prices and visibility status locked in.`);
   };
 
   const saveAll = async () => {
-    // Preserve entire previous baseline as backup before global overwrite
-    await saveBackupPrices(savedPrices);
-    const rounded: PriceMap = {};
-    Object.keys(currentPrices).forEach(key => {
-      rounded[key] = Math.ceil(parseFloat(currentPrices[key]) || 0).toString();
-    });
-    await saveToBackend(rounded);
-    await saveToLocalforage(rounded);
-    setSavedPrices(rounded);
-    setCurrentPrices(rounded);
-    // Apply all pending visibility changes
+    // 1. APPLY ALL PENDING VISIBILITY CHANGES FIRST
+    // This is critical because saveToBackend reads from getPackageMeta which reads from localStorage.
     Object.keys(pendingVisibilityPkg).forEach(pid => {
       const val = pendingVisibilityPkg[pid];
       if (typeof val !== 'undefined') setPackageMeta(pid, { visible: val });
@@ -1302,17 +1311,30 @@ export default function PackagePricing() {
     });
     setPendingVisibilityPkg({});
     setPendingVisibilityAddon({});
+
+    // 2. Preserve entire previous baseline as backup before global overwrite
+    await saveBackupPrices(savedPrices);
+    const rounded: PriceMap = {};
+    Object.keys(currentPrices).forEach(key => {
+      rounded[key] = Math.ceil(parseFloat(currentPrices[key]) || 0).toString();
+    });
+
+    // 3. NOW SAVE TO BACKEND (reads current metadata)
+    await saveToBackend(rounded);
+    await saveToLocalforage(rounded);
+    setSavedPrices(rounded);
+    setCurrentPrices(rounded);
+
     // Update persistent restore point to ALWAYS remember your latest saved prices
     savePersistentBackup(rounded);
+    
+    // 4. SYNC & REFRESH
     await fetch("http://localhost:6066/api/packages/sync", { method: "POST" });
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
-    toast.success("ALL PRICES LOCKED IN FOREVER + WEBSITE UPDATED");
-    try {
-      pushAdminAlert('pricing_update', 'Pricing updated: ALL prices', 'system', { recordType: 'Pricing' });
-    } catch { }
+    toast.success("All changes (pricing + visibility) synced to Cloud and Live Website.");
   };
 
   const restoreAllPrices = async () => {
