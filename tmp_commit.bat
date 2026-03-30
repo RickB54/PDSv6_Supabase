@@ -1,2 +1,2 @@
 git add -A
-git commit -m "feat: Social Blast Engine - real FB Graph API draft posting, Instagram/TikTok/custom platforms"
+git commit -m "feat: Social Blast + AI Strategist docs in AppManual; fix modal responsive layout"

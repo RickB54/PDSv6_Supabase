@@ -174,9 +174,9 @@ export function BlogSocialBlast({ isOpen, onOpenChange, item }: BlogSocialBlastP
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-[600px] rounded-[40px] p-0 overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)]">
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-[600px] w-[95vw] max-h-[90vh] rounded-[40px] p-0 overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col">
                     {/* Header */}
-                    <DialogHeader className="p-8 pb-0">
+                    <DialogHeader className="p-6 pb-0 shrink-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
@@ -202,7 +202,7 @@ export function BlogSocialBlast({ isOpen, onOpenChange, item }: BlogSocialBlastP
                         </div>
                     </DialogHeader>
 
-                    <ScrollArea className="max-h-[80vh]">
+                    <ScrollArea className="flex-1 overflow-auto">
                         <div className="p-8 space-y-6">
 
                             {/* Help Panel */}
@@ -414,8 +414,8 @@ export function BlogSocialBlast({ isOpen, onOpenChange, item }: BlogSocialBlastP
                         </div>
                     </ScrollArea>
 
-                    {/* Action Button */}
-                    <div className="p-8 pt-0">
+                    {/* Action Button - always pinned at bottom */}
+                    <div className="p-6 pt-0 shrink-0">
                         {activePlatform === 'facebook' && (
                             <Button disabled={isPosting || !postText.trim()}
                                 onClick={postToFacebook}

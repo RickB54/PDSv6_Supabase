@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Printer, FileText, ChevronRight, BookOpen, Sparkles, Info } from "lucide-react";
+import { Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music } from "lucide-react";
 
 export default function AppManual() {
     const contentRef = useRef<HTMLDivElement>(null);
@@ -45,6 +45,8 @@ export default function AppManual() {
                                     { id: "scenario-estimate", label: "Scenario: Creating Estimates" },
                                     { id: "scenario-employee", label: "Scenario: Employee Training" },
                                     { id: "ai-assistant", label: "Scenario: Chemical AI Consultant" },
+                                    { id: "blog-ai", label: "✨ Blog AI Content Strategist" },
+                                    { id: "social-blast", label: "🚀 Social Blast Engine" },
                                     { id: "admin-workflow", label: "Admin Workflows" },
                                     { id: "tips", label: "Best Practices" },
                                 ].map((item) => (
@@ -85,6 +87,8 @@ export default function AppManual() {
                                     { id: "scenario-estimate", label: "Estimates" },
                                     { id: "scenario-employee", label: "Training" },
                                     { id: "ai-assistant", label: "AI Consultant" },
+                                    { id: "blog-ai", label: "✨ Blog AI" },
+                                    { id: "social-blast", label: "🚀 Social Blast" },
                                     { id: "admin-workflow", label: "Admin" },
                                     { id: "tips", label: "Tips" },
                                 ].map((item) => (
@@ -251,9 +255,98 @@ export default function AppManual() {
                         </Card>
                     </section>
 
+                    <section id="blog-ai" className="scroll-mt-20">
+                        <h2 className="text-2xl font-bold text-indigo-400 mb-4 flex items-center gap-2">
+                            <Sparkles className="h-6 w-6" /> 8. ✨ Blog AI Content Strategist (Admin Only)
+                        </h2>
+                        <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
+                            <p className="mb-4 text-zinc-300 print:text-black">
+                                The <strong>AI Content Strategist</strong> is a built-in writing assistant inside the Prime Blog. It helps you generate viral titles, engaging story drafts, and social media hooks for any detailing job — directly from the Blog Layout Architect.
+                            </p>
+                            <h3 className="text-xl font-semibold text-white mb-2 print:text-black">How to Access</h3>
+                            <ul className="list-disc pl-5 space-y-2 text-zinc-300 mb-4 print:text-black">
+                                <li>Navigate to <strong>Prime Blog</strong> (the Blog Layout Architect page).</li>
+                                <li>Click the <strong>✨ Sparkles button</strong> in the top-right toolbar (admin only).</li>
+                                <li>The AI Content Strategist modal opens.</li>
+                            </ul>
+                            <h3 className="text-xl font-semibold text-white mb-2 print:text-black">Step-by-Step Workflow</h3>
+                            <ul className="list-disc pl-5 space-y-2 text-zinc-300 mb-4 print:text-black">
+                                <li><strong>Step 1:</strong> Open or create a blog post first — click "SHARE YOUR WORK".</li>
+                                <li><strong>Step 2:</strong> Click the ✨ AI button while the post editor is open.</li>
+                                <li><strong>Step 3:</strong> Choose a generation type:
+                                    <ul className="list-disc pl-5 mt-1">
+                                        <li><strong>💡 Viral Titles</strong> — Generates an attention-grabbing headline.</li>
+                                        <li><strong>📄 Story Draft</strong> — Writes a full engaging post description.</li>
+                                        <li><strong>⭐ Social Hook</strong> — Creates a punchy caption for Facebook/Instagram.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Step 4:</strong> Or type a custom job description in the "Custom Request" field (e.g. "Black BMW M5, paint correction, heavy overspray") and hit Send.</li>
+                                <li><strong>Step 5:</strong> Review the AI suggestion in the output box.</li>
+                                <li><strong>Step 6:</strong> Click <strong>"APPLY TO POST"</strong> — it fills the Description field in your open post editor.</li>
+                                <li><strong>Step 7:</strong> Save/Publish your post to make it live.</li>
+                            </ul>
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase border-t border-zinc-800 pt-4">
+                                <Info className="h-3 w-3 text-indigo-400" /> TIP: The AI suggestion is NOT saved until you Apply it and then Save your post.
+                            </div>
+                        </Card>
+                    </section>
+
+                    <section id="social-blast" className="scroll-mt-20">
+                        <h2 className="text-2xl font-bold text-blue-400 mb-4 flex items-center gap-2">
+                            <Rocket className="h-6 w-6" /> 9. 🚀 Social Blast Engine (Admin Only)
+                        </h2>
+                        <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none space-y-6">
+                            <p className="text-zinc-300 print:text-black">
+                                The <strong>Social Blast Engine</strong> lets you push any blog post directly to your social media accounts — Facebook Business Page, Instagram, TikTok, or any custom platform — without leaving the Prime Blog.
+                            </p>
+
+                            <div>
+                                <h3 className="text-xl font-semibold text-white mb-2 print:text-black flex items-center gap-2"><Facebook className="w-5 h-5 text-[#1877F2]" /> Facebook Business Page (Real Posting)</h3>
+                                <ul className="list-disc pl-5 space-y-2 text-zinc-300 print:text-black">
+                                    <li>Click the <strong>🚀 Rocket button</strong> on any blog post card (admin only).</li>
+                                    <li>Select the <strong>Facebook</strong> tab.</li>
+                                    <li>First-time only: Click <strong>⚙️ Settings</strong> and enter:
+                                        <ul className="list-disc pl-5 mt-1">
+                                            <li><strong>Page ID:</strong> Facebook Business Page → About → Page ID</li>
+                                            <li><strong>Access Token:</strong> Go to <strong>developers.facebook.com/tools/explorer</strong> → Select your App → Select your Page → Generate Token → grant <em>pages_manage_posts</em> permission</li>
+                                            <li><strong>Page Name:</strong> Display name for your reference</li>
+                                        </ul>
+                                    </li>
+                                    <li>The <strong>"Save as Draft" toggle is ON by default</strong> — your post goes to Facebook as a Draft. Nothing is published until YOU decide in Facebook Business Suite.</li>
+                                    <li>Edit the post message (pre-filled with your blog title, description, link, and hashtags).</li>
+                                    <li>Click <strong>"SAVE TO FACEBOOK DRAFTS"</strong>.</li>
+                                    <li>Go to <strong>Facebook Business Suite → Content → Drafts</strong> to review, edit, and publish when ready.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-semibold text-white mb-2 print:text-black flex items-center gap-2"><Instagram className="w-5 h-5 text-[#E4405F]" /> Instagram & <Music className="w-5 h-5" /> TikTok</h3>
+                                <ul className="list-disc pl-5 space-y-2 text-zinc-300 print:text-black">
+                                    <li>Select the <strong>Instagram</strong> or <strong>TikTok</strong> tab.</li>
+                                    <li>Edit the post message if needed.</li>
+                                    <li>Click the platform button — your message is <strong>automatically copied to clipboard</strong> and the platform opens in a new tab.</li>
+                                    <li>Paste the caption into your post on Instagram/TikTok and publish when ready.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-semibold text-white mb-2 print:text-black">Adding Custom Platforms (Twitter, Pinterest, etc.)</h3>
+                                <ul className="list-disc pl-5 space-y-2 text-zinc-300 print:text-black">
+                                    <li>In the Social Blast modal, click <strong>"+ Add Platform"</strong>.</li>
+                                    <li>Enter the platform name and its compose/upload URL.</li>
+                                    <li>Hit Add — it saves permanently and works like Instagram/TikTok.</li>
+                                </ul>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase border-t border-zinc-800 pt-4">
+                                <Info className="h-3 w-3 text-blue-400" /> TIP: Click the ❓ help icon inside the Social Blast modal for quick step-by-step instructions at any time.
+                            </div>
+                        </Card>
+                    </section>
+
                     <section id="admin-workflow" className="scroll-mt-20">
                         <h2 className="text-2xl font-bold text-red-400 mb-4 flex items-center gap-2">
-                            <FileText className="h-6 w-6" /> 8. Admin Workflows
+                            <FileText className="h-6 w-6" /> 10. Admin Workflows
                         </h2>
                         <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
                             <h3 className="text-xl font-semibold text-white mb-2 print:text-black">Danger Zone & Settings</h3>
