@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { servicePackages as builtInPackages, addOns as builtInAddOns, VehicleType, calculateDestinationFee } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
-import { isSupabaseEnabled } from "@/lib/auth";
+import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { contentService } from "@/lib/content";
@@ -369,36 +369,38 @@ const CustomerPortal = () => {
           `}>
             Step 2: Select your package below
           </h3>
-          <button 
-            onClick={async () => {
-              const confirm = window.confirm("This will clear all local settings and force a fresh sync from the cloud. Proceed?");
-              if (!confirm) return;
-              
-              // Clear all relevant local storage keys
-              const keys = [
-                'servicePackageMeta', 'serviceAddOnMeta', 
-                'servicePricingOverrides', 'addOnPricingOverrides',
-                'packageMeta', 'addOnMeta', 'savedPrices'
-              ];
-              keys.forEach(k => {
-                localStorage.removeItem(k);
-                sessionStorage.removeItem(k);
-              });
-              
-              try {
-                await localforage.removeItem('packageMeta');
-                await localforage.removeItem('addOnMeta');
-                await localforage.removeItem('savedPrices');
-              } catch (e) { console.warn("localforage clear skipped", e); }
-              
-              // Force hard reload
-              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
-            }}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-md hover:bg-black active:scale-95"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Sync with Cloud
-          </button>
+          {getCurrentUser()?.role === 'admin' && (
+            <button 
+              onClick={async () => {
+                const confirm = window.confirm("This will clear all local settings and force a fresh sync from the cloud. Proceed?");
+                if (!confirm) return;
+                
+                // Clear all relevant local storage keys
+                const keys = [
+                  'servicePackageMeta', 'serviceAddOnMeta', 
+                  'servicePricingOverrides', 'addOnPricingOverrides',
+                  'packageMeta', 'addOnMeta', 'savedPrices'
+                ];
+                keys.forEach(k => {
+                  localStorage.removeItem(k);
+                  sessionStorage.removeItem(k);
+                });
+                
+                try {
+                  await localforage.removeItem('packageMeta');
+                  await localforage.removeItem('addOnMeta');
+                  await localforage.removeItem('savedPrices');
+                } catch (e) { console.warn("localforage clear skipped", e); }
+                
+                // Force hard reload
+                window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+              }}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-md hover:bg-black active:scale-95"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Sync with Cloud
+            </button>
+          )}
         </div>
 
         {/* Premium 6-Box Service Grid */}

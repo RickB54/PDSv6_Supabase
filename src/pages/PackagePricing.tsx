@@ -1656,14 +1656,28 @@ export default function PackagePricing() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Package Pricing">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setComparisonMatrixOpen(true)}
-          className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px]"
-        >
-          <Info className="w-4 h-4 mr-2" /> Show Services
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (confirm("Sync all data fresh from the cloud? This will resolve any discrepancies between your browser and the database.")) {
+                window.location.reload();
+              }
+            }}
+            className="border-blue-500 text-blue-500 hover:bg-blue-500/10 font-black uppercase tracking-widest text-[10px]"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" /> Sync with Cloud
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setComparisonMatrixOpen(true)}
+            className="border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px]"
+          >
+            <Info className="w-4 h-4 mr-2" /> Show Services
+          </Button>
+        </div>
       </PageHeader>
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in space-y-8">
@@ -1922,8 +1936,11 @@ export default function PackagePricing() {
             {Array.from(new Map([...builtInPackages, ...getCustomPackages()].map(p => [p.id, p])).values())
 
 
-              .filter(pkg => !getPackageMeta(pkg.id)?.deleted)
-              .filter(pkg => showArchived || !legacyIds.includes(pkg.id) || getPackageMeta(pkg.id)?.visible !== false)
+              .filter(pkg => !getPackageMeta(pkg.id)?.deleted) // Hard ignore truly deleted ones
+              .filter(pkg => {
+                const isHidden = getPackageMeta(pkg.id)?.visible === false || legacyIds.includes(pkg.id);
+                return showArchived || !isHidden;
+              })
               .map(pkg => {
                 const isArchived = getPackageMeta(pkg.id)?.visible === false;
                 return (
