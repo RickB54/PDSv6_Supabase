@@ -175,10 +175,12 @@ export async function buildFullSyncPayload(): Promise<any> {
   };
 }
 
+const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'http://localhost:6066/api' : '/api';
+
 export async function postFullSync() {
   try {
     const payload = await buildFullSyncPayload();
-    await fetch('http://localhost:6066/api/packages/full-sync', {
+    await fetch(`${API_BASE}/packages/full-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -193,7 +195,7 @@ export async function postServicesFullSync() {
       packageMeta: getAllPackageMeta(),
       addOnMeta: getAllAddOnMeta(),
     };
-    await fetch('http://localhost:6066/api/services/full-sync', {
+    await fetch(`${API_BASE}/services/full-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

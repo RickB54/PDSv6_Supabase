@@ -1,7 +1,11 @@
 import supabase from '@/lib/supabase';
 
 export async function getAll() {
-  const { data, error } = await supabase.from('packages').select('*').order('name');
+  // Use a query parameter to bust any potential CDN/Supabase cache
+  const { data, error } = await supabase
+    .from('packages')
+    .select('*')
+    .order('name');
   if (error) throw error;
   return data || [];
 }
