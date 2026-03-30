@@ -1648,10 +1648,13 @@ export default function PackagePricing() {
 
   const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail', 'prime-2026-exterior', 'prime-2026-interior', 'prime-2026-full'];
 
-  const totalPkgs = Array.from(new Map([...builtInPackages, ...getCustomPackages()].map(p => [p.id, p])).values())
-    .filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false).length;
-  const totalAddons = Array.from(new Map([...builtInAddOns, ...getCustomAddOns()].map(a => [a.id, a])).values())
-    .filter(a => !getAddOnMeta(a.id)?.deleted && getAddOnMeta(a.id)?.visible !== false).length;
+  const allPkgsData = Array.from(new Map([...builtInPackages, ...getCustomPackages()].map(p => [p.id, p])).values());
+  const activePkgs = allPkgsData.filter(p => !getPackageMeta(p.id)?.deleted && getPackageMeta(p.id)?.visible !== false).length;
+  const archivedPkgs = allPkgsData.filter(p => getPackageMeta(p.id)?.deleted || getPackageMeta(p.id)?.visible === false).length;
+
+  const allAddonsData = Array.from(new Map([...builtInAddOns, ...getCustomAddOns()].map(a => [a.id, a])).values());
+  const activeAddons = allAddonsData.filter(a => !getAddOnMeta(a.id)?.deleted && getAddOnMeta(a.id)?.visible !== false).length;
+  const archivedAddons = allAddonsData.filter(a => getAddOnMeta(a.id)?.deleted || getAddOnMeta(a.id)?.visible === false).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -1691,13 +1694,15 @@ export default function PackagePricing() {
             </div>
             <div className="flex flex-col sm:flex-row gap-6">
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{totalPkgs}</div>
-                <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">Active Packages</div>
+                <div className="text-3xl font-bold text-white mb-1">{activePkgs}</div>
+                <div className="text-[10px] uppercase tracking-widest font-black text-red-500">Active Packages</div>
+                <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1">{archivedPkgs} Archived</div>
               </div>
               <div className="w-px h-12 bg-zinc-800 hidden sm:block"></div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white mb-1">{totalAddons}</div>
-                <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">Active Add-Ons</div>
+                <div className="text-3xl font-bold text-white mb-1">{activeAddons}</div>
+                <div className="text-[10px] uppercase tracking-widest font-black text-red-500">Active Add-Ons</div>
+                <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1">{archivedAddons} Archived</div>
               </div>
             </div>
           </div>
@@ -2022,7 +2027,7 @@ export default function PackagePricing() {
                         <Input
                           type="number"
                           step="1"
-                          value={currentPrices[getKey('package', pkg.id, vehicleType)] || ''}
+                          value={currentPrices[getKey('package', pkg.id, vehicleType)] || (pkg.pricing as any)?.[vehicleType] || ''}
                           onChange={(e) => handleChange(getKey('package', pkg.id, vehicleType), e.target.value)}
                         />
                       </div>
@@ -2101,7 +2106,7 @@ export default function PackagePricing() {
                         <Input
                           type="number"
                           step="1"
-                          value={currentPrices[getKey('addon', addon.id, vehicleType)] || ''}
+                          value={currentPrices[getKey('addon', addon.id, vehicleType)] || (addon.pricing as any)?.[vehicleType] || ''}
                           onChange={(e) => handleChange(getKey('addon', addon.id, vehicleType), e.target.value)}
                         />
                       </div>
