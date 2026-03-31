@@ -15,7 +15,7 @@ import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { contentService } from "@/lib/content";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import localforage from "localforage";
@@ -64,6 +64,7 @@ const getServiceDuration = (id: string = '') => {
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
+  const PRE_LAUNCH_MODE = true;
   // ... (rest of hook calls)
 
   // ... (skip down to AvailabilityPicker) ...
@@ -532,21 +533,23 @@ const CustomerPortal = () => {
                       Compare Packages
                     </Button>
 
-                    <Button
-                      className="w-full h-12 bg-blue-900 hover:bg-black text-white font-bold"
-                      onClick={() => {
-                        const price = pkg.pricing[vehicleType];
-                        const params = new URLSearchParams();
-                        params.set('package', pkg.id);
-                        if (price > 0) params.set('price', String(price));
-                        params.set('vehicle', vehicleType);
-                        if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
-                        if (distance > 0) params.set('distance', String(distance));
-                        window.location.href = `/book?${params.toString()}`;
-                      }}
-                    >
-                      Book Now →
-                    </Button>
+                    {!PRE_LAUNCH_MODE && (
+                      <Button
+                        className="w-full h-12 bg-blue-900 hover:bg-black text-white font-bold"
+                        onClick={() => {
+                          const price = pkg.pricing[vehicleType];
+                          const params = new URLSearchParams();
+                          params.set('package', pkg.id);
+                          if (price > 0) params.set('price', String(price));
+                          params.set('vehicle', vehicleType);
+                          if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
+                          if (distance > 0) params.set('distance', String(distance));
+                          window.location.href = `/book?${params.toString()}`;
+                        }}
+                      >
+                        Book Now →
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -679,25 +682,44 @@ const CustomerPortal = () => {
             </div>
 
             <div className="space-y-3">
-              <Button
-                className={`w-full h-14 text-white font-bold text-xl transition-all rounded-xl shadow-xl
-                  ${activeStep === 4 ? 'bg-blue-600 animate-blink shadow-blue-600/30' : 'bg-blue-600 hover:bg-blue-700'}
-                `}
-                onClick={() => {
-                  const selectedPkg = livePackages.find(s => s.id === selectedService);
-                  const price = selectedPkg ? selectedPkg.pricing[vehicleType] : 0;
-                  const params = new URLSearchParams();
-                  if (selectedPkg) params.set('package', selectedPkg.id);
-                  if (price > 0) params.set('price', String(price));
-                  params.set('vehicle', vehicleType);
-                  if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
-                  if (distance > 0) params.set('distance', String(distance));
-                  if (destinationFee > 0) params.set('destinationFee', String(destinationFee));
-                  window.location.href = `/book?${params.toString()}`;
-                }}
-              >
-                Schedule My Detail →
-              </Button>
+              {!PRE_LAUNCH_MODE ? (
+                <Button
+                  className={`w-full h-14 text-white font-bold text-xl transition-all rounded-xl shadow-xl
+                    ${activeStep === 4 ? 'bg-blue-600 animate-blink shadow-blue-600/30' : 'bg-blue-600 hover:bg-blue-700'}
+                  `}
+                  onClick={() => {
+                    const selectedPkg = livePackages.find(s => s.id === selectedService);
+                    const price = selectedPkg ? selectedPkg.pricing[vehicleType] : 0;
+                    const params = new URLSearchParams();
+                    if (selectedPkg) params.set('package', selectedPkg.id);
+                    if (price > 0) params.set('price', String(price));
+                    params.set('vehicle', vehicleType);
+                    if (selectedAddOns.length > 0) params.set('addons', selectedAddOns.join(','));
+                    if (distance > 0) params.set('distance', String(distance));
+                    if (destinationFee > 0) params.set('destinationFee', String(destinationFee));
+                    window.location.href = `/book?${params.toString()}`;
+                  }}
+                >
+                  Schedule My Detail →
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <p className="text-sm font-bold text-primary text-center uppercase tracking-tight">
+                      Prime Auto Detail is launching soon!
+                    </p>
+                    <p className="text-xs text-muted-foreground text-center mt-2 font-medium">
+                      Live bookings are not yet open. Please use our inquiry form to join the waitlist.
+                    </p>
+                  </div>
+                  <Button
+                    className="w-full h-14 bg-gradient-hero text-white font-black text-xl uppercase tracking-widest shadow-xl"
+                    asChild
+                  >
+                    <Link to="/contact">Inquiry Form →</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </Card>
         )}

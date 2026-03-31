@@ -7,26 +7,36 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import SuccessMessage from "@/components/SuccessMessage";
-import { Mail, Phone, MapPin, Clock, ArrowLeft } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check } from "lucide-react";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
 import api from "@/lib/api";
 import { isSupabaseEnabled } from "@/lib/auth";
 import * as contactSvc from "@/services/supabase/contact";
+import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
+import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/servicesMeta";
 import logo from "@/assets/logo-primary.png";
 
 const Contact = () => {
   const { toast } = useToast();
   const [showAbout, setShowAbout] = useState(false);
   const [contactInfo, setContactInfo] = useState<{ hours: string; phone: string; address: string; email: string } | null>(null);
+  const [liveServices, setLiveServices] = useState<{ id: string, name: string }[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    vehicle: "",
+    address: "",
+    city: "",
+    vehicleType: "",
+    serviceInterested: "",
+    preferredTiming: "",
+    howFound: "",
     message: ""
   });
   const [submitting, setSubmitting] = useState(false);
@@ -36,18 +46,18 @@ const Contact = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.name.trim()) newErrors.name = "Full Name is required";
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = "Email Address is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = "Phone is required";
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = "Phone must be 10 digits";
+      newErrors.phone = "Phone Number is required";
     }
-    if (!formData.message.trim()) newErrors.message = "Message is required";
+    if (!formData.city.trim()) newErrors.city = "City / Town is required";
+    if (!formData.vehicleType) newErrors.vehicleType = "Vehicle Type is required";
+    if (!formData.serviceInterested) newErrors.serviceInterested = "Please select a service of interest";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -67,91 +77,100 @@ const Contact = () => {
 
     setSubmitting(true);
 
-    // Auto-create customer account
-    const autoPassword = `PDS${Math.random().toString(36).slice(2, 10)}`;
-    // console.log(`Customer account created: ${formData.email} / ${autoPassword}`);
-    // console.log(`Portal link: ${window.location.origin}/portal?token=auto-${Date.now()}`);
-
-    // Generate PDF
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Contact Form Submission", 105, 20, { align: "center" });
-    doc.setFontSize(12);
-    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 35);
-    doc.text(`Name: ${formData.name}`, 20, 50);
-    doc.text(`Email: ${formData.email}`, 20, 60);
-    doc.text(`Phone: ${formData.phone || "N/A"}`, 20, 70);
-    doc.text(`Vehicle: ${formData.vehicle || "N/A"}`, 20, 80);
-    doc.text("Message:", 20, 95);
-
-    const lines = doc.splitTextToSize(formData.message, 170);
-    doc.text(lines, 20, 105);
-
-    const pdfDataUrl = doc.output('dataurlstring');
-
-    // Save to File Manager
-    savePDFToArchive("Customer", formData.name, `contact_${Date.now()}`, pdfDataUrl);
-
-    // Open Gmail compose directly with full subject and body
-    const subject = `Contact: ${formData.name} (${formData.email})`;
-    const body = `New Contact Submission\n\n` +
-      `Name: ${formData.name}\n` +
-      `Email: ${formData.email}\n` +
-      `Phone: ${formData.phone || 'N/A'}\n` +
-      `Vehicle: ${formData.vehicle || 'N/A'}\n\n` +
-      `Message:\n${formData.message}\n\n` +
-      `Submitted: ${new Date().toLocaleString()}\n` +
-      `Portal Link (auto): ${window.location.origin}/portal?token=auto-${Date.now()}`;
-    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailLink, "_blank");
-
-    toast({
-      title: "Message Sent!",
-      description: "We'll reply within 24 hours. Check your email client to complete sending.",
-    });
-    setSubmitted(true);
-
-    // Store to Supabase if enabled
+    // Save to Prospects Database
     try {
       if (isSupabaseEnabled()) {
+        await upsertSupabaseCustomer({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: `${formData.address}${formData.city ? `, ${formData.city}` : ''}`,
+          type: 'prospect',
+          vehicleType: formData.vehicleType,
+          howFound: formData.howFound,
+          services: [formData.serviceInterested],
+          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nClient Message: ${formData.message}`
+        });
+
+        // Also create a contact record for redundancy and history
         await contactSvc.create({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          message: formData.message,
-        });
+          message: `Vehicle: ${formData.vehicleType}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}`,
+        }).catch(() => {});
       }
-    } catch { }
+    } catch (err) {
+      console.error("Failed to save prospect", err);
+    }
+
+    // Generate PDF for Archive
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Future Service Inquiry", 105, 20, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 35);
+    doc.text(`Name: ${formData.name}`, 20, 50);
+    doc.text(`Email: ${formData.email}`, 20, 60);
+    doc.text(`Phone: ${formData.phone}`, 20, 70);
+    doc.text(`Vehicle Type: ${formData.vehicleType}`, 20, 80);
+    doc.text(`Service: ${formData.serviceInterested}`, 20, 90);
+    doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 100);
+    doc.text("Message:", 20, 115);
+
+    const lines = doc.splitTextToSize(formData.message, 170);
+    doc.text(lines, 20, 125);
+
+    const pdfDataUrl = doc.output('dataurlstring');
+    savePDFToArchive("Prospects", formData.name, `inquiry_${Date.now()}`, pdfDataUrl);
+
+    // Open Gmail compose with refined wording
+    const subject = `Pre-Launch Inquiry: ${formData.name}`;
+    const body = `New Pre-Launch Service Inquiry\n\n` +
+      `Name: ${formData.name}\n` +
+      `Email: ${formData.email}\n` +
+      `Phone: ${formData.phone}\n` +
+      `Address: ${formData.address}, ${formData.city}\n` +
+      `Vehicle Type: ${formData.vehicleType}\n` +
+      `Interested In: ${formData.serviceInterested}\n` +
+      `Timing: ${formData.preferredTiming}\n\n` +
+      `Message:\n${formData.message}\n\n` +
+      `Submitted: ${new Date().toLocaleString()}`;
+    
+    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailLink, "_blank");
+
+    setSubmitted(true);
+    setSubmitting(false);
+
+    // No hard redirect - stay on page to show success message clearly
+    toast({
+      title: "Inquiry Received!",
+      description: "Thank you for your interest in Prime Auto Detail.",
+    });
 
     // Reset form
     setFormData({
       name: "",
       email: "",
       phone: "",
-      vehicle: "",
+      address: "",
+      city: "",
+      vehicleType: "",
+      serviceInterested: "",
+      preferredTiming: "",
+      howFound: "",
       message: ""
     });
     setErrors({});
-
-    // Allow normal browser POST so Netlify can capture the submission
-    try {
-      const formEl = e.target as HTMLFormElement;
-      formEl.submit();
-    } catch { }
-
-    setSubmitting(false);
-
-    // Redirect consistent with Book Now flow
-    try { window.location.href = "/thank-you?contact=1"; } catch { }
   };
 
   // Load contact info and keep in sync with admin edits
   useEffect(() => {
     const load = async () => {
-      // 1. Try Supabase (Source of Truth)
+      // 1. Fetch contact info
       if (isSupabaseEnabled()) {
         try {
-          // Dynamic import to avoid circular dependency issues if any, or just use content service
           const { contentService } = await import("@/lib/content");
           const supaContact = await contentService.getContact();
           if (supaContact) {
@@ -161,41 +180,29 @@ const Contact = () => {
               address: supaContact.address || 'Methuen, MA',
               email: supaContact.email || 'Rick.PrimeAutoDetail@gmail.com',
             });
-            return;
           }
-        } catch (err) {
-          console.error("Supabase contact load failed", err);
-        }
+        } catch {}
       }
 
-      // 2. Fallback to Local API
+      // 2. Fetch Live Services for Dynamic Dropdown
       try {
-        const res = await fetch(`http://localhost:6066/api/contact/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
-        if (res.ok) {
-          const c = await res.json();
-          if (c && typeof c === 'object') {
-            setContactInfo({
-              hours: c.hours || 'Appointments daily 8 AM–6 PM',
-              phone: c.phone || '(555) 123-4567',
-              address: c.address || 'Methuen, MA',
-              email: c.email || 'Rick.PrimeAutoDetail@gmail.com',
-            });
-          } else {
-            setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
-          }
-        } else {
-          setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
-        }
-      } catch {
-        setContactInfo({ hours: 'Appointments daily 8 AM–6 PM', phone: '(555) 123-4567', address: 'Methuen, MA', email: 'Rick.PrimeAutoDetail@gmail.com' });
+        const pkgMeta = getAllPackageMeta();
+        const addonMeta = getAllAddOnMeta();
+        const customPkgs = getCustomServices().filter((s: any) => s.type === 'package' || !s.type);
+        
+        const allPkgs = [...builtInPackages, ...customPkgs]
+          .filter(p => {
+            const meta = pkgMeta[p.id];
+            return meta ? (meta.visible !== false && meta.deleted !== true) : true;
+          })
+          .map(p => ({ id: p.id, name: p.name }));
+
+        setLiveServices(allPkgs);
+      } catch (err) {
+        console.error("Failed to load services for contact form", err);
       }
     };
     load();
-    const onChanged = (e: any) => {
-      if (e && e.detail && e.detail.type === 'contact') load();
-    };
-    window.addEventListener('content-changed', onChanged as any);
-    return () => window.removeEventListener('content-changed', onChanged as any);
   }, []);
 
   return (
@@ -210,103 +217,224 @@ const Contact = () => {
           </Link>
         </Button>
 
-        <div className="text-center mb-4">
+        {/* Pre-Launch Notice Banner */}
+        <Card className="mb-12 border-2 border-primary/50 bg-primary/5 overflow-hidden shadow-2xl animate-fade-in">
+          <div className="bg-primary px-6 py-4 flex items-center gap-4">
+            <div className="p-2 bg-white/20 rounded-lg">
+              <Info className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-black text-white uppercase tracking-wider">
+              Pre-Launch Contact Notice
+            </h2>
+          </div>
+          <div className="p-8 space-y-4">
+            <h3 className="text-xl font-bold text-foreground">Thank you for your interest in Prime Auto Detail.</h3>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              We are currently in the <strong>final preparation phase</strong> before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.
+            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              If you would like to get in touch, please complete the inquiry form below. This helps us stay organized and ensures all inquiries are properly tracked as we prepare for launch.
+            </p>
+            <div className="pt-2">
+              <span className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary font-black uppercase tracking-widest text-xs border border-primary/20">
+                <Star className="h-3.5 w-3.5 mr-2 animate-pulse" /> Launching Soon
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <div className="text-center mb-12">
           <img
             src={logo}
             alt="Prime Auto Detail"
-            className="mx-auto mb-2 cursor-pointer h-48 md:h-60 w-auto"
+            className="mx-auto mb-4 cursor-pointer h-48 md:h-60 w-auto"
             onClick={() => setShowAbout(true)}
           />
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Contact Us</h1>
-          <p className="text-xl text-muted-foreground">
-            Have questions? We'd love to hear from you.
+          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4 uppercase tracking-tight">Future Service Inquiry / Pre-Launch Contact</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto italic">
+            Connecting you to premium preservation as we prepare for our official opening.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Contact Form */}
-          <Card className="p-6 md:p-8 bg-gradient-card border-border">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Send us a message</h2>
-            <form onSubmit={handleSubmit} className="space-y-4" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" noValidate>
-              <input type="hidden" name="form-name" value="contact" />
+          {/* Inquiry Form */}
+          <Card className="p-6 md:p-8 bg-gradient-card border-border shadow-xl">
+            <div className="mb-8">
+              <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Future Service Inquiry Form</h2>
+              <p className="text-muted-foreground font-medium italic">Interested in future service? Complete the form below to join our prospect list.</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6" name="contact-prelaunch" method="POST" data-netlify="true" netlify-honeypot="bot-field" noValidate>
+              <input type="hidden" name="form-name" value="contact-prelaunch" />
               <input type="hidden" name="bot-field" />
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Your name"
-                  required
-                  className={errors.name ? "border-destructive" : ""}
-                />
-                {errors.name && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.name}</p>}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="font-bold">Full Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Your legal name"
+                    required
+                    className={errors.name ? "border-destructive h-12" : "h-12"}
+                  />
+                  {errors.name && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.name}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="font-bold">Email Address *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="your@email.com"
+                    required
+                    className={errors.email ? "border-destructive h-12" : "h-12"}
+                  />
+                  {errors.email && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.email}</p>}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your@email.com"
-                  required
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.email}</p>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="font-bold">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="(555) 123-4567"
+                    required
+                    className={errors.phone ? "border-destructive h-12" : "h-12"}
+                  />
+                  {errors.phone && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.phone}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="font-bold">Street Address (Optional)</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="123 Detail Lane"
+                    className="h-12"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
-                  required
-                  className={errors.phone ? "border-destructive" : ""}
-                />
-                {errors.phone && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.phone}</p>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="font-bold">City / Town *</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="Methuen, MA"
+                    required
+                    className={errors.city ? "border-destructive h-12" : "h-12"}
+                  />
+                  {errors.city && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.city}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vehicleType" className="font-bold">Vehicle Type *</Label>
+                  <Select value={formData.vehicleType} onValueChange={(v) => setFormData({ ...formData, vehicleType: v })}>
+                    <SelectTrigger className={`h-12 ${errors.vehicleType ? 'border-destructive' : ''}`}>
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compact">Compact / Sedan</SelectItem>
+                      <SelectItem value="midsize">Mid-Size / SUV</SelectItem>
+                      <SelectItem value="truck">Truck / Van / Large SUV</SelectItem>
+                      <SelectItem value="luxury">Luxury / Specialty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.vehicleType && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleType}</p>}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="vehicle">Vehicle</Label>
-                <Input
-                  id="vehicle"
-                  value={formData.vehicle}
-                  onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
-                  placeholder="e.g., 2024 Tesla Model 3"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="service" className="font-bold">Service Interested In *</Label>
+                  <Select value={formData.serviceInterested} onValueChange={(v) => setFormData({ ...formData, serviceInterested: v })}>
+                    <SelectTrigger className={`h-12 ${errors.serviceInterested ? 'border-destructive' : ''}`}>
+                      <SelectValue placeholder="Select service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {liveServices.map(s => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))}
+                      <SelectItem value="Other / Multiple">Other / Multiple</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.serviceInterested && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.serviceInterested}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="timing" className="font-bold">Preferred Timing</Label>
+                  <Select value={formData.preferredTiming} onValueChange={(v) => setFormData({ ...formData, preferredTiming: v })}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="When do you need service?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Immediately upon launch">Immediately upon launch</SelectItem>
+                      <SelectItem value="Within a month of launch">Within a month of launch</SelectItem>
+                      <SelectItem value="Flexible / Just inquiring">Flexible / Just inquiring</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="message">Message *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="howFound" className="font-bold">How Did You Hear About Us?</Label>
+                <Select value={formData.howFound} onValueChange={(v) => setFormData({ ...formData, howFound: v })}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Referral source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="google">Google Search</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="referral">Word of Mouth / Referral</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="message" className="font-bold">Message / Questions (Optional)</Label>
                 <Textarea
                   id="message"
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Tell us about your detailing needs..."
-                  rows={5}
-                  required
-                  className={errors.message ? "border-destructive" : ""}
+                  placeholder="Any specific questions or detailing needs?"
+                  rows={4}
+                  className="bg-background"
                 />
-                {errors.message && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.message}</p>}
               </div>
-
-              {/* Netlify reCAPTCHA v2 */}
-              <div data-netlify-recaptcha="true"></div>
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-hero min-h-[56px]"
+                className="w-full bg-gradient-hero min-h-[56px] text-lg font-black uppercase tracking-widest shadow-lg hover:shadow-primary/20"
                 disabled={submitting}
               >
-                {submitting ? "Sending..." : "Send Message"}
+                {submitting ? "Processing..." : "Submit Inquiry"}
               </Button>
+
               {submitted && (
-                <SuccessMessage title="Message received" description="Thank you for reaching out. We’ll respond shortly." />
+                <div className="animate-in fade-in zoom-in duration-500">
+                  <Card className="p-6 bg-emerald-950/20 border-emerald-500/50 flex flex-col items-center text-center gap-3">
+                    <div className="p-2 bg-emerald-500 rounded-full">
+                      <Check className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-emerald-400">Thank you for your inquiry!</h4>
+                    <p className="text-zinc-300">
+                      Prime Auto Detail is currently in pre-launch / final preparation. Your information has been received and added to our prospect list. We appreciate your interest and will be in touch as we move closer to launch.
+                    </p>
+                  </Card>
+                </div>
               )}
             </form>
           </Card>
