@@ -600,6 +600,47 @@ export default function WebsiteAdministration() {
               </AccordionContent>
             </AccordionItem>
 
+            {/* Testimonials */}
+            <AccordionItem value="testimonials" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Testimonials Management</AccordionTrigger>
+              <AccordionContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Client Reviews</h4>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewTestimonialOpen(true)}>Add Testimonial</Button>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-zinc-800">
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Customer</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Review Quote</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {testimonials.map((t: any) => (
+                        <TableRow key={t.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium text-sm">{t.name}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate italic">"{t.quote}"</TableCell>
+                          <TableCell className="text-right flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditTestimonial(t)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
+                              if (!confirm('Delete this testimonial?')) return;
+                              await contentService.deleteTestimonial(t.id);
+                              const updated = await contentService.getTestimonials();
+                              setTestimonials(updated);
+                              notifyChange('testimonials');
+                              toast({ title: 'Testimonial deleted' });
+                            }}><Trash2 className="h-3 w-3" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
             {/* Vehicle Types */}
             <AccordionItem value="vehicle-types" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Vehicle Types</AccordionTrigger>

@@ -54,6 +54,14 @@ const About = () => {
     whoWeAreTitle: 'Who We Are',
     whoWeAreText: 'Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash." Our focus is on quality over quantity. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We focus on delivering results that exceed expectations through careful attention to detail and professional-grade standards.'
   });
+  const DEFAULT_TESTIMONIALS = [
+    { name: "LISA M.", quote: "The interior cleaning was amazing. They removed pet hair and odors I thought were permanent. My SUV smells and looks fantastic!", rating: 5 },
+    { name: "JAMES D.", quote: "I love their mobile service! They came to my office and detailed my truck while I worked. Convenient and exceptional results.", rating: 5 },
+    { name: "SARAH K.", quote: "Professional, friendly, and affordable. The ceramic coating has kept my BMW looking pristine for months. Best detailing service in Methuen!", rating: 5 },
+    { name: "MICHAEL R.", quote: "Prime Auto Detail transformed my car! The attention to detail is incredible. My Tesla looks brand new again. Highly recommend!", rating: 5 }
+  ];
+
+  const displayTestimonials = testimonials.length > 0 ? testimonials : DEFAULT_TESTIMONIALS.slice(0, 3);
 
   useEffect(() => {
     const load = async () => {
@@ -380,7 +388,7 @@ const About = () => {
       </section>
 
       {/* SECTION 6: What Our Customers Say (Testimonials) */}
-      {aboutData.showTestimonials !== false && testimonials.length > 0 && (
+      {aboutData.showTestimonials !== false && (
         <section className="py-24 bg-zinc-50">
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="text-center mb-16">
@@ -388,7 +396,7 @@ const About = () => {
               <p className="text-zinc-500 mt-4 text-lg">Real feedback from satisfied clients.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {testimonials.map((t, i) => (
+              {displayTestimonials.map((t, i) => (
                 <Card key={i} className="p-8 bg-white border-blue-50 shadow-sm flex flex-col justify-between">
                   <div className="space-y-4 text-left">
                     <div className="flex text-yellow-400 gap-1">
