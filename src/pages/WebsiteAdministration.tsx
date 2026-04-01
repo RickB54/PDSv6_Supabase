@@ -13,7 +13,8 @@ import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { contentService } from "@/lib/content";
 import { Switch } from "@/components/ui/switch";
-import { Facebook, Pencil, Trash2 } from "lucide-react";
+import { Facebook, Pencil, Trash2, HelpCircle } from "lucide-react";
+import HelpModal from "@/components/help/HelpModal";
 
 const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
@@ -23,6 +24,7 @@ export default function WebsiteAdministration() {
   const { toast } = useToast();
   const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
   const [showBookNow, setShowBookNow] = useState(false);
+  const [helpId, setHelpId] = useState<string | null>(null);
   const [faqs, setFaqs] = useState<any[]>([]);
   const [contactInfo, setContactInfo] = useState<{ hours: string; phone: string; address: string; email: string }>({ hours: '', phone: '', address: '', email: '' });
   const [aboutSections, setAboutSections] = useState<any[]>([]);
@@ -645,7 +647,17 @@ export default function WebsiteAdministration() {
               <AccordionContent className="p-4 space-y-6">
                 <div className="flex items-center justify-between p-5 bg-gradient-to-r from-zinc-900/80 to-zinc-950 border border-red-900/20 rounded-xl">
                   <div className="space-y-1.5 flex-1 pr-6">
-                    <h4 className="text-white font-black text-lg uppercase tracking-tighter">Live Booking & Active Launch Status</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-white font-black text-lg uppercase tracking-tighter">Live Booking & Active Launch Status</h4>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 text-zinc-600 hover:text-emerald-500 transition-colors"
+                        onClick={() => setHelpId('business-launch-manager')}
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <p className="text-xs text-zinc-500 leading-relaxed max-w-lg">
                       {showBookNow 
                         ? "Currently: LIVE MODE - Pre-launch banners are hidden, and customers can book services directly." 
@@ -1158,6 +1170,12 @@ export default function WebsiteAdministration() {
             </div>
           </DialogContent>
         </Dialog>
+        <HelpModal 
+          open={helpId !== null} 
+          onOpenChange={(open) => !open && setHelpId(null)} 
+          role="admin" 
+          initialTopicId={helpId || undefined} 
+        />
       </div>
     </div>
   );
