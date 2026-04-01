@@ -748,415 +748,33 @@ export default function WebsiteAdministration() {
             onValueChange={setAccordionValue}
             className="w-full space-y-1"
           >
-            <div className="px-4 py-3 bg-zinc-900/30 border-b border-zinc-800/50 flex items-center justify-between">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Website Pages</h4>
-              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-zinc-800/50 to-transparent" />
+            <div className="px-6 py-4 bg-gradient-to-r from-red-950/20 via-zinc-900/30 to-transparent border-y border-zinc-800/50 flex items-center justify-between mb-4 mt-2">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Management Functions</h4>
+              </div>
+              <div className="h-px flex-1 mx-6 bg-gradient-to-r from-zinc-800/80 to-transparent" />
+              <Badge variant="outline" className="text-[8px] font-black border-red-500/30 text-red-500 uppercase px-2 shadow-[0_0_10px_rgba(239,68,68,0.1)]">Active Control</Badge>
             </div>
 
 
-            {/* Home Page Sections */}
-            <AccordionItem value="home" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
-                <div className="flex items-center gap-2">
-                  Home Page Content Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('home-content-management'); }} />
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-4 space-y-8">
-                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">1. Hero & Branding</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Main Brand Title</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black uppercase text-lg" value={homeData.heroTitle} onChange={(e) => setHomeData({ ...homeData, heroTitle: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Subtitle (Italic)</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-white italic" value={homeData.heroSubtitle} onChange={(e) => setHomeData({ ...homeData, heroSubtitle: e.target.value })} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter">1b. Customer Testimonials (Reviews)</h4>
-                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">{homeData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
-                      <Switch
-                        checked={homeData.showTestimonials}
-                        onCheckedChange={(checked) => setHomeData({ ...homeData, showTestimonials: checked })}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the Home page. Recommended to hide for new businesses.</p>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">2. Why Detailing Matters (SEO/Education)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Section Title (Main)</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-white" value={homeData.whyMattersTitle} onChange={(e) => setHomeData({ ...homeData, whyMattersTitle: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Accent Title (Red)</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-red-500 font-bold" value={homeData.whyMattersAccent} onChange={(e) => setHomeData({ ...homeData, whyMattersAccent: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Detailed Description</Label>
-                    <textarea
-                      className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
-                      value={homeData.whyMatters}
-                      onChange={(e) => setHomeData({ ...homeData, whyMatters: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Checklist Items (one per line)</Label>
-                    <textarea
-                      className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-24 text-sm font-mono"
-                      value={homeData.whyMattersList?.join('\n')}
-                      onChange={(e) => setHomeData({ ...homeData, whyMattersList: e.target.value.split('\n').filter(Boolean) })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">3. Precision Process Steps</h4>
-                  {homeData.precisionProcessSteps?.map((step: any, i: number) => (
-                    <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-zinc-950 rounded-lg border border-zinc-800">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-zinc-500 uppercase">Step #</Label>
-                        <Input className="bg-zinc-900 h-8 text-red-500 font-black italic" value={step.step} onChange={(e) => {
-                          const n = [...homeData.precisionProcessSteps]; n[i].step = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-zinc-500 uppercase">Step Name</Label>
-                        <Input className="bg-zinc-900 h-8 uppercase font-bold" value={step.name} onChange={(e) => {
-                          const n = [...homeData.precisionProcessSteps]; n[i].name = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-zinc-500 uppercase">Description</Label>
-                        <Input className="bg-zinc-900 h-8 text-xs" value={step.desc} onChange={(e) => {
-                          const n = [...homeData.precisionProcessSteps]; n[i].desc = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
-                        }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end pt-4 gap-3">
-                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white" onClick={() => {
-                    setHomeData(DEFAULT_HOME_DATA);
-                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
-                  }}>Reset to Default</Button>
-                  <Button className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
-                    await contentService.upsertServiceMeta({ key: 'home_content', meta: homeData, description: 'Complete Home Content' });
-                    notifyChange('home');
-                    toast({ title: 'Home settings saved!', description: 'All sections updated live.' });
-                  }}>Save Home Content</Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* About Page Sections */}
-            <AccordionItem value="about-page" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-blue-900/5">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-blue-400 [&[data-state=open]]:text-blue-500 font-bold uppercase tracking-tight">
-                <div className="flex items-center gap-2">
-                  About Page Content Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-blue-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('about-content-management'); }} />
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-4 space-y-8">
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">1. About Hero</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Badge (Award)</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-blue-400 font-bold uppercase" value={aboutData.heroBadge} onChange={(e) => setAboutData({ ...aboutData, heroBadge: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Main Header Title</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black uppercase" value={aboutData.heroTitle} onChange={(e) => setAboutData({ ...aboutData, heroTitle: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Subtitle</Label>
-                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm text-zinc-300" value={aboutData.heroSubtitle} onChange={(e) => setAboutData({ ...aboutData, heroSubtitle: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">1b. Customer Testimonials</h4>
-                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">{aboutData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
-                      <Switch
-                        checked={aboutData.showTestimonials}
-                        onCheckedChange={(checked) => setAboutData({ ...aboutData, showTestimonials: checked })}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the About page.</p>
-                  
-                  {/* Embedded Testimonial Management for visibility */}
-                  <div className="mt-4 p-4 bg-zinc-950/50 rounded-lg border border-zinc-800">
-                    <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-bold text-[10px] uppercase text-zinc-500 tracking-widest">Manage Reviews Below</h5>
-                      <Button className="bg-red-700 hover:bg-red-800 h-6 text-[10px] uppercase font-black" onClick={() => setNewTestimonialOpen(true)}>Add New Review</Button>
-                    </div>
-                    {testimonials.length === 0 ? (
-                      <p className="text-[10px] text-zinc-500 italic">No custom reviews added yet. Showing defaults on website.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        {testimonials.map(t => (
-                          <div key={t.id} className="flex items-center justify-between p-2 bg-zinc-900 rounded border border-zinc-800">
-                            <span className="text-[10px] text-white font-bold truncate max-w-[100px]">{t.name}</span>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-white" onClick={() => setEditTestimonial(t)}><Pencil className="h-3 w-3" /></Button>
-                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-red-500" onClick={async () => {
-                                if(!confirm('Delete?')) return;
-                                await contentService.deleteTestimonial(t.id);
-                                const updated = await contentService.getTestimonials();
-                                setTestimonials(updated);
-                                notifyChange('testimonials');
-                              }}><Trash2 className="h-3 w-3" /></Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400 font-bold">2. More Than a Car Wash Sections</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">Section Header Title</Label>
-                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black" value={aboutData.moreThanWashTitle} onChange={(e) => setAboutData({ ...aboutData, moreThanWashTitle: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="text-zinc-400 text-xs uppercase font-bold">Section Subtitle</Label>
-                        <Input className="bg-zinc-950 border-zinc-800 text-zinc-400" value={aboutData.moreThanWashSubtitle} onChange={(e) => setAboutData({ ...aboutData, moreThanWashSubtitle: e.target.value })} />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-                    {(aboutData.benefits || [
-                      { title: "Paint Preservation", desc: "Automated washes use abrasive brushes that create micro-scratches. We use pH-neutral chemicals and hand-washing techniques to protect your clear coat." },
-                      { title: "Value Retention", desc: "A professionally detailed car maintains a much higher resale value. We remove contaminants that cause long-term corrosion and oxidation." },
-                      { title: "Internal Health", desc: "We don\'t just vacuum. We steam-clean, extract, and condition surfaces to remove bacteria and allergens, creating a healthier environment for you." }
-                    ]).map((b: any, i: number) => (
-                      <div key={i} className="p-3 bg-zinc-950 rounded border border-zinc-800 space-y-2">
-                        <Label className="text-[9px] text-zinc-600 uppercase font-black">Benefit Card #{i+1}</Label>
-                        <Input className="bg-zinc-900 border-zinc-800 h-8 text-[11px] font-bold" placeholder="Header" value={b.title} onChange={(e) => {
-                          const n = [...(aboutData.benefits || [])]; n[i] = { ...n[i], title: e.target.value };
-                          setAboutData({ ...aboutData, benefits: n });
-                        }} />
-                        <textarea className="w-full bg-zinc-900 border-zinc-800 h-20 text-[10px] p-2 text-zinc-400" placeholder="Body Text" value={b.desc} onChange={(e) => {
-                          const n = [...(aboutData.benefits || [])]; n[i] = { ...n[i], desc: e.target.value };
-                          setAboutData({ ...aboutData, benefits: n });
-                        }} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">2a. Who We Are</h4>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Section Title</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.whoWeAreTitle} onChange={(e) => setAboutData({ ...aboutData, whoWeAreTitle: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Section Content (Main Bio)</Label>
-                    <textarea
-                      className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm min-h-[150px] text-zinc-300"
-                      value={aboutData.whoWeAreText}
-                      onChange={(e) => setAboutData({ ...aboutData, whoWeAreText: e.target.value })}
-                    />
-                    <p className="text-zinc-500 text-[10px] italic mt-1 font-medium">This replaces the fallback text and takes priority over legacy About Sections below.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">2b. Restoration Story</h4>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Title</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.interiorRefreshTitle} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshTitle: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Content</Label>
-                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm" value={aboutData.interiorRefreshText} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshText: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Benefits List (one per line)</Label>
-                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm font-mono" value={aboutData.interiorRefreshList?.join('\n')} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshList: e.target.value.split('\n').filter(Boolean) })} />
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">3. Exterior Strategy</h4>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Exterior Coverage Title</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.exteriorCareTitle} onChange={(e) => setAboutData({ ...aboutData, exteriorCareTitle: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400 text-xs uppercase font-bold">Exterior Care Content</Label>
-                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm" value={aboutData.exteriorCareText} onChange={(e) => setAboutData({ ...aboutData, exteriorCareText: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white font-bold uppercase tracking-tighter" onClick={() => {
-                    setAboutData(DEFAULT_ABOUT_DATA);
-                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
-                  }}>Reset to Default</Button>
-                  <Button className="bg-blue-700 hover:bg-blue-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
-                    await contentService.upsertServiceMeta({ key: 'about_content', meta: aboutData, description: 'Complete About Content' });
-                    notifyChange('about');
-                    toast({ title: 'About settings saved!', description: 'Page sections updated.' });
-                  }}>Save About Content</Button>
-                </div>
-
-                <div className="h-px bg-zinc-800 my-8" />
-
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold uppercase text-zinc-400 tracking-widest text-xs">About Sections Table (Legacy)</h4>
-                  <Button className="bg-zinc-800 hover:bg-zinc-700 h-8 text-xs" onClick={() => setNewAboutOpen(true)}>Add Row</Button>
-                </div>
-                <div className="w-full overflow-x-auto mb-6">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-zinc-500 uppercase text-[10px]">Section</TableHead>
-                        <TableHead className="text-zinc-500 uppercase text-[10px]">Content</TableHead>
-                        <TableHead className="text-zinc-500 uppercase text-[10px] w-20">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {aboutSections.map((s: any) => (
-                        <TableRow key={s.id} className="border-zinc-800">
-                          <TableCell className="text-white font-medium">{s.section}</TableCell>
-                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{s.content}</TableCell>
-                          <TableCell className="flex gap-2">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white" onClick={() => setEditAbout(s)}><Pencil className="h-3 w-3" /></Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-red-500" onClick={async () => {
-                              if (!confirm('Delete this section?')) return;
-                              await contentService.deleteAboutSection(s.id);
-                              const updated = await contentService.getAboutSections();
-                              setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
-                              toast({ title: 'Section deleted' });
-                            }}><Trash2 className="h-3 w-3" /></Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* FAQs */}
-            <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
-                <div className="flex items-center gap-2">
-                  FAQs
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('faqs-management'); }} />
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Manage FAQs</h4>
-                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewFaqOpen(true)}>Add FAQ</Button>
-                </div>
-                <div className="w-full overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-zinc-800">
-                        <TableHead className="text-[10px] text-zinc-500 uppercase">Question</TableHead>
-                        <TableHead className="text-[10px] text-zinc-500 uppercase">Answer</TableHead>
-                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {faqs.map((fq: any) => (
-                        <TableRow key={fq.id} className="border-zinc-800">
-                          <TableCell className="text-white font-medium text-sm">{fq.question}</TableCell>
-                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{fq.answer}</TableCell>
-                          <TableCell className="text-right flex justify-end gap-1">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
-                              if (!confirm('Delete this FAQ?')) return;
-                              await contentService.deleteFaq(fq.id);
-                              const updated = await contentService.getFaqs();
-                              setFaqs(updated);
-                              notifyChange('faqs');
-                              toast({ title: 'FAQ deleted' });
-                            }}><Trash2 className="h-3 w-3" /></Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Contact Information */}
-            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
-                <div className="flex items-center gap-2">
-                  Contact Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('contact-control'); }} />
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-4 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
-                  <div className="space-y-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Phone</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Email Address</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Address / Location</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} placeholder="54 Boston Street Methuen, MA" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Service Hours</Label>
-                    <textarea className="w-full bg-zinc-950 border-zinc-800 text-white rounded p-3 h-24 text-sm" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button className="bg-red-700 hover:bg-red-800 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
-                    await contentService.upsertContact(contactInfo);
-                    notifyChange('contact');
-                    toast({ title: 'Contact Sync', description: 'Business details updated.' });
-                  }}>Save Contact Profile</Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <div className="px-4 py-3 bg-zinc-900/30 border-y border-zinc-800/50 mt-4 flex items-center justify-between">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Management Functions</h4>
-              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-zinc-800/50 to-transparent" />
-            </div>
 
             {/* Business Launch Manager - Global Toggle */}
-            <AccordionItem value="launch-status" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
-                <div className="flex items-center gap-2">
-                  Business Launch Manager
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
+            <AccordionItem 
+              value="launch-status" 
+              className="border-2 mb-4 rounded-xl bg-gradient-to-br from-zinc-900/90 via-zinc-900 to-red-900/10 hover:from-zinc-800 transition-all border-red-500/20 overflow-hidden px-2 shadow-[0_0_30px_rgba(239,68,68,0.05)] scale-[1.01]"
+            >
+              <AccordionTrigger className="hover:no-underline px-6 py-5 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight text-lg group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-red-500/10 rounded-xl group-data-[state=open]:bg-red-500/20 transition-colors">
+                    <Rocket className="h-6 w-6 text-red-500 group-data-[state=open]:animate-bounce" />
+                  </div>
+                  <span className="font-black text-white tracking-tighter text-xl">Business Launch Manager</span>
+                  <div className="ml-2 px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-[8px] font-black text-red-500 uppercase tracking-widest">Master Control</div>
+                  <HelpCircle className="h-4 w-4 text-zinc-700 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="p-4 space-y-8">
+              <AccordionContent className="p-6 space-y-8 bg-black/20">
                 {/* Advanced Mode Selector */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {[
@@ -1607,6 +1225,400 @@ export default function WebsiteAdministration() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <div className="px-4 py-3 bg-zinc-900/30 border-y border-zinc-800/50 mt-4 flex items-center justify-between">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Website Pages</h4>
+              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-zinc-800/50 to-transparent" />
+            </div>
+
+            {/* Home Page Sections */}
+            <AccordionItem value="home" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Home Page Content Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('home-content-management'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-8">
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">1. Hero & Branding</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Main Brand Title</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black uppercase text-lg" value={homeData.heroTitle} onChange={(e) => setHomeData({ ...homeData, heroTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Subtitle (Italic)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white italic" value={homeData.heroSubtitle} onChange={(e) => setHomeData({ ...homeData, heroSubtitle: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter">1b. Customer Testimonials (Reviews)</h4>
+                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">{homeData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
+                      <Switch
+                        checked={homeData.showTestimonials}
+                        onCheckedChange={(checked) => setHomeData({ ...homeData, showTestimonials: checked })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the Home page. Recommended to hide for new businesses.</p>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">2. Why Detailing Matters (SEO/Education)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Section Title (Main)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white" value={homeData.whyMattersTitle} onChange={(e) => setHomeData({ ...homeData, whyMattersTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Accent Title (Red)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-red-500 font-bold" value={homeData.whyMattersAccent} onChange={(e) => setHomeData({ ...homeData, whyMattersAccent: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Detailed Description</Label>
+                    <textarea
+                      className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
+                      value={homeData.whyMatters}
+                      onChange={(e) => setHomeData({ ...homeData, whyMatters: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Checklist Items (one per line)</Label>
+                    <textarea
+                      className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-24 text-sm font-mono"
+                      value={homeData.whyMattersList?.join('\n')}
+                      onChange={(e) => setHomeData({ ...homeData, whyMattersList: e.target.value.split('\n').filter(Boolean) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">3. Precision Process Steps</h4>
+                  {homeData.precisionProcessSteps?.map((step, i) => (
+                    <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-zinc-950 rounded-lg border border-zinc-800">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Step #</Label>
+                        <Input className="bg-zinc-900 h-8 text-red-500 font-black italic" value={step.step} onChange={(e) => {
+                          const n = [...homeData.precisionProcessSteps]; n[i].step = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Step Name</Label>
+                        <Input className="bg-zinc-900 h-8 uppercase font-bold" value={step.name} onChange={(e) => {
+                          const n = [...homeData.precisionProcessSteps]; n[i].name = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-500 uppercase">Description</Label>
+                        <Input className="bg-zinc-900 h-8 text-xs" value={step.desc} onChange={(e) => {
+                          const n = [...homeData.precisionProcessSteps]; n[i].desc = e.target.value; setHomeData({ ...homeData, precisionProcessSteps: n });
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end pt-4 gap-3">
+                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white" onClick={() => {
+                    setHomeData(DEFAULT_HOME_DATA);
+                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
+                  }}>Reset to Default</Button>
+                  <Button className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
+                    await contentService.upsertServiceMeta({ key: 'home_content', meta: homeData, description: 'Complete Home Content' });
+                    notifyChange('home');
+                    toast({ title: 'Home settings saved!', description: 'All sections updated live.' });
+                  }}>Save Home Content</Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* About Page Sections */}
+            <AccordionItem value="about-page" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-blue-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-blue-400 [&[data-state=open]]:text-blue-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  About Page Content Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-blue-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('about-content-management'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-8">
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">1. About Hero</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Badge (Award)</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-blue-400 font-bold uppercase" value={aboutData.heroBadge} onChange={(e) => setAboutData({ ...aboutData, heroBadge: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Main Header Title</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black uppercase" value={aboutData.heroTitle} onChange={(e) => setAboutData({ ...aboutData, heroTitle: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Hero Subtitle</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm text-zinc-300" value={aboutData.heroSubtitle} onChange={(e) => setAboutData({ ...aboutData, heroSubtitle: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">1b. Customer Testimonials</h4>
+                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">{aboutData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
+                      <Switch
+                        checked={aboutData.showTestimonials}
+                        onCheckedChange={(checked) => setAboutData({ ...aboutData, showTestimonials: checked })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the About page.</p>
+                  
+                  {/* Embedded Testimonial Management for visibility */}
+                  <div className="mt-4 p-4 bg-zinc-950/50 rounded-lg border border-zinc-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-bold text-[10px] uppercase text-zinc-500 tracking-widest">Manage Reviews Below</h5>
+                      <Button className="bg-red-700 hover:bg-red-800 h-6 text-[10px] uppercase font-black" onClick={() => setNewTestimonialOpen(true)}>Add New Review</Button>
+                    </div>
+                    {testimonials.length === 0 ? (
+                      <p className="text-[10px] text-zinc-500 italic">No custom reviews added yet. Showing defaults on website.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                        {testimonials.map(t => (
+                          <div key={t.id} className="flex items-center justify-between p-2 bg-zinc-900 rounded border border-zinc-800">
+                            <span className="text-[10px] text-white font-bold truncate max-w-[100px]">{t.name}</span>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-white" onClick={() => setEditTestimonial(t)}><Pencil className="h-3 w-3" /></Button>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-red-500" onClick={async () => {
+                                if(!confirm('Delete?')) return;
+                                await contentService.deleteTestimonial(t.id);
+                                const updated = await contentService.getTestimonials();
+                                setTestimonials(updated);
+                                notifyChange('testimonials');
+                              }}><Trash2 className="h-3 w-3" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400 font-bold">2. More Than a Car Wash Sections</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Section Header Title</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black" value={aboutData.moreThanWashTitle} onChange={(e) => setAboutData({ ...aboutData, moreThanWashTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-zinc-400 text-xs uppercase font-bold">Section Subtitle</Label>
+                        <Input className="bg-zinc-950 border-zinc-800 text-zinc-400" value={aboutData.moreThanWashSubtitle} onChange={(e) => setAboutData({ ...aboutData, moreThanWashSubtitle: e.target.value })} />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                    {(aboutData.benefits || [
+                      { title: "Paint Preservation", desc: "Automated washes use abrasive brushes that create micro-scratches. We use pH-neutral chemicals and hand-washing techniques to protect your clear coat." },
+                      { title: "Value Retention", desc: "A professionally detailed car maintains a much higher resale value. We remove contaminants that cause long-term corrosion and oxidation." },
+                      { title: "Internal Health", desc: "We don't just vacuum. We steam-clean, extract, and condition surfaces to remove bacteria and allergens, creating a healthier environment for you." }
+                    ]).map((b, i) => (
+                      <div key={i} className="p-3 bg-zinc-950 rounded border border-zinc-800 space-y-2">
+                        <Label className="text-[9px] text-zinc-600 uppercase font-black">Benefit Card #{i+1}</Label>
+                        <Input className="bg-zinc-900 border-zinc-800 h-8 text-[11px] font-bold" placeholder="Header" value={b.title} onChange={(e) => {
+                          const n = [...(aboutData.benefits || [])]; n[i] = { ...n[i], title: e.target.value };
+                          setAboutData({ ...aboutData, benefits: n });
+                        }} />
+                        <textarea className="w-full bg-zinc-900 border-zinc-800 h-20 text-[10px] p-2 text-zinc-400" placeholder="Body Text" value={b.desc} onChange={(e) => {
+                          const n = [...(aboutData.benefits || [])]; n[i] = { ...n[i], desc: e.target.value };
+                          setAboutData({ ...aboutData, benefits: n });
+                        }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">2a. Who We Are</h4>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Section Title</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.whoWeAreTitle} onChange={(e) => setAboutData({ ...aboutData, whoWeAreTitle: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Section Content (Main Bio)</Label>
+                    <textarea
+                      className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm min-h-[150px] text-zinc-300"
+                      value={aboutData.whoWeAreText}
+                      onChange={(e) => setAboutData({ ...aboutData, whoWeAreText: e.target.value })}
+                    />
+                    <p className="text-zinc-500 text-[10px] italic mt-1 font-medium">This replaces the fallback text and takes priority over legacy About Sections below.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">2b. Restoration Story</h4>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Title</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.interiorRefreshTitle} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshTitle: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Refresh Content</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm" value={aboutData.interiorRefreshText} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshText: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Interior Benefits List (one per line)</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm font-mono" value={aboutData.interiorRefreshList?.join('\n')} onChange={(e) => setAboutData({ ...aboutData, interiorRefreshList: e.target.value.split('\n').filter(Boolean) })} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">3. Exterior Strategy</h4>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Exterior Coverage Title</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white font-bold" value={aboutData.exteriorCareTitle} onChange={(e) => setAboutData({ ...aboutData, exteriorCareTitle: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400 text-xs uppercase font-bold">Exterior Care Content</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 rounded p-3 text-sm" value={aboutData.exteriorCareText} onChange={(e) => setAboutData({ ...aboutData, exteriorCareText: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white font-bold uppercase tracking-tighter" onClick={() => {
+                    setAboutData(DEFAULT_ABOUT_DATA);
+                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
+                  }}>Reset to Default</Button>
+                  <Button className="bg-blue-700 hover:bg-blue-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
+                    await contentService.upsertServiceMeta({ key: 'about_content', meta: aboutData, description: 'Complete About Content' });
+                    notifyChange('about');
+                    toast({ title: 'About settings saved!', description: 'Page sections updated.' });
+                  }}>Save About Content</Button>
+                </div>
+
+                <div className="h-px bg-zinc-800 my-8" />
+
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold uppercase text-zinc-400 tracking-widest text-xs">About Sections Table (Legacy)</h4>
+                  <Button className="bg-zinc-800 hover:bg-zinc-700 h-8 text-xs" onClick={() => setNewAboutOpen(true)}>Add Row</Button>
+                </div>
+                <div className="w-full overflow-x-auto mb-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-zinc-500 uppercase text-[10px]">Section</TableHead>
+                        <TableHead className="text-zinc-500 uppercase text-[10px]">Content</TableHead>
+                        <TableHead className="text-zinc-500 uppercase text-[10px] w-20">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {aboutSections.map((s) => (
+                        <TableRow key={s.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium">{s.section}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{s.content}</TableCell>
+                          <TableCell className="flex gap-2">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white" onClick={() => setEditAbout(s)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-red-500" onClick={async () => {
+                              if (!confirm('Delete this section?')) return;
+                              await contentService.deleteAboutSection(s.id);
+                              const updated = await contentService.getAboutSections();
+                              setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
+                              toast({ title: 'Section deleted' });
+                            }}><Trash2 className="h-3 w-3" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* FAQs */}
+            <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  FAQs
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('faqs-management'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Manage FAQs</h4>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewFaqOpen(true)}>Add FAQ</Button>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-zinc-800">
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Question</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Answer</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {faqs.map((fq: any) => (
+                        <TableRow key={fq.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium text-sm">{fq.question}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{fq.answer}</TableCell>
+                          <TableCell className="text-right flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
+                              if (!confirm('Delete this FAQ?')) return;
+                              await contentService.deleteFaq(fq.id);
+                              const updated = await contentService.getFaqs();
+                              setFaqs(updated);
+                              notifyChange('faqs');
+                              toast({ title: 'FAQ deleted' });
+                            }}><Trash2 className="h-3 w-3" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Contact Information */}
+            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Contact Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('contact-control'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Phone</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Email Address</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Address / Location</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} placeholder="54 Boston Street Methuen, MA" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Service Hours</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 text-white rounded p-3 h-24 text-sm" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button className="bg-red-700 hover:bg-red-800 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    await contentService.upsertContact(contactInfo);
+                    notifyChange('contact');
+                    toast({ title: 'Contact Sync', description: 'Business details updated.' });
+                  }}>Save Contact Profile</Button>
                 </div>
               </AccordionContent>
             </AccordionItem>
