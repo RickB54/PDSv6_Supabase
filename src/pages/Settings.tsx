@@ -17,8 +17,6 @@ import { deleteCustomersOlderThan, deleteInvoicesOlderThan, deleteExpensesOlderT
 import localforage from "localforage";
 import EnvironmentHealthModal from '@/components/admin/EnvironmentHealthModal';
 import { restoreDefaults, restorePackages, restoreAddons } from '@/lib/restoreDefaults';
-import { insertMockData, removeMockData } from '@/lib/mockData';
-import { insertStaticMockData, removeStaticMockData, insertStaticMockBasic, removeStaticMockBasic } from '@/lib/staticMock';
 import jsPDF from 'jspdf';
 import { savePDFToArchive } from '@/lib/pdfArchive';
 import { pushAdminAlert } from '@/lib/adminAlerts';
@@ -46,8 +44,6 @@ const Settings = () => {
   const [reportData, setReportData] = useState<any | null>(null);
   const [staticReportOpen, setStaticReportOpen] = useState(false);
   const [staticReportData, setStaticReportData] = useState<any | null>(null);
-  const [mockDataOpen, setMockDataOpen] = useState(false);
-  const [mockReport, setMockReport] = useState<any | null>(null);
   const [restoreDefaultsOpen, setRestoreDefaultsOpen] = useState(false);
   const [supabaseBackups, setSupabaseBackups] = useState<BackupMetadata[]>([]);
   const [supabaseBackupsOpen, setSupabaseBackupsOpen] = useState(false);
@@ -322,79 +318,6 @@ const Settings = () => {
   };
 
 
-  const generateMockDataPDF = async (action: 'inserted' | 'removed', trackerData?: any) => {
-    try {
-      const doc = new jsPDF();
-      let y = 20;
-      const addLine = (text: string, indent = 0) => {
-        doc.text(text, 20 + indent, y);
-        y += 6;
-        if (y > 270) { doc.addPage(); y = 20; }
-      };
-
-      doc.setFontSize(18);
-      doc.text('Mock Data Report', 105, 18, { align: 'center' });
-      doc.setFontSize(11);
-      const now = new Date();
-      addLine(`Action: ${action === 'inserted' ? 'Mock Data Inserted' : 'Mock Data Removed'}`);
-      addLine(`Timestamp: ${now.toLocaleString()}`);
-      y += 4;
-
-      if (action === 'inserted' && trackerData) {
-        // Summary
-        doc.setFontSize(14);
-        addLine("Summary");
-        doc.setFontSize(11);
-        if (trackerData.customers) addLine(`Customers Created: ${trackerData.customers.length}`, 5);
-        if (trackerData.employees) addLine(`Employees Created: ${trackerData.employees.length}`, 5);
-        if (trackerData.inventory) addLine(`Inventory Items Created: ${trackerData.inventory.length}`, 5);
-        y += 4;
-
-        // Details
-        if (trackerData.customers && trackerData.customers.length > 0) {
-          doc.setFontSize(12);
-          addLine("Customers:");
-          doc.setFontSize(10);
-          trackerData.customers.forEach((c: any) => addLine(`- ${c.name} (${c.email})`, 5));
-          y += 2;
-        }
-        if (trackerData.employees && trackerData.employees.length > 0) {
-          doc.setFontSize(12);
-          addLine("Employees:");
-          doc.setFontSize(10);
-          trackerData.employees.forEach((e: any) => addLine(`- ${e.name} (${e.email})`, 5));
-          y += 2;
-        }
-        if (trackerData.inventory && trackerData.inventory.length > 0) {
-          doc.setFontSize(12);
-          addLine("Inventory:");
-          doc.setFontSize(10);
-          trackerData.inventory.forEach((i: any) => addLine(`- ${i.name} (${i.category})`, 5));
-        }
-      } else if (action === 'removed') {
-        addLine("All local-only mock data entities (customers, employees, inventory) have been cleared.");
-        addLine("System status: Clean");
-      }
-
-      const dataUrl = doc.output('dataurlstring');
-      const fileName = `MockData_${action}_${now.toISOString().split('T')[0]}.pdf`;
-      savePDFToArchive('Mock Data' as any, 'Admin', `mock-data-${Date.now()}`, dataUrl, { fileName, path: 'Mock Data/' });
-
-      // Push admin alert
-      try {
-        pushAdminAlert('pdf_saved', `Mock Data Report (${action}) saved to File Manager`, 'system', {
-          recordType: 'Mock Data',
-          fileName
-        });
-      } catch { }
-
-      toast({ title: 'Report Saved', description: `PDF report saved to File Manager: ${fileName}` });
-
-    } catch (e: any) {
-      console.error("PDF Gen Error", e);
-      toast({ title: "PDF Error", description: "Could not generate report PDF", variant: "destructive" });
-    }
-  };
 
   const generateDeletionFailsafePDF = async (type: string, days?: any) => {
     try {
@@ -870,30 +793,7 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Mock Data System (Local Only) */}
-        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <TestTube2 className="w-6 h-6 text-amber-500" />
-              <div>
-                <CardTitle className="text-white text-xl">Test Data Generation</CardTitle>
-                <CardDescription className="text-zinc-400">Generate local mock data for testing purposes (Customers, Employees, Inventory)</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Button variant="default" onClick={() => { setMockDataOpen(true); setMockReport(null); }} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold">
-              Open Mock Data Tools
-            </Button>
-          </CardContent>
-        </Card>
 
-        {/* Mock Data Tools (Hidden Logic Preserved) */}
-        <div className="hidden">
-          {/* Original logic preserved for hidden card, just minimal structure */}
-          <Button onClick={async () => { /* ... preserved insertMockData logic ... */ }}>Insert Mock Data</Button>
-          <Button onClick={async () => { /* ... preserved removeMockData logic ... */ }}>Remove Mock Data</Button>
-        </div>
 
         {/* Danger Zone */}
         <Card
@@ -1433,65 +1333,6 @@ const Settings = () => {
 
       <EnvironmentHealthModal open={healthOpen} onOpenChange={setHealthOpen} />
 
-      {/* Mock Data Dialog - Local */}
-      <Dialog open={mockDataOpen} onOpenChange={setMockDataOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-amber-500">Mock Data Generator</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Generate random data for testing purely locally. Data will not sync to Supabase.
-              A PDF report will be automatically generated and saved to your file manager.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="p-4 rounded-lg bg-zinc-900 border border-zinc-800">
-              <h3 className="font-bold text-white mb-2">Generate Data</h3>
-              <p className="text-xs text-zinc-500 mb-4">Creates 5 customers, 5 employees, and sample inventory.</p>
-              <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={async () => {
-                  try {
-                    setMockReport({ progress: ['Starting local insertion...'], createdAt: new Date().toISOString() });
-                    const push = (msg: string) => setMockReport((prev: any) => ({ ...prev, progress: [...(prev?.progress || []), msg] }));
-                    const tracker = await insertStaticMockBasic(push, { customers: 5, employees: 5, chemicals: 3, materials: 3 });
-
-                    // Generate PDF
-                    await generateMockDataPDF('inserted', tracker);
-
-                    toast({ title: 'Mock Data Created' });
-                  } catch (e: any) {
-                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                  }
-                }}
-              >
-                Insert Random Data
-              </Button>
-            </div>
-
-            <div className="p-4 rounded-lg bg-zinc-900 border border-zinc-800">
-              <h3 className="font-bold text-white mb-2">Clear Mock Data</h3>
-              <p className="text-xs text-zinc-500 mb-4">Removes only the locally generated mock items.</p>
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={async () => {
-                  try {
-                    await removeStaticMockBasic((msg) => console.log(msg));
-                    await generateMockDataPDF('removed');
-                    toast({ title: 'Mock Data Cleared' });
-                    setTimeout(() => window.location.reload(), 1500);
-                  } catch (e) {
-                    toast({ title: 'Error', variant: 'destructive' });
-                  }
-                }}
-              >
-                Remove Mock Data
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Restore Choices Dialog */}
       <Dialog open={restoreDefaultsOpen} onOpenChange={setRestoreDefaultsOpen}>

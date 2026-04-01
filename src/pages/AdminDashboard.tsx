@@ -51,7 +51,6 @@ import SubContractorsModal from "@/components/subcontractors/SubContractorsModal
 import { useAlertsStore } from "@/store/alerts";
 import { isViewed } from "@/lib/viewTracker";
 import { getInvoices, upsertCustomer } from "@/lib/db";
-import { insertStaticMockBasic, removeStaticMockBasic } from "@/lib/staticMock";
 import api from "@/lib/api";
 import { postFullSync } from "@/lib/servicesMeta";
 import { useToast } from "@/hooks/use-toast";
@@ -189,8 +188,6 @@ export default function AdminDashboard() {
   const [orientationOpen, setOrientationOpen] = useState(false);
   const user = getCurrentUser();
   const [helpOpen, setHelpOpen] = useState(false);
-  const [mockDataOpen, setMockDataOpen] = useState(false);
-  const [mockReport, setMockReport] = useState<any | null>(null);
   const [subContractorsOpen, setSubContractorsOpen] = useState(false);
   // Bookings list for dashboard metrics (e.g., today's new bookings)
   const items = useBookingsStore((s) => s.items);
@@ -629,7 +626,6 @@ export default function AdminDashboard() {
                 case 'subcontractors': setSubContractorsOpen(true); break;
                 case 'user-admin': setUserAdminOpen(true); break;
                 case 'employee-mgmt': setEmployeeMgmtOpen(true); break;
-                case 'mock-data': setMockDataOpen(true); break;
                 case 'orientation': setOrientationOpen(true); break;
               }
             }
@@ -672,196 +668,7 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Mock Data System Popup — local-only users/employees/inventory */}
-      <Dialog open={mockDataOpen} onOpenChange={setMockDataOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Mock Data System (Local Only)</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 text-sm">
-            <div className="flex flex-wrap gap-3">
-              <Button
-                className="bg-red-700 hover:bg-red-800"
-                onClick={async () => {
-                  try {
-                    setMockReport({ progress: ['Starting local-only insertion…'], createdAt: new Date().toISOString() });
-                    const push = (msg: string) => setMockReport((prev: any) => ({ ...(prev || {}), progress: [...((prev?.progress) || []), `${new Date().toLocaleTimeString()} — ${msg}`] }));
-                    const tracker = await insertStaticMockBasic(push, { customers: 5, employees: 5, chemicals: 3, materials: 3 });
-                    // Build simple report
-                    const usersLF = (await localforage.getItem<any[]>('users')) || [];
-                    const customersLF = (await localforage.getItem<any[]>('customers')) || [];
-                    const employeesLF = (await localforage.getItem<any[]>('company-employees')) || [];
-                    const chemicalsLF = (await localforage.getItem<any[]>('chemicals')) || [];
-                    const materialsLF = (await localforage.getItem<any[]>('materials')) || [];
-                    const summary = {
-                      local_users: usersLF.length,
-                      local_customers: customersLF.length,
-                      local_employees: employeesLF.length,
-                      chemicals_count: chemicalsLF.length,
-                      materials_count: materialsLF.length,
-                      mode: 'Local only — Not Linked to Supabase',
-                    };
-                    setMockReport((prev: any) => ({ ...(prev || {}), customers: tracker.customers, employees: tracker.employees, inventory: tracker.inventory, summary }));
-                    try {
-                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
-                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'customers' } }));
-                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'employees' } }));
-                      window.dispatchEvent(new CustomEvent('inventory-changed'));
-                    } catch { }
-                    toast?.({ title: 'Static Mock Data Inserted', description: 'Added customers, employees, and inventory locally.' });
-                  } catch (e: any) {
-                    const errMsg = e?.message || String(e);
-                    setMockReport((prev: any) => ({ ...(prev || {}), errors: [...(prev?.errors || []), errMsg] }));
-                  }
-                }}
-              >Insert Mock Data</Button>
-              <Button
-                variant="outline"
-                className="border-red-700 text-red-700 hover:bg-red-700/10"
-                onClick={async () => {
-                  try {
-                    setMockReport((prev: any) => ({ ...(prev || {}), progress: ['Removing local-only mock data…'] }));
-                    await removeStaticMockBasic((msg) => setMockReport((prev: any) => ({ ...(prev || {}), progress: [...((prev?.progress) || []), `${new Date().toLocaleTimeString()} — ${msg}`] })));
-                    try {
-                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'users' } }));
-                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'customers' } }));
-                      window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'employees' } }));
-                      window.dispatchEvent(new CustomEvent('inventory-changed'));
-                    } catch { }
-                    setMockReport((prev: any) => ({ ...(prev || {}), removed: true, removedAt: new Date().toISOString() }));
-                    toast?.({ title: 'Static Mock Data Removed', description: 'Local-only mock data was cleared.' });
-                  } catch (e: any) {
-                    const errMsg = e?.message || String(e);
-                    setMockReport((prev: any) => ({ ...(prev || {}), errors: [...(prev?.errors || []), errMsg] }));
-                  }
-                }}
-              >Remove Mock Data</Button>
-              <Button
-                variant="secondary"
-                className="border-red-700 text-white bg-red-700 hover:bg-red-800"
-                onClick={() => {
-                  try {
-                    const doc = new jsPDF();
-                    let y = 30;
-                    const addLine = (text: string, indent = 0) => {
-                      doc.text(text, 20 + indent, y);
-                      y += 6;
-                      if (y > 270) { doc.addPage(); y = 20; }
-                    };
 
-                    doc.setFontSize(18);
-                    doc.text('Mock Data Report', 105, 18, { align: 'center' });
-                    doc.setFontSize(11);
-                    const created = mockReport?.createdAt ? new Date(mockReport.createdAt).toLocaleString() : new Date().toLocaleString();
-                    const removed = mockReport?.removedAt ? new Date(mockReport.removedAt).toLocaleString() : '—';
-                    addLine(`Created: ${created}`);
-                    addLine(`Removed: ${removed}`);
-
-                    // Live Progress
-                    if ((mockReport?.progress || []).length > 0) {
-                      doc.setFontSize(12);
-                      addLine('Live Progress:');
-                      doc.setFontSize(11);
-                      (mockReport?.progress || []).forEach((ln: string) => addLine(`- ${ln}`, 6));
-                    }
-
-                    // Summary
-                    if (mockReport?.summary) {
-                      doc.setFontSize(12);
-                      addLine('Summary:');
-                      doc.setFontSize(11);
-                      addLine(`Local Users: ${mockReport.summary.local_users}`, 6);
-                      addLine(`Local Customers: ${mockReport.summary.local_customers}`, 6);
-                      addLine(`Local Employees: ${mockReport.summary.local_employees}`, 6);
-                      addLine(`Chemicals: ${mockReport.summary.chemicals_count}`, 6);
-                      addLine(`Materials: ${mockReport.summary.materials_count}`, 6);
-                      addLine(`Mode: ${mockReport.summary.mode}`, 6);
-                    }
-
-                    // Customers
-                    doc.setFontSize(12);
-                    addLine('Customers:');
-                    doc.setFontSize(11);
-                    (mockReport?.customers || []).forEach((c: any) => addLine(`- ${c.name} — ${c.email}`, 6));
-
-                    // Employees
-                    doc.setFontSize(12);
-                    addLine('Employees:');
-                    doc.setFontSize(11);
-                    (mockReport?.employees || []).forEach((e: any) => addLine(`- ${e.name} — ${e.email}`, 6));
-
-                    // Inventory
-                    doc.setFontSize(12);
-                    addLine('Inventory:');
-                    doc.setFontSize(11);
-                    (mockReport?.inventory || []).forEach((i: any) => addLine(`- ${i.category}: ${i.name}`, 6));
-
-                    // Removal status
-                    if (mockReport?.removed) {
-                      doc.setFontSize(12);
-                      addLine('Removal Status:');
-                      doc.setFontSize(11);
-                      addLine(`Mock data removed at ${new Date(mockReport.removedAt).toLocaleString()}`, 6);
-                    }
-
-                    // Errors
-                    if ((mockReport?.errors || []).length > 0) {
-                      doc.setFontSize(12);
-                      addLine('Issues detected:');
-                      doc.setFontSize(11);
-                      (mockReport.errors || []).forEach((err: any) => addLine(`- ${String(err)}`, 6));
-                    }
-
-                    const dataUrl = doc.output('dataurlstring');
-                    const today = new Date().toISOString().split('T')[0];
-                    const fileName = `MockData_Report_${today}.pdf`;
-                    savePDFToArchive('Mock Data' as any, 'Admin', `mock-data-${Date.now()}`, dataUrl, { fileName, path: 'Mock Data/' });
-                    toast?.({ title: 'Saved to File Manager', description: 'Mock Data Report archived.' });
-                  } catch (e: any) {
-                    toast?.({ title: 'Save Failed', description: e?.message || 'Could not generate PDF', variant: 'destructive' });
-                  }
-                }}
-              >Save to PDF</Button>
-            </div>
-
-            {mockReport?.progress && (
-              <div className="rounded-md border p-3">
-                <div className="font-semibold mb-2">Live Progress</div>
-                {(mockReport.progress || []).map((ln: string, i: number) => (
-                  <div key={`md-prog-${i}`}>- {ln}</div>
-                ))}
-              </div>
-            )}
-
-            <div>
-              <div className="font-semibold">Customers Created</div>
-              {(mockReport?.customers || []).map((c: any, i: number) => (
-                <div key={`md-c-${i}`} className="mt-1">- {c.name} ({c.email}) — Local only; appears in Admin → Customers and dropdowns</div>
-              ))}
-            </div>
-            <div>
-              <div className="font-semibold">Employees Created</div>
-              {(mockReport?.employees || []).map((e: any, i: number) => (
-                <div key={`md-e-${i}`} className="mt-1">- {e.name} ({e.email}) — Local only; appears in Admin → Company Employees and selectors</div>
-              ))}
-            </div>
-            <div>
-              <div className="font-semibold">Inventory Added</div>
-              {(mockReport?.inventory || []).map((i: any, idx: number) => (
-                <div key={`md-i-${idx}`} className="mt-1">- {i.name} — {i.category} — Local only; appears in Inventory Control and Inventory Report</div>
-              ))}
-            </div>
-            <div>
-              <div className="font-semibold">Summary</div>
-              <div className="text-muted-foreground">{mockReport?.summary?.mode}</div>
-              {mockReport?.summary && (
-                <div className="text-muted-foreground">Local counts — users={mockReport.summary.local_users}, customers={mockReport.summary.local_customers}, employees={mockReport.summary.local_employees}, chemicals={mockReport.summary.chemicals_count}, materials={mockReport.summary.materials_count}</div>
-              )}
-              <div className="text-xs mt-1">No Supabase interactions. If using Supabase-backed mock system later, ensure your Supabase env/config is valid.</div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* User Administration Modal */}
       <Dialog open={userAdminOpen} onOpenChange={setUserAdminOpen}>

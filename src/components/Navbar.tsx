@@ -26,6 +26,7 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(getCurrentUser());
   const cartCount = useCartStore((s) => s.count());
+  const [bookingTestMode, setBookingTestMode] = useState(false);
 
   const defaultNavLinks = [
     { to: "/", label: "Home" },
@@ -41,7 +42,11 @@ export const Navbar = () => {
 
   const loadLinks = async () => {
     try {
-      const meta = await contentService.getServiceMeta('header_links');
+      const allMeta = await contentService.getAllServiceMeta();
+      const meta = allMeta.find(m => m.key === 'header_links');
+      const bMode = allMeta.find(m => m.key === 'booking_test_mode');
+      setBookingTestMode(!!bMode?.meta?.enabled);
+      
       if (meta && meta.meta && Array.isArray(meta.meta.links)) {
         setNavLinks(meta.meta.links);
       } else {
@@ -53,7 +58,7 @@ export const Navbar = () => {
   useEffect(() => {
     loadLinks();
     const handleContentChange = (e: any) => {
-      if (e.detail?.kind === 'header') {
+      if (e.detail?.kind === 'header' || e.detail?.kind === 'booking_test_mode') {
         loadLinks();
       }
     };
@@ -107,7 +112,7 @@ export const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            {navLinks.map(link => (
+            {[...navLinks, ...(bookingTestMode && user?.role === 'admin' && !navLinks.some(l => l.to === '/book-now') ? [{ to: "/book-now", label: "Booking (Test)" }] : [])].map(link => (
               <Link
                 key={`${link.to}-${link.label}`}
                 to={link.to}
@@ -202,7 +207,7 @@ export const Navbar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-4">
-              {navLinks.map(link => (
+              {[...navLinks, ...(bookingTestMode && user?.role === 'admin' && !navLinks.some(l => l.to === '/book-now') ? [{ to: "/book-now", label: "Booking (Test)" }] : [])].map(link => (
                 <Link
                   key={`${link.to}-${link.label}`}
                   to={link.to}

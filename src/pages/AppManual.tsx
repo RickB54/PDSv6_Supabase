@@ -456,8 +456,7 @@ export default function AppManual() {
                             <h3 className="text-xl font-semibold text-white mb-2 print:text-black">Danger Zone & Settings</h3>
                             <p className="text-zinc-300 mb-4 print:text-black">Navigate to <strong>Settings</strong> to manage:</p>
                             <ul className="list-disc pl-5 space-y-2 text-zinc-300 print:text-black">
-                                <li><strong>Data Reset:</strong> "Danger Zone" allows clearing mock data or factory resetting the app (Password Protected).</li>
-                                <li><strong>Mock Data:</strong> Use the "Mock Data System" in Admin Dashboard to seed test jobs/employees for training purposes.</li>
+                                <li><strong>Data Reset:</strong> "Danger Zone" allows clearing local app snapshots or factory resetting the browser's persistent storage (Password Protected).</li>
                             </ul>
                         </Card>
                     </section>

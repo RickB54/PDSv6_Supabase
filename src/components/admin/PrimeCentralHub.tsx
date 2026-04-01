@@ -117,7 +117,6 @@ const AVAILABLE_SHORTCUTS: Shortcut[] = [
     { id: 'modal-subcontractors', label: 'SubContractors', detail: 'External teams', type: 'modal', target: 'subcontractors' },
     { id: 'modal-user-admin', label: 'User Admin', detail: 'Roles & Rights', type: 'modal', target: 'user-admin' },
     { id: 'modal-employee-mgmt', label: 'Employee Mgmt', detail: 'Details & History', type: 'modal', target: 'employee-mgmt' },
-    { id: 'modal-mock-data', label: 'Mock Data System', detail: 'Control center', type: 'modal', target: 'mock-data' },
     { id: 'modal-orientation', label: 'Employee Orientation', detail: 'Onboarding flow', type: 'modal', target: 'orientation' },
 ];
 

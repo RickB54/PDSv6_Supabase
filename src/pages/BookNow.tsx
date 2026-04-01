@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle, Check, CreditCard, ChevronRight, ArrowRight } from "lucide-react"; // Merged icons
+import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle, Check, CreditCard, ChevronRight, ArrowRight, TestTube2 } from "lucide-react"; // Merged icons
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
@@ -58,19 +58,12 @@ const BookNow = () => {
   const urlTimeStr = urlParams.get('time');
   const urlDestFee = parseFloat(urlParams.get('destinationFee') || '0');
 
+  // 1. All State Declarations First
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    make: urlParams.get('make') || "",
-    model: urlParams.get('model') || "",
-    year: urlParams.get('year') || "",
-    datetime: "",
-    package: urlPackage || "",
-    message: urlTimeStr ? `Preferred Time: ${urlTimeStr}` : "",
-    conditionInside: "",
-    conditionOutside: ""
+    name: "", email: "", phone: "", address: "",
+    make: urlParams.get('make') || "", model: urlParams.get('model') || "", year: urlParams.get('year') || "",
+    datetime: "", package: urlPackage || "", message: urlTimeStr ? `Preferred Time: ${urlTimeStr}` : "",
+    conditionInside: "", conditionOutside: ""
   });
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
   const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
@@ -78,15 +71,36 @@ const BookNow = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { add: addBooking, items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const { refresh: refreshCoupons, items: allCoupons } = useCouponsStore();
+  const [testModeActive, setTestModeActive] = useState(false);
 
-  useEffect(() => {
-    refreshBookings();
-    refreshCoupons();
-  }, [refreshBookings, refreshCoupons]);
+  // Coupon states
+  const [couponCode, setCouponCode] = useState('');
+  const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState<string>('');
+  const [showCouponField, setShowCouponField] = useState(false);
 
-  // 🧪 TEST DATA FILLER - Only on localhost
-  // 🧪 TEST DATA FILLER - Only on localhost
-  const [mockIndex, setMockIndex] = useState(0);
+  // Date/Time states
+  const [date, setDate] = useState<Date | undefined>(() => {
+    if (!urlDateStr) return undefined;
+    const parts = urlDateStr.split('-').map(Number);
+    if (parts.length !== 3) return undefined;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  });
+  const [selectedTime, setSelectedTime] = useState(() => {
+    if (!urlTimeStr) return '';
+    const match = urlTimeStr.match(/(\d+):(\d+)\s?(AM|PM)/i);
+    if (match) {
+      let [_, h, m, ap] = match;
+      let hour = parseInt(h);
+      if (ap.toUpperCase() === 'PM' && hour < 12) hour += 12;
+      if (ap.toUpperCase() === 'AM' && hour === 12) hour = 0;
+      return `${hour.toString().padStart(2, '0')}:${m}:00`;
+    }
+    return '';
+  });
+  const [isEditingDate, setIsEditingDate] = useState(!date || !selectedTime);
+
+  // 2. Specialized Logic Functions
   const fillTestData = () => {
     const mockProfiles = [
       { name: "James Wilson", email: "james.w@example.com", phone: "(555) 234-5678", address: "742 Evergreen Terrace, Springfield", make: "Tesla", model: "Model 3", year: "2023", vType: "sedan", package: "prime-essential-exterior", addons: ["premium-wax"], time: "09:00:00" },
@@ -102,7 +116,8 @@ const BookNow = () => {
     const randomIndex = Math.floor(Math.random() * mockProfiles.length);
     const profile = mockProfiles[randomIndex];
 
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       name: profile.name,
       email: profile.email,
       phone: profile.phone,
@@ -110,16 +125,15 @@ const BookNow = () => {
       make: profile.make,
       model: profile.model,
       year: profile.year,
-      datetime: "",
       package: profile.package,
       message: `[MOCK_DATA] Test booking for ${profile.name} - can be deleted`,
       conditionInside: "Good",
       conditionOutside: "Fair"
-    });
+    }));
     setVehicleType(profile.vType);
     setAddOns(profile.addons);
 
-    // ONLY prefill date if NOT already set
+    // Default date/time for test booking if not set
     if (!date && !selectedTime) {
       const targetDate = new Date();
       targetDate.setDate(targetDate.getDate() + (randomIndex + 1));
@@ -130,38 +144,44 @@ const BookNow = () => {
 
     toast({
       title: "🧪 Mock Data Filled!",
-      description: `Loaded profile: ${profile.name} (${profile.vType}). ${(!date && !selectedTime) ? "Date/Time defaulted." : "Date/Time preserved."}`
+      description: `Loaded profile: ${profile.name}. ${(!date && !selectedTime) ? "Date/Time defaulted." : "Date/Time preserved."}`
     });
   };
-  // Coupon states
-  const [couponCode, setCouponCode] = useState('');
-  const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
-  const [couponError, setCouponError] = useState<string>('');
-  const [showCouponField, setShowCouponField] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(() => {
-    if (!urlDateStr) return undefined;
-    const parts = urlDateStr.split('-').map(Number);
-    if (parts.length !== 3) return undefined;
-    return new Date(parts[0], parts[1] - 1, parts[2]);
-  });
 
-  const [selectedTime, setSelectedTime] = useState(() => {
-    if (!urlTimeStr) return '';
-    const match = urlTimeStr.match(/(\d+):(\d+)\s?(AM|PM)/i);
-    if (match) {
-      let [_, h, m, ap] = match;
-      let hour = parseInt(h);
-      if (ap.toUpperCase() === 'PM' && hour < 12) hour += 12;
-      if (ap.toUpperCase() === 'AM' && hour === 12) hour = 0;
-      return `${hour.toString().padStart(2, '0')}:${m}:00`;
-    }
-    return '';
-  });
+  // 3. Effects
+  useEffect(() => {
+    refreshBookings();
+    refreshCoupons();
 
-  // UX Improvement: Check if we have valid pre-filled data.
-  // If so, default to NOT editing (Calendar Hidden) to reduce confusion.
-  // Use 'date' and 'selectedTime' which are initialized from URL params above.
-  const [isEditingDate, setIsEditingDate] = useState(!date || !selectedTime);
+    const checkTestMode = async () => {
+      const meta = await contentService.getServiceMeta('booking_test_mode');
+      if (meta?.meta?.enabled) {
+        setTestModeActive(true);
+        setTimeout(fillTestData, 500); 
+      }
+    };
+    checkTestMode();
+
+    const handleContentChange = (e: any) => {
+      if (e.detail?.kind === 'booking_test_mode') {
+        contentService.getServiceMeta('booking_test_mode').then(m => {
+          if (m?.meta?.enabled) {
+            setTestModeActive(true);
+            fillTestData();
+          } else {
+            setTestModeActive(false);
+            setFormData({
+              name: "", email: "", phone: "", address: "", make: "", model: "", year: "",
+              datetime: "", package: urlPackage || "", message: "", conditionInside: "", conditionOutside: ""
+            });
+            setAddOns([]);
+          }
+        });
+      }
+    };
+    window.addEventListener('content-changed', handleContentChange as any);
+    return () => window.removeEventListener('content-changed', handleContentChange as any);
+  }, []);
 
   // Map bookings for AvailabilityPicker
   const mappedBookings = allBookings.map(b => ({
@@ -851,6 +871,30 @@ const BookNow = () => {
       )}
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
+        {testModeActive && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between animate-pulse-subtle shadow-lg shadow-amber-500/5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center shadow-inner ring-2 ring-amber-400/50">
+                <TestTube2 className="h-5 w-5 text-black" />
+              </div>
+              <div>
+                <h3 className="text-amber-500 font-black italic uppercase tracking-tighter text-sm flex items-center gap-2">
+                  Admin Test Mode Active
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping" />
+                </h3>
+                <p className="text-[10px] text-zinc-500 font-medium">Verification mode enabled: form fields are pre-filled with randomized test identities.</p>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-[10px] uppercase font-bold text-amber-500 hover:bg-amber-500 hover:text-black transition-all border border-amber-500/20 hover:border-amber-500 px-4"
+              onClick={fillTestData}
+            >
+              Shuffle Data
+            </Button>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" asChild>
             <Link to="/services">

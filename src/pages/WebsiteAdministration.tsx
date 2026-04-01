@@ -13,12 +13,22 @@ import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { contentService } from "@/lib/content";
 import { Switch } from "@/components/ui/switch";
-import { Facebook, Pencil, Trash2, HelpCircle } from "lucide-react";
+import { Facebook, Pencil, Trash2, HelpCircle, TestTube2 } from "lucide-react";
 import HelpModal from "@/components/help/HelpModal";
 
 const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
 };
+
+import { 
+  Users, 
+  Rocket, 
+  Calendar, 
+  ShieldCheck, 
+  ChevronsDown, 
+  ChevronsUp,
+  LayoutDashboard
+} from "lucide-react";
 
 export default function WebsiteAdministration() {
   const { toast } = useToast();
@@ -103,12 +113,15 @@ export default function WebsiteAdministration() {
   const [editFaq, setEditFaq] = useState<any | null>(null);
   const [newFaqOpen, setNewFaqOpen] = useState(false);
   const [newFaqQ, setNewFaqQ] = useState('');
+  const [bookingTestMode, setBookingTestMode] = useState(false);
   const [newFaqA, setNewFaqA] = useState('');
 
   const [editAbout, setEditAbout] = useState<any | null>(null);
   const [newAboutOpen, setNewAboutOpen] = useState(false);
   const [newAboutSection, setNewAboutSection] = useState('');
   const [newAboutContent, setNewAboutContent] = useState('');
+  const [accordionValue, setAccordionValue] = useState<string[]>([]);
+  const ALL_SECTIONS = ["home", "about-page", "bookings", "faqs", "vehicle-types", "launch-status", "contact", "package-details", "footer", "header"];
 
   const loadWA = async () => {
     // 1. VEHICLE TYPES
@@ -237,6 +250,10 @@ export default function WebsiteAdministration() {
         setShowBookNow(gs.meta.showBookNow !== false);
       }
 
+      // Booking Test Mode
+      const btm = allMeta.find(m => m.key === 'booking_test_mode');
+      if (btm) setBookingTestMode(btm.meta?.active === true);
+
       // Home Data
       const h = allMeta.find(m => m.key === 'home_content');
       if (h && h.meta) {
@@ -331,13 +348,88 @@ export default function WebsiteAdministration() {
               <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">Content Control</h1>
               <p className="text-zinc-400 max-w-xl">Manage your website's content, vehicle pricing, FAQs, and more from a centralized dashboard. Changes reflect immediately.</p>
             </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:text-white"
+                onClick={() => setAccordionValue(accordionValue.length === ALL_SECTIONS.length ? [] : ALL_SECTIONS)}
+              >
+                {accordionValue.length === ALL_SECTIONS.length ? (
+                  <>
+                    <ChevronsUp className="h-4 w-4 mr-2" />
+                    Collapse All
+                  </>
+                ) : (
+                  <>
+                    <ChevronsDown className="h-4 w-4 mr-2" />
+                    Expand All
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
           {/* Decorative background element */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
         </div>
 
+        {/* Status Dashboard / Stats Boxes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
+            <div className={`p-3 rounded-xl ${showBookNow ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+              <Rocket className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Global Status</p>
+              <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
+                {showBookNow ? 'Website Live' : 'Pre-Launch'}
+              </h3>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
+            <div className={`p-3 rounded-xl ${bookingTestMode ? 'bg-amber-500/10 text-amber-500' : 'bg-zinc-500/10 text-zinc-500'}`}>
+              <TestTube2 className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Booking Mode</p>
+              <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
+                {bookingTestMode ? 'Admin Test' : 'Standard'}
+              </h3>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
+            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500">
+              <Users className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Testimonials</p>
+              <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
+                {testimonials.length} ACTIVE
+              </h3>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
+            <div className="p-3 rounded-xl bg-zinc-500/10 text-zinc-400">
+              <LayoutDashboard className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Sections</p>
+              <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
+                9 CONTROL AREAS
+              </h3>
+            </div>
+          </Card>
+        </div>
+
         <Card className="p-1 bg-zinc-950/50 border-zinc-800 shadow-xl rounded-xl overflow-hidden">
-          <Accordion type="single" collapsible className="w-full space-y-1">
+          <Accordion 
+            type="multiple" 
+            value={accordionValue}
+            onValueChange={setAccordionValue}
+            className="w-full space-y-1"
+          >
 
             {/* Home Page Sections */}
             <AccordionItem value="home" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
@@ -627,6 +719,62 @@ export default function WebsiteAdministration() {
               </AccordionContent>
             </AccordionItem>
 
+            {/* Booking Control */}
+            <AccordionItem value="bookings" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-amber-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Booking Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); setHelpId('booking-test-mode'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="flex items-center justify-between p-5 bg-gradient-to-r from-zinc-900/80 to-zinc-950 border border-amber-900/20 rounded-xl">
+                  <div className="space-y-1.5 flex-1 pr-6">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-white font-black text-lg uppercase tracking-tighter">Booking Test Mode</h4>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 text-zinc-600 hover:text-amber-500 transition-colors"
+                        onClick={() => setHelpId('booking-test-mode')}
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-relaxed max-w-lg">
+                      {bookingTestMode 
+                        ? "Currently: TEST MODE ACTIVE - The 'Booking (Test)' link is visible in the Navbar. The booking page will auto-fill with random test data for diagnostic purposes." 
+                        : "Currently: PRODUCTION MODE - Test links are hidden. Booking page operates normally with manual user input only."}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-3 bg-zinc-950 px-5 py-2.5 rounded-full border border-zinc-800 shadow-inner">
+                      <Label className={`text-[10px] uppercase font-black tracking-widest ${bookingTestMode ? 'text-amber-500' : 'text-zinc-500'}`}>
+                        {bookingTestMode ? 'Test Mode On' : 'Standard'}
+                      </Label>
+                      <Switch
+                        checked={bookingTestMode}
+                        onCheckedChange={async (checked) => {
+                          setBookingTestMode(checked);
+                          await contentService.upsertServiceMeta({
+                            key: 'booking_test_mode',
+                            meta: { active: checked },
+                            description: 'Administrative Booking Test Mode'
+                          });
+                          notifyChange('settings');
+                          toast({ 
+                            title: checked ? 'Booking Test Mode Active' : 'Production Mode Restored', 
+                            description: checked ? 'Test booking link is now visible to you.' : 'Test mode disabled.',
+                            className: checked ? "bg-amber-950 border-amber-500 text-white" : "bg-zinc-900 border-zinc-700 text-white"
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
             {/* FAQs */}
             <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">FAQs</AccordionTrigger>
@@ -671,10 +819,18 @@ export default function WebsiteAdministration() {
 
             {/* Vehicle Types */}
             <AccordionItem value="vehicle-types" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Vehicle Types</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">
+                <div className="flex items-center gap-2">
+                  Vehicle Types
+                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); setHelpId('vehicle-types-management'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Register Vehicle Types</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Register Vehicle Types</h4>
+                    <HelpCircle className="h-3.5 w-3.5 text-zinc-700 cursor-pointer hover:text-white" onClick={() => setHelpId('vehicle-types-management')} />
+                  </div>
                   <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewVehicleOpen(true)}>Add Type</Button>
                 </div>
                 <div className="w-full overflow-x-auto">
@@ -795,7 +951,12 @@ export default function WebsiteAdministration() {
 
             {/* Services */}
             <AccordionItem value="package-details" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">Learn More & Disclaimer</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Learn More & Disclaimer
+                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); setHelpId('services-disclaimer-management'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
                 <div className="space-y-2">
                   <Label className="text-zinc-400 text-xs uppercase font-bold">Services Section Disclaimer</Label>
