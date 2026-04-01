@@ -68,9 +68,10 @@ const CustomerPortal = () => {
   const user = getCurrentUser();
   const [showBookNow, setShowBookNow] = useState(false);
   const [bookingTestMode, setBookingTestMode] = useState(false);
-  // Only show direct booking functions if the site is officially LIVE (not in Pre-Launch)
+  const [businessStatus, setBusinessStatus] = useState<any>(null);
+  // Only show direct booking functions if the site is officially LIVE (not in Pre-Launch or Winter Mode)
   // Per user request, admins will use the Shuffle button on the Book Now page for diagnostic testing
-  const isEffectiveLive = showBookNow;
+  const isEffectiveLive = businessStatus ? businessStatus.showBooking : showBookNow;
   // ... (rest of hook calls)
 
   // ... (skip down to AvailabilityPicker) ...
@@ -156,6 +157,9 @@ const CustomerPortal = () => {
         const globalMeta = allMetaItems.find(m => m.key === 'global_settings');
         if (globalMeta && globalMeta.meta) {
           setShowBookNow(globalMeta.meta.showBookNow !== false);
+          if (globalMeta.meta.businessStatus) {
+            setBusinessStatus(globalMeta.meta.businessStatus);
+          }
         }
         
         const btm = allMetaItems.find(m => m.key === 'booking_test_mode');

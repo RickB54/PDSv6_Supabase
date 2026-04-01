@@ -13,22 +13,36 @@ import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { contentService } from "@/lib/content";
 import { Switch } from "@/components/ui/switch";
-import { Facebook, Pencil, Trash2, HelpCircle, TestTube2 } from "lucide-react";
-import HelpModal from "@/components/help/HelpModal";
-
-const notifyChange = (kind: string) => {
-  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
-};
-
+import { Badge } from "@/components/ui/badge";
 import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
+  Facebook, 
+  Pencil, 
+  Trash2, 
+  HelpCircle, 
+  TestTube2,
   Users, 
   Rocket, 
   Calendar, 
   ShieldCheck, 
   ChevronsDown, 
   ChevronsUp,
-  LayoutDashboard
+  LayoutDashboard,
+  Snowflake,
+  Construction,
+  Info,
+  Settings
 } from "lucide-react";
+import HelpModal from "@/components/help/HelpModal";
+
+const notifyChange = (kind: string) => {
+  try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
+};
 import * as bookingsSvc from "@/services/supabase/bookings";
 
 export default function WebsiteAdministration() {
@@ -117,7 +131,61 @@ export default function WebsiteAdministration() {
   const [bookingTestMode, setBookingTestMode] = useState(false);
   const [newFaqA, setNewFaqA] = useState('');
 
+  const [businessStatus, setBusinessStatus] = useState({
+    mode: 'live',
+    bannerText: 'We are currently LIVE and accepting bookings!',
+    bannerDescription: 'Our mobile units are active and ready to deliver precision results to your driveway.',
+    showBooking: true,
+    showContact: true,
+    isBannerActive: false
+  });
+  const [activeStatus, setActiveStatus] = useState<any>(null);
+
+  const STATUS_PRESETS: Record<string, any> = {
+    live: {
+      mode: 'live',
+      bannerText: 'We are currently LIVE and accepting bookings!',
+      bannerDescription: 'Our mobile units are active and ready to deliver precision results to your driveway.',
+      showBooking: true,
+      showContact: true,
+      isBannerActive: false
+    },
+    'pre-launch': {
+      mode: 'pre-launch',
+      bannerText: 'Grand Opening Soon - Pre-Launch Mode Active',
+      bannerDescription: 'We are in the final preparation phase. Connect with us early to be first in line when we officially launch.',
+      showBooking: false,
+      showContact: true,
+      isBannerActive: true
+    },
+    'winter-closed': {
+      mode: 'winter-closed',
+      bannerText: 'Seasonally Closed For Winter',
+      bannerDescription: 'We have paused mobile operations for the season. Our inquiry portal remains open for Spring scheduling.',
+      showBooking: false,
+      showContact: true,
+      isBannerActive: true
+    }
+  };
+
   const [editAbout, setEditAbout] = useState<any | null>(null);
+
+  const handleUpdateStatus = async (newStatus: any) => {
+    setBusinessStatus(newStatus);
+    setActiveStatus(newStatus);
+    const isLive = newStatus.mode === 'live' || (newStatus.mode === 'custom' && newStatus.showBooking);
+    setShowBookNow(isLive);
+    
+    await contentService.upsertServiceMeta({
+      key: 'global_settings',
+      meta: { 
+        showBookNow: isLive,
+        businessStatus: newStatus
+      },
+      description: 'Website Global Operational Status'
+    });
+    notifyChange('settings');
+  };
   const [newAboutOpen, setNewAboutOpen] = useState(false);
   const [newAboutSection, setNewAboutSection] = useState('');
   const [newAboutContent, setNewAboutContent] = useState('');
@@ -249,6 +317,20 @@ export default function WebsiteAdministration() {
       const gs = allMeta.find(m => m.key === 'global_settings');
       if (gs && gs.meta) {
         setShowBookNow(gs.meta.showBookNow !== false);
+        if (gs.meta.businessStatus) {
+          setBusinessStatus(gs.meta.businessStatus);
+          setActiveStatus(gs.meta.businessStatus);
+        } else {
+          // Migration from old showBookNow flag
+          setBusinessStatus({
+            mode: gs.meta.showBookNow !== false ? 'live' : 'pre-launch',
+            bannerText: gs.meta.showBookNow !== false ? 'We are currently LIVE and accepting bookings!' : 'Grand Opening Soon - Pre-Launch Mode Active',
+            bannerDescription: gs.meta.showBookNow !== false ? 'Our mobile units are active.' : 'We are preparing for our official launch.',
+            showBooking: gs.meta.showBookNow !== false,
+            showContact: true,
+            isBannerActive: gs.meta.showBookNow === false
+          });
+        }
       }
 
       // Booking Test Mode
@@ -375,37 +457,102 @@ export default function WebsiteAdministration() {
 
         {/* Status Dashboard / Stats Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card 
-            className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-emerald-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
-            onClick={async () => {
-              const next = !showBookNow;
-              setShowBookNow(next);
-              await contentService.upsertServiceMeta({
-                key: 'global_settings',
-                meta: { showBookNow: next },
-                description: 'Website Global Settings'
-              });
-              notifyChange('settings');
-              toast({ 
-                title: next ? 'Business Launched!' : 'Pre-Launch Active', 
-                description: next ? 'Public booking is now enabled.' : 'Inquiry mode re-activated.',
-                className: next ? "bg-emerald-950 border-emerald-500 text-white" : "bg-red-950 border-red-500 text-white"
-              });
-            }}
-          >
-            <div className={`p-3 rounded-xl transition-colors ${showBookNow ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/10'}`}>
-              <Rocket className={`h-6 w-6 ${showBookNow ? 'animate-pulse' : ''}`} />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }}>Global Status</p>
-                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-emerald-400 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
-              </div>
-              <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
-                {showBookNow ? 'Website Live' : 'Pre-Launch'}
-              </h3>
-            </div>
-          </Card>
+          {/* Status Mode Card - Cycle/Select Presets via Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Card 
+                className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-zinc-700 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
+              >
+                <div className={`p-3 rounded-xl transition-all duration-500 ${
+                  businessStatus.mode === 'live' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 
+                  businessStatus.mode === 'winter-closed' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' :
+                  businessStatus.mode === 'custom' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20' :
+                  'bg-red-500/10 text-red-500 border border-red-500/10'
+                }`}>
+                  {businessStatus.mode === 'live' ? <Rocket className="h-6 w-6 animate-pulse" /> : 
+                   businessStatus.mode === 'winter-closed' ? <Snowflake className="h-6 w-6 animate-spin-slow" /> :
+                   businessStatus.mode === 'custom' ? <Settings className="h-6 w-6" /> :
+                   <Construction className="h-6 w-6" />}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help">Global Status</p>
+                    <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-emerald-400 transition-colors" />
+                  </div>
+                  <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
+                    {businessStatus.mode === 'live' ? 'Website Live' : 
+                     businessStatus.mode === 'winter-closed' ? 'Winter Mode' : 
+                     businessStatus.mode === 'custom' ? 'Custom Mode' : 'Pre-Launch'}
+                  </h3>
+                </div>
+              </Card>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-64 shadow-2xl p-1.5 focus:outline-none">
+              <DropdownMenuItem 
+                className="flex items-center gap-3 p-3 focus:bg-emerald-500/10 focus:text-emerald-400 cursor-pointer rounded-lg mb-1" 
+                onClick={() => {
+                  handleUpdateStatus(STATUS_PRESETS.live);
+                  toast({ title: "Live Mode Active", description: "All booking features enabled." });
+                }}
+              >
+                <div className="p-2 bg-emerald-500/20 rounded-md">
+                  <Rocket className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold uppercase italic tracking-tighter">Live Mode</p>
+                  <p className="text-[10px] text-zinc-500">Enable all consumer functions</p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-3 p-3 focus:bg-red-500/10 focus:text-red-400 cursor-pointer rounded-lg mb-1" 
+                onClick={() => {
+                  handleUpdateStatus(STATUS_PRESETS['pre-launch']);
+                  toast({ title: "Pre-Launch Enabled", description: "Bookings disabled, inquiry portal active." });
+                }}
+              >
+                <div className="p-2 bg-red-500/20 rounded-md">
+                  <Construction className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold uppercase italic tracking-tighter">Pre-Launch</p>
+                  <p className="text-[10px] text-zinc-500">Hide bookings / Show 'Coming Soon'</p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-3 p-3 focus:bg-blue-500/10 focus:text-blue-400 cursor-pointer rounded-lg mb-1" 
+                onClick={() => {
+                  handleUpdateStatus(STATUS_PRESETS['winter-closed']);
+                  toast({ title: "Winter Mode Active", description: "Seasonal closure notice active." });
+                }}
+              >
+                <div className="p-2 bg-blue-500/20 rounded-md">
+                  <Snowflake className="h-4 w-4 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold uppercase italic tracking-tighter">Winter Mode</p>
+                  <p className="text-[10px] text-zinc-500">Seasonal closure / Lead preservation</p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-3 p-3 focus:bg-purple-500/10 focus:text-purple-400 cursor-pointer rounded-lg" 
+                onClick={() => {
+                  handleUpdateStatus({ ...businessStatus, mode: 'custom' });
+                  if (!accordionValue.includes('launch-status')) {
+                    setAccordionValue([...accordionValue, 'launch-status']);
+                  }
+                  toast({ title: "Custom Mode", description: "Manual overrides enabled below." });
+                }}
+              >
+                <div className="p-2 bg-purple-500/20 rounded-md">
+                  <Settings className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold uppercase italic tracking-tighter">Custom Mode</p>
+                  <p className="text-[10px] text-zinc-500">Configurable manual overrides</p>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Card 
             className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-amber-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
@@ -873,9 +1020,202 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             <div className="px-4 py-3 bg-zinc-900/30 border-y border-zinc-800/50 mt-4 flex items-center justify-between">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">System Functions & Config</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Management Functions</h4>
               <div className="h-px flex-1 mx-4 bg-gradient-to-r from-zinc-800/50 to-transparent" />
             </div>
+
+            {/* Business Launch Manager - Global Toggle */}
+            <AccordionItem value="launch-status" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Business Launch Manager
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-8">
+                {/* Advanced Mode Selector */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {[
+                    { id: 'live', name: 'Live Mode', icon: Rocket, color: 'emerald' },
+                    { id: 'pre-launch', name: 'Pre-Launch', icon: Construction, color: 'red' },
+                    { id: 'winter-closed', name: 'Winter Mode', icon: Snowflake, color: 'blue' },
+                    { id: 'custom', name: 'Custom Mode', icon: Settings, color: 'purple' }
+                  ].map((preset) => {
+                    const isPreview = businessStatus.mode === preset.id;
+                    const isActive = activeStatus?.mode === preset.id;
+
+                    const colorStyles: Record<string, string> = {
+                      emerald: isPreview ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
+                      red: isPreview ? 'bg-red-500/10 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
+                      blue: isPreview ? 'bg-blue-500/10 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
+                      purple: isPreview ? 'bg-purple-500/10 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
+                    };
+                    const iconColors: Record<string, string> = {
+                      emerald: isPreview ? 'bg-emerald-500 text-white' : 'bg-zinc-800 text-zinc-500',
+                      red: isPreview ? 'bg-red-500 text-white' : 'bg-zinc-800 text-zinc-500',
+                      blue: isPreview ? 'bg-blue-500 text-white' : 'bg-zinc-800 text-zinc-500',
+                      purple: isPreview ? 'bg-purple-500 text-white' : 'bg-zinc-800 text-zinc-500',
+                    };
+                    const textColors: Record<string, string> = {
+                      emerald: isPreview ? 'text-emerald-500' : 'text-zinc-500',
+                      red: isPreview ? 'text-red-500' : 'text-zinc-500',
+                      blue: isPreview ? 'text-blue-500' : 'text-zinc-500',
+                      purple: isPreview ? 'text-purple-500' : 'text-zinc-500',
+                    };
+
+                    return (
+                    <Card 
+                      key={preset.id}
+                      className={`p-4 cursor-pointer transition-all border-2 relative overflow-hidden ${colorStyles[preset.color]}`}
+                      onClick={() => {
+                        if (preset.id === 'custom') {
+                          setBusinessStatus({ ...businessStatus, mode: 'custom' });
+                        } else {
+                          setBusinessStatus(STATUS_PRESETS[preset.id]);
+                        }
+                      }}
+                    >
+                      {isActive && (
+                        <div className={`absolute top-2 right-2 flex items-center gap-1`}>
+                           <div className={`h-2 w-2 rounded-full animate-pulse ${
+                             preset.color === 'emerald' ? 'bg-emerald-500' : 
+                             preset.color === 'red' ? 'bg-red-500' : 
+                             preset.color === 'blue' ? 'bg-blue-500' : 'bg-purple-500'
+                           }`} />
+                           <span className="text-[8px] font-black uppercase text-zinc-500 tracking-tighter">Live Now</span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        <div className={`p-3 rounded-full ${iconColors[preset.color]}`}>
+                          <preset.icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 pb-2">
+                          <p className={`text-xs font-black uppercase tracking-widest ${textColors[preset.color]}`}>{preset.name}</p>
+                          <p className="text-[10px] text-zinc-600 mt-1">
+                            {preset.id === 'live' ? 'Full Operations' : 
+                             preset.id === 'pre-launch' ? 'Growing Leads' : 
+                             preset.id === 'winter-closed' ? 'Seasonal Pause' : 'Your Config'}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 mt-auto border-t border-zinc-800 w-full flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                           <Label className={`text-[10px] uppercase font-black tracking-tighter ${isActive ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                             {isActive ? 'Active' : 'Deploy'}
+                           </Label>
+                           <Switch 
+                             checked={isActive} 
+                             onCheckedChange={(checked) => {
+                               if (checked) {
+                                  const presetData = preset.id === 'custom' ? businessStatus : STATUS_PRESETS[preset.id];
+                                  handleUpdateStatus(presetData);
+                               }
+                             }}
+                             className={`scale-75 ${
+                               preset.color === 'emerald' ? 'data-[state=checked]:bg-emerald-600' : 
+                               preset.color === 'red' ? 'data-[state=checked]:bg-red-600' : 
+                               preset.color === 'blue' ? 'data-[state=checked]:bg-blue-600' : 'data-[state=checked]:bg-purple-600'
+                             }`}
+                           />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+                {/* Status Configuration Form */}
+                <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-6 space-y-6">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-zinc-900 rounded-lg">
+                        <Settings className="h-4 w-4 text-zinc-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold uppercase tracking-tight">Status Configuration</h4>
+                        <p className="text-[10px] text-zinc-500 uppercase font-bold">Currently in {businessStatus.mode} mode</p>
+                      </div>
+                    </div>
+                    {businessStatus.mode !== 'live' && (
+                       <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-3 flex items-center gap-1">
+                         <Info className="h-3 w-3" /> Professional Banner Active
+                       </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest flex items-center gap-2">
+                          Primary Banner Heading
+                          <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => setHelpId('business-launch-manager')} />
+                        </Label>
+                        <Input 
+                          className="bg-zinc-900 border-zinc-800 text-white font-bold h-12 text-lg" 
+                          value={businessStatus.bannerText} 
+                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerText: e.target.value })} 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest">Banner Sub-Description</Label>
+                        <textarea 
+                          className="w-full bg-zinc-900 border-zinc-800 text-zinc-400 rounded-lg p-3 text-sm min-h-[100px]" 
+                          value={businessStatus.bannerDescription} 
+                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerDescription: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-zinc-900">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-4">Feature Visibility Toggles</h4>
+                      
+                      <div className="flex items-center justify-between group">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Accept Real Bookings</Label>
+                          <p className="text-[10px] text-zinc-500">Enable/Disable the 'Book Now' functionality site-wide.</p>
+                        </div>
+                        <Switch 
+                          checked={businessStatus.showBooking} 
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, showBooking: c })}
+                          className="data-[state=checked]:bg-emerald-600"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between group">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Accept Inquiries</Label>
+                          <p className="text-[10px] text-zinc-500">Enable/Disable the contact and inquiry forms.</p>
+                        </div>
+                        <Switch 
+                          checked={businessStatus.showContact} 
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, showContact: c })}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between group">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Display Top Banner</Label>
+                          <p className="text-[10px] text-zinc-500">Force the announcement banner to stay active.</p>
+                        </div>
+                        <Switch 
+                          checked={businessStatus.isBannerActive} 
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, isBannerActive: c })}
+                          className="data-[state=checked]:bg-red-600"
+                        />
+                      </div>
+
+                      <Button 
+                        className="w-full bg-zinc-100 hover:bg-white text-black font-black uppercase italic tracking-tighter mt-4"
+                        onClick={() => handleUpdateStatus(businessStatus)}
+                      >
+                        Apply Status Changes
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
             <AccordionItem value="bookings" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-amber-900/5">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">
@@ -1009,49 +1349,141 @@ export default function WebsiteAdministration() {
                   <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="p-4 space-y-6">
-                <div className="flex items-center justify-between p-5 bg-gradient-to-r from-zinc-900/80 to-zinc-950 border border-red-900/20 rounded-xl">
-                  <div className="space-y-1.5 flex-1 pr-6">
+              <AccordionContent className="p-4 space-y-8">
+                {/* Advanced Mode Selector */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {[
+                    { id: 'live', name: 'Live Mode', icon: Rocket, color: 'emerald' },
+                    { id: 'pre-launch', name: 'Pre-Launch', icon: Construction, color: 'red' },
+                    { id: 'winter-closed', name: 'Winter Mode', icon: Snowflake, color: 'blue' },
+                    { id: 'custom', name: 'Custom Mode', icon: Settings, color: 'purple' }
+                  ].map((preset) => (
+                    <Card 
+                      key={preset.id}
+                      className={`p-4 cursor-pointer transition-all border-2 ${
+                        businessStatus.mode === preset.id 
+                          ? `bg-${preset.color}-500/10 border-${preset.color}-500 shadow-[0_0_15px_rgba(var(--${preset.color}-500),0.2)]` 
+                          : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
+                      }`}
+                      onClick={() => {
+                        if (preset.id === 'custom') {
+                          handleUpdateStatus({ ...businessStatus, mode: 'custom' });
+                        } else {
+                          handleUpdateStatus(STATUS_PRESETS[preset.id]);
+                        }
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        <div className={`p-3 rounded-full ${
+                          businessStatus.mode === preset.id ? `bg-${preset.color}-500 text-white` : 'bg-zinc-800 text-zinc-500'
+                        }`}>
+                          <preset.icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className={`text-xs font-black uppercase tracking-widest ${
+                            businessStatus.mode === preset.id ? `text-${preset.color}-500` : 'text-zinc-500'
+                          }`}>{preset.name}</p>
+                          <p className="text-[10px] text-zinc-600 mt-1">
+                            {preset.id === 'live' ? 'Full Operations' : 
+                             preset.id === 'pre-launch' ? 'Growing Leads' : 
+                             preset.id === 'winter-closed' ? 'Seasonal Pause' : 'Your Config'}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Status Configuration Form */}
+                <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-6 space-y-6">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-white font-black text-lg uppercase tracking-tighter">Live Booking & Active Launch Status</h4>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-5 w-5 text-zinc-600 hover:text-emerald-500 transition-colors"
-                        onClick={() => setHelpId('business-launch-manager')}
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
+                      <div className="p-2 bg-zinc-900 rounded-lg">
+                        <Settings className="h-4 w-4 text-zinc-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold uppercase tracking-tight">Status Configuration</h4>
+                        <p className="text-[10px] text-zinc-500 uppercase font-bold">Currently in {businessStatus.mode} mode</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-zinc-500 leading-relaxed max-w-lg">
-                      {showBookNow 
-                        ? "Currently: LIVE MODE - Pre-launch banners are hidden, and customers can book services directly." 
-                        : "Currently: PRE-LAUNCH MODE - 'Book Now' buttons are hidden, and customers are guided to the inquiry portal."}
-                    </p>
+                    {businessStatus.mode !== 'live' && (
+                       <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-3 flex items-center gap-1">
+                         <Info className="h-3 w-3" /> Professional Banner Active
+                       </Badge>
+                    )}
                   </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex items-center gap-3 bg-zinc-950 px-5 py-2.5 rounded-full border border-zinc-800 shadow-inner">
-                      <Label className={`text-[10px] uppercase font-black tracking-widest ${showBookNow ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {showBookNow ? 'Website Live' : 'Pre-Launch'}
-                      </Label>
-                      <Switch
-                        checked={showBookNow}
-                        onCheckedChange={async (checked) => {
-                          setShowBookNow(checked);
-                          await contentService.upsertServiceMeta({
-                            key: 'global_settings',
-                            meta: { showBookNow: checked },
-                            description: 'Website Global Settings'
-                          });
-                          notifyChange('settings');
-                          toast({ 
-                            title: checked ? 'Business Launched!' : 'Pre-Launch Active', 
-                            description: checked ? 'Public booking is now enabled.' : 'Inquiry mode re-activated.',
-                            className: checked ? "bg-emerald-950 border-emerald-500 text-white" : "bg-red-950 border-red-500 text-white"
-                          });
-                        }}
-                      />
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest flex items-center gap-2">
+                          Primary Banner Heading
+                          <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => setHelpId('business-launch-manager')} />
+                        </Label>
+                        <Input 
+                          value={businessStatus.bannerText}
+                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerText: e.target.value })}
+                          className="bg-zinc-900 border-zinc-800 focus:border-red-500 text-white font-bold"
+                          placeholder="e.g. Closed for the Winter"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest">Banner Subtext / Description</Label>
+                        <textarea 
+                          rows={3}
+                          value={businessStatus.bannerDescription}
+                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerDescription: e.target.value })}
+                          className="w-full bg-zinc-900 border-zinc-800 rounded-md p-3 text-sm text-zinc-300 focus:outline-none focus:border-red-500 transition-colors"
+                          placeholder="Explain your current business status to visitors..."
+                        />
+                      </div>
                     </div>
+
+                    <div className="space-y-6 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/50">
+                      <h5 className="text-[10px] uppercase font-black text-zinc-600 tracking-widest mb-4">Website Feature Visibility</h5>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white">"Book Now" Buttons</Label>
+                          <p className="text-[10px] text-zinc-500 uppercase font-medium">Toggle all live scheduling links</p>
+                        </div>
+                        <Switch 
+                          checked={businessStatus.showBooking} 
+                          onCheckedChange={(v) => setBusinessStatus({ ...businessStatus, showBooking: v })}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white">Contact Inquiry Form</Label>
+                          <p className="text-[10px] text-zinc-500 uppercase font-medium">Allow customers to send prospects</p>
+                        </div>
+                        <Switch 
+                          checked={businessStatus.showContact} 
+                          onCheckedChange={(v) => setBusinessStatus({ ...businessStatus, showContact: v })}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white">Announcement Banner</Label>
+                          <p className="text-[10px] text-zinc-500 uppercase font-medium">Show the top info bar on public site</p>
+                        </div>
+                        <Switch 
+                          checked={businessStatus.isBannerActive} 
+                          onCheckedChange={(v) => setBusinessStatus({ ...businessStatus, isBannerActive: v })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t border-zinc-800">
+                    <Button 
+                      className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase tracking-widest text-xs h-10"
+                      onClick={() => {
+                        handleUpdateStatus(businessStatus);
+                        toast({ title: 'Status Config Saved', description: 'Your website has been updated.' });
+                      }}
+                    >
+                      Apply Launch Config
+                    </Button>
                   </div>
                 </div>
               </AccordionContent>

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import SuccessMessage from "@/components/SuccessMessage";
-import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Snowflake } from "lucide-react";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
 import api from "@/lib/api";
@@ -44,6 +44,7 @@ const Contact = () => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showBookNow, setShowBookNow] = useState(false);
+  const [businessStatus, setBusinessStatus] = useState<any>(null);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -209,6 +210,9 @@ const Contact = () => {
         const { data: globalMeta } = await supabase.from('content_services_meta').select('*').eq('key', 'global_settings').single();
         if (globalMeta && globalMeta.meta) {
           setShowBookNow(globalMeta.meta.showBookNow !== false);
+          if (globalMeta.meta.businessStatus) {
+            setBusinessStatus(globalMeta.meta.businessStatus);
+          }
         }
       } catch {}
     };
@@ -227,31 +231,34 @@ const Contact = () => {
           </Link>
         </Button>
 
-        {/* Pre-Launch Notice Banner - ONLY SHOWN IF NOT IN LIVE MODE */}
-        {!showBookNow && (
-          <Card className="mb-12 border-2 border-primary/50 bg-primary/5 overflow-hidden shadow-2xl animate-fade-in">
-            <div className="bg-primary px-6 py-4 flex items-center gap-4">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Info className="h-6 w-6 text-white" />
-              </div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-wider">
-                Pre-Launch Contact Notice
-              </h2>
-            </div>
-            <div className="p-8 space-y-4">
-              <h3 className="text-xl font-bold text-foreground">Thank you for your interest in Prime Auto Detail.</h3>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                We are currently in the <strong>final preparation phase</strong> before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.
-              </p>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                If you would like to get in touch, please complete the inquiry form below. This helps us stay organized and ensures all inquiries are properly tracked as we prepare for launch.
-              </p>
-              <div className="pt-2">
-                <span className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary font-black uppercase tracking-widest text-xs border border-primary/20">
-                  <Star className="h-3.5 w-3.5 mr-2 animate-pulse" /> Launching Soon
-                </span>
-              </div>
-            </div>
+        {/* Dynamic Business Status Banner */}
+        {businessStatus?.isBannerActive && (
+          <Card className={`mb-12 border-2 overflow-hidden shadow-2xl animate-fade-in ${
+            businessStatus.mode === 'winter-closed' ? 'border-blue-500/50 bg-blue-500/5' : 'border-primary/50 bg-primary/5'
+          }`}>
+             <div className={`${businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 'bg-primary'} px-6 py-4 flex items-center gap-4`}>
+                <div className="p-2 bg-white/20 rounded-lg">
+                  {businessStatus.mode === 'winter-closed' ? <Snowflake className="h-6 w-6 text-white" /> : <Info className="h-6 w-6 text-white" />}
+                </div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-wider">
+                  {businessStatus.bannerText}
+                </h2>
+             </div>
+             <div className="p-8 space-y-4">
+                <h3 className="text-xl font-bold text-foreground">Important Status Update</h3>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  {businessStatus.bannerDescription}
+                </p>
+                {businessStatus.showContact ? (
+                   <p className="text-lg text-muted-foreground leading-relaxed italic">
+                     Our inquiry portal remains open. Please use the form below to connect with us.
+                   </p>
+                ) : (
+                   <p className="text-lg font-bold text-red-500 uppercase tracking-tighter">
+                     Our inquiry portal is temporarily paused. Please check back soon or try calling us.
+                   </p>
+                )}
+             </div>
           </Card>
         )}
 
@@ -263,7 +270,7 @@ const Contact = () => {
             onClick={() => setShowAbout(true)}
           />
           <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4 uppercase tracking-tight">Contact Us</h1>
-          {!showBookNow && (
+          {(!showBookNow || (businessStatus && !businessStatus.showBooking)) && (
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto italic">
               Connecting you to premium preservation as we prepare for our official opening.
             </p>
