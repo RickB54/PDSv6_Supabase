@@ -65,7 +65,10 @@ const getServiceDuration = (id: string = '') => {
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
+  const user = getCurrentUser();
   const [showBookNow, setShowBookNow] = useState(false);
+  const [bookingTestMode, setBookingTestMode] = useState(false);
+  const isEffectiveLive = showBookNow || (bookingTestMode && user?.role === 'admin');
   // ... (rest of hook calls)
 
   // ... (skip down to AvailabilityPicker) ...
@@ -147,10 +150,14 @@ const CustomerPortal = () => {
         });
         
         // Load Global Settings
-        const { data: globalMeta } = await supabase.from('content_services_meta').select('*').eq('key', 'global_settings').single();
+        const allMetaItems = await contentService.getAllServiceMeta();
+        const globalMeta = allMetaItems.find(m => m.key === 'global_settings');
         if (globalMeta && globalMeta.meta) {
           setShowBookNow(globalMeta.meta.showBookNow !== false);
         }
+        
+        const btm = allMetaItems.find(m => m.key === 'booking_test_mode');
+        setBookingTestMode(!!btm?.meta?.active);
 
         const newAddOnMeta: Record<string, any> = {};
         addons.forEach((a: any) => {
@@ -540,7 +547,7 @@ const CustomerPortal = () => {
                       Compare Packages
                     </Button>
 
-                    {showBookNow && (
+                    {isEffectiveLive && (
                       <Button
                         className="w-full h-12 bg-blue-900 hover:bg-black text-white font-bold"
                         onClick={() => {
@@ -689,7 +696,7 @@ const CustomerPortal = () => {
             </div>
 
             <div className="space-y-3">
-              {showBookNow ? (
+              {isEffectiveLive ? (
                 <Button
                   className={`w-full h-14 text-white font-bold text-xl transition-all rounded-xl shadow-xl
                     ${activeStep === 4 ? 'bg-blue-600 animate-blink shadow-blue-600/30' : 'bg-blue-600 hover:bg-blue-700'}

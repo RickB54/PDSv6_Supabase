@@ -155,7 +155,7 @@ const BookNow = () => {
 
     const checkTestMode = async () => {
       const meta = await contentService.getServiceMeta('booking_test_mode');
-      if (meta?.meta?.enabled) {
+      if (meta?.meta?.active) {
         setTestModeActive(true);
         setTimeout(fillTestData, 500); 
       }
@@ -165,7 +165,7 @@ const BookNow = () => {
     const handleContentChange = (e: any) => {
       if (e.detail?.kind === 'booking_test_mode') {
         contentService.getServiceMeta('booking_test_mode').then(m => {
-          if (m?.meta?.enabled) {
+          if (m?.meta?.active) {
             setTestModeActive(true);
             fillTestData();
           } else {

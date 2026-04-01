@@ -45,7 +45,7 @@ export const Navbar = () => {
       const allMeta = await contentService.getAllServiceMeta();
       const meta = allMeta.find(m => m.key === 'header_links');
       const bMode = allMeta.find(m => m.key === 'booking_test_mode');
-      setBookingTestMode(!!bMode?.meta?.enabled);
+      setBookingTestMode(!!bMode?.meta?.active);
       
       if (meta && meta.meta && Array.isArray(meta.meta.links)) {
         setNavLinks(meta.meta.links);
@@ -58,7 +58,7 @@ export const Navbar = () => {
   useEffect(() => {
     loadLinks();
     const handleContentChange = (e: any) => {
-      if (e.detail?.kind === 'header' || e.detail?.kind === 'booking_test_mode') {
+      if (e.detail?.kind === 'header' || e.detail?.kind === 'booking_test_mode' || e.detail?.kind === 'settings') {
         loadLinks();
       }
     };
@@ -112,7 +112,7 @@ export const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            {[...navLinks, ...(bookingTestMode && user?.role === 'admin' && !navLinks.some(l => l.to === '/book-now') ? [{ to: "/book-now", label: "Booking (Test)" }] : [])].map(link => (
+            {[...navLinks, ...(bookingTestMode && user?.role === 'admin' && !navLinks.some(l => l.to === '/book') ? [{ to: "/book", label: "Booking (Test)" }] : [])].map(link => (
               <Link
                 key={`${link.to}-${link.label}`}
                 to={link.to}
@@ -207,7 +207,7 @@ export const Navbar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-4">
-              {[...navLinks, ...(bookingTestMode && user?.role === 'admin' && !navLinks.some(l => l.to === '/book-now') ? [{ to: "/book-now", label: "Booking (Test)" }] : [])].map(link => (
+              {[...navLinks, ...(bookingTestMode && user?.role === 'admin' && !navLinks.some(l => l.to === '/book') ? [{ to: "/book", label: "Booking (Test)" }] : [])].map(link => (
                 <Link
                   key={`${link.to}-${link.label}`}
                   to={link.to}
