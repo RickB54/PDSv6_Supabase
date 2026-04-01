@@ -188,6 +188,12 @@ export default function WebsiteAdministration() {
       },
       description: 'Website Global Operational Status'
     });
+    
+    toast({
+      title: "Deployment Successful",
+      description: `Website status has been updated to ${newStatus.mode.toUpperCase()}.`,
+    });
+
     notifyChange('settings');
   };
   const [newAboutOpen, setNewAboutOpen] = useState(false);
@@ -1224,12 +1230,25 @@ export default function WebsiteAdministration() {
                         />
                       </div>
 
-                      <Button 
-                        className="w-full bg-zinc-100 hover:bg-white text-black font-black uppercase italic tracking-tighter mt-4"
-                        onClick={() => handleUpdateStatus(businessStatus)}
-                      >
-                        Apply Status Changes
-                      </Button>
+                      <div className="flex gap-3 mt-4">
+                        <Button 
+                          className="flex-1 bg-zinc-100 hover:bg-white text-black font-black uppercase italic tracking-tighter"
+                          onClick={() => handleUpdateStatus(businessStatus)}
+                        >
+                          Apply Status Changes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="px-8 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white font-black uppercase italic tracking-tighter"
+                          onClick={() => {
+                            const defaults = STATUS_PRESETS[businessStatus.mode] || STATUS_PRESETS['live'];
+                            setBusinessStatus(defaults);
+                            toast({ title: "Defaults Loaded", description: `Settings for ${businessStatus.mode} have been reset.` });
+                          }}
+                        >
+                          Reset to Default
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
