@@ -167,11 +167,53 @@ export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; l
     let deletedCount = 0;
     let linkedCount = 0;
 
+    // --- Levenshtein helper for fuzzy name matching ---
+    const levenshtein = (a: string, b: string): number => {
+        const m = a.length, n = b.length;
+        const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+            Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+        );
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                dp[i][j] = a[i - 1] === b[j - 1]
+                    ? dp[i - 1][j - 1]
+                    : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+            }
+        }
+        return dp[m][n];
+    };
+
+    // --- Group inventory items: exact match first, then fuzzy near-match ---
     const groups: Record<string, any[]> = {};
+    const groupKeys: string[] = []; // ordered list of canonical keys
+
     (inventory || []).forEach(inv => {
-        const key = `${inv.name.toLowerCase().trim()}|${(inv.brand || '').toLowerCase().trim()}`;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(inv);
+        const normName = inv.name.toLowerCase().trim();
+        const normBrand = (inv.brand || '').toLowerCase().trim();
+
+        // Try to find an existing group whose key is within 2 edits on the name part,
+        // AND matches the brand exactly (or both are blank).
+        const FUZZY_THRESHOLD = 2;
+        let matchedKey: string | null = null;
+
+        for (const existingKey of groupKeys) {
+            const [eName, eBrand] = existingKey.split('||');
+            // Brand must match exactly (both empty, or same brand)
+            if (eBrand !== normBrand) continue;
+            const dist = levenshtein(normName, eName);
+            if (dist <= FUZZY_THRESHOLD) {
+                matchedKey = existingKey;
+                break;
+            }
+        }
+
+        if (!matchedKey) {
+            matchedKey = `${normName}||${normBrand}`;
+            groupKeys.push(matchedKey);
+            groups[matchedKey] = [];
+        }
+
+        groups[matchedKey].push(inv);
     });
 
     for (const key in groups) {
@@ -199,7 +241,7 @@ export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; l
 
         // FULL AUTO-LINK (Check master against library card)
         if (!master.chemical_library_id) {
-            const [name, brand] = key.split('|');
+            const [name, brand] = key.split('||');
             const match = (library || []).find(l => {
                 const libName = l.name.toLowerCase().trim();
                 const libBrand = (l.brand || '').toLowerCase().trim();
