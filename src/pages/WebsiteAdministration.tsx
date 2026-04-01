@@ -152,8 +152,8 @@ export default function WebsiteAdministration() {
     },
     'pre-launch': {
       mode: 'pre-launch',
-      bannerText: 'Grand Opening Soon - Pre-Launch Mode Active',
-      bannerDescription: 'We are in the final preparation phase. Connect with us early to be first in line when we officially launch.',
+      bannerText: 'PRE-LAUNCH CONTACT NOTICE',
+      bannerDescription: 'We are currently in the final preparation phase before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.',
       showBooking: false,
       showContact: true,
       isBannerActive: true
@@ -1107,7 +1107,9 @@ export default function WebsiteAdministration() {
                              checked={isActive} 
                              onCheckedChange={(checked) => {
                                if (checked) {
-                                  const presetData = preset.id === 'custom' ? businessStatus : STATUS_PRESETS[preset.id];
+                                  // If we are activating the mode currently being edited, use the edited state (businessStatus)
+                                  // Otherwise, use the preset default
+                                  const presetData = (businessStatus.mode === preset.id) ? businessStatus : (preset.id === 'custom' ? businessStatus : STATUS_PRESETS[preset.id]);
                                   handleUpdateStatus(presetData);
                                }
                              }}

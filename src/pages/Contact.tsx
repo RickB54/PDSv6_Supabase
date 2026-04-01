@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import SuccessMessage from "@/components/SuccessMessage";
 import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Snowflake } from "lucide-react";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -234,29 +235,51 @@ const Contact = () => {
         {/* Dynamic Business Status Banner */}
         {businessStatus?.isBannerActive && (
           <Card className={`mb-12 border-2 overflow-hidden shadow-2xl animate-fade-in ${
-            businessStatus.mode === 'winter-closed' ? 'border-blue-500/50 bg-blue-500/5' : 'border-primary/50 bg-primary/5'
+            businessStatus.mode === 'winter-closed' ? 'border-blue-500/50 bg-blue-500/5' : 'border-blue-500/50 bg-blue-50/30'
           }`}>
-             <div className={`${businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 'bg-primary'} px-6 py-4 flex items-center gap-4`}>
+             <div className={`${businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 'bg-blue-600'} px-6 py-5 flex items-center gap-4`}>
                 <div className="p-2 bg-white/20 rounded-lg">
                   {businessStatus.mode === 'winter-closed' ? <Snowflake className="h-6 w-6 text-white" /> : <Info className="h-6 w-6 text-white" />}
                 </div>
                 <h2 className="text-2xl font-black text-white uppercase tracking-wider">
-                  {businessStatus.bannerText}
+                  {businessStatus.mode === 'pre-launch' ? 'PRE-LAUNCH CONTACT NOTICE' : businessStatus.bannerText}
                 </h2>
              </div>
-             <div className="p-8 space-y-4">
-                <h3 className="text-xl font-bold text-foreground">Important Status Update</h3>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  {businessStatus.bannerDescription}
-                </p>
-                {businessStatus.showContact ? (
-                   <p className="text-lg text-muted-foreground leading-relaxed italic">
-                     Our inquiry portal remains open. Please use the form below to connect with us.
-                   </p>
+             <div className="p-8 space-y-6">
+                {businessStatus.mode === 'pre-launch' ? (
+                  <>
+                    <h3 className="text-2xl font-black text-foreground">Thank you for your interest in Prime Auto Detail.</h3>
+                    <div className="space-y-4">
+                      <p className="text-lg text-muted-foreground leading-relaxed">
+                        We are currently in the <span className="font-black text-zinc-700">final preparation phase</span> before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.
+                      </p>
+                      <p className="text-lg text-muted-foreground leading-relaxed">
+                        If you would like to get in touch, please complete the inquiry form below. This helps us stay organized and ensures all inquiries are properly tracked as we prepare for launch.
+                      </p>
+                    </div>
+                    <div className="pt-4">
+                       <Badge className="bg-blue-100 text-blue-600 border-none px-4 py-2 flex items-center gap-2 w-fit rounded-full shadow-sm">
+                          <Star className="h-3 w-3 fill-blue-600" />
+                          <span className="text-[10px] uppercase font-black tracking-widest">Launching Soon</span>
+                       </Badge>
+                    </div>
+                  </>
                 ) : (
-                   <p className="text-lg font-bold text-red-500 uppercase tracking-tighter">
-                     Our inquiry portal is temporarily paused. Please check back soon or try calling us.
-                   </p>
+                  <>
+                    <h3 className="text-xl font-bold text-foreground">Important Status Update</h3>
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                      {businessStatus.bannerDescription}
+                    </p>
+                    {businessStatus.showContact ? (
+                       <p className="text-lg text-muted-foreground leading-relaxed italic">
+                         Our inquiry portal remains open. Please use the form below to connect with us.
+                       </p>
+                    ) : (
+                       <p className="text-lg font-bold text-red-500 uppercase tracking-tighter">
+                         Our inquiry portal is temporarily paused. Please check back soon or try calling us.
+                       </p>
+                    )}
+                  </>
                 )}
              </div>
           </Card>
