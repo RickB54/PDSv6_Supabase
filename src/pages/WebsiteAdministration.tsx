@@ -29,6 +29,7 @@ import {
   ChevronsUp,
   LayoutDashboard
 } from "lucide-react";
+import * as bookingsSvc from "@/services/supabase/bookings";
 
 export default function WebsiteAdministration() {
   const { toast } = useToast();
@@ -761,12 +762,32 @@ export default function WebsiteAdministration() {
                             meta: { active: checked },
                             description: 'Administrative Booking Test Mode'
                           });
+                          
+                          if (!checked) {
+                            try {
+                              await bookingsSvc.purgeMockData();
+                              toast({ 
+                                title: 'Production Mode Restored', 
+                                description: 'Test mode disabled and all mock bookings have been purged.',
+                                className: "bg-zinc-900 border-zinc-700 text-white"
+                              });
+                            } catch (error) {
+                              console.error("Purge failed:", error);
+                              toast({ 
+                                title: 'Cleanup Warning', 
+                                description: 'Test mode disabled, but automated purge encountered an issue.',
+                                variant: "destructive"
+                              });
+                            }
+                          } else {
+                            toast({ 
+                              title: 'Booking Test Mode Active', 
+                              description: 'Test booking link is now visible to you.',
+                              className: "bg-amber-950 border-amber-500 text-white"
+                            });
+                          }
+                          
                           notifyChange('settings');
-                          toast({ 
-                            title: checked ? 'Booking Test Mode Active' : 'Production Mode Restored', 
-                            description: checked ? 'Test booking link is now visible to you.' : 'Test mode disabled.',
-                            className: checked ? "bg-amber-950 border-amber-500 text-white" : "bg-zinc-900 border-zinc-700 text-white"
-                          });
                         }}
                       />
                     </div>

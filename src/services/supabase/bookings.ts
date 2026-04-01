@@ -120,3 +120,15 @@ export async function remove(id: string | number) {
   if (error) throw error;
   return true;
 }
+
+export async function purgeMockData() {
+  // Specifically delete bookings labeled with administrative test signatures
+  // We use multiple filters to ensure all varieties of test data are caught
+  const { error } = await supabase
+    .from('bookings')
+    .delete()
+    .or('notes.ilike.%[MOCK_DATA]%,notes.ilike.%Test booking - can be deleted%');
+  
+  if (error) throw error;
+  return true;
+}

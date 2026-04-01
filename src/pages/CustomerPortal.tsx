@@ -68,7 +68,9 @@ const CustomerPortal = () => {
   const user = getCurrentUser();
   const [showBookNow, setShowBookNow] = useState(false);
   const [bookingTestMode, setBookingTestMode] = useState(false);
-  const isEffectiveLive = showBookNow || (bookingTestMode && user?.role === 'admin');
+  // Only show direct booking functions if the site is officially LIVE (not in Pre-Launch)
+  // Per user request, admins will use the Shuffle button on the Book Now page for diagnostic testing
+  const isEffectiveLive = showBookNow;
   // ... (rest of hook calls)
 
   // ... (skip down to AvailabilityPicker) ...

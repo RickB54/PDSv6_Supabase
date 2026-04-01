@@ -638,7 +638,12 @@ const BookNow = () => {
       }
 
       const dateIso = submissionDate.toISOString();
-      const finalNotes = formData.message || "";
+      // Ensure all bookings created during Admin Test Mode are flagged for future purging
+      const mockSignature = "[MOCK_DATA]";
+      let finalNotes = formData.message || "";
+      if (testModeActive && !finalNotes.includes(mockSignature)) {
+        finalNotes = `${mockSignature} ${finalNotes}`.trim();
+      }
 
       const bookingPayload = {
         customer: { name: formData.name, email: formData.email, phone: formData.phone },
