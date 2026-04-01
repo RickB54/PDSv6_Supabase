@@ -26,6 +26,7 @@ import aboutEliteProducts from "@/assets/about_elite_products.png";
 import mobileRigPremium from "@/assets/about/mobile_rig_premium.png";
 import aboutHero4k from "@/assets/about/about_hero_4k.png";
 import { contentService } from "@/lib/content";
+import { getChemicals } from "@/lib/inventory-data";
 import { useEffect, useState } from "react";
 
 const About = () => {
@@ -59,6 +60,7 @@ const About = () => {
     whoWeAreTitle: 'Who We Are',
     whoWeAreText: 'Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash." Our focus is on quality over quantity. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We focus on delivering results that exceed expectations through careful attention to detail and professional-grade standards.'
   });
+  const [dynamicBrands, setDynamicBrands] = useState<string[]>([]);
   const DEFAULT_TESTIMONIALS = [
     { name: "LISA M.", quote: "The interior cleaning was amazing. They removed pet hair and odors I thought were permanent. My SUV smells and looks fantastic!", rating: 5 },
     { name: "JAMES D.", quote: "I love their mobile service! They came to my office and detailed my truck while I worked. Convenient and exceptional results.", rating: 5 },
@@ -71,15 +73,21 @@ const About = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [s, t, meta] = await Promise.all([
+        const [s, t, meta, chems] = await Promise.all([
           contentService.getAboutSections(),
           contentService.getTestimonials(),
-          contentService.getServiceMeta('about_content')
+          contentService.getServiceMeta('about_content'),
+          getChemicals()
         ]);
         setSections(s);
         setTestimonials(t);
         if (meta && meta.meta) {
           setAboutData((prev: any) => ({ ...prev, ...meta.meta }));
+        }
+
+        if (chems && chems.length > 0) {
+          const brands = Array.from(new Set(chems.map(c => c.brand).filter(b => !!b && b.trim() !== ''))) as string[];
+          setDynamicBrands(brands.sort());
         }
       } catch { }
     };
@@ -236,9 +244,9 @@ const About = () => {
                 </p>
                 <div className="pt-4">
                   <h4 className="font-bold text-blue-900 uppercase text-sm tracking-widest mb-4 border-b border-zinc-100 pb-2">Our Preferred Brands</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {['Chemical Guys', 'Koch-Chemie', "Meguiar's Pro", 'P&S Detail'].map(brand => (
-                      <div key={brand} className="px-3 py-2 bg-zinc-50 text-zinc-700 font-bold text-center rounded-lg border border-zinc-200 text-xs uppercase hover:bg-zinc-100 transition-colors">
+                  <div className="flex flex-wrap gap-3">
+                    {(dynamicBrands.length > 0 ? dynamicBrands : ['Chemical Guys', 'Koch-Chemie', "Meguiar's Pro", 'P&S Detail']).map(brand => (
+                      <div key={brand} className="px-3 py-2 bg-zinc-50 text-zinc-700 font-bold text-center rounded-lg border border-zinc-200 text-xs uppercase hover:bg-zinc-100 transition-colors shadow-sm whitespace-nowrap">
                         {brand}
                       </div>
                     ))}
