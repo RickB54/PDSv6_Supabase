@@ -58,6 +58,11 @@ export default function WebsiteAdministration() {
     heroSubtitle: 'Elevating automotive care through precision, passion, and a commitment to perfection. We don\'t just clean cars—we preserve investments.',
     moreThanWashTitle: 'More Than a Car Wash',
     moreThanWashSubtitle: 'Understanding the difference between cleaning and detailing.',
+    benefits: [
+      { title: "Paint Preservation", desc: "Automated washes use abrasive brushes that create micro-scratches. We use pH-neutral chemicals and hand-washing techniques to protect your clear coat." },
+      { title: "Value Retention", desc: "A professionally detailed car maintains a much higher resale value. We remove contaminants that cause long-term corrosion and oxidation." },
+      { title: "Internal Health", desc: "We don\'t just vacuum. We steam-clean, extract, and condition surfaces to remove bacteria and allergens, creating a healthier environment for you." }
+    ],
     interiorRefreshTitle: 'Interior Refresh & Restoration',
     interiorRefreshText: 'The cabin of your vehicle should be a sanctuary. Our interior detailing process goes beyond a simple wipe-down. We deep-clean every surface, extract deep-seated dirt from carpets, and condition leather to its original supple feel.',
     interiorRefreshList: [
@@ -466,6 +471,69 @@ export default function WebsiteAdministration() {
                     </div>
                   </div>
                   <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the About page.</p>
+                  
+                  {/* Embedded Testimonial Management for visibility */}
+                  <div className="mt-4 p-4 bg-zinc-950/50 rounded-lg border border-zinc-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-bold text-[10px] uppercase text-zinc-500 tracking-widest">Manage Reviews Below</h5>
+                      <Button className="bg-red-700 hover:bg-red-800 h-6 text-[10px] uppercase font-black" onClick={() => setNewTestimonialOpen(true)}>Add New Review</Button>
+                    </div>
+                    {testimonials.length === 0 ? (
+                      <p className="text-[10px] text-zinc-500 italic">No custom reviews added yet. Showing defaults on website.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                        {testimonials.map(t => (
+                          <div key={t.id} className="flex items-center justify-between p-2 bg-zinc-900 rounded border border-zinc-800">
+                            <span className="text-[10px] text-white font-bold truncate max-w-[100px]">{t.name}</span>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-white" onClick={() => setEditTestimonial(t)}><Pencil className="h-3 w-3" /></Button>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-red-500" onClick={async () => {
+                                if(!confirm('Delete?')) return;
+                                await contentService.deleteTestimonial(t.id);
+                                const updated = await contentService.getTestimonials();
+                                setTestimonials(updated);
+                                notifyChange('testimonials');
+                              }}><Trash2 className="h-3 w-3" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
+                  <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400 font-bold">2. More Than a Car Wash Sections</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs uppercase font-bold">Section Header Title</Label>
+                      <Input className="bg-zinc-950 border-zinc-800 text-white font-black" value={aboutData.moreThanWashTitle} onChange={(e) => setAboutData({ ...aboutData, moreThanWashTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-zinc-400 text-xs uppercase font-bold">Section Subtitle</Label>
+                        <Input className="bg-zinc-950 border-zinc-800 text-zinc-400" value={aboutData.moreThanWashSubtitle} onChange={(e) => setAboutData({ ...aboutData, moreThanWashSubtitle: e.target.value })} />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                    {(aboutData.benefits || [
+                      { title: "Paint Preservation", desc: "Automated washes use abrasive brushes that create micro-scratches. We use pH-neutral chemicals and hand-washing techniques to protect your clear coat." },
+                      { title: "Value Retention", desc: "A professionally detailed car maintains a much higher resale value. We remove contaminants that cause long-term corrosion and oxidation." },
+                      { title: "Internal Health", desc: "We don\'t just vacuum. We steam-clean, extract, and condition surfaces to remove bacteria and allergens, creating a healthier environment for you." }
+                    ]).map((b: any, i: number) => (
+                      <div key={i} className="p-3 bg-zinc-950 rounded border border-zinc-800 space-y-2">
+                        <Label className="text-[9px] text-zinc-600 uppercase font-black">Benefit Card #{i+1}</Label>
+                        <Input className="bg-zinc-900 border-zinc-800 h-8 text-[11px] font-bold" placeholder="Header" value={b.title} onChange={(e) => {
+                          const n = [...(aboutData.benefits || [])]; n[i] = { ...n[i], title: e.target.value };
+                          setAboutData({ ...aboutData, benefits: n });
+                        }} />
+                        <textarea className="w-full bg-zinc-900 border-zinc-800 h-20 text-[10px] p-2 text-zinc-400" placeholder="Body Text" value={b.desc} onChange={(e) => {
+                          const n = [...(aboutData.benefits || [])]; n[i] = { ...n[i], desc: e.target.value };
+                          setAboutData({ ...aboutData, benefits: n });
+                        }} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">

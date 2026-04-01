@@ -37,6 +37,11 @@ const About = () => {
     heroSubtitle: 'Elevating automotive care through precision, passion, and a commitment to perfection. We don\'t just clean cars—we preserve investments.',
     moreThanWashTitle: 'More Than a Car Wash',
     moreThanWashSubtitle: 'Understanding the difference between cleaning and detailing.',
+    benefits: [
+      { title: "Paint Preservation", desc: "Automated washes use abrasive brushes that create micro-scratches. We use pH-neutral chemicals and hand-washing techniques to protect your clear coat." },
+      { title: "Value Retention", desc: "A professionally detailed car maintains a much higher resale value. We remove contaminants that cause long-term corrosion and oxidation." },
+      { title: "Internal Health", desc: "We don\'t just vacuum. We steam-clean, extract, and condition surfaces to remove bacteria and allergens, creating a healthier environment for you." }
+    ],
     interiorRefreshTitle: 'Interior Refresh & Restoration',
     interiorRefreshText: 'The cabin of your vehicle should be a sanctuary. Our interior detailing process goes beyond a simple wipe-down. We deep-clean every surface, extract deep-seated dirt from carpets, and condition leather to its original supple feel.',
     interiorRefreshList: [
@@ -258,7 +263,7 @@ const About = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
+            {(aboutData.benefits || [
               {
                 title: "Paint Preservation",
                 desc: "Automated washes use abrasive brushes that create micro-scratches. We use pH-neutral chemicals and hand-washing techniques to protect your clear coat.",
@@ -274,15 +279,21 @@ const About = () => {
                 desc: "We don't just vacuum. We steam-clean, extract, and condition surfaces to remove bacteria and allergens, creating a healthier environment for you.",
                 icon: <Sparkles className="w-8 h-8 text-blue-600" />
               }
-            ].map((item, i) => (
+            ]).map((item: any, i: number) => {
+              const icons = [
+                <ShieldCheck className="w-8 h-8 text-blue-600" />,
+                <Star className="w-8 h-8 text-blue-600" />,
+                <Sparkles className="w-8 h-8 text-blue-600" />
+              ];
+              return (
               <div key={i} className="space-y-4">
                 <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-blue-100">
-                  {item.icon}
+                  {icons[i] || item.icon || <ShieldCheck className="w-8 h-8 text-blue-600" />}
                 </div>
-                <h3 className="text-2xl font-black text-blue-900 uppercase tracking-tight">{item.title}</h3>
-                <p className="text-zinc-600 leading-relaxed italic">{item.desc}</p>
+                <h3 className="text-2xl font-black text-blue-900 uppercase tracking-tighter">{item.title}</h3>
+                <p className="text-zinc-500 leading-relaxed">{item.desc}</p>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </section>
