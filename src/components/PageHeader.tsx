@@ -5,8 +5,7 @@ import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import AboutDialog from "@/components/AboutDialog";
 import { useState } from "react";
-import { LogOut, Globe, User, ArrowLeft, Maximize2, Minimize2 } from "lucide-react";
-import { FileText, CheckSquare } from "lucide-react";
+import { LogOut, Globe, User, ArrowLeft, Maximize2, Minimize2, FileText, CheckSquare, Settings } from "lucide-react";
 import logo from "@/assets/logo-primary.png";
 import NotificationBell from "@/components/NotificationBell";
 import { Link } from "react-router-dom";
@@ -40,85 +39,131 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
       <header className="fixed top-0 left-0 right-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
         <div className="relative flex items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-2 sm:gap-4 flex-nowrap min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-4 flex-nowrap min-w-0">
             {user && (
-              <SidebarTrigger className="text-foreground" />
+              <SidebarTrigger className="text-foreground -ml-2 sm:ml-0" />
             )}
 
             {showBackButton && (
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-zinc-400 hover:text-white" title="Go Back">
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-zinc-400 hover:text-white h-8 w-8 sm:h-9 sm:w-9" title="Go Back">
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             )}
 
-            <button onClick={() => navigate("/")} className="flex items-center gap-3 transition-opacity hover:opacity-80">
-              <img src={logo} alt="Prime Auto Detail" className="h-10 w-auto" />
+            <button onClick={() => navigate("/")} className="flex items-center gap-2 sm:gap-3 transition-opacity hover:opacity-80 min-w-fit">
+              <img src={logo} alt="Prime Auto Detail" className="h-7 sm:h-10 w-auto" />
             </button>
 
             {title && (
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <span className="text-muted-foreground/60 hidden sm:inline">/</span>
-                  <span className="text-foreground font-semibold tracking-tight truncate max-w-[40vw] sm:max-w-[60vw]">{title}</span>
+                  <span className="text-foreground font-semibold tracking-tight truncate text-sm sm:text-base max-w-[120px] xs:max-w-[150px] sm:max-w-[60vw]">{title}</span>
                 </div>
-                {subtitle && <span className="text-xs text-muted-foreground pl-4 hidden md:block">{subtitle}</span>}
+                {subtitle && <span className="text-[10px] text-muted-foreground pl-4 hidden md:block">{subtitle}</span>}
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-1 sm:gap-3">
             {children}
 
-            {/* Full Screen Toggle (Mobile/Tablet Friendly) */}
-            <Button variant="ghost" size="icon" onClick={toggleFullScreen} className="text-zinc-400 hover:text-white" title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}>
-              {isFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-            </Button>
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-1 sm:gap-3">
+              <Button variant="ghost" size="icon" onClick={toggleFullScreen} className="text-zinc-400 hover:text-white" title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}>
+                {isFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+              </Button>
 
-            <Button asChild variant="outline" size="icon" className="sm:gap-2 flex">
-              <Link to="/">
-                <Globe className="h-4 w-4" />
-                <span className="sr-only">Website</span>
-              </Link>
-            </Button>
+              <Button asChild variant="outline" size="icon" className="flex">
+                <Link to="/">
+                  <Globe className="h-4 w-4" />
+                  <span className="sr-only">Website</span>
+                </Link>
+              </Button>
 
-            {(user?.role === 'admin' || user?.role === 'employee') && (
-              <div className="flex items-center gap-1 border-x border-border/50 px-2 mx-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { path: location.pathname } }))}
-                  title="Quick Note"
-                >
-                  <FileText className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-quick-task', { detail: { path: location.pathname } }))}
-                  title="Quick Task"
-                >
-                  <CheckSquare className="h-5 w-5" />
-                </Button>
+              {(user?.role === 'admin' || user?.role === 'employee') && (
+                <div className="flex items-center gap-1 border-x border-border/50 px-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { path: location.pathname } }))}
+                    title="Quick Note"
+                  >
+                    <FileText className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-quick-task', { detail: { path: location.pathname } }))}
+                    title="Quick Task"
+                  >
+                    <CheckSquare className="h-5 w-5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile/Tablet "More" Menu */}
+            <div className="flex md:hidden items-center">
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-zinc-400 h-8 w-8">
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-zinc-950 border-zinc-900 text-white shadow-2xl">
+                    <DropdownMenuItem onClick={toggleFullScreen} className="gap-2 focus:bg-zinc-900">
+                      {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                      {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="gap-2 focus:bg-zinc-900">
+                      <Link to="/" className="flex items-center">
+                        <Globe className="h-4 w-4" />
+                        Website
+                      </Link>
+                    </DropdownMenuItem>
+                    {(user?.role === 'admin' || user?.role === 'employee') && (
+                      <>
+                        <div className="h-px bg-zinc-900 my-1" />
+                        <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { path: location.pathname } }))} className="gap-2 focus:bg-zinc-900">
+                          <FileText className="h-4 w-4 text-blue-400" />
+                          Quick Note
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('open-quick-task', { detail: { path: location.pathname } }))} className="gap-2 focus:bg-zinc-900">
+                          <CheckSquare className="h-4 w-4 text-emerald-400" />
+                          Quick Task
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+               </DropdownMenu>
+            </div>
+
+            {user?.role === 'admin' && (
+              <div className="h-8 w-8 flex items-center justify-center">
+                <NotificationBell />
               </div>
             )}
-
-            {user?.role === 'admin' && <NotificationBell />}
 
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 truncate max-w-[50vw] sm:max-w-none hover:bg-muted/50">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="truncate hidden sm:inline">Hi, {user.name || user.email}</span>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-1.5 sm:gap-2 hover:bg-muted/50 p-1 sm:p-2 min-w-0">
+                    <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="truncate hidden sm:inline max-w-[100px]">Hi, {user.name || user.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/user-settings')}>
+                <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-900 text-white w-48">
+                  <DropdownMenuItem onClick={() => navigate('/user-settings')} className="gap-2 focus:bg-zinc-900">
+                    <User className="h-4 w-4" />
                     User Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-500 focus:text-red-500">
+                  <div className="h-px bg-zinc-900 my-1" />
+                  <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10">
                     <LogOut className="h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>

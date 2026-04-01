@@ -20,6 +20,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Facebook, 
   Pencil, 
@@ -56,7 +63,7 @@ export default function WebsiteAdministration() {
   const [aboutFeatures, setAboutFeatures] = useState<{ expertTeam: string; ecoFriendly: string; satisfactionGuarantee: string }>({ expertTeam: '', ecoFriendly: '', satisfactionGuarantee: '' });
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [servicesDisclaimer, setServicesDisclaimer] = useState<string>('');
-  const [homeData, setHomeData] = useState<any>({
+  const DEFAULT_HOME_DATA = {
     heroTitle: 'PRIME AUTO DETAIL',
     heroSubtitle: 'Premium auto detailing services that exceed expectations',
     whyMattersTitle: 'More Than Just',
@@ -76,8 +83,10 @@ export default function WebsiteAdministration() {
     perfectedTitle: 'Perfected for Every Driver',
     perfectedSubtitle: 'Whether it\'s your daily commute or your weekend pride, we have a solution.',
     showTestimonials: false
-  });
-  const [aboutData, setAboutData] = useState<any>({
+  };
+
+  const [homeData, setHomeData] = useState<any>(DEFAULT_HOME_DATA);
+  const DEFAULT_ABOUT_DATA = {
     heroBadge: 'Premium Craftsmanship',
     heroTitle: 'About Prime Auto Detail',
     heroSubtitle: 'Elevating automotive care through precision, passion, and a commitment to perfection. We don\'t just clean cars—we preserve investments.',
@@ -104,13 +113,17 @@ export default function WebsiteAdministration() {
     showTestimonials: false,
     whoWeAreTitle: 'Who We Are',
     whoWeAreText: 'Prime Auto Detail is a locally owned, dedicated professional mobile auto detailing service designed for vehicle owners who demand more than a "quick wash." Our focus is on quality over quantity. Every vehicle that enters our care is treated with the same meticulous attention to detail as if it were our own. We focus on delivering results that exceed expectations through careful attention to detail and professional-grade standards.'
-  });
-  const [footerData, setFooterData] = useState<any>({
+  };
+
+  const [aboutData, setAboutData] = useState<any>(DEFAULT_ABOUT_DATA);
+  const DEFAULT_FOOTER_DATA = {
     brandName: 'Prime Auto Detail',
     marqueeText: 'Precision. Protection. Perfection.',
     copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`,
     facebookUrl: 'https://www.facebook.com/PrimeAutoDetail.net'
-  });
+  };
+
+  const [footerData, setFooterData] = useState<any>(DEFAULT_FOOTER_DATA);
   const [headerLinks, setHeaderLinks] = useState<any[]>([]);
   const [learnMoreEdit, setLearnMoreEdit] = useState<Record<string, { description: string; stepIds: string[] }>>({});
   const [allStepOptions, setAllStepOptions] = useState<{ id: string; name: string }[]>([]);
@@ -131,46 +144,119 @@ export default function WebsiteAdministration() {
   const [bookingTestMode, setBookingTestMode] = useState(false);
   const [newFaqA, setNewFaqA] = useState('');
 
-  const [businessStatus, setBusinessStatus] = useState({
+  const [businessStatus, setBusinessStatus] = useState<{
+    mode: string;
+    bannerText: string;
+    bannerDescription: string;
+    showBooking: boolean;
+    showContact: boolean;
+    isTopBannerActive: boolean;
+    isContactBannerActive: boolean;
+    blockedStartDate?: string;
+    blockedEndDate?: string;
+    blockedReason?: string;
+  }>({
     mode: 'live',
     bannerText: 'We are currently LIVE and accepting bookings!',
     bannerDescription: 'Our mobile units are active and ready to deliver precision results to your driveway.',
     showBooking: true,
     showContact: true,
     isTopBannerActive: false,
-    isContactBannerActive: true
+    isContactBannerActive: true,
+    blockedStartDate: '',
+    blockedEndDate: '',
+    blockedReason: ''
   });
   const [activeStatus, setActiveStatus] = useState<any>(null);
 
   const STATUS_PRESETS: Record<string, any> = {
     live: {
       mode: 'live',
-      bannerText: 'We are currently LIVE and accepting bookings!',
-      bannerDescription: 'Our mobile units are active and ready to deliver precision results to your driveway.',
+      bannerText: '✨ NOW LIVE: PREMIUM MOBILE DETAILING',
+      bannerDescription: 'Fully operational! Book your elite detailing experience online today for premium service at your driveway.',
       showBooking: true,
       showContact: true,
       isTopBannerActive: false,
-      isContactBannerActive: false
+      isContactBannerActive: false,
+      blockedStartDate: '',
+      blockedEndDate: '',
+      blockedReason: ''
     },
     'pre-launch': {
       mode: 'pre-launch',
-      bannerText: 'PRE-LAUNCH CONTACT NOTICE',
-      bannerDescription: 'We are currently in the final preparation phase before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.',
+      bannerText: '🚀 PRE-LAUNCH: GROWING THE WAITLIST',
+      bannerDescription: 'We are in the final setup phase. Active detailing is currently paused, but we are accepting inquiries and waitlist signups!',
       showBooking: false,
       showContact: true,
       isTopBannerActive: true,
-      isContactBannerActive: true
+      isContactBannerActive: true,
+      blockedStartDate: '',
+      blockedEndDate: '',
+      blockedReason: ''
     },
     'winter-closed': {
       mode: 'winter-closed',
-      bannerText: 'Seasonally Closed For Winter',
-      bannerDescription: 'We have paused mobile operations for the season. Our inquiry portal remains open for Spring scheduling.',
+      bannerText: '❄️ SEASONAL PAUSE: WINTER OPERATIONS',
+      bannerDescription: 'We are currently closed for the winter season to protect our equipment and your vehicle. We will resume operations in the Spring! Inquiries are still welcome for future bookings.',
       showBooking: false,
       showContact: true,
       isTopBannerActive: true,
-      isContactBannerActive: true
+      isContactBannerActive: true,
+      blockedStartDate: '',
+      blockedEndDate: '',
+      blockedReason: 'Seasonal Closure'
+    },
+    'custom': {
+      mode: 'custom',
+      bannerText: 'CUSTOM ANNOUNCEMENT',
+      bannerDescription: 'Enter your custom status details here...',
+      showBooking: true,
+      showContact: true,
+      isTopBannerActive: true,
+      isContactBannerActive: true,
+      blockedStartDate: '',
+      blockedEndDate: '',
+      blockedReason: ''
     }
   };
+
+  const CUSTOM_PRESETS = [
+    { 
+      id: 'vacation', 
+      name: '🌴 Vacation / Holiday', 
+      reason: 'Vacation',
+      title: '🌴 OUT OF OFFICE: VACATION MODE',
+      desc: 'Our team is taking a short break to recharge! We will be out of the office during this period. You can still send inquiries, and we will respond systematically in the order they were received upon our return. Thank you for your patience!'
+    },
+    { 
+      id: 'medical', 
+      name: '🏥 Medical / Health', 
+      reason: 'Medical Leave',
+      title: '🏥 TEMPORARY LEAVE: MEDICAL NOTICE',
+      desc: 'Prime Auto Detail is temporarily pausing operations for medical reasons. We apologize for any disruption to your scheduling! Our inquiry portal remains active, and we will contact you immediately when we resume full mobile detailing services.'
+    },
+    { 
+      id: 'family', 
+      name: '👨‍👩‍👧‍👦 Family Leave', 
+      reason: 'Family Commitments',
+      title: '👨‍👩‍👧‍👦 FAMILY LEAVE: TEMPORARY PAUSE',
+      desc: 'We are currently away for family-related reasons. Mobile detailing is paused, but we are accepting inquiries for future bookings. High-end care for your vehicle will resume shortly. Thank you for being a valued customer!'
+    },
+    { 
+      id: 'emergency', 
+      name: '⚠️ Personal Emergency', 
+      reason: 'Personal Emergency',
+      title: '⚠️ TEMPORARY STATUS UPDATE',
+      desc: 'Due to personal emergency circumstances, we have temporarily paused our active detailing schedule. We will reach out to all pending inquiries and resume operations as soon as possible.'
+    },
+    { 
+      id: 'travel', 
+      name: '✈️ Business Travel', 
+      reason: 'Business Travel',
+      title: '✈️ AWAY ON BUSINESS',
+      desc: 'Our mobile units are stationary for a few days while our team is away on business. Inquiry response times may be slightly longer than usual. We look forward to detailing your vehicle upon our return!'
+    }
+  ];
 
   const [editAbout, setEditAbout] = useState<any | null>(null);
 
@@ -180,6 +266,25 @@ export default function WebsiteAdministration() {
     const isLive = newStatus.mode === 'live' || (newStatus.mode === 'custom' && newStatus.showBooking);
     setShowBookNow(isLive);
     
+    // Handle automated calendar blocking if in custom mode with date range
+    if (newStatus.mode === 'custom' && newStatus.blockedStartDate && newStatus.blockedEndDate) {
+      try {
+        const { blockDateRange } = await import("@/lib/availability");
+        await blockDateRange(
+          newStatus.blockedStartDate, 
+          newStatus.blockedEndDate, 
+          newStatus.blockedReason || 'Blocked by Business Launch Manager (Custom Mode)',
+          'System'
+        );
+        toast({
+          title: "Calendar Sync",
+          description: "Custom date range has been blocked on the calendar.",
+        });
+      } catch (e) {
+        console.error("Failed to auto-block calendar:", e);
+      }
+    }
+
     await contentService.upsertServiceMeta({
       key: 'global_settings',
       meta: { 
@@ -742,7 +847,11 @@ export default function WebsiteAdministration() {
                   ))}
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-4 gap-3">
+                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white" onClick={() => {
+                    setHomeData(DEFAULT_HOME_DATA);
+                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
+                  }}>Reset to Default</Button>
                   <Button className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
                     await contentService.upsertServiceMeta({ key: 'home_content', meta: homeData, description: 'Complete Home Content' });
                     notifyChange('home');
@@ -901,7 +1010,11 @@ export default function WebsiteAdministration() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white font-bold uppercase tracking-tighter" onClick={() => {
+                    setAboutData(DEFAULT_ABOUT_DATA);
+                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
+                  }}>Reset to Default</Button>
                   <Button className="bg-blue-700 hover:bg-blue-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
                     await contentService.upsertServiceMeta({ key: 'about_content', meta: aboutData, description: 'Complete About Content' });
                     notifyChange('about');
@@ -1225,31 +1338,150 @@ export default function WebsiteAdministration() {
                         </div>
                         <Switch 
                           checked={!!businessStatus.isContactBannerActive} 
-                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, isContactBannerActive: !!c })}
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, isContactBannerActive: !!c })} 
                           className="data-[state=checked]:bg-blue-600"
                         />
                       </div>
+                    </div>
+                  </div>
 
-                      <div className="flex gap-3 mt-4">
-                        <Button 
-                          className="flex-1 bg-zinc-100 hover:bg-white text-black font-black uppercase italic tracking-tighter"
-                          onClick={() => handleUpdateStatus(businessStatus)}
-                        >
-                          Apply Status Changes
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="px-8 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white font-black uppercase italic tracking-tighter"
-                          onClick={() => {
-                            const defaults = STATUS_PRESETS[businessStatus.mode] || STATUS_PRESETS['live'];
-                            setBusinessStatus(defaults);
-                            toast({ title: "Defaults Loaded", description: `Settings for ${businessStatus.mode} have been reset.` });
+                  {businessStatus.mode === 'custom' && (
+                    <div className="pt-4 mt-6 border-t border-zinc-800 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                          <Calendar className="h-3 w-3" /> Custom Block Duration
+                        </h5>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white bg-zinc-900 border border-zinc-800">
+                              Standard Notice Library <LayoutDashboard className="h-3 w-3 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56 bg-zinc-950 border-zinc-800 text-white z-[100]">
+                            <div className="px-2 py-1 text-[10px] font-black uppercase text-zinc-600">Select Preset Logic</div>
+                            {CUSTOM_PRESETS.map((p) => (
+                              <DropdownMenuItem 
+                                key={p.id} 
+                                onClick={() => {
+                                  setBusinessStatus({ 
+                                    ...businessStatus, 
+                                    bannerText: p.title, 
+                                    bannerDescription: p.desc, 
+                                    blockedReason: p.reason,
+                                    isTopBannerActive: true,
+                                    isContactBannerActive: true,
+                                    showBooking: false
+                                  });
+                                  toast({ title: `${p.name} Applied`, description: "Banner fields pre-filled with professional messaging." });
+                                }}
+                                className="text-xs focus:bg-purple-900/20 focus:text-purple-400 cursor-pointer"
+                              >
+                                {p.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-[9px] uppercase text-zinc-500 font-bold">Start Date</Label>
+                          <Input 
+                            type="date" 
+                            className="bg-zinc-900 border-zinc-800 text-xs h-8 text-white h-9" 
+                            value={businessStatus.blockedStartDate || ''}
+                            onChange={(e) => setBusinessStatus({ ...businessStatus, blockedStartDate: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[9px] uppercase text-zinc-500 font-bold">End Date</Label>
+                          <Input 
+                            type="date" 
+                            className="bg-zinc-900 border-zinc-800 text-xs h-8 text-white h-9" 
+                            value={businessStatus.blockedEndDate || ''}
+                            onChange={(e) => setBusinessStatus({ ...businessStatus, blockedEndDate: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[9px] uppercase text-zinc-500 font-bold">Blocking Reason (Choose Category)</Label>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-5 text-[8px] font-black text-purple-500 hover:text-white uppercase"
+                            onClick={() => {
+                              const reasons = ["Vacation", "Medical Leave", "Personal Emergency", "Business Travel", "Equipment Maintenance"];
+                              const val = businessStatus.blockedReason || reasons[0];
+                              const next = reasons[(reasons.indexOf(val) + 1) % reasons.length];
+                              
+                              // Auto-generate banner content "AI-style"
+                              const generatedTitleCount = ["OFFICE NOTICE", "TEMPORARY STATUS update", "SERVICE ALERT", "BOOKING UPDATE"];
+                              const randomTitle = generatedTitleCount[Math.floor(Math.random() * generatedTitleCount.length)];
+                              
+                              setBusinessStatus({ 
+                                ...businessStatus, 
+                                blockedReason: next,
+                                bannerText: `⚠️ ${randomTitle}: ${next.toUpperCase()}`,
+                                bannerDescription: `Prime Auto Detail is currently adjusting operations for ${next}. We appreciate your patience and will respond to all inquiries in the order received as soon as possible.`
+                              });
+                              toast({ title: "AI Generation Complete", description: `Synthesized professionally formatted banner for: ${next}` });
+                            }}
+                          >
+                            <Rocket className="h-2 w-2 mr-1" /> Use AI Generation
+                          </Button>
+                        </div>
+                        <Select 
+                          value={businessStatus.blockedReason || ""} 
+                          onValueChange={(val) => {
+                            setBusinessStatus({ 
+                                ...businessStatus, 
+                                blockedReason: val,
+                                bannerText: `⚠️ NOTICE: ${val.toUpperCase()}`,
+                                bannerDescription: `Prime Auto Detail operations are temporarily adjusted due to ${val}. We remain active for inquiries and future bookings!`
+                            });
+                            toast({ title: "Reason Applied", description: "Banner heading and description pre-filled automatically." });
                           }}
                         >
-                          Reset to Default
-                        </Button>
+                          <SelectTrigger className="bg-zinc-900 border-zinc-800 text-xs h-9 text-white w-full">
+                            <SelectValue placeholder="Select a reason for being away..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-950 border-zinc-800 text-white z-[120]">
+                            <SelectItem value="Vacation">🌴 Vacation / Holiday</SelectItem>
+                            <SelectItem value="Medical Leave">🏥 Medical Leave</SelectItem>
+                            <SelectItem value="Personal Emergency">⚠️ Personal Emergency</SelectItem>
+                            <SelectItem value="Family Commitments">👨‍👩‍👧‍👦 Family Commitments</SelectItem>
+                            <SelectItem value="Business Travel">✈️ Business Travel</SelectItem>
+                            <SelectItem value="Equipment Maintenance">🔧 Equipment Maintenance</SelectItem>
+                            <SelectItem value="Training / Certification">📚 Training / Certification</SelectItem>
+                            <SelectItem value="Seasonal Closure">❄️ Seasonal Closure</SelectItem>
+                            <SelectItem value="Personal Time">🏠 Personal Time</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
+                  )}
+
+                  <div className="flex gap-3 mt-8">
+                    <Button 
+                      className="flex-1 bg-zinc-100 hover:bg-white text-black font-black uppercase italic tracking-tighter"
+                      onClick={() => handleUpdateStatus(businessStatus)}
+                    >
+                      Apply Status Changes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="px-8 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white font-black uppercase italic tracking-tighter"
+                      onClick={() => {
+                        const mode = businessStatus.mode || 'live';
+                        const defaults = STATUS_PRESETS[mode] || STATUS_PRESETS['live'];
+                        setBusinessStatus(defaults);
+                        toast({ title: "Defaults Loaded", description: `Settings for ${mode} have been reset.` });
+                      }}
+                    >
+                      Reset to Default
+                    </Button>
                   </div>
                 </div>
               </AccordionContent>
@@ -1375,154 +1607,6 @@ export default function WebsiteAdministration() {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            
-            {/* Business Launch Manager - Global Toggle */}
-            <AccordionItem value="launch-status" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
-                <div className="flex items-center gap-2">
-                  Business Launch Manager
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-4 space-y-8">
-                {/* Advanced Mode Selector */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {[
-                    { id: 'live', name: 'Live Mode', icon: Rocket, color: 'emerald' },
-                    { id: 'pre-launch', name: 'Pre-Launch', icon: Construction, color: 'red' },
-                    { id: 'winter-closed', name: 'Winter Mode', icon: Snowflake, color: 'blue' },
-                    { id: 'custom', name: 'Custom Mode', icon: Settings, color: 'purple' }
-                  ].map((preset) => (
-                    <Card 
-                      key={preset.id}
-                      className={`p-4 cursor-pointer transition-all border-2 ${
-                        businessStatus.mode === preset.id 
-                          ? `bg-${preset.color}-500/10 border-${preset.color}-500 shadow-[0_0_15px_rgba(var(--${preset.color}-500),0.2)]` 
-                          : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
-                      }`}
-                      onClick={() => {
-                        if (preset.id === 'custom') {
-                          handleUpdateStatus({ ...businessStatus, mode: 'custom' });
-                        } else {
-                          handleUpdateStatus(STATUS_PRESETS[preset.id]);
-                        }
-                      }}
-                    >
-                      <div className="flex flex-col items-center gap-3 text-center">
-                        <div className={`p-3 rounded-full ${
-                          businessStatus.mode === preset.id ? `bg-${preset.color}-500 text-white` : 'bg-zinc-800 text-zinc-500'
-                        }`}>
-                          <preset.icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className={`text-xs font-black uppercase tracking-widest ${
-                            businessStatus.mode === preset.id ? `text-${preset.color}-500` : 'text-zinc-500'
-                          }`}>{preset.name}</p>
-                          <p className="text-[10px] text-zinc-600 mt-1">
-                            {preset.id === 'live' ? 'Full Operations' : 
-                             preset.id === 'pre-launch' ? 'Growing Leads' : 
-                             preset.id === 'winter-closed' ? 'Seasonal Pause' : 'Your Config'}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-
-                {/* Status Configuration Form */}
-                <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-6 space-y-6">
-                  <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-zinc-900 rounded-lg">
-                        <Settings className="h-4 w-4 text-zinc-400" />
-                      </div>
-                      <div>
-                        <h4 className="text-white font-bold uppercase tracking-tight">Status Configuration</h4>
-                        <p className="text-[10px] text-zinc-500 uppercase font-bold">Currently in {businessStatus.mode} mode</p>
-                      </div>
-                    </div>
-                    {businessStatus.mode !== 'live' && (
-                       <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-3 flex items-center gap-1">
-                         <Info className="h-3 w-3" /> Professional Banner Active
-                       </Badge>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest flex items-center gap-2">
-                          Primary Banner Heading
-                          <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => setHelpId('business-launch-manager')} />
-                        </Label>
-                        <Input 
-                          value={businessStatus.bannerText}
-                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerText: e.target.value })}
-                          className="bg-zinc-900 border-zinc-800 focus:border-red-500 text-white font-bold"
-                          placeholder="e.g. Closed for the Winter"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest">Banner Subtext / Description</Label>
-                        <textarea 
-                          rows={3}
-                          value={businessStatus.bannerDescription}
-                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerDescription: e.target.value })}
-                          className="w-full bg-zinc-900 border-zinc-800 rounded-md p-3 text-sm text-zinc-300 focus:outline-none focus:border-red-500 transition-colors"
-                          placeholder="Explain your current business status to visitors..."
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-6 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/50">
-                      <h5 className="text-[10px] uppercase font-black text-zinc-600 tracking-widest mb-4">Website Feature Visibility</h5>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm font-bold text-white">"Book Now" Buttons</Label>
-                          <p className="text-[10px] text-zinc-500 uppercase font-medium">Toggle all live scheduling links</p>
-                        </div>
-                        <Switch 
-                          checked={businessStatus.showBooking} 
-                          onCheckedChange={(v) => setBusinessStatus({ ...businessStatus, showBooking: v })}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm font-bold text-white">Contact Inquiry Form</Label>
-                          <p className="text-[10px] text-zinc-500 uppercase font-medium">Allow customers to send prospects</p>
-                        </div>
-                        <Switch 
-                          checked={businessStatus.showContact} 
-                          onCheckedChange={(v) => setBusinessStatus({ ...businessStatus, showContact: v })}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm font-bold text-white">Announcement Banner</Label>
-                          <p className="text-[10px] text-zinc-500 uppercase font-medium">Show the top info bar on public site</p>
-                        </div>
-                        <Switch 
-                          checked={businessStatus.isBannerActive} 
-                          onCheckedChange={(v) => setBusinessStatus({ ...businessStatus, isBannerActive: v })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-4 border-t border-zinc-800">
-                    <Button 
-                      className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase tracking-widest text-xs h-10"
-                      onClick={() => {
-                        handleUpdateStatus(businessStatus);
-                        toast({ title: 'Status Config Saved', description: 'Your website has been updated.' });
-                      }}
-                    >
-                      Apply Launch Config
-                    </Button>
-                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -1660,7 +1744,11 @@ export default function WebsiteAdministration() {
                     <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.facebookUrl} onChange={(e) => setFooterData({ ...footerData, facebookUrl: e.target.value })} placeholder="https://www.facebook.com/PrimeAutoDetail.net" />
                   </div>
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" className="border-zinc-800 text-zinc-500 hover:text-white" onClick={() => {
+                    setFooterData(DEFAULT_FOOTER_DATA);
+                    toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
+                  }}>Reset to Default</Button>
                   <Button className="bg-amber-600 hover:bg-amber-700 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
                     await contentService.upsertServiceMeta({ key: 'footer_content', meta: footerData, description: 'Website Footer Content' });
                     notifyChange('footer');

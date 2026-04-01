@@ -4,6 +4,11 @@ echo  Deploying Supabase Edge Functions
 echo ========================================
 echo.
 
+echo Cleaning up background processes...
+taskkill /F /IM node.exe /T 2>nul
+taskkill /F /IM npx.exe /T 2>nul
+timeout /t 2 /nobreak >nul
+
 echo Project: kqhaoyaermsqrilhsfxj
 echo.
 
