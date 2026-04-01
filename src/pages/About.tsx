@@ -65,7 +65,9 @@ const About = () => {
         ]);
         setSections(s);
         setTestimonials(t);
-        if (meta) setAboutData((prev: any) => ({ ...prev, ...meta }));
+        if (meta && meta.meta) {
+          setAboutData((prev: any) => ({ ...prev, ...meta.meta }));
+        }
       } catch { }
     };
     load();
