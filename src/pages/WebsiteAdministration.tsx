@@ -375,38 +375,92 @@ export default function WebsiteAdministration() {
 
         {/* Status Dashboard / Stats Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
-            <div className={`p-3 rounded-xl ${showBookNow ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-              <Rocket className="h-6 w-6" />
+          <Card 
+            className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-emerald-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
+            onClick={async () => {
+              const next = !showBookNow;
+              setShowBookNow(next);
+              await contentService.upsertServiceMeta({
+                key: 'global_settings',
+                meta: { showBookNow: next },
+                description: 'Website Global Settings'
+              });
+              notifyChange('settings');
+              toast({ 
+                title: next ? 'Business Launched!' : 'Pre-Launch Active', 
+                description: next ? 'Public booking is now enabled.' : 'Inquiry mode re-activated.',
+                className: next ? "bg-emerald-950 border-emerald-500 text-white" : "bg-red-950 border-red-500 text-white"
+              });
+            }}
+          >
+            <div className={`p-3 rounded-xl transition-colors ${showBookNow ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/10'}`}>
+              <Rocket className={`h-6 w-6 ${showBookNow ? 'animate-pulse' : ''}`} />
             </div>
-            <div>
-              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Global Status</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }}>Global Status</p>
+                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-emerald-400 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
+              </div>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
                 {showBookNow ? 'Website Live' : 'Pre-Launch'}
               </h3>
             </div>
           </Card>
 
-          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
-            <div className={`p-3 rounded-xl ${bookingTestMode ? 'bg-amber-500/10 text-amber-500' : 'bg-zinc-500/10 text-zinc-500'}`}>
-              <TestTube2 className="h-6 w-6" />
+          <Card 
+            className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-amber-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
+            onClick={async () => {
+              const next = !bookingTestMode;
+              setBookingTestMode(next);
+              await contentService.upsertServiceMeta({
+                key: 'booking_test_mode',
+                meta: { active: next },
+                description: 'Administrative Booking Test Mode'
+              });
+              
+              if (!next) {
+                try {
+                  await bookingsSvc.purgeMockData();
+                  toast({ title: 'Production Mode Restored', description: 'Mock data purged.' });
+                } catch (e) { console.error(e); }
+              } else {
+                toast({ title: 'Test Mode Active', description: 'Diagnostic links revealed.' });
+              }
+              notifyChange('settings');
+            }}
+          >
+            <div className={`p-3 rounded-xl transition-colors ${bookingTestMode ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'bg-zinc-500/10 text-zinc-500 border border-zinc-800'}`}>
+              <TestTube2 className={`h-6 w-6 ${bookingTestMode ? 'animate-bounce-subtle' : ''}`} />
             </div>
-            <div>
-              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Booking Mode</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); setHelpId('booking-test-mode'); }}>Booking Mode</p>
+                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-amber-400 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('booking-test-mode'); }} />
+              </div>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
                 {bookingTestMode ? 'Admin Test' : 'Standard'}
               </h3>
             </div>
           </Card>
 
-          <Card className="p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-red-900/40 transition-colors">
-            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500">
+          <Card 
+            className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-blue-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
+            onClick={() => {
+              const next = !homeData.showTestimonials;
+              setHomeData({ ...homeData, showTestimonials: next });
+              toast({ title: next ? 'Reviews Enabled' : 'Reviews Hidden', description: `Home page visibility ${next ? 'on' : 'off'}.` });
+            }}
+          >
+            <div className={`p-3 rounded-xl transition-colors ${homeData.showTestimonials ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' : 'bg-zinc-800 text-zinc-600'}`}>
               <Users className="h-6 w-6" />
             </div>
-            <div>
-              <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Testimonials</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); setHelpId('testimonials-management'); }}>Testimonials</p>
+                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-blue-400 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('testimonials-management'); }} />
+              </div>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
-                {testimonials.length} ACTIVE
+                {homeData.showTestimonials ? `${testimonials.length} ACTIVE` : 'INACTIVE'}
               </h3>
             </div>
           </Card>
@@ -418,7 +472,7 @@ export default function WebsiteAdministration() {
             <div>
               <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Sections</p>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
-                9 CONTROL AREAS
+                10 CONTROL AREAS
               </h3>
             </div>
           </Card>
@@ -431,10 +485,20 @@ export default function WebsiteAdministration() {
             onValueChange={setAccordionValue}
             className="w-full space-y-1"
           >
+            <div className="px-4 py-3 bg-zinc-900/30 border-b border-zinc-800/50 flex items-center justify-between">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Website Pages</h4>
+              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-zinc-800/50 to-transparent" />
+            </div>
+
 
             {/* Home Page Sections */}
-            <AccordionItem value="home" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">Home Page Content Control</AccordionTrigger>
+            <AccordionItem value="home" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Home Page Content Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('home-content-management'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
                 <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
                   <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter">1. Hero & Branding</h4>
@@ -531,8 +595,13 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             {/* About Page Sections */}
-            <AccordionItem value="about-page" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-blue-400 [&[data-state=open]]:text-blue-500 font-bold uppercase tracking-tight">About Page Content Control</AccordionTrigger>
+            <AccordionItem value="about-page" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-blue-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-blue-400 [&[data-state=open]]:text-blue-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  About Page Content Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-blue-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('about-content-management'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
                 <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
                   <h4 className="font-black text-xl text-white uppercase italic italic tracking-tighter text-blue-400">1. About Hero</h4>
@@ -720,7 +789,94 @@ export default function WebsiteAdministration() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* Booking Control */}
+            {/* FAQs */}
+            <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  FAQs
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('faqs-management'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Manage FAQs</h4>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewFaqOpen(true)}>Add FAQ</Button>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-zinc-800">
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Question</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase">Answer</TableHead>
+                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {faqs.map((fq: any) => (
+                        <TableRow key={fq.id} className="border-zinc-800">
+                          <TableCell className="text-white font-medium text-sm">{fq.question}</TableCell>
+                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{fq.answer}</TableCell>
+                          <TableCell className="text-right flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
+                              if (!confirm('Delete this FAQ?')) return;
+                              await contentService.deleteFaq(fq.id);
+                              const updated = await contentService.getFaqs();
+                              setFaqs(updated);
+                              notifyChange('faqs');
+                              toast({ title: 'FAQ deleted' });
+                            }}><Trash2 className="h-3 w-3" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Contact Information */}
+            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Contact Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('contact-control'); }} />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Phone</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Email Address</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Address / Location</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} placeholder="54 Boston Street Methuen, MA" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Service Hours</Label>
+                    <textarea className="w-full bg-zinc-950 border-zinc-800 text-white rounded p-3 h-24 text-sm" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button className="bg-red-700 hover:bg-red-800 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    await contentService.upsertContact(contactInfo);
+                    notifyChange('contact');
+                    toast({ title: 'Contact Sync', description: 'Business details updated.' });
+                  }}>Save Contact Profile</Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <div className="px-4 py-3 bg-zinc-900/30 border-y border-zinc-800/50 mt-4 flex items-center justify-between">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">System Functions & Config</h4>
+              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-zinc-800/50 to-transparent" />
+            </div>
+
             <AccordionItem value="bookings" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-amber-900/5">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
@@ -796,48 +952,6 @@ export default function WebsiteAdministration() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* FAQs */}
-            <AccordionItem value="faqs" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">FAQs</AccordionTrigger>
-              <AccordionContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Manage FAQs</h4>
-                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewFaqOpen(true)}>Add FAQ</Button>
-                </div>
-                <div className="w-full overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-zinc-800">
-                        <TableHead className="text-[10px] text-zinc-500 uppercase">Question</TableHead>
-                        <TableHead className="text-[10px] text-zinc-500 uppercase">Answer</TableHead>
-                        <TableHead className="text-[10px] text-zinc-500 uppercase w-20 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {faqs.map((fq: any) => (
-                        <TableRow key={fq.id} className="border-zinc-800">
-                          <TableCell className="text-white font-medium text-sm">{fq.question}</TableCell>
-                          <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{fq.answer}</TableCell>
-                          <TableCell className="text-right flex justify-end gap-1">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
-                              if (!confirm('Delete this FAQ?')) return;
-                              await contentService.deleteFaq(fq.id);
-                              const updated = await contentService.getFaqs();
-                              setFaqs(updated);
-                              notifyChange('faqs');
-                              toast({ title: 'FAQ deleted' });
-                            }}><Trash2 className="h-3 w-3" /></Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-
             {/* Vehicle Types */}
             <AccordionItem value="vehicle-types" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">
@@ -889,7 +1003,12 @@ export default function WebsiteAdministration() {
             
             {/* Business Launch Manager - Global Toggle */}
             <AccordionItem value="launch-status" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">Business Launch Manager</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Business Launch Manager
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
                 <div className="flex items-center justify-between p-5 bg-gradient-to-r from-zinc-900/80 to-zinc-950 border border-red-900/20 rounded-xl">
                   <div className="space-y-1.5 flex-1 pr-6">
@@ -934,38 +1053,6 @@ export default function WebsiteAdministration() {
                       />
                     </div>
                   </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Contact Information */}
-            <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Contact Control</AccordionTrigger>
-              <AccordionContent className="p-4 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
-                  <div className="space-y-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Phone</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.phone} onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Email Address</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.email} onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Business Address / Location</Label>
-                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={contactInfo.address} onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })} placeholder="54 Boston Street Methuen, MA" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Service Hours</Label>
-                    <textarea className="w-full bg-zinc-950 border-zinc-800 text-white rounded p-3 h-24 text-sm" value={contactInfo.hours} onChange={(e) => setContactInfo({ ...contactInfo, hours: e.target.value })} />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button className="bg-red-700 hover:bg-red-800 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
-                    await contentService.upsertContact(contactInfo);
-                    notifyChange('contact');
-                    toast({ title: 'Contact Sync', description: 'Business details updated.' });
-                  }}>Save Contact Profile</Button>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -1078,7 +1165,12 @@ export default function WebsiteAdministration() {
 
             {/* Footer Control */}
             <AccordionItem value="footer" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">Footer Content Control</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Footer Content Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-amber-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('footer-content-management'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-lg border border-zinc-800">
                   <div className="space-y-2">
@@ -1110,7 +1202,12 @@ export default function WebsiteAdministration() {
 
             {/* Header / Main Menu Control */}
             <AccordionItem value="header" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-emerald-400 [&[data-state=open]]:text-emerald-500 font-bold uppercase tracking-tight">Main Menu / Header Control</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-emerald-400 [&[data-state=open]]:text-emerald-500 font-bold uppercase tracking-tight">
+                <div className="flex items-center gap-2">
+                  Main Menu / Header Control
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-emerald-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('main-menu-management'); }} />
+                </div>
+              </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Navigation Links</h4>
