@@ -233,7 +233,7 @@ const Contact = () => {
         </Button>
 
         {/* Dynamic Business Status Banner */}
-        {businessStatus?.isBannerActive && (
+        {businessStatus && !!businessStatus.isContactBannerActive && (
           <Card className={`mb-12 border-2 overflow-hidden shadow-2xl animate-fade-in ${
             businessStatus.mode === 'winter-closed' ? 'border-blue-500/50 bg-blue-500/5' : 'border-blue-500/50 bg-blue-50/30'
           }`}>

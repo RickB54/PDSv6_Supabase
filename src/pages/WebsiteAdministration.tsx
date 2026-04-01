@@ -137,7 +137,8 @@ export default function WebsiteAdministration() {
     bannerDescription: 'Our mobile units are active and ready to deliver precision results to your driveway.',
     showBooking: true,
     showContact: true,
-    isBannerActive: false
+    isTopBannerActive: false,
+    isContactBannerActive: true
   });
   const [activeStatus, setActiveStatus] = useState<any>(null);
 
@@ -148,7 +149,8 @@ export default function WebsiteAdministration() {
       bannerDescription: 'Our mobile units are active and ready to deliver precision results to your driveway.',
       showBooking: true,
       showContact: true,
-      isBannerActive: false
+      isTopBannerActive: false,
+      isContactBannerActive: false
     },
     'pre-launch': {
       mode: 'pre-launch',
@@ -156,7 +158,8 @@ export default function WebsiteAdministration() {
       bannerDescription: 'We are currently in the final preparation phase before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.',
       showBooking: false,
       showContact: true,
-      isBannerActive: true
+      isTopBannerActive: true,
+      isContactBannerActive: true
     },
     'winter-closed': {
       mode: 'winter-closed',
@@ -164,7 +167,8 @@ export default function WebsiteAdministration() {
       bannerDescription: 'We have paused mobile operations for the season. Our inquiry portal remains open for Spring scheduling.',
       showBooking: false,
       showContact: true,
-      isBannerActive: true
+      isTopBannerActive: true,
+      isContactBannerActive: true
     }
   };
 
@@ -328,7 +332,8 @@ export default function WebsiteAdministration() {
             bannerDescription: gs.meta.showBookNow !== false ? 'Our mobile units are active.' : 'We are preparing for our official launch.',
             showBooking: gs.meta.showBookNow !== false,
             showContact: true,
-            isBannerActive: gs.meta.showBookNow === false
+            isTopBannerActive: gs.meta.showBookNow === false,
+            isContactBannerActive: gs.meta.showBookNow === false
           });
         }
       }
@@ -1198,12 +1203,24 @@ export default function WebsiteAdministration() {
                       <div className="flex items-center justify-between group">
                         <div className="space-y-0.5">
                           <Label className="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Display Top Banner</Label>
-                          <p className="text-[10px] text-zinc-500">Force the announcement banner to stay active.</p>
+                          <p className="text-[10px] text-zinc-500">Enable/Disable the site-wide announcement bar.</p>
                         </div>
                         <Switch 
-                          checked={businessStatus.isBannerActive} 
-                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, isBannerActive: c })}
+                          checked={!!businessStatus.isTopBannerActive} 
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, isTopBannerActive: !!c })}
                           className="data-[state=checked]:bg-red-600"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between group">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Display Contact Notice</Label>
+                          <p className="text-[10px] text-zinc-500">Enable/Disable the informational banner on the contact page.</p>
+                        </div>
+                        <Switch 
+                          checked={!!businessStatus.isContactBannerActive} 
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, isContactBannerActive: !!c })}
+                          className="data-[state=checked]:bg-blue-600"
                         />
                       </div>
 

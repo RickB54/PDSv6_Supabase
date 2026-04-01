@@ -89,10 +89,9 @@ export const Navbar = () => {
   const handleLogoClick = (e: React.MouseEvent) => {
     // Standard navigation only
   };
-
   return (
     <>
-      {businessStatus?.isBannerActive && (
+      {businessStatus && !!businessStatus.isTopBannerActive && (
         <div className={`fixed top-0 left-0 right-0 z-50 py-2 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg animate-in slide-in-from-top duration-500 ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
           businessStatus.mode === 'pre-launch' ? 'bg-red-600' : 'bg-primary'
@@ -106,7 +105,7 @@ export const Navbar = () => {
         </div>
       )}
       <nav className={`fixed left-0 right-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300 ${
-        businessStatus?.isBannerActive ? 'top-[32px] sm:top-[36px]' : 'top-0'
+        (businessStatus && !!businessStatus.isTopBannerActive) ? 'top-[32px] sm:top-[36px]' : 'top-0'
       }`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
