@@ -12,8 +12,8 @@ import { postFullSync, getAllPackageMeta, setPackageMeta, getCustomPackages, get
 import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { contentService } from "@/lib/content";
-import { Pencil, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Facebook, Pencil, Trash2 } from "lucide-react";
 
 const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
@@ -22,6 +22,7 @@ const notifyChange = (kind: string) => {
 export default function WebsiteAdministration() {
   const { toast } = useToast();
   const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
+  const [showBookNow, setShowBookNow] = useState(false);
   const [faqs, setFaqs] = useState<any[]>([]);
   const [contactInfo, setContactInfo] = useState<{ hours: string; phone: string; address: string; email: string }>({ hours: '', phone: '', address: '', email: '' });
   const [aboutSections, setAboutSections] = useState<any[]>([]);
@@ -75,7 +76,8 @@ export default function WebsiteAdministration() {
   const [footerData, setFooterData] = useState<any>({
     brandName: 'Prime Auto Detail',
     marqueeText: 'Precision. Protection. Perfection.',
-    copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`
+    copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`,
+    facebookUrl: 'https://www.facebook.com/PrimeAutoDetail.net'
   });
   const [headerLinks, setHeaderLinks] = useState<any[]>([]);
   const [learnMoreEdit, setLearnMoreEdit] = useState<Record<string, { description: string; stepIds: string[] }>>({});
@@ -221,6 +223,12 @@ export default function WebsiteAdministration() {
       // Find disclaimer
       const d = allMeta.find(m => m.key === 'disclaimer');
       if (d) setServicesDisclaimer(d.description || '');
+      
+      // Global Settings
+      const gs = allMeta.find(m => m.key === 'global_settings');
+      if (gs && gs.meta) {
+        setShowBookNow(gs.meta.showBookNow !== false);
+      }
 
       // Home Data
       const h = allMeta.find(m => m.key === 'home_content');
@@ -630,6 +638,47 @@ export default function WebsiteAdministration() {
                 </div>
               </AccordionContent>
             </AccordionItem>
+            
+            {/* Business Launch Manager - Global Toggle */}
+            <AccordionItem value="launch-status" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2 shadow-lg shadow-red-900/5">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">Business Launch Manager</AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                <div className="flex items-center justify-between p-5 bg-gradient-to-r from-zinc-900/80 to-zinc-950 border border-red-900/20 rounded-xl">
+                  <div className="space-y-1.5 flex-1 pr-6">
+                    <h4 className="text-white font-black text-lg uppercase tracking-tighter">Live Booking & Active Launch Status</h4>
+                    <p className="text-xs text-zinc-500 leading-relaxed max-w-lg">
+                      {showBookNow 
+                        ? "Currently: LIVE MODE - Pre-launch banners are hidden, and customers can book services directly." 
+                        : "Currently: PRE-LAUNCH MODE - 'Book Now' buttons are hidden, and customers are guided to the inquiry portal."}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-3 bg-zinc-950 px-5 py-2.5 rounded-full border border-zinc-800 shadow-inner">
+                      <Label className={`text-[10px] uppercase font-black tracking-widest ${showBookNow ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {showBookNow ? 'Website Live' : 'Pre-Launch'}
+                      </Label>
+                      <Switch
+                        checked={showBookNow}
+                        onCheckedChange={async (checked) => {
+                          setShowBookNow(checked);
+                          await contentService.upsertServiceMeta({
+                            key: 'global_settings',
+                            meta: { showBookNow: checked },
+                            description: 'Website Global Settings'
+                          });
+                          notifyChange('settings');
+                          toast({ 
+                            title: checked ? 'Business Launched!' : 'Pre-Launch Active', 
+                            description: checked ? 'Public booking is now enabled.' : 'Inquiry mode re-activated.',
+                            className: checked ? "bg-emerald-950 border-emerald-500 text-white" : "bg-red-950 border-red-500 text-white"
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
             {/* Contact Information */}
             <AccordionItem value="contact" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
@@ -664,8 +713,8 @@ export default function WebsiteAdministration() {
             </AccordionItem>
 
             {/* Services */}
-            <AccordionItem value="services" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
-              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">Learn More & Disclaimer</AccordionTrigger>
+            <AccordionItem value="package-details" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
+              <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">Learn More & Disclaimer</AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
                 <div className="space-y-2">
                   <Label className="text-zinc-400 text-xs uppercase font-bold">Services Section Disclaimer</Label>
@@ -780,6 +829,10 @@ export default function WebsiteAdministration() {
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-zinc-500 text-[10px] uppercase font-bold">Copyright Statement</Label>
                     <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.copyrightText} onChange={(e) => setFooterData({ ...footerData, copyrightText: e.target.value })} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">Facebook Page URL</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.facebookUrl} onChange={(e) => setFooterData({ ...footerData, facebookUrl: e.target.value })} placeholder="https://www.facebook.com/PrimeAutoDetail.net" />
                   </div>
                 </div>
                 <div className="flex justify-end">

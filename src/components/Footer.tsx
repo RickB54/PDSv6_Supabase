@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { contentService, type SupaContact } from "@/lib/content";
+import { Facebook } from "lucide-react";
 
 export const Footer = () => {
     const [contact, setContact] = useState<SupaContact | null>(null);
@@ -80,6 +81,17 @@ export const Footer = () => {
                                 </div>
                             ))}
                         </div>
+                        {footerData.facebookUrl && (
+                          <a 
+                            href={footerData.facebookUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 flex items-center gap-2 text-zinc-400 hover:text-[#1877F2] transition-colors"
+                          >
+                            <Facebook className="h-5 w-5" />
+                            <span className="text-[10px] font-black uppercase tracking-widest leading-none mt-0.5">Facebook Page</span>
+                          </a>
+                        )}
                     </div>
 
                     {/* Navigation */}

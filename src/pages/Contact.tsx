@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
+import { supabase } from "@/lib/supabase";
 import { Footer } from "@/components/Footer";
 import AboutDialog from "@/components/AboutDialog";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const Contact = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showBookNow, setShowBookNow] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -201,6 +203,14 @@ const Contact = () => {
       } catch (err) {
         console.error("Failed to load services for contact form", err);
       }
+
+      // 3. Load Global Settings
+      try {
+        const { data: globalMeta } = await supabase.from('content_services_meta').select('*').eq('key', 'global_settings').single();
+        if (globalMeta && globalMeta.meta) {
+          setShowBookNow(globalMeta.meta.showBookNow !== false);
+        }
+      } catch {}
     };
     load();
   }, []);
@@ -217,31 +227,33 @@ const Contact = () => {
           </Link>
         </Button>
 
-        {/* Pre-Launch Notice Banner */}
-        <Card className="mb-12 border-2 border-primary/50 bg-primary/5 overflow-hidden shadow-2xl animate-fade-in">
-          <div className="bg-primary px-6 py-4 flex items-center gap-4">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <Info className="h-6 w-6 text-white" />
+        {/* Pre-Launch Notice Banner - ONLY SHOWN IF NOT IN LIVE MODE */}
+        {!showBookNow && (
+          <Card className="mb-12 border-2 border-primary/50 bg-primary/5 overflow-hidden shadow-2xl animate-fade-in">
+            <div className="bg-primary px-6 py-4 flex items-center gap-4">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Info className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-white uppercase tracking-wider">
+                Pre-Launch Contact Notice
+              </h2>
             </div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-wider">
-              Pre-Launch Contact Notice
-            </h2>
-          </div>
-          <div className="p-8 space-y-4">
-            <h3 className="text-xl font-bold text-foreground">Thank you for your interest in Prime Auto Detail.</h3>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              We are currently in the <strong>final preparation phase</strong> before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.
-            </p>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              If you would like to get in touch, please complete the inquiry form below. This helps us stay organized and ensures all inquiries are properly tracked as we prepare for launch.
-            </p>
-            <div className="pt-2">
-              <span className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary font-black uppercase tracking-widest text-xs border border-primary/20">
-                <Star className="h-3.5 w-3.5 mr-2 animate-pulse" /> Launching Soon
-              </span>
+            <div className="p-8 space-y-4">
+              <h3 className="text-xl font-bold text-foreground">Thank you for your interest in Prime Auto Detail.</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                We are currently in the <strong>final preparation phase</strong> before officially opening for active detailing appointments. At this time, we are not yet scheduling live service appointments, but we are welcoming future service inquiries, pricing questions, service area questions, and early customer interest.
+              </p>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                If you would like to get in touch, please complete the inquiry form below. This helps us stay organized and ensures all inquiries are properly tracked as we prepare for launch.
+              </p>
+              <div className="pt-2">
+                <span className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary font-black uppercase tracking-widest text-xs border border-primary/20">
+                  <Star className="h-3.5 w-3.5 mr-2 animate-pulse" /> Launching Soon
+                </span>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         <div className="text-center mb-12">
           <img
@@ -250,18 +262,20 @@ const Contact = () => {
             className="mx-auto mb-4 cursor-pointer h-48 md:h-60 w-auto"
             onClick={() => setShowAbout(true)}
           />
-          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4 uppercase tracking-tight">Future Service Inquiry / Pre-Launch Contact</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto italic">
-            Connecting you to premium preservation as we prepare for our official opening.
-          </p>
+          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4 uppercase tracking-tight">Contact Us</h1>
+          {!showBookNow && (
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto italic">
+              Connecting you to premium preservation as we prepare for our official opening.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Inquiry Form */}
           <Card className="p-6 md:p-8 bg-gradient-card border-border shadow-xl">
             <div className="mb-8">
-              <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Future Service Inquiry Form</h2>
-              <p className="text-muted-foreground font-medium italic">Interested in future service? Complete the form below to join our prospect list.</p>
+              <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Service Inquiry Form</h2>
+              <p className="text-muted-foreground font-medium italic">Interested in professional detailing? Complete the form below to get started.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6" name="contact-prelaunch" method="POST" data-netlify="true" netlify-honeypot="bot-field" noValidate>
@@ -429,9 +443,12 @@ const Contact = () => {
                     <div className="p-2 bg-emerald-500 rounded-full">
                       <Check className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="text-xl font-bold text-emerald-400">Thank you for your inquiry!</h4>
+                    <h4 className="text-xl font-bold text-emerald-400">Thank you for your message!</h4>
                     <p className="text-zinc-300">
-                      Prime Auto Detail is currently in pre-launch / final preparation. Your information has been received and added to our prospect list. We appreciate your interest and will be in touch as we move closer to launch.
+                      {showBookNow 
+                        ? "Your inquiry has been received. We appreciate you reaching out to Prime Auto Detail and will be in touch with you shortly."
+                        : "Prime Auto Detail is currently in pre-launch / final preparation. Your information has been received and added to our prospect list. We appreciate your interest and will be in touch as we move closer to launch."
+                      }
                     </p>
                   </Card>
                 </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -64,7 +65,7 @@ const getServiceDuration = (id: string = '') => {
 
 const CustomerPortal = () => {
   const navigate = useNavigate();
-  const PRE_LAUNCH_MODE = true;
+  const [showBookNow, setShowBookNow] = useState(false);
   // ... (rest of hook calls)
 
   // ... (skip down to AvailabilityPicker) ...
@@ -144,6 +145,12 @@ const CustomerPortal = () => {
           if (p.truck_price != null) newSavedPrices[`package:${id}:truck`] = String(p.truck_price);
           if (p.luxury_price != null) newSavedPrices[`package:${id}:luxury`] = String(p.luxury_price);
         });
+        
+        // Load Global Settings
+        const { data: globalMeta } = await supabase.from('content_services_meta').select('*').eq('key', 'global_settings').single();
+        if (globalMeta && globalMeta.meta) {
+          setShowBookNow(globalMeta.meta.showBookNow !== false);
+        }
 
         const newAddOnMeta: Record<string, any> = {};
         addons.forEach((a: any) => {
@@ -533,7 +540,7 @@ const CustomerPortal = () => {
                       Compare Packages
                     </Button>
 
-                    {!PRE_LAUNCH_MODE && (
+                    {showBookNow && (
                       <Button
                         className="w-full h-12 bg-blue-900 hover:bg-black text-white font-bold"
                         onClick={() => {
@@ -682,7 +689,7 @@ const CustomerPortal = () => {
             </div>
 
             <div className="space-y-3">
-              {!PRE_LAUNCH_MODE ? (
+              {showBookNow ? (
                 <Button
                   className={`w-full h-14 text-white font-bold text-xl transition-all rounded-xl shadow-xl
                     ${activeStep === 4 ? 'bg-blue-600 animate-blink shadow-blue-600/30' : 'bg-blue-600 hover:bg-blue-700'}
