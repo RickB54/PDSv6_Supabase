@@ -1199,6 +1199,23 @@ export default function WebsiteAdministration() {
                       >
                         {blockHistoryLoading ? 'Loading...' : 'Load History'}
                       </Button>
+                      {blockHistory.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-[10px] bg-red-900/60 hover:bg-red-700 border border-red-700/50 font-black uppercase"
+                          onClick={async () => {
+                            if (!confirm(`This will clear ALL ${blockHistory.reduce((t, r) => t + r.ids.length, 0)} blocked dates from the booking calendar. Are you sure?`)) return;
+                            const { supabase } = await import('@/lib/supabase');
+                            await supabase.from('availability_blocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                            window.dispatchEvent(new Event('availability-changed'));
+                            toast({ title: '🧹 All Blocks Cleared', description: 'Every blocked date has been removed from the booking calendar.' });
+                            setBlockHistory([]);
+                          }}
+                        >
+                          🗑 Clear ALL
+                        </Button>
+                      )}
                     </div>
                   </div>
 
