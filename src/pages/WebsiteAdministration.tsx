@@ -168,6 +168,44 @@ export default function WebsiteAdministration() {
     blockedReason: ''
   });
   const [activeStatus, setActiveStatus] = useState<any>(null);
+  const [blockHistory, setBlockHistory] = useState<{ start: string; end: string; reason: string; ids: string[] }[]>([]);
+  const [blockHistoryLoading, setBlockHistoryLoading] = useState(false);
+  const [blockStaffScheduler, setBlockStaffScheduler] = useState(false);
+
+  const loadBlockHistory = async () => {
+    setBlockHistoryLoading(true);
+    try {
+      const { getBlockedSlots } = await import('@/lib/availability');
+      const slots = await getBlockedSlots();
+      // Group contiguous dates by reason into ranges
+      const sorted = [...slots].sort((a, b) => a.date.localeCompare(b.date));
+      const ranges: { start: string; end: string; reason: string; ids: string[] }[] = [];
+      for (const slot of sorted) {
+        const last = ranges[ranges.length - 1];
+        const prevDate = last ? new Date(last.end) : null;
+        const currDate = new Date(slot.date);
+        const isNextDay = prevDate && (currDate.getTime() - prevDate.getTime()) <= 86400001;
+        const sameReason = last && last.reason === (slot.reason || '');
+        if (last && isNextDay && sameReason) {
+          last.end = slot.date;
+          last.ids.push(slot.id);
+        } else {
+          ranges.push({ start: slot.date, end: slot.date, reason: slot.reason || 'Blocked', ids: [slot.id] });
+        }
+      }
+      setBlockHistory(ranges);
+    } finally {
+      setBlockHistoryLoading(false);
+    }
+  };
+
+  const handleUnblockRange = async (range: { start: string; end: string; reason: string; ids: string[] }) => {
+    if (!confirm(`Remove all blocks from ${range.start} to ${range.end}?`)) return;
+    const { unblockDateRange } = await import('@/lib/availability');
+    await unblockDateRange(range.start, range.end);
+    toast({ title: 'Date Range Unblocked', description: `${range.start} → ${range.end} cleared from booking calendar.` });
+    loadBlockHistory();
+  };
 
   const STATUS_PRESETS: Record<string, any> = {
     live: {
@@ -278,12 +316,41 @@ export default function WebsiteAdministration() {
         );
         toast({
           title: "Calendar Sync",
-          description: "Custom date range has been blocked on the calendar.",
+          description: "Custom date range has been blocked on the booking calendar.",
         });
+
+        // Optionally also block in Staff Scheduler
+        if (blockStaffScheduler) {
+          try {
+            const { createStaffShift } = await import('@/lib/supa-data');
+            const { eachDayOfInterval, parseISO, format: dateFnsFormat } = await import('date-fns');
+            const days = eachDayOfInterval({
+              start: parseISO(newStatus.blockedStartDate),
+              end: parseISO(newStatus.blockedEndDate)
+            });
+            for (const day of days) {
+              await createStaffShift({
+                employee_id: 'system',
+                employee_name: 'All Staff',
+                date: dateFnsFormat(day, 'yyyy-MM-dd'),
+                start_time: '08:00',
+                end_time: '17:00',
+                role: 'Business Closed',
+                notes: newStatus.blockedReason || 'Business Closed – Launch Manager',
+                color: 'red',
+                status: 'scheduled'
+              });
+            }
+            toast({ title: "Staff Scheduler Synced", description: `"Business Closed" added for ${days.length} day(s).` });
+          } catch(staffErr) {
+            console.error("Failed to sync to Staff Scheduler:", staffErr);
+          }
+        }
       } catch (e) {
         console.error("Failed to auto-block calendar:", e);
       }
     }
+
 
     await contentService.upsertServiceMeta({
       key: 'global_settings',
@@ -1102,6 +1169,100 @@ export default function WebsiteAdministration() {
                     </Button>
                   </div>
                 </div>
+
+                {/* ── BLOCK HISTORY PANEL ── */}
+                <div className="border-t border-zinc-800/60 pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-orange-500" />
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-orange-400">Block History &amp; Management</h4>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg">
+                        <input
+                          id="block-staff-scheduler"
+                          type="checkbox"
+                          checked={blockStaffScheduler}
+                          onChange={e => setBlockStaffScheduler(e.target.checked)}
+                          className="accent-orange-500 h-3.5 w-3.5"
+                        />
+                        <label htmlFor="block-staff-scheduler" className="text-[10px] font-bold uppercase text-zinc-400 cursor-pointer">
+                          Also Block Staff Scheduler
+                        </label>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] border-orange-500/30 text-orange-400 hover:bg-orange-500/10 font-black uppercase"
+                        onClick={loadBlockHistory}
+                        disabled={blockHistoryLoading}
+                      >
+                        {blockHistoryLoading ? 'Loading...' : 'Load History'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {blockHistory.length === 0 && !blockHistoryLoading && (
+                    <div className="text-center py-6 text-zinc-600 text-xs italic border border-dashed border-zinc-800 rounded-lg">
+                      Click "Load History" to see all currently blocked date ranges.
+                    </div>
+                  )}
+
+                  {blockHistory.length > 0 && (
+                    <div className="space-y-2">
+                      {blockHistory.map((range, i) => (
+                        <div key={i} className="flex items-center justify-between gap-3 p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl hover:border-orange-500/30 transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <div className="p-1.5 bg-orange-500/10 rounded-lg">
+                              <svg className="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">
+                                {range.start === range.end ? range.start : `${range.start}  →  ${range.end}`}
+                              </p>
+                              <p className="text-[10px] text-zinc-500 mt-0.5">
+                                {range.reason} &bull; {range.ids.length} day{range.ids.length !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 text-[10px] bg-red-900/40 hover:bg-red-700 border border-red-700/30 text-red-400 hover:text-white font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={async () => {
+                              await handleUnblockRange(range);
+                              if (blockStaffScheduler) {
+                                try {
+                                  const { createStaffShift } = await import('@/lib/supa-data');
+                                  const { eachDayOfInterval, parseISO } = await import('date-fns');
+                                  const days = eachDayOfInterval({ start: parseISO(range.start), end: parseISO(range.end) });
+                                  // We need to remove the staff blocks that match this range+reason
+                                  const { getStaffShifts, deleteStaffShift } = await import('@/lib/supa-data');
+                                  const existing = await getStaffShifts(range.start, range.end);
+                                  for (const s of existing.filter((s: any) => s.role === 'Business Closed' && s.notes === range.reason)) {
+                                    await deleteStaffShift(s.id!);
+                                  }
+                                  toast({ title: 'Staff Scheduler Cleared', description: `Business Closed blocks removed for ${range.start} → ${range.end}.` });
+                                } catch(e) {
+                                  console.error('Failed to clear staff scheduler blocks', e);
+                                }
+                              }
+                            }}
+                          >
+                            Remove Block
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {blockStaffScheduler && (
+                    <div className="mt-3 p-3 bg-blue-950/20 border border-blue-500/20 rounded-lg text-[10px] text-blue-300">
+                      <span className="font-black">Staff Scheduler Sync ON:</span> When you deploy a Custom Mode block, a "Business Closed" all-day entry will also be added to the Staff Schedule for each blocked day. Removing it here will also remove those entries.
+                    </div>
+                  )}
+                </div>
+
               </AccordionContent>
             </AccordionItem>
 
