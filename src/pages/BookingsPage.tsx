@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package } from "lucide-react"; // Added Copy, RotateCcw, Trash2, Printer, Package
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield } from "lucide-react"; // Added Copy, RotateCcw, Trash2, Printer, Package, Shield
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -2417,64 +2417,46 @@ export default function BookingsPage() {
                   {(() => {
                     // Get unique customers from all bookings
                     const uniqueCustomers = Array.from(
-                      new Set(items.map(b => b.customer))
+                      new Set(unifiedEvents.map(e => e.customer || 'INTERNAL: System Blocks'))
                     ).map(customerName => {
-                      // Find all bookings for this customer
-                      // Apply filters here
-                      let customerBookings = items.filter(b => b.customer === customerName);
+                      // Filter events for this "customer"
+                      let customerEvents = unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName);
 
-                      // Removed !showArchived check so they always appear in history list
-
-                      if (dateFilter.start && dateFilter.end) {
-                        customerBookings = customerBookings.filter(b => {
-                          const d = parseISO(b.date);
-                          const passesDate = isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
-                          const passesArchive = showArchived || !b.isArchived;
-                          return passesDate && passesArchive;
-                        });
-                      } else {
-                        // Always respect showArchived even if no date filter active
-                        customerBookings = customerBookings.filter(b => showArchived || !b.isArchived);
+                      // Apply Source Filter
+                      if (sourceFilter) {
+                        customerEvents = customerEvents.filter(e => e.source_origin === sourceFilter);
                       }
                       
-                      if (dateFilter.start && !dateFilter.end) {
-                        // Single day selection or partial range? Calendar range usually sets both if range
-                        // If only start is set, maybe just match start?
-                        // But range calendar might return undefined end while selecting
-                        // Let's assume strict range only if both set, or just allow strict filtering if single day
-                        // Actually standard behavior is to show nothing or just start? 
-                        // Let's safe guard:
-                        if (!dateFilter.end) {
-                          customerBookings = customerBookings.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
-                        }
+                      // Apply date range filters if active (redundant if already in unifiedEvents but good for safety)
+                      if (dateFilter.start && dateFilter.end) {
+                        customerEvents = customerEvents.filter(e => {
+                          const d = parseISO(e.date);
+                          return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+                        });
                       }
 
-                      if (sourceFilter) {
-                        customerBookings = customerBookings.filter(b => b.source === sourceFilter);
-                      }
+                      if (customerEvents.length === 0) return null;
 
-                      if (customerBookings.length === 0) return null;
-
-                      // Get the most recent booking to extract customer details
-                      // Get the most recent booking to extract customer details
-                      const recentBooking = customerBookings.sort((a, b) =>
+                      // Sort by date descending
+                      const sortedEvents = customerEvents.sort((a, b) =>
                         new Date(b.date).getTime() - new Date(a.date).getTime()
-                      )[0];
+                      );
 
-                      // Find full customer data from customers list
+                      const mostRecent = sortedEvents[0];
                       const fullCustomer = customers.find(c => c.name === customerName);
 
                       return {
                         name: customerName,
-                        bookingCount: customerBookings.length,
-                        lastBooking: recentBooking.date,
-                        vehicle: recentBooking.vehicleYear && recentBooking.vehicleMake
-                          ? `${recentBooking.vehicleYear} ${recentBooking.vehicleMake} ${recentBooking.vehicleModel}`
-                          : recentBooking.vehicle || 'N/A',
-                        address: recentBooking.address || fullCustomer?.address || 'N/A',
+                        bookingCount: customerEvents.length,
+                        lastBooking: mostRecent.date,
+                        vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
+                          ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
+                          : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
+                        address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || fullCustomer?.address || 'N/A') : 'Internal System',
                         phone: fullCustomer?.phone || 'N/A',
                         email: fullCustomer?.email || 'N/A',
-                        bookings: customerBookings
+                        events: sortedEvents,
+                        isSystem: customerName === 'INTERNAL: System Blocks'
                       };
                     }).filter(Boolean) as any[];
 
@@ -2496,13 +2478,17 @@ export default function BookingsPage() {
                           <CollapsibleTrigger className="w-full">
                             <div className="flex items-center justify-between p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
                               <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-primary" />
+                                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", customer.isSystem ? "bg-blue-500/20" : "bg-primary/20")}>
+                                  {customer.isSystem ? (
+                                    <Shield className="h-5 w-5 text-blue-400" />
+                                  ) : (
+                                    <User className="h-5 w-5 text-primary" />
+                                  )}
                                 </div>
                                 <div className="text-left">
                                   <div className="font-semibold">{customer.name}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {customer.bookingCount} booking{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
+                                    {customer.bookingCount} record{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
                                   </div>
                                 </div>
                               </div>
@@ -2519,131 +2505,164 @@ export default function BookingsPage() {
                             <div className="border-t border-zinc-800 p-4 bg-zinc-900/30">
                               <div className="grid md:grid-cols-2 gap-4">
                                 {/* Customer Details */}
-                                <div className="space-y-3">
-                                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Contact Information</h3>
+                                {!customer.isSystem ? (
+                                  <div className="space-y-3">
+                                    <h3 className="font-semibold text-sm text-muted-foreground uppercase">Contact Information</h3>
 
-                                  <div className="flex items-start gap-2">
-                                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                    <div>
-                                      <div className="text-xs text-muted-foreground">Email</div>
-                                      <div className="text-sm">{customer.email}</div>
+                                    <div className="flex items-start gap-2">
+                                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                      <div>
+                                        <div className="text-xs text-muted-foreground">Email</div>
+                                        <div className="text-sm">{customer.email}</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-2">
+                                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                      <div>
+                                        <div className="text-xs text-muted-foreground">Phone</div>
+                                        <div className="text-sm">{customer.phone}</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-2">
+                                      <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                      <div>
+                                        <div className="text-xs text-muted-foreground">Address</div>
+                                        <div className="text-sm">{customer.address}</div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-2">
+                                      <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                      <div>
+                                        <div className="text-xs text-muted-foreground">Vehicle</div>
+                                        <div className="text-sm">{customer.vehicle}</div>
+                                      </div>
                                     </div>
                                   </div>
-
-                                  <div className="flex items-start gap-2">
-                                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                    <div>
-                                      <div className="text-xs text-muted-foreground">Phone</div>
-                                      <div className="text-sm">{customer.phone}</div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <h3 className="font-semibold text-sm text-muted-foreground uppercase">Internal Information</h3>
+                                    <p className="text-sm text-zinc-500">These records represent internal calendar allocations, vacations, or system maintenance blocks created by administrators.</p>
+                                    <div className="flex items-center gap-2 text-xs text-blue-400 bg-blue-950/30 p-2 rounded border border-blue-900/30">
+                                      <Shield className="w-3 h-3" />
+                                      <span>Full Audit Traceability Enabled</span>
                                     </div>
                                   </div>
-
-                                  <div className="flex items-start gap-2">
-                                    <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                    <div>
-                                      <div className="text-xs text-muted-foreground">Address</div>
-                                      <div className="text-sm">{customer.address}</div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-start gap-2">
-                                    <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                    <div>
-                                      <div className="text-xs text-muted-foreground">Vehicle</div>
-                                      <div className="text-sm">{customer.vehicle}</div>
-                                    </div>
-                                  </div>
-                                </div>
+                                )}
 
                                 {/* Booking History for this customer */}
                                 <div className="space-y-3">
-                                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Booking History</h3>
-                                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {customer.bookings.map((booking: Booking) => (
+                                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Activity Logs</h3>
+                                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin">
+                                    {customer.events.map((event: any) => (
                                       <div
-                                        key={booking.id}
+                                        key={event.id}
                                         className={cn(
                                           "p-2 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer",
-                                          booking.isArchived && "bg-green-900/40 border-green-700 hover:bg-green-900/50"
+                                          event.type === 'booking' && items.find(i => i.id === event.id)?.isArchived && "bg-green-900/40 border-green-700 hover:bg-green-900/50"
                                         )}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleBookingClick(e as any, booking as any);
+                                          if (event.type === 'booking') {
+                                            const original = items.find(i => i.id === event.id);
+                                            if (original) handleBookingClick(e as any, original as any);
+                                          }
                                         }}
                                       >
                                         <div className="flex justify-between items-start">
                                           <div>
-                                            <div className="font-medium text-sm">{booking.title}</div>
+                                            <div className="font-medium text-sm">{event.title}</div>
                                             <div className="text-xs text-muted-foreground">
-                                              {format(parseISO(booking.date), "MMM d, yyyy 'at' h:mm a")}
+                                              {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
                                             </div>
                                           </div>
                                           <Badge
                                             variant="outline"
-                                            className={cn("text-xs", getStatusColor(booking.status as any))}
+                                            className={cn("text-[10px] h-5", event.type === 'booking' ? getStatusColor((event.status || 'pending') as any) : "text-blue-400 border-blue-900")}
                                           >
-                                            {booking.status}
+                                            {event.type === 'booking' ? (event.status || 'PENDING') : 'BLOCKED'}
                                           </Badge>
                                         </div>
+                                        
                                         <div className="flex items-center gap-2 mt-1">
-                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                                                Origin: <span className="text-purple-300 font-medium">{booking.source || 'Manual Entry'}</span>
+                                                Source: <span className="text-purple-300 font-medium">{event.source_origin || (event.type === 'booking' ? (items.find(i => i.id === event.id)?.source || 'Manual Entry') : 'System')}</span>
                                             </div>
                                         </div>
+
                                         <div className="flex justify-end mt-2">
-                                          <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            className="h-6 text-xs gap-1"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              const params = new URLSearchParams();
-                                              if (customer.name) params.set('customerName', customer.name);
-                                              if (booking.title) {
-                                                const svc = allServices.find(s => s.name === booking.title);
-                                                if (svc) params.set('package', svc.id);
-                                              }
-                                              if (booking.vehicle) params.set('vehicleType', booking.vehicle);
-                                              if (booking.addons && booking.addons.length) {
-                                                const aids = booking.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
-                                                params.set('addons', aids.join(','));
-                                              }
-                                              navigate(`/service-checklist?${params.toString()}`);
-                                            }}
-                                          >
-                                            <Wrench className="h-3 w-3" /> Start Job
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className={cn("h-6 text-xs gap-1 ml-2", booking.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleArchiveToggle(booking);
-                                            }}
-                                          >
-                                            <Archive className="h-3 w-3" /> {booking.isArchived ? "Restore" : "Archive"}
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 text-xs gap-1 ml-2 text-zinc-500 hover:text-zinc-300"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDuplicate(booking);
-                                            }}
-                                          >
-                                            <Copy className="h-3 w-3" /> Duplicate
-                                          </Button>
+                                          {event.type === 'booking' ? (
+                                            <>
+                                              <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="h-6 text-[10px] gap-1"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const booking = items.find(i => i.id === event.id);
+                                                  if (!booking) return;
+                                                  const params = new URLSearchParams();
+                                                  if (customer.name) params.set('customerName', customer.name);
+                                                  if (booking.title) {
+                                                    const svc = allServices.find(s => s.name === booking.title);
+                                                    if (svc) params.set('package', svc.id);
+                                                  }
+                                                  if (booking.vehicle) params.set('vehicleType', booking.vehicle);
+                                                  if (booking.addons?.length) {
+                                                    const aids = booking.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+                                                    params.set('addons', aids.join(','));
+                                                  }
+                                                  navigate(`/service-checklist?${params.toString()}`);
+                                                }}
+                                              >
+                                                <Wrench className="h-2.5 w-2.5" /> Start Job
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className={cn("h-6 text-[10px] gap-1 ml-1", items.find(i => i.id === event.id)?.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const booking = items.find(i => i.id === event.id);
+                                                  if (booking) handleArchiveToggle(booking);
+                                                }}
+                                              >
+                                                <Archive className="h-2.5 w-2.5" /> {items.find(i => i.id === event.id)?.isArchived ? "Restore" : "Archive"}
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 text-[10px] gap-1 ml-1 text-zinc-500 hover:text-zinc-300"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const booking = items.find(i => i.id === event.id);
+                                                  if (booking) handleDuplicate(booking);
+                                                }}
+                                              >
+                                                <Copy className="h-2.5 w-2.5" /> Duplicate
+                                              </Button>
+                                            </>
+                                          ) : (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-6 text-[10px] gap-1 text-red-500 hover:text-red-400 hover:bg-red-950/20"
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Are you sure you want to delete this internal block?')) {
+                                                  await unblockSlot(event.id);
+                                                  loadUnifiedEvents();
+                                                  toast.success("Internal block removed");
+                                                }
+                                              }}
+                                            >
+                                              <Trash2 className="h-2.5 w-2.5" /> Delete Block
+                                            </Button>
+                                          )}
                                         </div>
-                                        {
-                                          booking.assignedEmployee && (
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                              👤 {booking.assignedEmployee}
-                                            </div>
-                                          )
-                                        }
                                       </div>
                                     ))}
                                   </div>

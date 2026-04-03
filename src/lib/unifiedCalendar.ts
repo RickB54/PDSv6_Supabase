@@ -18,6 +18,7 @@ export interface CalendarEvent {
     customer?: string;
     status?: string;
     source: 'booking' | 'manual' | 'google';
+    source_origin?: string; // e.g. 'Hybrid Availability System'
     isDeletable: boolean;
     color?: string;
     icon?: string;
@@ -51,6 +52,7 @@ export async function getUnifiedCalendarEvents(
                 customer: booking.customer,
                 status: booking.status,
                 source: 'booking',
+                source_origin: booking.source || 'Manual Entry',
                 isDeletable: true,
                 color: undefined,
                 icon: undefined,
@@ -101,6 +103,7 @@ export async function getUnifiedCalendarEvents(
                     title: block.reason || 'Blocked Time',
                     date: blockStart,
                     endTime: blockEnd,
+                    source_origin: block.source || 'Hybrid Availability System',
                     source: 'manual',
                     isDeletable: true,
                     color: 'blue',
