@@ -57,16 +57,25 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // 1) Path-based or admin toggle
   const isDemoPath = location.pathname.startsWith("/demo") || location.pathname === "/demo";
+  const isHome = location.pathname === "/" || location.pathname === "/index.html";
   
   // 2) Persistence flag (so clicking /dashboard doesn't kick you out)
   const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
 
   useEffect(() => {
+    // If we land on the HOME PAGE explicitly, clear the demo lock/cache
+    // This allows the user to 'break out' of demo mode by just going to the root URL
+    if (isHome) {
+      localStorage.removeItem("demo_mode_active");
+      setStayInDemo(false);
+      return;
+    }
+
     if (isDemoPath) {
       localStorage.setItem("demo_mode_active", "true");
       setStayInDemo(true);
     }
-  }, [isDemoPath]);
+  }, [isDemoPath, isHome]);
 
   // Global demo mode check
   const isDemoMode = stayInDemo || isDemoPath || isAdminPreview;
@@ -182,16 +191,29 @@ export const DemoBanner = () => {
         </p>
       </div>
       
-      <button 
-        onClick={() => {
-          window.dispatchEvent(new CustomEvent('open-help', { detail: 'interactive-training-demo' }));
-        }}
-        className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-all group"
-        title="View Sharing Instructions & Help"
-      >
-        <span className="text-[10px] font-bold text-white uppercase tracking-wider hidden xs:inline">Sharing Help</span>
-        <div className="w-4 h-4 rounded-full bg-white text-orange-600 flex items-center justify-center font-bold text-[10px] group-hover:scale-110 transition-transform">?</div>
-      </button>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('open-help', { detail: 'interactive-training-demo' }));
+          }}
+          className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-all group"
+          title="View Sharing Instructions & Help"
+        >
+          <span className="text-[10px] font-bold text-white uppercase tracking-wider hidden xs:inline">Sharing Help</span>
+          <div className="w-4 h-4 rounded-full bg-white text-orange-600 flex items-center justify-center font-bold text-[10px] group-hover:scale-110 transition-transform">?</div>
+        </button>
+
+        <button 
+          onClick={() => {
+            localStorage.removeItem("demo_mode_active");
+            localStorage.removeItem("admin_demo_preview");
+            window.location.href = "/";
+          }}
+          className="px-3 py-1 bg-white text-orange-600 hover:bg-zinc-200 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95"
+        >
+          Exit Training Session
+        </button>
+      </div>
     </div>
   );
 };

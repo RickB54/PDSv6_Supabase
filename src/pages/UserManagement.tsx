@@ -14,7 +14,8 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/lib/supabase";
-import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw, Info } from "lucide-react";
+import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw, Info, Lock } from "lucide-react";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -25,6 +26,7 @@ import {
 
 export default function UserManagement() {
   const { toast } = useToast();
+  const { isDemoMode } = useDemoMode();
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -161,6 +163,10 @@ export default function UserManagement() {
   }, []);
 
   const createEmployee = async () => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "User creation is disabled for training visitor security.", variant: "destructive" });
+      return;
+    }
     if (!empNewName || !empNewEmail) {
       toast({ title: "Validation Error", description: "Name and Email are required.", variant: "destructive" });
       return;
@@ -217,6 +223,10 @@ export default function UserManagement() {
   };
 
   const createCustomer = async () => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "Customer creation is blocked in this sample environment.", variant: "destructive" });
+      return;
+    }
     if (!custNewName) {
       toast({ title: "Validation Error", description: "Customer name is required.", variant: "destructive" });
       return;
@@ -241,6 +251,10 @@ export default function UserManagement() {
   };
 
   const createAdmin = async () => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "Administrative changes are strictly forbidden in training mode.", variant: "destructive" });
+      return;
+    }
     if (!adminNewName || !adminNewEmail) {
       toast({ title: "Validation Error", description: "Name and Email are required.", variant: "destructive" });
       return;
@@ -261,6 +275,11 @@ export default function UserManagement() {
   };
 
   const updateEmployee = async () => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "Profile updates are disabled in this simulation.", variant: "destructive" });
+      setEmpEditId(null);
+      return;
+    }
     if (!empEditId) return;
     try {
       const { error } = await supabase
@@ -306,6 +325,11 @@ export default function UserManagement() {
   };
 
   const handleConfirmDelete = async () => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "Record deletion is disabled for security reasons.", variant: "destructive" });
+      setDeleteConfirm({ open: false, type: null, id: null });
+      return;
+    }
     const { id, type } = deleteConfirm;
     if (!id || !type) return;
 
