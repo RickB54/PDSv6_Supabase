@@ -207,13 +207,18 @@ const App = () => {
 
     const onOpenCallAssistant = () => setCallAssistantOpen(true);
     const onOpenHelp = (e: any) => {
-      // Use getCurrentUser() directly or a functional update to get the latest state
-      // instead of relying on the closure which might be stale or triggering too many re-renders
       const currentUser = getCurrentUser();
-      const role = e.detail?.role || currentUser?.role || 'customer';
-      const topicId = e.detail?.topicId;
+      let topicId: string | undefined = undefined;
+      let role: any = currentUser?.role || 'customer';
+
+      if (typeof e.detail === 'string') {
+        topicId = e.detail;
+      } else if (e.detail && typeof e.detail === 'object') {
+        topicId = e.detail.topicId;
+        if (e.detail.role) role = e.detail.role;
+      }
       
-      setHelpRole(role as any);
+      setHelpRole(role);
       setHelpId(topicId);
       setHelpOpen(true);
     };

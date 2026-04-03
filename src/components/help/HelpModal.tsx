@@ -22,20 +22,37 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
   const [index, setIndex] = useState(0);
   const [accordionValue, setAccordionValue] = useState<string>(""); // Default closed
 
-  // Handle direct navigation to topic
+  // Handle direct navigation to topic via event (more robust than just prop)
   useEffect(() => {
-    if (open) {
-      if (initialTopicId) {
-        const topicIndex = toc.findIndex(t => t.id === initialTopicId);
+    const handleOpenHelp = (e: any) => {
+      let topicId: string | undefined = undefined;
+      if (typeof e.detail === 'string') {
+        topicId = e.detail;
+      } else if (e.detail && typeof e.detail === 'object') {
+        topicId = e.detail.topicId;
+      }
+
+      if (topicId) {
+        const topicIndex = toc.findIndex(t => t.id === topicId);
         if (topicIndex !== -1) {
           setIndex(topicIndex);
           setAccordionValue(""); // Ensure menu is closed to show content
+          setQuery(''); // Clear search to ensure topic is visible in filtered list
         }
-      } else {
-        // If opened without ID, show the first topic or keep user's last spot?
-        // Let's default to the search query being cleared and index 0 for a "fresh" start from sidebar
-        setIndex(0);
-        setQuery('');
+      }
+    };
+
+    window.addEventListener('open-help', handleOpenHelp);
+    return () => window.removeEventListener('open-help', handleOpenHelp);
+  }, [toc]);
+
+  // Handle direct navigation to topic via prop (initial mount)
+  useEffect(() => {
+    if (open && initialTopicId) {
+      const topicIndex = toc.findIndex(t => t.id === initialTopicId);
+      if (topicIndex !== -1) {
+        setIndex(topicIndex);
+        setAccordionValue("");
       }
     }
   }, [open, initialTopicId, toc]);
