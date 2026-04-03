@@ -74,6 +74,20 @@ interface NotesState {
     setSearch: (q: string) => void;
 }
 
+const isDemo = () => localStorage.getItem('demo_mode_active') === 'true';
+const DEMO_STORAGE_KEY = 'demo_personal_notes_v1';
+
+async function loadDemoData() {
+    try {
+        const raw = localStorage.getItem(DEMO_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : { notebooks: [], sections: [], notes: [] };
+    } catch { return { notebooks: [], sections: [], notes: [] }; }
+}
+
+async function saveDemoData(data: any) {
+    try { localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(data)); } catch { }
+}
+
 export const useNotesStore = create<NotesState>((set, get) => ({
     notebooks: [],
     sections: [],
@@ -87,6 +101,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     isLoading: false,
 
     refresh: async () => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            set({
+                notebooks: data.notebooks || [],
+                sections: data.sections || [],
+                notes: data.notes || [],
+                isLoading: false
+            });
+            return;
+        }
+
         set({ isLoading: true });
         try {
             const { data: n } = await supabase.from('personal_notebooks').select('*').order('created_at');
@@ -106,6 +131,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     createNotebook: async (name) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            const nb: Notebook = {
+                id: `nb_${Date.now()}`,
+                user_id: 'demo-visitor',
+                name,
+                created_at: new Date().toISOString()
+            };
+            data.notebooks.push(nb);
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
+
         const user = getCurrentUser();
         if (!user) return;
         const { error } = await supabase.from('personal_notebooks').insert({ name, user_id: user.id });
@@ -113,16 +152,48 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     updateNotebook: async (id, name) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.notebooks = data.notebooks.map((nb: any) => nb.id === id ? { ...nb, name } : nb);
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
         await supabase.from('personal_notebooks').update({ name }).eq('id', id);
         get().refresh();
     },
 
     deleteNotebook: async (id) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.notebooks = data.notebooks.filter((nb: any) => nb.id !== id);
+            data.sections = data.sections.filter((s: any) => s.notebook_id !== id);
+            // Also delete notes in those sections? Yes.
+            const sIds = data.sections.filter((s: any) => s.notebook_id === id).map((s: any) => s.id);
+            data.notes = data.notes.filter((n: any) => !sIds.includes(n.section_id));
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
         await supabase.from('personal_notebooks').delete().eq('id', id);
         get().refresh();
     },
 
     createSection: async (notebookId, name) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            const s: Section = {
+                id: `sec_${Date.now()}`,
+                notebook_id: notebookId,
+                user_id: 'demo-visitor',
+                name,
+                created_at: new Date().toISOString()
+            };
+            data.sections.push(s);
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
         const user = getCurrentUser();
         if (!user) return;
         const { error } = await supabase.from('personal_sections').insert({
@@ -134,16 +205,52 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     updateSection: async (id, name) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.sections = data.sections.map((s: any) => s.id === id ? { ...s, name } : s);
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
         await supabase.from('personal_sections').update({ name }).eq('id', id);
         get().refresh();
     },
 
     deleteSection: async (id) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.sections = data.sections.filter((s: any) => s.id !== id);
+            data.notes = data.notes.filter((n: any) => n.section_id !== id);
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
         await supabase.from('personal_sections').delete().eq('id', id);
         get().refresh();
     },
 
     createNote: async (sectionId, title = '', content = '') => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            const n: Note = {
+                id: `note_${Date.now()}`,
+                section_id: sectionId,
+                user_id: 'demo-visitor',
+                title: title || 'Untitled Note',
+                content,
+                is_pinned: false,
+                is_locked: false,
+                tags: [],
+                versions: [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            data.notes.unshift(n);
+            await saveDemoData(data);
+            set({ notes: data.notes, activeNoteId: n.id });
+            return n.id;
+        }
+
         const user = getCurrentUser();
         if (!user) return '';
 
@@ -157,9 +264,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         if (error) {
             console.error("Failed to create note:", error);
-            // We can't use toast hook inside zustand directly easily without passing it or using a global toaster instance.
-            // But we can log it. 
-            // Or we can return null to signal failure.
             return '';
         }
 
@@ -173,15 +277,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     updateNote: async (id, patch) => {
         const { notes } = get();
-        // Optimistic update
         const note = notes.find(n => n.id === id);
         if (!note) return;
 
-        // Handle Versioning if content changed
         let versions = note.versions || [];
         if (patch.content && patch.content !== note.content) {
-            // Add OLD content to version history
-            // Limit to last 10 versions for sanity? Let's keep it simple for now.
             versions = [
                 { ts: new Date().toISOString(), title: note.title, content: note.content },
                 ...versions
@@ -192,7 +292,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const nextNotes = notes.map(n => n.id === id ? nextNote : n);
         set({ notes: nextNotes });
 
-        // DB Update
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.notes = data.notes.map((n: any) => n.id === id ? nextNote : n);
+            await saveDemoData(data);
+            return;
+        }
+
         await supabase.from('personal_notes').update({
             ...patch,
             versions,
@@ -206,6 +312,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         if (get().activeNoteId === id) set({ activeNoteId: null });
         set({ notes: nextNotes });
 
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.notes = data.notes.filter((n: any) => n.id !== id);
+            await saveDemoData(data);
+            return;
+        }
+
         await supabase.from('personal_notes').delete().eq('id', id);
     },
 
@@ -213,6 +326,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const { notes } = get();
         const nextNotes = notes.map(n => n.id === noteId ? { ...n, section_id: newSectionId } : n);
         set({ notes: nextNotes });
+
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.notes = data.notes.map((n: any) => n.id === noteId ? { ...n, section_id: newSectionId } : n);
+            await saveDemoData(data);
+            return;
+        }
         await supabase.from('personal_notes').update({ section_id: newSectionId }).eq('id', noteId);
     },
 

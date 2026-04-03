@@ -42,14 +42,42 @@ export default function Tasks() {
   const [editingMap, setEditingMap] = useState<Record<string, Task>>({});
   const [expandAll, setExpandAll] = useState(false);
   const dragIdRef = useRef<string | null>(null);
+  const { isDemoMode } = useDemoMode();
+  const isAdmin = user?.role === 'admin' || isDemoMode;
+  const isEmployee = user?.role === 'employee';
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
-  const isAdmin = user?.role === 'admin';
-  const isEmployee = user?.role === 'employee';
   // Team Communication state
   const [chatMessages, setChatMessages] = useState<TeamMessage[]>([]);
   const [newChatText, setNewChatText] = useState("");
   const [chatRecipient, setChatRecipient] = useState<string>("all"); // 'all' or employee email
+
+  const handleSendChat = async () => {
+    const text = newChatText.trim();
+    if (!text) return;
+
+    if (isDemoMode) {
+      toast({ 
+        title: "Simulation Mode", 
+        description: "Team messages are disabled in the public demo to prevent accidental contact with live staff.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const actor = getCurrentUser();
+      await sendTeamMessage({
+        sender_email: actor?.email || 'guest@demo.com',
+        sender_name: actor?.name || 'Demo Visitor',
+        recipient_id: chatRecipient,
+        message: text,
+      });
+      setNewChatText("");
+    } catch {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    }
+  };
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
@@ -170,11 +198,14 @@ export default function Tasks() {
 
   const handleQuickAdd = async () => {
     const parsed = parseTaskInput(quickAdd);
-    // Employees can add tasks, but they'll be auto-assigned to themselves.
-    // Admin also auto-assigns to self by default so it appears in "My Tasks", but they can reassign.
+    // In demo mode, use a dummy assignee if not logged in
+    const assignees = isDemoMode && !user 
+      ? [{ name: 'Demo Visitor', email: 'visitor@demo.com' }] 
+      : [{ email: user?.email, name: user?.name }];
+
     const rec = await add({
       ...parsed,
-      assignees: [{ email: user?.email, name: user?.name }]
+      assignees
     });
     setQuickAdd("");
     toast({ title: "Task Added", description: rec.title });
@@ -874,21 +905,7 @@ export default function Tasks() {
                   }
                 }}
               />
-              <Button size="sm" variant="secondary" onClick={async () => {
-                const text = newChatText.trim(); if (!text) return;
-                const senderEmail = user?.email || '';
-                const senderName = user?.name || senderEmail;
-                const recipient = chatRecipient === 'all' ? null : chatRecipient;
-
-                try {
-                  await sendTeamMessage(text, senderEmail, senderName, recipient);
-                  setNewChatText('');
-                  // Optimistic update handled by Realtime subscription, but duplicate prevention might be needed if latency is high?
-                  // Supabase Realtime is fast usually.
-                } catch (err) {
-                  toast({ title: "Failed to send", variant: "destructive" });
-                }
-              }}>Send</Button>
+              <Button size="sm" variant="secondary" onClick={handleSendChat}>Send</Button>
             </div>
           </Card>
 

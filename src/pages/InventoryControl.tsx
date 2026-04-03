@@ -1146,6 +1146,16 @@ const InventoryControl = () => {
     const { id, mode, type, name, item } = deleteState;
     if (!id || !type) return;
 
+    if (isDemoMode) {
+      toast({ 
+        title: "Read-Only Mode", 
+        description: `This is a training session. Changes to the permanent inventory (like ${type}ing ${name}) are disabled.`,
+        variant: "destructive"
+      });
+      setDeleteState(prev => ({ ...prev, open: false }));
+      return;
+    }
+
     try {
       if (type === 'delete') {
         if (!mode) return;

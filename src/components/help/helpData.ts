@@ -33,9 +33,9 @@ export const demoModeHelpTopic: HelpTopic = {
     '• **Automatic Activation**: Anyone who clicks this link will automatically enter **Demo Mode**. They can explore all the administrative features, catalogs, and calculators without needing to create an account or sign in.',
     '• **Safe Exploration**: Visitors can "click everything" and see how your business operates professionally, but they can never view or change your real customer records or financial data.',
     '',
-    '💡 **How to Exit**: If you are a visitor, simply navigate back to the main site. If you are an Admin previewing the demo, use the "Exit Demo Preview" button in the sidebar or the toggle in **System Settings**.',
+    '💡 **How to Exit**: To return to the real site, simply click the **"Exit Training Session"** button in the orange banner, or navigate back to the main homepage (`/`). The system will automatically clear your session and restore full live functionality.',
     '',
-    '⚠️ **Persistence**: Any "changes" you make while in Demo Mode (like adding a task or updating a chemical) are local to your current session and will **NEVER** persist. Once you exit, the system restores your real environment exactly as it was.',
+    '⚠️ **Persistence**: While browsing, you can click any menu item and the demo session will remain active (no login required). However, any "actions" you take (like hitting Save or Delete) are strictly blocked to protect the production database. This allows for total freedom of exploration without any risk.',
   ],
   section: 'system',
 };

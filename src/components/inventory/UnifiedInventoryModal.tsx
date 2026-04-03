@@ -12,6 +12,7 @@ import { supabase, upsertSupabaseTaxExpense, getSupabaseTaxExpenses } from "@/li
 import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
 import { DilutionRatio } from "@/types/chemicals";
 import { generateTemplate } from "@/lib/chemical-ai";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 // Updated naming: material → supply, tool → equipment
 // Backward compatibility maintained in data layer
@@ -299,11 +300,19 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     }
   };
 
+  const { isDemoMode } = useDemoMode();
+
   const save = async () => {
     try {
       // Validate required fields
       if (!form.name.trim()) {
         toast.error("Name is required");
+        return;
+      }
+
+      if (isDemoMode) {
+        toast.error("Training Mode: Changes to the permanent inventory are disabled.");
+        onOpenChange(false);
         return;
       }
 
@@ -422,6 +431,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const handleDelete = async () => {
     if (!form.id) return;
+
+    if (isDemoMode) {
+      toast.error("Training Mode: Record deletion is disabled.");
+      onOpenChange(false);
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this item? This action cannot be undone.")) return;
 
     try {

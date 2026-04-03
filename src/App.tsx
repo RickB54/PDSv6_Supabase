@@ -208,13 +208,18 @@ const App = () => {
     const onOpenCallAssistant = () => setCallAssistantOpen(true);
     const onOpenHelp = (e: any) => {
       const currentUser = getCurrentUser();
+      const isDemoSession = localStorage.getItem("demo_mode_active") === "true";
       let topicId: string | undefined = undefined;
-      let role: any = currentUser?.role || 'customer';
+      
+      // If we are in demo mode, ALWAYS show the full Admin suite of help topics
+      // so visitors can understand all the high-level features.
+      let role: any = isDemoSession ? 'admin' : (currentUser?.role || 'customer');
 
       if (typeof e.detail === 'string') {
         topicId = e.detail;
       } else if (e.detail && typeof e.detail === 'object') {
         topicId = e.detail.topicId;
+        // Only override role if explicitly provided in detail, otherwise use the demo/auth logic
         if (e.detail.role) role = e.detail.role;
       }
       
