@@ -137,9 +137,9 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   if (isDemoMode) return <>{children}</>;
 
   if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
-  if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    if (user.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
-    if (user.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
+  if (user && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
+    if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
     return <Navigate to="/customer-dashboard" replace />;
   }
   return <>{children}</>;
@@ -148,8 +148,8 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 
 const DefaultRedirect = ({ user }: { user: any }) => {
   if (!user) return <Navigate to="/" replace />;
-  if (user.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
-  if (user.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
+  if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
+  if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
   return <Navigate to="/customer-dashboard" replace />;
 };
 
@@ -272,7 +272,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
   const isApp = isAppRoute(location.pathname);
   
   // In demo mode, use admin dark theme even if not logged in
-  const showDarkTheme = isApp && (isDemoMode || (user && (user.role === 'admin' || user.role === 'employee')));
+  const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
   // Use a mock admin user for layout purposes when in demo mode
   const effectiveUser = isDemoMode ? (user || { id: 'demo-visitor', email: 'visitor@prime-demo', role: 'admin', name: 'Demo Visitor' }) : user;
@@ -415,7 +415,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="*" element={<DefaultRedirect user={user} />} />
         </Routes>
       </div>
-      {user.role !== 'customer' && (
+      {effectiveUser?.role !== 'customer' && (
         <div className="dark-theme">
           <GlobalRightSidebar />
         </div>

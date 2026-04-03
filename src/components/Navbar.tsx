@@ -169,7 +169,7 @@ export const Navbar = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    {(user.role === 'admin' || user.role === 'employee') && (
+                    {(user?.role === 'admin' || user?.role === 'employee') && (
                       <DropdownMenuItem asChild>
                         <Link to="/dashboard" className="cursor-pointer w-full">
                           <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -262,7 +262,7 @@ export const Navbar = () => {
                       <User className="h-4 w-4 text-purple-500 mr-1" />
                       Hi, {user.name || user.email}
                     </span>
-                    {(user.role === 'admin' || user.role === 'employee') && (
+                    {(user?.role === 'admin' || user?.role === 'employee') && (
                       <Link
                         to="/dashboard"
                         onClick={() => setMobileMenuOpen(false)}
@@ -286,7 +286,7 @@ export const Navbar = () => {
                         Phone Assistant
                       </Button>
                     )}
-                    {user.role === 'admin' && (
+                    {user?.role === 'admin' && (
                       <div className="px-2 mb-2"><NotificationBell /></div>
                     )}
                     <Button onClick={handleLogout} variant="outline" size="sm" className="w-full">

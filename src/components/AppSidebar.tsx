@@ -514,7 +514,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       </SidebarContent>
       <div className="p-2 border-t border-border mt-auto">
         <div className="text-[10px] text-zinc-500 font-mono text-center">
-          {isDemoMode ? <span className="text-amber-500 font-black">DEMO VISITOR</span> : (user ? <span className={user.role === 'admin' ? 'text-red-500' : 'text-blue-500'}>{user.role?.toUpperCase()}</span> : "Logged Out")}
+          {isDemoMode ? <span className="text-amber-500 font-black">DEMO VISITOR</span> : (user ? <span className={user?.role === 'admin' ? 'text-red-500' : 'text-blue-500'}>{user?.role?.toUpperCase()}</span> : "Logged Out")}
         </div>
       </div>
       <SidebarRail />
