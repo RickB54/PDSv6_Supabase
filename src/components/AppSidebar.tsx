@@ -73,6 +73,13 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     if (url === '/invoicing') return '/demo/invoicing';
     if (url === '/vehicle-gallery') return '/demo/vehicle-gallery';
     if (url === '/reports') return '/demo/reports';
+    if (url === '/bookings') return '/demo/bookings';
+    if (url === '/bookings-analytics') return '/demo/bookings-analytics';
+    if (url === '/tasks') return '/demo/tasks';
+    if (url === '/estimates') return '/demo/estimates';
+    if (url === '/accounting') return '/demo/accounting';
+    if (url === '/payroll') return '/demo/payroll';
+    if (url === '/company-budget') return '/demo/company-budget';
 
     return url;
   };
@@ -416,7 +423,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title} className="bg-transparent hover:bg-transparent">
-                      <Link to={item.url} className={className} onClick={handleNavClick}>
+                      <Link to={item.url} className={className} onClick={(e) => handleNavClick(e, item.url)}>
                         {item.icon && <item.icon className="h-4 w-4" />}
                         {open && <span>{item.title}</span>}
                       </Link>

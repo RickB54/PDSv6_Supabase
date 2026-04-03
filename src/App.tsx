@@ -201,21 +201,28 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
           <Route path="/customer-dashboard" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
+          <Route path="/demo/bookings" element={<ProtectedRoute allowedRoles={[]}><BookingsPage /></ProtectedRoute>} />
           <Route path="/bookings-analytics" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
+          <Route path="/demo/bookings-analytics" element={<ProtectedRoute allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
           <Route path="/search-customer" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/demo/search-customer" element={<ProtectedRoute allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/prospects" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />
           <Route path="/demo/prospects" element={<ProtectedRoute allowedRoles={[]}><Prospects /></ProtectedRoute>} />
           <Route path="/service-checklist" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
+          <Route path="/demo/tasks" element={<ProtectedRoute allowedRoles={[]}><Tasks /></ProtectedRoute>} />
           <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
           <Route path="/jobs-completed" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><JobsCompleted /></ProtectedRoute>} />
           <Route path="/invoicing" element={<ProtectedRoute allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
           <Route path="/demo/invoicing" element={<ProtectedRoute allowedRoles={[]}><Invoicing /></ProtectedRoute>} />
           <Route path="/estimates" element={<ProtectedRoute allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
+          <Route path="/demo/estimates" element={<ProtectedRoute allowedRoles={[]}><Estimates /></ProtectedRoute>} />
           <Route path="/accounting" element={<ProtectedRoute allowedRoles={['admin']}><Accounting /></ProtectedRoute>} />
+          <Route path="/demo/accounting" element={<ProtectedRoute allowedRoles={[]}><Accounting /></ProtectedRoute>} />
           <Route path="/payroll" element={<ProtectedRoute allowedRoles={['admin']}><Payroll /></ProtectedRoute>} />
+          <Route path="/demo/payroll" element={<ProtectedRoute allowedRoles={[]}><Payroll /></ProtectedRoute>} />
           <Route path="/company-budget" element={<ProtectedRoute allowedRoles={['admin']}><CompanyBudget /></ProtectedRoute>} />
+          <Route path="/demo/company-budget" element={<ProtectedRoute allowedRoles={[]}><CompanyBudget /></ProtectedRoute>} />
           <Route path="/discount-coupons" element={<ProtectedRoute allowedRoles={['admin']}><DiscountCoupons /></ProtectedRoute>} />
           <Route path="/package-pricing" element={<ProtectedRoute allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
           <Route path="/mileage" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
