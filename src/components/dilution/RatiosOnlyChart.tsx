@@ -223,22 +223,23 @@ export const RatiosOnlyChart = ({ open, onOpenChange, chemicals, onOpenCalculato
     const sortedRatios = useMemo(() => {
         const allSet = new Set<string>();
         
-        chemicals.forEach(c => {
-            const ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) 
+        (chemicals || []).forEach(c => {
+            if (!c) return;
+            const ratios = (Array.isArray(c.dilutionRatios) && c.dilutionRatios.length > 0) 
                 ? c.dilutionRatios 
-                : (c.dilution_ratios && c.dilution_ratios.length > 0) 
+                : (Array.isArray(c.dilution_ratios) && c.dilution_ratios.length > 0) 
                     ? c.dilution_ratios 
                     : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
 
-            ratios.forEach((r: any) => {
-                const norm = normalizeRatio(r.ratio);
+            (ratios || []).forEach((r: any) => {
+                const norm = normalizeRatio(r?.ratio);
                 if (norm) allSet.add(norm);
             });
         });
 
-        customRatios.forEach(r => allSet.add(r));
+        (customRatios || []).forEach(r => { if(r) allSet.add(r); });
 
-        const filtered = Array.from(allSet).filter(r => !hiddenRatios.includes(r));
+        const filtered = Array.from(allSet).filter(r => !(hiddenRatios || []).includes(r));
 
         return filtered.sort((a, b) => {
             if (a === 'RTU') return -1;

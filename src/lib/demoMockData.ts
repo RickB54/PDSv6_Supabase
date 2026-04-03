@@ -73,14 +73,23 @@ export const MOCK_PROSPECTS = [
 
 export const MOCK_INVENTORY = {
   materials: [
-    { id: "mat-1", name: "Premium Car Soap", brand: "Chemical Guys", quantity: 15, lowThreshold: 5, unit: "Gallon", price: 45.00 },
-    { id: "mat-2", name: "Microfiber Towels (Blue)", brand: "The Rag Company", quantity: 120, lowThreshold: 20, unit: "Pack of 12", price: 29.99 },
+    { id: "mat-1", name: "Premium Car Soap", brand: "Chemical Guys", quantity: 15, lowThreshold: 5, unit: "Gallon", price: 45.00, costPerItem: 45.00 },
+    { id: "mat-2", name: "Microfiber Towels (Blue)", brand: "The Rag Company", quantity: 120, lowThreshold: 20, unit: "Pack of 12", price: 29.99, costPerItem: 29.99 },
   ],
   chemicals: [
-    { id: "chem-1", name: "Carnauba Wax", brand: "Meguiar's", currentStock: 8, threshold: 10, unit: "16oz Tub", price: 19.95 },
-    { id: "chem-2", name: "All Purpose Cleaner", brand: "Koch Chemie", currentStock: 3, threshold: 5, unit: "5L Jug", price: 65.00 }
+    { id: "chem-1", name: "Carnauba Wax", brand: "Meguiar's", currentStock: 8, threshold: 10, unit: "16oz Tub", price: 19.95, costPerBottle: 19.95 },
+    { id: "chem-2", name: "All Purpose Cleaner", brand: "Koch Chemie", currentStock: 3, threshold: 5, unit: "5L Jug", price: 65.00, costPerBottle: 65.00 }
+  ],
+  tools: [
+    { id: "tool-1", name: "High-Pressure Wash Gun", price: 145.00, cost: 145.00, purchaseDate: new Date().toISOString(), notes: "Standard issue" },
+    { id: "tool-2", name: "RUPES LHR15 Mark III", price: 450.00, cost: 450.00, purchaseDate: new Date().toISOString(), notes: "Polisher" }
   ]
 };
+
+export const MOCK_TASKS: any[] = [
+  { id: "task-1", title: "Clean mobile unit #1", status: "pending", priority: "high", dueDate: new Date().toISOString() },
+  { id: "task-2", title: "Order re-stock of microfiber towels", status: "completed", priority: "medium", dueDate: new Date(Date.now() - 86400000).toISOString() },
+];
 
 export const MOCK_INVOICES = [
   { id: "demo-inv-1", customerName: "John Smith", total: 249.99, paymentStatus: "paid", createdAt: new Date().toISOString(), invoiceNumber: "INV-5001", paidAmount: 249.99 },
@@ -155,10 +164,6 @@ export const MOCK_ANALYTICS = {
   customerSatisfaction: 4.9
 };
 
-export const MOCK_TASKS = [
-  { id: "task-1", title: "Clean mobile unit #1", status: "pending", priority: "high", dueDate: new Date().toISOString() },
-  { id: "task-2", title: "Order re-stock of microfiber towels", status: "completed", priority: "medium", dueDate: new Date(Date.now() - 86400000).toISOString() },
-];
 
 export const MOCK_ACCOUNTING = {
   income: 12450.50,

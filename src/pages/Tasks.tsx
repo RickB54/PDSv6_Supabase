@@ -141,10 +141,11 @@ export default function Tasks() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const todayStr = new Date().toISOString().slice(0, 10);
-    return items
+    return (items || [])
       .filter(t => {
+        if (!t) return false;
         if (!q) return true;
-        const blob = `${t.title} ${t.description} ${t.notes}`.toLowerCase();
+        const blob = `${t.title || ''} ${t.description || ''} ${t.notes || ''}`.toLowerCase();
         return blob.includes(q);
       })
       .filter(t => {
@@ -272,9 +273,9 @@ export default function Tasks() {
               <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Pending</p>
               <div className="flex items-center justify-center gap-2 mt-1">
                 <p className="text-3xl font-bold text-amber-400">
-                  {items.filter(t => t.status !== 'completed').length}
+                  {(items || []).filter(t => t && t.status !== 'completed').length}
                 </p>
-                {items.some(t => {
+                {(items || []).some(t => {
                   if (!t.dueDate || t.status === 'completed') return false;
                   const due = new Date(t.dueDate + 'T' + (t.dueTime || '23:59') + ':00');
                   return due.getTime() < Date.now();
@@ -288,7 +289,7 @@ export default function Tasks() {
             </div>
             <div className="text-center border-l border-zinc-700 pl-8">
               <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Done</p>
-              <p className="text-3xl font-bold text-emerald-400 mt-1">{items.filter(t => t.status === 'completed').length}</p>
+              <p className="text-3xl font-bold text-emerald-400 mt-1">{(items || []).filter(t => t && t.status === 'completed').length}</p>
             </div>
           </div>
         </div>
@@ -431,6 +432,12 @@ export default function Tasks() {
                           <span className={`px-2 py-0.5 rounded-full ${priorities.find(p => p.key === t.priority)?.color}`}>{priorities.find(p => p.key === t.priority)?.label}</span>
                           {(Array.isArray((t as any).assignees) && (t as any).assignees.length > 0) && (
                             <span className="flex items-center gap-1 text-green-300"><User className="w-3 h-3" />{(t as any).assignees.length} assigned</span>
+                          )}
+                          {(Array.isArray(t.attachments) && t.attachments.length > 0) && (
+                             <span className="flex items-center gap-1 text-amber-300"><Paperclip className="w-3 h-3" />{t.attachments.length}</span>
+                          )}
+                          {(Array.isArray(t.comments) && t.comments.length > 0) && (
+                             <span className="flex items-center gap-1 text-blue-300"><MessageSquare className="w-3 h-3" />{t.comments.length}</span>
                           )}
                         </div>
                       </div>
@@ -595,18 +602,18 @@ export default function Tasks() {
                                 </AccordionContent>
                               </AccordionItem>
                             )}
-
+ 
                             {/* Checklist */}
                             <AccordionItem value="checklist">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-medium">
                                 <div className="flex items-center gap-2">
                                   <ListChecks className="w-4 h-4 text-blue-400" />
-                                  Checklist ({editing.checklist.filter(c => c.done).length}/{editing.checklist.length})
+                                  Checklist ({(editing.checklist || []).filter(c => c && c.done).length}/{(editing.checklist || []).length})
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="space-y-2">
-                                  {editing.checklist.map((c, idx) => (
+                                  {(editing.checklist || []).map((c, idx) => (
                                     <div key={c.id} className="flex items-center gap-2">
                                       <Checkbox checked={c.done} onCheckedChange={(v) => {
                                         const list = editing.checklist.slice(); list[idx] = { ...c, done: !!v };
@@ -636,18 +643,18 @@ export default function Tasks() {
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-medium">
                                 <div className="flex items-center gap-2">
                                   <Paperclip className="w-4 h-4 text-amber-400" />
-                                  Attachments ({editing.attachments.length})
+                                  Attachments ({(editing.attachments || []).length})
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="space-y-3">
                                   <div className="space-y-1">
-                                    {editing.attachments.map(a => (
+                                    {(editing.attachments || []).map(a => (
                                       <div key={a.id} className="flex items-center gap-2 text-sm bg-zinc-900 p-2 rounded">
                                         <Paperclip className="w-3 h-3" />
                                         <a href={a.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline flex-1 truncate">{a.name}</a>
                                         <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400" onClick={() => {
-                                          setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], attachments: prev[t.id].attachments.filter(x => x.id !== a.id) } }));
+                                          setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], attachments: (prev[t.id].attachments || []).filter(x => x.id !== a.id) } }));
                                         }}><X className="w-3 h-3" /></Button>
                                       </div>
                                     ))}
@@ -659,7 +666,7 @@ export default function Tasks() {
                                         const f = e.target.files?.[0]; if (!f) return;
                                         const url = URL.createObjectURL(f);
                                         const att = { id: `att_${Date.now()}`, name: f.name, url, type: f.type, size: f.size };
-                                        setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], attachments: [...prev[t.id].attachments, att] } }));
+                                        setEditingMap(prev => ({ ...prev, [t.id]: { ...prev[t.id], attachments: [...(prev[t.id].attachments || []), att] } }));
                                       }} />
                                     </label>
                                     <span className="text-xs text-muted-foreground">No file chosen</span>
@@ -671,9 +678,9 @@ export default function Tasks() {
                             {/* Comments */}
                             <AccordionItem value="comments" className="border-b-0">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-medium">
-                                <div className="flex items-center gap-2">
-                                  <MessageSquare className="w-4 h-4 text-purple-400" />
-                                  Comments ({editing.comments?.length || 0})
+                                <div className="flex items-center gap-2 text-zinc-100 italic">
+                                  <MessageSquare className="w-4 h-4 text-blue-400" />
+                                  Discussion ({(editing.comments || []).length})
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">

@@ -215,8 +215,8 @@ const InventoryControl = () => {
 
   // Update menu badge count whenever low stock changes
   useEffect(() => {
-    const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
-      materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length;
+    const lowStockCount = (chemicals || []).filter(c => c && (c.currentStock || 0) < (c.threshold || 0)).length +
+      (materials || []).filter(m => m && typeof m.lowThreshold === 'number' && (m.quantity || 0) < (m.lowThreshold || 0)).length;
     try {
       localStorage.setItem('inventory_low_count', String(lowStockCount));
       // Trigger sidebar refresh
@@ -248,9 +248,9 @@ const InventoryControl = () => {
   const loadData = async () => {
     setIsRefreshing(true);
     if (isDemoMode) {
-      setChemicals(MOCK_INVENTORY.chemicals as any);
-      setSupplies(MOCK_INVENTORY.materials as any);
-      setEquipment(MOCK_INVENTORY.tools as any); // Set equipment from mock tools
+      setChemicals((MOCK_INVENTORY as any).chemicals || []);
+      setSupplies((MOCK_INVENTORY as any).materials || []);
+      setEquipment((MOCK_INVENTORY as any).tools || (MOCK_INVENTORY as any).equipment || []); // Handle different mock naming
       setUsageHistory([]);
       setIsRefreshing(false);
       return;
@@ -353,9 +353,9 @@ const InventoryControl = () => {
   });
 
   const getSortedChemicals = () => {
-    let baseFiltered = chemicals.filter(c =>
-      c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
-      (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase()))
+    let baseFiltered = (chemicals || []).filter(c =>
+      c && (c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
+      (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase())))
     );
 
     // If a specific brand is selected, filter by it
@@ -384,9 +384,9 @@ const InventoryControl = () => {
   };
 
   const getSortedSupplies = () => {
-    const filtered = supplies.filter(s =>
-      s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
-      (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase()))
+    const filtered = (supplies || []).filter(s =>
+      s && (s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
+      (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase())))
     );
     
     return [...filtered].sort((a, b) => {
@@ -404,8 +404,8 @@ const InventoryControl = () => {
   };
 
   const getSortedEquipment = () => {
-    const filtered = equipment.filter(e =>
-      e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
+    const filtered = (equipment || []).filter(e =>
+      e && e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
     );
 
     return [...filtered].sort((a, b) => {
@@ -472,10 +472,10 @@ const InventoryControl = () => {
 
     // Summary Box
     const totalValue = category === 'chemicals' ?
-      (items as any[]).reduce((a, c: any) => a + (c.costPerBottle * c.currentStock), 0) :
+      (items as any[]).reduce((a, c: any) => a + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0) :
       category === 'supplies' ?
-        (items as any[]).reduce((a, m: any) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0) :
-        (items as any[]).reduce((a, t: any) => a + (t.price || 0), 0);
+        (items as any[]).reduce((a, m: any) => a + (((m as any).costPerItem || m.price || 0) * (m.quantity || 0)), 0) :
+        (items as any[]).reduce((a, t: any) => a + (t.price || t.cost || 0), 0);
 
     autoTable(pdf, {
       startY: yPos,
@@ -510,8 +510,8 @@ const InventoryControl = () => {
         ['Product', item.name],
         ['Bottle Size', item.bottleSize],
         ['Current Stock', `${item.currentStock} bottles`],
-        ['Cost/Bottle', `$${item.costPerBottle.toFixed(2)}`],
-        ['Total Value', `$${(item.costPerBottle * item.currentStock).toFixed(2)}`]
+        ['Cost/Bottle', `$${(item.costPerBottle || 0).toFixed(2)}`],
+        ['Total Value', `$${((item.costPerBottle || 0) * (item.currentStock || 0)).toFixed(2)}`]
       ] : category === 'supplies' ? [
         ['Name', item.name],
         ['Category', item.category],
@@ -704,7 +704,7 @@ const InventoryControl = () => {
             </div>
             <div class="summary-item">
               <div class="summary-label">Total Value</div>
-              <div class="summary-value">$${(items as any[]).reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(2)}</div>
+              <div class="summary-value">$${(items as any[]).reduce((a, c) => a + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0).toFixed(2)}</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">Low Stock</div>
@@ -717,10 +717,10 @@ const InventoryControl = () => {
               ${c.brand ? `<div class="field"><div class="field-label">Brand</div><div class="field-value">${c.brand}</div></div>` : ''}
               <div class="field"><div class="field-label">Product Name</div><div class="field-value">${c.name}</div></div>
               <div class="field"><div class="field-label">Bottle Size</div><div class="field-value">${c.bottleSize}</div></div>
-              <div class="field"><div class="field-label">Cost Per Bottle</div><div class="field-value">$${c.costPerBottle.toFixed(2)}</div></div>
+              <div class="field"><div class="field-label">Cost Per Bottle</div><div class="field-value">$${(c.costPerBottle || 0).toFixed(2)}</div></div>
               <div class="field"><div class="field-label">Current Stock</div><div class="field-value" style="${c.currentStock < c.threshold ? 'color: #ef4444; font-weight: bold;' : ''}">${c.currentStock} bottles</div></div>
               <div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${c.threshold} bottles</div></div>
-              <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${(c.costPerBottle * c.currentStock).toFixed(2)}</div></div>
+              <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</div></div>
               
               ${(() => {
                 const libCard = c.chemicalLibraryId ? libMap[c.chemicalLibraryId] : null;
@@ -827,7 +827,7 @@ const InventoryControl = () => {
     }, 250);
   };
 
-  const calculateAmounts = (ratioStr: string, bottleOz: number) => {
+  const calculateAmounts = (ratioStr: string | undefined | null, bottleOz: number) => {
     const normalized = ratioStr?.toLowerCase().trim();
     if (!normalized) return null;
     let parts = 0;
@@ -949,7 +949,8 @@ const InventoryControl = () => {
 
     const rows = filteredChemicals.map(c => {
       let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
-      const sorted = [...ratios].sort((a,b) => {
+      const sorted = [...(ratios || [])].sort((a,b) => {
+          if (!a?.ratio || !b?.ratio) return 0;
           const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
           const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
           return pA - pB;
@@ -1229,8 +1230,8 @@ const InventoryControl = () => {
     materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length;
   // Approximating value if cost exists
   const totalValue =
-    chemicals.reduce((acc, c) => acc + (c.costPerBottle || 0) * (c.currentStock || 0), 0) +
-    materials.reduce((acc, m) => acc + (m.costPerItem || 0) * (m.quantity || 0), 0) +
+    chemicals.reduce((acc, c) => acc + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0) +
+    materials.reduce((acc, m) => acc + ((m.costPerItem || 0) * (m.quantity || 0)), 0) +
     tools.reduce((acc, t) => acc + (t.price || 0), 0);
 
   // Helper to get formatted fraction/qty string
@@ -1271,7 +1272,7 @@ const InventoryControl = () => {
         </div>
       </TableCell>
       <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
-      <TableCell className="text-zinc-300">${c.costPerBottle.toFixed(2)}</TableCell>
+      <TableCell className="text-zinc-300">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
       <TableCell>
         <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
           {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
@@ -1326,12 +1327,12 @@ const InventoryControl = () => {
       onClick={() => openEdit(c, 'chemical')}
     >
       <div className="flex justify-between items-start">
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="font-bold text-white flex items-center gap-2">
             {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
           </div>
-          <div className="text-sm text-zinc-300">{c.bottleSize} • ${c.costPerBottle.toFixed(2)}</div>
+          <div className="text-sm text-zinc-300">{c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)}</div>
           {(() => {
             const ratios = getMasterRatios(c);
             if (ratios.length === 0) return null;
@@ -1529,7 +1530,8 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + (c.costPerBottle * c.currentStock), 0).toFixed(0)}</span></span>
+              <span className="mr-2 text-zinc-400 text-sm hidden lg:inline">Items: <span className="text-zinc-200">{chemicals.length}</span></span>
+              <span className="mr-4 hidden sm:inline text-sm">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0).toFixed(0)}</span></span>
               {chemicals.some(c => c.currentStock < c.threshold) && (
                 <span className="text-red-400 font-medium flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> {chemicals.filter(c => c.currentStock < c.threshold).length} Low
@@ -1663,7 +1665,7 @@ const InventoryControl = () => {
                   <option value="low_stock">Low Threshold</option>
                 </select>
               </div>
-              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + ((m.costPerItem || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
+              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || m.price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
               {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
                 <span className="text-red-400 font-medium flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length} Low
@@ -1824,7 +1826,7 @@ const InventoryControl = () => {
                 </select>
               </div>
               <div className="hidden sm:block">
-                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + (t.price || 0), 0).toFixed(0)}</span></span>
+                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + (t.price || t.cost || 0), 0).toFixed(0)}</span></span>
               </div>
               {expandedSections.tools ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
@@ -2442,8 +2444,9 @@ const InventoryControl = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...chemicals]
+                    {[...(chemicals || [])]
                       .filter(c => {
+                        if (!c) return false;
                         const baseFilter = !hiddenChemicalIds.includes(c.id);
                         if (!baseFilter) return false;
                         if (chartSort.startsWith('brand:')) {
@@ -2468,7 +2471,8 @@ const InventoryControl = () => {
                       })
                       .map((c, i) => {
                        const ratios = getMasterRatios(c);
-                       const sorted = [...ratios].sort((a,b) => {
+                       const sorted = [...(ratios || [])].sort((a,b) => {
+                          if (!a?.ratio || !b?.ratio) return 0;
                           const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                           const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                           return pA - pB;
