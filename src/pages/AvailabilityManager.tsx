@@ -66,9 +66,28 @@ import localforage from 'localforage';
  * Admin Calendar Manager
  * Quick and easy availability blocking
  */
+import { useDemoMode } from '@/contexts/DemoContext';
+
 export default function AvailabilityManager() {
+    const { isDemoMode } = useDemoMode();
     const { items, refresh: refreshBookings } = useBookingsStore();
     const { toast } = useToast();
+
+    // Secondary security guard for deep-links
+    if (isDemoMode) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+                <Shield className="w-16 h-16 text-zinc-700 mb-4" />
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Restricted Section</h2>
+                <p className="text-zinc-500 max-w-md mx-auto mb-6">
+                    The Hybrid Availability System contains sensitive administrative logic and is not available in the Interactive Demo.
+                </p>
+                <Button variant="outline" onClick={() => window.location.href = '/dashboard/admin'}>
+                    Return to Dashboard
+                </Button>
+            </div>
+        );
+    }
     const [blockedSlots, setBlockedSlots] = useState<BlockedTimeSlot[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [selectedDates, setSelectedDates] = useState<Date[]>([]); // Multi-select support

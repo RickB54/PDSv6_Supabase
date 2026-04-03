@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { badgeVariants } from "@/components/ui/badge";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_PAYROLL, MOCK_BOOKINGS } from "@/lib/demoMockData";
 
 type JobRow = { kind: 'job'; amount: number; description: string; date: string; employee?: string; jobId?: string };
 type HoursRow = { kind: 'hours'; name: string; email?: string; hours: number; rate: number; bonus?: number; jobPay?: number };
@@ -74,15 +76,31 @@ const Payroll = () => {
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(true);
   const [isWorksheetExpanded, setIsWorksheetExpanded] = useState(true);
 
+  const { isDemoMode } = useDemoMode();
+
   useEffect(() => {
     const load = async () => {
+      if (isDemoMode) {
+        setEmployees(MOCK_PAYROLL.map(p => ({ name: p.name, email: 'demo@example.com' })));
+        setCompletedJobs(MOCK_BOOKINGS.filter(b => b.status === 'completed' || b.status === 'in_progress'));
+        setHistory(MOCK_PAYROLL.map(p => ({
+          id: p.id,
+          date: p.date,
+          type: 'Payroll',
+          description: `Period: ${p.period}`,
+          amount: p.grossPay,
+          status: p.status === 'paid' ? 'Paid' : 'Pending',
+          employee: p.name
+        })));
+        return;
+      }
       const list = await getSupabaseEmployees();
       setEmployees(list);
       const jobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
       setCompletedJobs(jobs);
     };
     load();
-  }, []);
+  }, [isDemoMode]);
 
   useEffect(() => {
     // 1. Handle Tab Switching and Pre-filling from URL

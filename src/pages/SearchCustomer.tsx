@@ -11,6 +11,8 @@ import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, C
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
 import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
@@ -45,15 +47,20 @@ const SearchCustomer = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const { isDemoMode } = useDemoMode();
+
   useEffect(() => {
     refresh();
-  }, []);
+  }, [isDemoMode]);
 
   const refresh = async () => {
     setIsRefreshing(true);
     try {
-      // PERMANENT FIX: Use the same data source as Users & Roles page
-      // This ensures complete consistency across all customer/prospect pages
+      if (isDemoMode) {
+        setCustomers(MOCK_CUSTOMERS as any);
+        return;
+      }
+      
       const list = await getSupabaseCustomers();
       console.log('🔍 All Supabase customers in Customer Profiles:', list);
 

@@ -23,6 +23,8 @@ import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
 import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport } from "@/lib/supa-data";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTIMATES, MOCK_ACCOUNTING } from "@/lib/demoMockData";
 
 const Reports = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,7 +58,8 @@ const Reports = () => {
   const [mileageRate, setMileageRate] = useState<number>(0.67);
 
   const currentUser = getCurrentUser();
-  const isAdmin = currentUser?.role === 'admin';
+  const { isDemoMode } = useDemoMode();
+  const isAdmin = currentUser?.role === 'admin' || isDemoMode;
 
   useEffect(() => {
     // Always load data from localforage (fast, cached)
@@ -67,6 +70,20 @@ const Reports = () => {
   }, []);
 
   const loadData = async () => {
+    if (isDemoMode) {
+      setCustomers(MOCK_CUSTOMERS);
+      setInvoices(MOCK_INVOICES);
+      setChemicals(MOCK_INVENTORY.chemicals);
+      setMaterials(MOCK_INVENTORY.materials);
+      setTools([]);
+      setJobs(MOCK_BOOKINGS.filter(b => b.status === 'completed' || b.status === 'in_progress'));
+      setEstimates(MOCK_ESTIMATES);
+      setIncome(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'income'));
+      setExpenses(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'expense'));
+      setPayrollHistory([]);
+      setTaxHistory([]);
+      return;
+    }
     const cust = (await localforage.getItem<any[]>("customers")) || [];
     const inv = (await localforage.getItem<any[]>("invoices")) || [];
     // Load Inventory from Supabase

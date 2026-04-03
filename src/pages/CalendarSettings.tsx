@@ -16,12 +16,19 @@ import {
 } from '@/lib/googleCalendar';
 import { Calendar, Clock, Shield, AlertCircle } from 'lucide-react';
 
+import { useDemoMode } from '@/contexts/DemoContext';
+import { getCurrentUser } from '@/lib/auth';
+
 /**
  * Admin panel for Google Calendar integration
  * Allows configuration of availability settings
  */
 export default function CalendarSettings() {
     const { toast } = useToast();
+    const { isDemoMode } = useDemoMode();
+    const realUser = getCurrentUser();
+    const isRealAdminOrEmployee = realUser?.role === 'admin' || realUser?.role === 'employee';
+    
     const [config, setConfig] = useState<CalendarConfig>({
         clientId: '',
         apiKey: '',
@@ -216,7 +223,7 @@ export default function CalendarSettings() {
             </Card>
 
             {/* Connection Status */}
-            {apiConfigured && (
+            {apiConfigured && isRealAdminOrEmployee && (
                 <Card className="p-6 bg-zinc-900 border-zinc-800">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">

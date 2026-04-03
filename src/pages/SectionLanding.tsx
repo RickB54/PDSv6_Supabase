@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { HelpCircle } from "lucide-react";
 import { getMenuGroups } from "@/components/menu-config";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -96,8 +97,26 @@ export default function SectionLanding() {
                                     <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center transition-colors">
                                         {item.icon && <item.icon className={`w-6 h-6 transition-colors ${iconColorClass}`} />}
                                     </div>
-                                    <CardTitle className={`text-xl text-white transition-colors ${iconColorClass}`}>
+                                    <CardTitle className={`text-xl text-white transition-colors ${iconColorClass} flex items-center gap-2`}>
                                         {item.title}
+                                        {item.helpTopicId && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    window.dispatchEvent(new CustomEvent('open-help', { 
+                                                        detail: { 
+                                                            topicId: item.helpTopicId,
+                                                            role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
+                                                        } 
+                                                    }));
+                                                }}
+                                                className="hover:text-blue-400 transition-colors inline-flex items-center justify-center p-1 rounded-full hover:bg-zinc-800"
+                                            >
+                                                <HelpCircle className="w-4 h-4 cursor-pointer" />
+                                            </button>
+                                        )}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>

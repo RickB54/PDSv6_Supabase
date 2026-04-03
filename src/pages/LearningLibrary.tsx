@@ -18,10 +18,12 @@ import { SelectSeparator } from "@/components/ui/select";
 import { compressImage } from "@/lib/imageUtils";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import { useWalkthrough } from "@/contexts/WalkthroughContext";
 
 export default function LearningLibrary() {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { startWalkthrough } = useWalkthrough();
     const user = getCurrentUser();
     const isAdmin = user?.role === 'admin' || (user?.role as string) === 'owner';
     const isActualAdmin = user?.role === 'admin';
@@ -64,6 +66,15 @@ export default function LearningLibrary() {
 
     useEffect(() => {
         loadItems();
+        
+        // Handle Interactive Demo trigger
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('tab') === 'demo') {
+            startWalkthrough();
+            // Clear the param
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
     }, []);
 
     const loadItems = async () => {

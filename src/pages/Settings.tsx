@@ -12,6 +12,10 @@ import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAle
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
+import { useDemoMode } from "@/contexts/DemoContext";
+import { getMenuGroups, TOP_ITEMS } from "@/components/menu-config";
+import { Switch } from "@/components/ui/switch";
+import { useMemo } from "react";
 import { saveBackupToSupabase, listSupabaseBackups, loadBackupFromSupabase, deleteSupabaseBackup, BackupMetadata } from '@/lib/supabase-backup';
 import { deleteCustomersOlderThan, deleteInvoicesOlderThan, deleteExpensesOlderThan, deleteInventoryUsageOlderThan, deleteBookingsOlderThan, deleteEmployeesOlderThan, deleteEverything as deleteAllSupabase, deleteEverythingExceptInventory, previewDeleteCustomers, previewDeleteInvoices, previewDeleteExpenses, previewDeleteInventory, previewDeleteAll, previewDeleteAllExceptInventory } from '@/services/supabase/adminOps';
 import localforage from "localforage";
@@ -27,14 +31,66 @@ import { InventoryImportModal } from "@/components/inventory/InventoryImportModa
 import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ListChecks } from "lucide-react";
 
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const user = getCurrentUser();
   const { isFullScreen, toggleFullScreen } = useFullScreen();
-  const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
+  const { isDemoMode, isAdminPreview, setAdminPreview, visibleSections, setVisibleSections, saveConfig } = useDemoMode();
+
+  // Get all possible section keys for the checklist
+  const allAvailableKeys = useMemo(() => {
+    const keys: { id: string; title: string; group: string }[] = [];
+    
+    // Add TOP_ITEMS
+    TOP_ITEMS.forEach(item => {
+      if (item.key) keys.push({ id: item.key, title: item.title, group: 'Main Navigation' });
+    });
+
+    // Add Menu Groups
+    const groups = getMenuGroups({
+      todoCount: 0, payrollDueCount: 0, inventoryCount: 0, fileCount: 0, 
+      bookingsBadgeColor: 'blue', tentativeBookingsCount: 0 
+    });
+
+    groups.forEach(group => {
+      group.items.forEach(item => {
+        if (item.key) keys.push({ id: item.key, title: item.title, group: group.title });
+      });
+    });
+
+    const blacklisted = ['availability-manager', 'payroll', 'accounting', 'company-budget', 'taxes'];
+    return keys.filter(k => !blacklisted.includes(k.id));
+  }, []);
+
+  const toggleSectionVisibility = (key: string) => {
+    const next = visibleSections.includes(key)
+      ? visibleSections.filter(k => k !== key)
+      : [...visibleSections, key];
+    setVisibleSections(next);
+  };
+
+  const selectAllDemo = () => {
+    setVisibleSections(allAvailableKeys.map(k => k.id));
+  };
+
+  const selectNoneDemo = () => {
+    setVisibleSections(['public-site']);
+  };
+
+  const handleSaveDemoConfig = async () => {
+    try {
+      await saveConfig();
+      toast({ title: "Demo Config Saved", description: "The public demo visibility settings have been updated and synced to the cloud." });
+    } catch (e) {
+      toast({ title: "Failed to Save", description: "Cloud sync failed.", variant: "destructive" });
+    }
+  };
+
   // ... (rest of state)
+  const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState("");
   const [preview, setPreview] = useState<{ tables: { name: string; count: number }[] } | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -121,13 +177,22 @@ const Settings = () => {
   const pinValid = !!dangerPin && !!pinInput && dangerPin === pinInput;
   const confirmValid = confirmText.trim().toUpperCase() === "DELETE";
 
-  // Redirect non-admin users
-  if (user?.role !== 'admin') {
+  const isAdmin = user?.role === 'admin';
+  const realUser = getCurrentUser();
+  const isRealAdminOrEmployee = realUser?.role === 'admin' || realUser?.role === 'employee';
+  const isDemoOrAdmin = isAdmin || isDemoMode;
+
+  // Redirect non-admin users (except in Demo Mode)
+  if (!isDemoOrAdmin) {
     navigate('/');
     return null;
   }
 
   const handleBackup = async () => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "Configuration export is disabled for training visitor security." });
+      return;
+    }
     try {
       const { json } = await exportAllData();
       downloadBackup(json);
@@ -146,6 +211,10 @@ const Settings = () => {
   };
 
   const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode (Read-Only)", description: "Database restoration is disabled to protect the sample environment.", variant: "destructive" });
+      return;
+    }
     const file = event.target.files?.[0];
     if (!file) return;
     try {
@@ -695,6 +764,110 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Public Demo System */}
+        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl overflow-hidden">
+          <CardHeader className="border-b border-zinc-800/50 bg-zinc-950/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/10 rounded-lg">
+                  <ShieldAlert className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-white text-xl">Public Demo System</CardTitle>
+                  <CardDescription className="text-zinc-400">Manage public access and Guided Training Mode</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-full border border-zinc-800">
+                <span className="text-xs font-bold text-zinc-400 pl-2 uppercase tracking-widest">Demo / Training Mode</span>
+                <Switch 
+                  id="demo-master-toggle"
+                  checked={isAdminPreview} 
+                  onCheckedChange={setAdminPreview}
+                  className="data-[state=checked]:bg-amber-600"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div className="bg-amber-900/10 border border-amber-900/30 rounded-xl p-4 flex items-start gap-4">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-1 shrink-0" />
+              <div className="text-sm">
+                <p className="text-amber-200 font-semibold mb-1">Important Security Note</p>
+                <p className="text-amber-400/80">
+                  Enabling sections below only makes them visible in the Sidebar. All demo routes are strictly **READ-ONLY**. 
+                  Visitors will see mock data and cannot modify your production database.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <ListChecks className="w-4 h-4 text-blue-400" />
+                  Section Visibility Checklist
+                </h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllDemo} className="h-7 text-[10px] border-zinc-700 hover:bg-zinc-800">
+                    Select All
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={selectNoneDemo} className="h-7 text-[10px] border-zinc-700 hover:bg-zinc-800">
+                    Select None
+                  </Button>
+                </div>
+              </div>
+
+              <ScrollArea className="h-[350px] rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
+                <div className="space-y-6">
+                  {/* Categorized Keys */}
+                  {Array.from(new Set(allAvailableKeys.map(k => k.group))).map(groupName => (
+                    <div key={groupName} className="space-y-3">
+                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] border-b border-zinc-800 pb-1 mb-2">
+                        {groupName}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {allAvailableKeys.filter(k => k.group === groupName).map(section => (
+                          <div 
+                            key={section.id} 
+                            onClick={() => toggleSectionVisibility(section.id)}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer group ${
+                              visibleSections.includes(section.id) 
+                                ? 'bg-blue-600/10 border-blue-600/30 text-blue-100' 
+                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                            }`}
+                          >
+                            <span className="text-xs font-medium">{section.title}</span>
+                            <Checkbox 
+                              checked={visibleSections.includes(section.id)}
+                              onCheckedChange={() => toggleSectionVisibility(section.id)}
+                              className="border-zinc-700 data-[state=checked]:bg-blue-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+              <div>
+                <p className="text-xs text-zinc-500">
+                  <span className="text-blue-400 font-bold">{visibleSections.length}</span> sections currently visible to public
+                </p>
+              </div>
+              <Button 
+                onClick={handleSaveDemoConfig}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-10 px-8 rounded-full shadow-lg shadow-blue-900/20"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Sync Demo Changes to Cloud
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* Backup & Restore */}
         <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
@@ -1504,10 +1677,10 @@ const Settings = () => {
             </Button>
             <Button
               className="bg-red-600 hover:bg-red-700 text-white font-bold"
-              disabled={nukeItems.every(i => !i.selected) || nukeLoading}
+              disabled={nukeItems.every(i => !i.selected) || nukeLoading || isDemoMode}
               onClick={executeGranularNuke}
             >
-              Nuke Selected ({nukeItems.filter(i => i.selected).length})
+              {isDemoMode ? "Purge Disabled in Demo" : `Nuke Selected (${nukeItems.filter(i => i.selected).length})`}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -26,6 +26,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom';
 import HelpModal from '@/components/help/HelpModal';
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_CHEMICAL_LIBRARY } from "@/lib/demoMockData";
 
 const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boolean, onBack?: () => void, onHelp?: () => void }) => {
     const navigate = useNavigate();
@@ -40,13 +42,19 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
     const [isRatiosOnlyOpen, setIsRatiosOnlyOpen] = useState(false);
     const [chemicals, setChemicals] = useState<any[]>([]);
 
+    const { isDemoMode } = useDemoMode();
+
     useEffect(() => {
         const load = async () => {
+            if (isDemoMode) {
+                setChemicals(MOCK_CHEMICAL_LIBRARY as any);
+                return;
+            }
             const data = await inventoryData.getChemicals();
             setChemicals(data);
         };
         load();
-    }, []);
+    }, [isDemoMode]);
 
     const calculate = () => {
         if (!containerSize || isNaN(containerSize)) {

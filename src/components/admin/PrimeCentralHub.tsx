@@ -62,6 +62,8 @@ import { useAlertsStore } from "@/store/alerts";
 import { useNotesStore, Note } from "@/store/notes";
 import localforage from "localforage";
 import { getInvoices } from "@/lib/db";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_INVOICES, MOCK_EMPLOYEES, MOCK_INVENTORY, MOCK_BOOKINGS } from "@/lib/demoMockData";
 
 interface Shortcut {
     id: string;
@@ -144,27 +146,41 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
     const [customTarget, setCustomTarget] = useState('');
     const [customType, setCustomType] = useState<'link' | 'modal' | 'content'>('link');
 
+    const { isDemoMode } = useDemoMode();
+
     useEffect(() => {
-        getInvoices().then(val => setInvoices(Array.isArray(val) ? val : []));
-        localforage.getItem<any[]>('company-employees').then(val => setEmployees(val || []));
+        if (isDemoMode) {
+            setInvoices(MOCK_INVOICES);
+            setEmployees(MOCK_EMPLOYEES);
+            setInventories(MOCK_INVENTORY);
+        } else {
+            getInvoices().then(val => setInvoices(Array.isArray(val) ? val : []));
+            localforage.getItem<any[]>('company-employees').then(val => setEmployees(val || []));
+            Promise.all([
+                localforage.getItem<any[]>('materials'),
+                localforage.getItem<any[]>('chemicals')
+            ]).then(([m, c]) => {
+                setInventories({ materials: (m as any[]) || [], chemicals: (c as any[]) || [] });
+            });
+        }
+        
         Promise.all([
-            localforage.getItem<any[]>('materials'),
-            localforage.getItem<any[]>('chemicals'),
             localforage.getItem<string[]>('prime-pinned-shortcuts'),
             localforage.getItem<Shortcut[]>('prime-custom-shortcuts'),
             localforage.getItem<string>('prime-attached-note-id')
-        ]).then(([m, c, p, cs, an]) => {
-            setInventories({ materials: (m as any[]) || [], chemicals: (c as any[]) || [] });
+        ]).then(([p, cs, an]) => {
             setPinnedIds(p || DEFAULT_PINNED);
             setCustomShortcuts(cs || []);
             setAttachedNoteId(an || null);
         });
         notesStore.refresh();
-    }, []);
+    }, [isDemoMode]);
+
+    const activeBookings = isDemoMode ? MOCK_BOOKINGS : bookings;
 
     const recentActivity = useMemo(() => {
         const activity: any[] = [];
-        (bookings || []).slice(0, 5).forEach(b => {
+        (activeBookings || []).slice(0, 5).forEach(b => {
             activity.push({
                 type: 'Job',
                 name: `${b.customer || 'Lead'}`,
@@ -187,7 +203,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                 ...item,
                 time: formatDistanceToNow(item.timestamp, { addSuffix: true })
             }));
-    }, [bookings, invoices]);
+    }, [activeBookings, invoices]);
 
     const allShortcuts = useMemo(() => [...AVAILABLE_SHORTCUTS, ...customShortcuts], [customShortcuts]);
     const pinnedShortcuts = useMemo(() => {
@@ -256,13 +272,13 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
             end = endOfMonth(now);
         }
 
-        return (bookings || []).filter(b => {
+        return (activeBookings || []).filter(b => {
             try {
                 const d = b.date ? parseISO(b.date) : new Date();
                 return isWithinInterval(d, { start, end });
             } catch { return false; }
         });
-    }, [bookings, timeScope]);
+    }, [activeBookings, timeScope]);
 
     const stats = useMemo(() => {
         const scheduled = scopedBookings.length;

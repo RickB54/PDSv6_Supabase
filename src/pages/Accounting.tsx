@@ -51,7 +51,8 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import localforage from "localforage";
 import { getCategoryColors } from "@/lib/categoryColors";
 import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
-import { getSupabaseTaxExpenses } from "@/lib/supa-data";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_ACCOUNTING, MOCK_INVENTORY } from "@/lib/demoMockData";
 
 interface Invoice {
   id?: string;
@@ -136,16 +137,49 @@ const Accounting = () => {
     itemCount: { chemicals: 0, materials: 0, tools: 0, total: 0 }
   });
 
-  // Tax-deductible inventory
+  const { isDemoMode } = useDemoMode();
   const [taxInventoryExpenses, setTaxInventoryExpenses] = useState<any[]>([]);
 
   useEffect(() => {
-    loadData();
-    loadCustomCategories();
-    getSupabaseCustomers().then(setCustomers); // Load customers
-    getInventoryTotals().then(setInventoryTotals); // Load inventory
-    loadTaxInventory(); // Load tax-deductible inventory
-  }, [dateFilter]);
+    if (isDemoMode) {
+      loadMockData();
+    } else {
+      loadData();
+      loadCustomCategories();
+      getSupabaseCustomers().then(setCustomers); // Load customers
+      getInventoryTotals().then(setInventoryTotals); // Load inventory
+      loadTaxInventory(); // Load tax-deductible inventory
+    }
+  }, [dateFilter, isDemoMode]);
+
+  const loadMockData = () => {
+    setDailyRevenue(MOCK_ACCOUNTING.income / 30);
+    setWeeklyRevenue(MOCK_ACCOUNTING.income / 4);
+    setMonthlyRevenue(MOCK_ACCOUNTING.income);
+    setTotalSpent(MOCK_ACCOUNTING.expenses);
+    setInventoryTotals({
+      chemicals: 2500.00,
+      materials: 1200.00,
+      tools: 5000.00,
+      total: 8700.00,
+      itemCount: { chemicals: 25, materials: 50, tools: 15, total: 90 }
+    });
+    setExpenseList(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'expense').map(t => ({
+      id: t.id,
+      amount: t.amount,
+      description: t.description,
+      category: t.category,
+      createdAt: t.date
+    })));
+    setIncomeList(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'income').map(t => ({
+      id: t.id,
+      amount: t.amount,
+      description: t.description,
+      category: t.category,
+      date: t.date,
+      type: 'income'
+    } as any)));
+  };
 
   const loadTaxInventory = async () => {
     const taxExpenses = await getSupabaseTaxExpenses();

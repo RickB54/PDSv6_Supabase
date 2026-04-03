@@ -8,6 +8,8 @@ import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart } from "lucide-react";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_PROSPECTS } from "@/lib/demoMockData";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation } from "react-router-dom";
@@ -46,19 +48,26 @@ const Prospects = () => {
   const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string }[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
 
+  const { isDemoMode } = useDemoMode();
+
   useEffect(() => {
     // Always load fresh data on mount to ensure we see new prospects
     // But only once per mount to avoid duplicate calls
-    if (!hasLoadedThisMount) {
+    if (!hasLoadedThisMount || isDemoMode) {
       refresh();
       setHasLoadedThisMount(true);
     }
-  }, []);
+  }, [isDemoMode]);
 
   const refresh = async () => {
     setIsRefreshing(true);
     setLoading(true);
     try {
+      if (isDemoMode) {
+        setCustomers(MOCK_PROSPECTS as any);
+        return;
+      }
+
       // PERMANENT FIX: Use the same data source as Users & Roles page
       // This ensures Jen and all other prospects are always visible
       const list = await getSupabaseCustomers();

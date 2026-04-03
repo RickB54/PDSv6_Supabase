@@ -5,7 +5,39 @@ export type HelpTopic = {
   content: string[];
   blockable?: boolean; // If true, topic can be hidden from employees unless granted
   route?: string;
-  section?: 'menu' | 'dashboard' | 'chemicals';
+  section?: 'menu' | 'dashboard' | 'chemicals' | 'system';
+};
+
+export const demoModeHelpTopic: HelpTopic = {
+  id: 'interactive-training-demo',
+  title: 'Guided Training & Demo Mode',
+  summary: 'Learn how to use the interactive demo for staff training and feature exploration.',
+  content: [
+    '**Welcome to Training Mode**: The Interactive Demo is a high-fidelity simulation designed for staff onboarding and feature exploration without risking real business data.',
+    '',
+    '🛡️ **1. Total Data Isolation**',
+    'When Demo Mode is active (indicated by the amber banner), the system is strictly **READ-ONLY**. It disconnects from your production database and serves professional **Mock Data** instead.',
+    '• **Financials**: Explore Accounting, Payroll, and Budgets with simulated records.',
+    '• **Inventory**: Practice with a full library of chemicals and materials.',
+    '• **Estimates**: Generate sample quotes to master the sales workflow.',
+    '',
+    '🎓 **2. Interactive Walkthroughs**',
+    'Look for the "Guided Tour" icons. These provide step-by-step overlays that explain advanced features like the **Dilution Calculator** and **Smart Sync** in real-time.',
+    '',
+    '🔒 **3. Security & Admin Simulation**',
+    'In Demo Mode, users are granted "Simulated Admin" visibility. This allows employees to see how management tools work, enabling them to understand the "big picture" of the business operations while maintaining strict zero-access to real records.',
+    '',
+    '📱 **4. Sharing on Social Media (Facebook, Instagram, etc.)**',
+    'You can use this app as a powerful marketing and demonstration tool on your social media pages by sharing the direct **Demo Link**:',
+    '• **The Link**: Share `https://your-app-domain.com/demo` in your Facebook posts or Instagram bio.',
+    '• **Automatic Activation**: Anyone who clicks this link will automatically enter **Demo Mode**. They can explore all the administrative features, catalogs, and calculators without needing to create an account or sign in.',
+    '• **Safe Exploration**: Visitors can "click everything" and see how your business operates professionally, but they can never view or change your real customer records or financial data.',
+    '',
+    '💡 **How to Exit**: If you are a visitor, simply navigate back to the main site. If you are an Admin previewing the demo, use the "Exit Demo Preview" button in the sidebar or the toggle in **System Settings**.',
+    '',
+    '⚠️ **Persistence**: Any "changes" you make while in Demo Mode (like adding a task or updating a chemical) are local to your current session and will **NEVER** persist. Once you exit, the system restores your real environment exactly as it was.',
+  ],
+  section: 'system',
 };
 
 export const masterSourceOfTruthItem: HelpTopic = {
@@ -73,6 +105,7 @@ export const checklistToolsGuide: HelpTopic = {
 
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
+  demoModeHelpTopic,
   masterSourceOfTruthItem,
   inventoryCleanupTopic,
   checklistToolsGuide,
@@ -1506,6 +1539,7 @@ export const adminTopics: HelpTopic[] = [
 ];
 
 export const employeeMenuTopics: HelpTopic[] = [
+  demoModeHelpTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',

@@ -48,6 +48,8 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { getSupabaseTaxExpenses } from "@/lib/supa-data";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_BUDGET, MOCK_ACCOUNTING } from "@/lib/demoMockData";
 
 interface Expense {
     id: string;
@@ -162,11 +164,42 @@ const CompanyBudget = () => {
     const [expenseDescription, setExpenseDescription] = useState("");
     const [expenseDate, setExpenseDate] = useState(getLocalDateStr());
 
+    const { isDemoMode } = useDemoMode();
+
     useEffect(() => {
-        loadData();
-        loadCustomCategories();
-        loadBudgetTargets();
-    }, [dateFilter, dateRange]);
+        if (isDemoMode) {
+            loadMockData();
+        } else {
+            loadData();
+            loadCustomCategories();
+            loadBudgetTargets();
+        }
+    }, [dateFilter, dateRange, isDemoMode]);
+
+    const loadMockData = () => {
+        // Set basic lists with subsets of mock data for charts
+        setIncomeList([{ id: 'm1', amount: MOCK_BUDGET.actual.payroll, category: 'Service Income', description: 'Mock Monthly Revenue', date: new Date().toISOString() }]);
+        setExpenseList([
+            { id: 'm2', amount: MOCK_BUDGET.actual.operations, category: 'Supplies', description: 'Operations Mock', createdAt: new Date().toISOString() },
+            { id: 'm3', amount: MOCK_BUDGET.actual.marketing, category: 'Marketing', description: 'Marketing Mock', createdAt: new Date().toISOString() },
+            { id: 'm4', amount: MOCK_BUDGET.actual.payroll, category: 'Payroll', description: 'Payroll Mock', createdAt: new Date().toISOString() }
+        ]);
+        setInvoiceList([]);
+        
+        // Populate category data for charts
+        setCategoryData([
+            { name: 'Service Income', amount: MOCK_BUDGET.actual.payroll * 1.5, color: '#3b82f6', type: 'income' },
+            { name: 'Supplies', amount: MOCK_BUDGET.actual.operations, color: '#10b981', type: 'expense' },
+            { name: 'Marketing', amount: MOCK_BUDGET.actual.marketing, color: '#f59e0b', type: 'expense' },
+            { name: 'Payroll', amount: MOCK_BUDGET.actual.payroll, color: '#8b5cf6', type: 'expense' }
+        ]);
+
+        setBudgetTargets([
+            { category: 'Supplies', target: MOCK_BUDGET.planned.operations, type: 'expense' },
+            { category: 'Marketing', target: MOCK_BUDGET.planned.marketing, type: 'expense' },
+            { category: 'Payroll', target: MOCK_BUDGET.planned.payroll, type: 'expense' }
+        ]);
+    };
 
     const loadData = async () => {
         const incomes = await getReceivables();

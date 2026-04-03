@@ -31,20 +31,55 @@ import AboutDialog from "@/components/AboutDialog";
 import { getMenuGroups, TOP_ITEMS as CONFIGURED_TOP_ITEMS } from "@/components/menu-config";
 import api from "@/lib/api";
 import { isViewed } from "@/lib/viewTracker";
-import localforage from "localforage"; // Using localforage for payroll check
+import localforage from "localforage";
 import { useBookingsStore } from "@/store/bookings";
+import { useDemoMode } from "@/contexts/DemoContext";
+
+export type MenuItem = { 
+  title: string; 
+  url: string; 
+  icon?: any; 
+  role?: string; 
+  key?: string; 
+  badge?: number; 
+  badgeColor?: 'red' | 'blue'; 
+  highlight?: 'red' | 'green' | 'yellow';
+  iconColor?: 'blue' | string;
+  helpTopicId?: string;
+};
 
 export function AppSidebar({ user: userProp }: { user?: any }) {
+
   const { open, openMobile, setOpenMobile, setOpen } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(userProp || getCurrentUser());
   const { items: allBookings } = useBookingsStore();
+  const { isDemoMode, isAdminPreview, setAdminPreview, canAccess } = useDemoMode();
+
+  // Helper to get correct URL for demo mode
+  const getUrl = (url: string) => {
+    // If not in demo mode path, return as is
+    if (!location.pathname.startsWith('/demo')) return url;
+    
+    // If it's already a demo path, return as is
+    if (url.startsWith('/demo')) return url;
+
+    // Mapping for major demo sections to /demo equivalents
+    if (url === '/dashboard/admin') return '/demo/dashboard';
+    if (url === '/search-customer') return '/demo/search-customer';
+    if (url === '/prospects') return '/demo/prospects';
+    if (url === '/inventory-control') return '/demo/inventory-control';
+    if (url === '/invoicing') return '/demo/invoicing';
+    if (url === '/vehicle-gallery') return '/demo/vehicle-gallery';
+    if (url === '/reports') return '/demo/reports';
+
+    return url;
+  };
 
   // Keep local user in sync with prop
   useEffect(() => {
     if (userProp) {
-      // console.log("AppSidebar: Received user prop update", userProp.role);
       setUser(userProp);
     }
   }, [userProp]);
@@ -53,8 +88,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const isEmployee = user?.role === 'employee';
   const isCustomer = user?.role === 'customer';
 
-  // 5-click Admin Unlock Logic REMOVED for safety
-  // The system now strictly uses Supabase Auth via auth.ts
   const [showAbout, setShowAbout] = useState(false);
   const handleLogoClick = () => {
     setShowAbout(true);
@@ -68,7 +101,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       return Array.isArray(arr) ? arr : [];
     } catch { return []; }
   };
-  const isHidden = (key: string) => getHiddenMenuItems().includes(key);
+  const isHidden = (key: string) => {
+    if (isDemoMode && key && !canAccess(key)) return true;
+    return getHiddenMenuItems().includes(key);
+  };
 
   useEffect(() => {
     function onStorage() { setTick((t) => t + 1); }
@@ -86,6 +122,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
     // Force refresh role on mount to fix stale "customer" state
     const refreshRole = async () => {
+      if (isDemoMode) return; // Skip in demo mode
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
@@ -98,7 +135,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       if (dbUser) {
         const currentUser = getCurrentUser();
         if (currentUser?.role !== dbUser.role) {
-          console.log("AppSidebar Auto-Heal: Upgrading role to", dbUser.role);
           const { finalizeSupabaseSession } = await import('@/lib/auth');
           await finalizeSupabaseSession(authUser);
           setUser(getCurrentUser());
@@ -120,7 +156,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, []);
+  }, [isDemoMode]);
 
   // Auto-close mobile menu on route change
   useEffect(() => { setOpenMobile(false); }, [location.pathname, setOpenMobile]);
@@ -141,9 +177,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       const deltaX = touchEndX - touchStartX;
       const deltaY = Math.abs(touchEndY - touchStartY);
 
-      // Condition: Start near left edge (20px to 80px to avoid bevel but catch intent)
-      // Condition: Swipe right significantly (at least 60px)
-      // Condition: Mostly horizontal movement
       if (
         touchStartX >= 20 && touchStartX <= 80 && 
         deltaX > 60 && 
@@ -165,28 +198,35 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   // Counts
   const fileCount = useMemo(() => {
+    if (isDemoMode) return 3;
     try {
       const list = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
       return list.filter((r: any) => !isViewed('file', String(r.id || r.fileName || r.timestamp || ''))).length;
     } catch { return 0; }
-  }, [tick]);
+  }, [isDemoMode, tick]);
 
   const inventoryCount = useMemo(() => {
+    if (isDemoMode) return 5;
     try {
       const c = Number(localStorage.getItem('inventory_low_count') || '0');
       return isNaN(c) ? 0 : c;
     } catch { return 0; }
-  }, [tick]);
+  }, [isDemoMode, tick]);
 
   const todoCount = useMemo(() => {
+    if (isDemoMode) return 2;
     try {
       const list = getAdminAlerts();
       return list.filter(a => a.type === 'todo_overdue' && !a.read).length;
     } catch { return 0; }
-  }, [tick]);
+  }, [isDemoMode, tick]);
 
   const [payrollDueCount, setPayrollDueCount] = useState(0);
   useEffect(() => {
+    if (isDemoMode) {
+      setPayrollDueCount(1);
+      return;
+    }
     (async () => {
       try {
         const payrollHistory = (await localforage.getItem<any[]>('payroll-history'));
@@ -198,25 +238,24 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
         setPayrollDueCount(pendingCount);
       } catch (error) { setPayrollDueCount(0); }
     })();
-  }, [tick]);
+  }, [isDemoMode, tick]);
 
   const chatUnread = useMemo(() => {
-    // Check ephemeral storage or global state
+    if (isDemoMode) return false;
     return localStorage.getItem('has_unread_chat') === 'true';
-  }, [tick]);
+  }, [isDemoMode, tick]);
 
   const handleNavClick = () => {
     setOpenMobile(false);
   };
 
   // Group State Persistence
-  // Default to Dashboards open if empty? Or empty.
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem('sidebar_groups');
       if (saved) return JSON.parse(saved);
     } catch { }
-    return { 'Dashboards': true }; // Default
+    return { 'Customer Intake': true, 'Operations': true }; // Default for demo look
   });
 
   const toggleGroup = (title: string, isOpen: boolean) => {
@@ -233,8 +272,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     MENU_GROUPS.forEach(group => {
       const match = group.items.find(item => {
         const currentFull = location.pathname + location.search;
-        return item.url === currentFull ||
-          (!item.url.includes('?') && location.pathname === item.url);
+        const targetUrl = getUrl(item.url);
+        return targetUrl === currentFull ||
+          (!targetUrl.includes('?') && location.pathname === targetUrl);
       });
 
       if (match && !updatedGroups[group.title]) {
@@ -249,22 +289,18 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     }
   }, [location.pathname, location.search]);
 
-  // Menu Definition
-  type MenuItem = { title: string; url: string; icon?: any; role?: string; key?: string; badge?: number; badgeColor?: 'red' | 'blue'; highlight?: 'red' | 'green' };
-
-  // Standalone Top Items (Use shared config)
+  // Standalone Top Items
   const TOP_ITEMS = [
     ...CONFIGURED_TOP_ITEMS,
-    // Inject Personal Notes here if not in shared config yet, or add to shared config.
-    // User asked for it "below Employee Dashboard" which is usually in TOP_ITEMS or a group. 
-    // Usually Employee Dashboard is a top item.
     { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
     { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics' },
     { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery' },
     { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined }
-  ];
+  ].filter(item => {
+    if (isDemoMode && item.key && !canAccess(item.key)) return false;
+    return true;
+  });
 
-  /* ---------------- CUSTOMER ITEMS ---------------- */
   const CUSTOMER_ITEMS: MenuItem[] = [
     { title: "Customer Dashboard", url: "/customer-dashboard", icon: LayoutDashboard },
     { title: "Book A Job", url: "/services", icon: CalendarDays },
@@ -275,33 +311,19 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: "My Invoices", url: "/my-invoices", icon: FileText },
     { title: "Personal Notes", url: "/notes", icon: BookOpen },
     { title: "Prime Blog", url: "/blog", icon: Newspaper },
-    { title: "Help", url: "#help", icon: HelpCircle },
     { title: "User Settings", url: "/user-settings", icon: Settings },
     { title: "Prime Website", url: "/", icon: Globe },
   ];
 
-  // Using shared config to ensure Sidebar and Section Landing pages match
+  const realUser = useMemo(() => getCurrentUser(), []);
+  const isRealAdminOrEmployee = realUser?.role === "admin" || realUser?.role === "employee";
+
   const MENU_GROUPS = useMemo(() => {
-    // Count ALL TENTATIVE bookings
     const tentativeBookings = allBookings.filter(b => b.status === 'tentative');
+    const bookingAlerts = getAdminAlerts().filter(a => a.type === 'booking_created' && !a.read);
 
-    // Check if there are unread booking alerts
-    const bookingAlerts = getAdminAlerts().filter(a =>
-      a.type === 'booking_created' && !a.read
-    );
-
-    let badgeCount = 0;
-    let badgeColor: 'red' | 'blue' = 'blue';
-
-    if (bookingAlerts.length > 0) {
-      badgeCount = bookingAlerts.length;
-      badgeColor = 'red';
-    } else {
-      badgeCount = tentativeBookings.length;
-      badgeColor = 'blue';
-    }
-
-    console.log(`[AppSidebar] Badge Logic -> Color: ${badgeColor}, Count: ${badgeCount} (Unread: ${bookingAlerts.length}, Tentative: ${tentativeBookings.length})`);
+    let badgeCount = isDemoMode ? 3 : (bookingAlerts.length > 0 ? bookingAlerts.length : tentativeBookings.length);
+    let badgeColor: 'red' | 'blue' = (isDemoMode || bookingAlerts.length > 0) ? 'red' : 'blue';
 
     return getMenuGroups({
       todoCount,
@@ -310,61 +332,56 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       fileCount,
       tentativeBookingsCount: badgeCount,
       bookingsBadgeColor: badgeColor
-    });
-  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings, allBookings.length, tick]);
+    }).filter(group => {
+      group.items = group.items.filter(item => {
+        if (isDemoMode && item.key && !canAccess(item.key)) return false;
+        if (item.role === 'admin' && !isAdmin && !isDemoMode) return false;
+        
+        // Refined Filter for Demo Visitors & Customers (only real employees/admins see full intake)
+        if (isDemoMode && !isRealAdminOrEmployee && group.title === "Customer Intake") {
+          const allowedKeys = ["package-selection", "vehicle-classification"];
+          if (!allowedKeys.includes(item.key || "")) return false;
+        }
 
-  // Helper: Are ANY groups open?
+        return true;
+      });
+      return group.items.length > 0;
+    });
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode]);
+
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
   const toggleAllGroups = () => {
     if (isAnyOpen) {
-      // Collapse all
       const next = MENU_GROUPS.reduce((acc, g) => ({ ...acc, [g.title]: false }), {});
       setOpenGroups(next);
       localStorage.setItem('sidebar_groups', JSON.stringify(next));
     } else {
-      // Expand all
       const next = MENU_GROUPS.reduce((acc, g) => ({ ...acc, [g.title]: true }), {});
       setOpenGroups(next);
       localStorage.setItem('sidebar_groups', JSON.stringify(next));
     }
   };
 
-  const collapsibleMode = "icon";
-  const sidebarClass = "border-r border-border";
-
-    const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') ||
-    location.pathname.startsWith('/customer-portal') ||
-    location.pathname.startsWith('/active-jobs') ||
-    location.pathname.startsWith('/job-history') ||
-    location.pathname.startsWith('/my-invoices') ||
-    location.pathname.startsWith('/payments-cart') ||
-    location.pathname.startsWith('/customer-account') ||
-    location.pathname.startsWith('/customer-profile') ||
-    location.pathname.startsWith('/portal') ||
-    location.pathname.startsWith('/contact-support');
+  const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
 
   return (
-    <Sidebar className={sidebarClass} collapsible={collapsibleMode as any}>
+    <Sidebar 
+      className="border-r border-border" 
+      collapsible="icon"
+      style={{ top: isDemoMode ? '40px' : '0' }}
+    >
       <div className="p-4 border-b border-border pt-24">
         {open && (
           <div className="flex items-center w-full">
-            <div className="flex items-center gap-3 animate-fade-in flex-1" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
+            <div className="flex items-center gap-3 animate-fade-in flex-1 cursor-pointer" onClick={handleLogoClick}>
               <img src={logo} alt="Prime Auto Detail" className="h-12 w-auto" />
               <div>
                 <h2 className="font-bold text-foreground">Prime Auto</h2>
                 <p className="text-xs text-muted-foreground">Detail</p>
               </div>
             </div>
-
-            {/* Toggle Button in Header */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleAllGroups}
-              className="h-8 w-8 text-muted-foreground hover:text-white ml-2"
-              title={isAnyOpen ? "Collapse All" : "Expand All"}
-            >
+            <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-muted-foreground hover:text-white ml-2">
               {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
             </Button>
           </div>
@@ -372,14 +389,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       </div>
 
       <SidebarContent>
-        {isAdmin && isViewingAsCustomer && (
+        {isAdmin && isAdminPreview && (
           <div className="px-2 py-2">
             <Button 
               variant="destructive" 
-              className="w-full text-xs font-bold uppercase tracking-wider h-8 bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-800"
-              onClick={() => navigate('/dashboard/admin')}
+              className="w-full text-[10px] font-black uppercase tracking-wider h-8 bg-amber-900/40 hover:bg-amber-700 text-amber-200 border border-amber-800"
+              onClick={() => setAdminPreview(false)}
             >
-               Exit Customer View
+               Exit Demo Preview
             </Button>
           </div>
         )}
@@ -388,43 +405,15 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           {(isCustomer || (isAdmin && isViewingAsCustomer)) && (
             <>
               {CUSTOMER_ITEMS.map((item) => {
-                const isActive = location.pathname === item.url || (item.url.includes('#') && location.pathname + location.hash === item.url);
-                const className = isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors';
-
+                const isActive = location.pathname === item.url;
+                const className = isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full';
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
-                      {item.url === '#help' ? (
-                        <button
-                          onClick={() => {
-                            // Specify role: 'customer' to force HelpModal to show strictly customer content
-                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'customer' } }));
-                            handleNavClick();
-                          }}
-                          className={className}
-                        >
-                          {item.icon && <item.icon className="h-4 w-4" />}
-                          {open && <span>{item.title}</span>}
-                        </button>
-                      ) : (
-                        <Link to={item.url}
-                          className={className}
-                          onClick={() => {
-                            handleNavClick();
-                            if (item.url.includes('#')) {
-                              const id = item.url.split('#')[1];
-                              setTimeout(() => {
-                                const el = document.getElementById(id);
-                                if (el) el.scrollIntoView({ behavior: 'smooth' });
-                              }, 100);
-                            }
-                          }}
-                        >
-                          {item.icon && <item.icon className="h-4 w-4" />}
-                          {/* If viewing as customer, rename 'Customer Dashboard' to just 'Dashboard' for cleaner look if desired, or keep as is. */}
-                          {open && <span>{item.title}</span>}
-                        </Link>
-                      )}
+                    <SidebarMenuButton asChild tooltip={item.title} className="bg-transparent hover:bg-transparent">
+                      <Link to={item.url} className={className} onClick={handleNavClick}>
+                        {item.icon && <item.icon className="h-4 w-4" />}
+                        {open && <span>{item.title}</span>}
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -432,23 +421,20 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
             </>
           )}
 
-          {/* Only show Admin/Employee menu if NOT in "View As Customer" mode */}
           {(isAdmin || isEmployee) && !isViewingAsCustomer && (
             <>
-              {/* Top Items (Admin Dashboard) */}
               {TOP_ITEMS.map((item) => {
-                if (item.role === 'admin' && !isAdmin) return null;
-                // Strict active check to prevent overlap
-                const isActive = location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'));
+                if (item.role === 'admin' && !isAdmin && !isDemoMode) return null;
+                const targetUrl = getUrl(item.url);
+                const isActive = location.pathname === targetUrl;
                 const isChatAlert = item.url === '/team-chat' && chatUnread;
 
                 return (
                   <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick} className="bg-transparent hover:bg-transparent data-[active=true]:bg-transparent ring-0 outline-none">
-                      <Link to={item.url} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors')}>
+                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick}>
+                      <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {open && <span>{item.title}</span>}
-                        {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -456,119 +442,62 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
               })}
 
               {MENU_GROUPS.map((group) => {
-                const validItems = group.items.filter(item => {
-                  if (item.role === 'admin' && !isAdmin) return false;
-                  if (item.role === 'employee' && !isEmployee && !isAdmin) return false;
-                  if (item.key && isHidden(item.key)) return false;
-                  return true;
-                });
-                if (validItems.length === 0) return null;
-
-                // We use CONTROLLED open state
                 const isOpen = !!openGroups[group.title];
-
-                // Calculate group badge count for closed state
-                const groupBadgeCount = validItems.reduce((acc, item) => acc + (item.badge || 0), 0);
+                const groupBadgeCount = group.items.reduce((acc, item) => acc + (item.badge || 0), 0);
 
                 return (
-                  <Collapsible
-                    key={group.title}
-                    open={isOpen}
-                    onOpenChange={(val) => toggleGroup(group.title, val)}
-                    className="group/collapsible"
-                  >
+                  <Collapsible key={group.title} open={isOpen} onOpenChange={(val) => toggleGroup(group.title, val)} className="group/collapsible">
                     <SidebarMenuItem>
-                      {/* Header: Link + Trigger */}
                       <div className="flex items-center w-full group-data-[state=open]/collapsible:mb-1">
                         <SidebarMenuButton asChild tooltip={group.title} className="flex-1">
-                          <Link
-                            to={`/section/${group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                            className={`flex items-center gap-2 ${validItems.some(item => location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url + '/'))) ? 'text-blue-500 font-bold' : 'text-zinc-300 font-bold hover:text-white transition-colors'}`}
-                          >
+                          <Link to={`/section/${group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className={`flex items-center gap-2 ${group.items.some(item => location.pathname === getUrl(item.url)) ? 'text-blue-500 font-bold' : 'text-zinc-300 font-bold hover:text-white'}`}>
                             <group.icon className="h-4 w-4" />
                             {open && <span>{group.title}</span>}
-                            {/* Batch count on parent */}
-                            {open && !isOpen && groupBadgeCount > 0 && (
-                              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
-                                {groupBadgeCount}
-                              </span>
-                            )}
+                            {open && !isOpen && groupBadgeCount > 0 && <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">{groupBadgeCount}</span>}
                           </Link>
                         </SidebarMenuButton>
                         {open && (
                           <CollapsibleTrigger asChild>
-                            <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-400 transition-colors">
-                              <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-400">
+                              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
                             </button>
                           </CollapsibleTrigger>
                         )}
                       </div>
-
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {validItems.map((item) => {
-                            const currentFull = location.pathname + location.search;
-                            // Strict match for exact links, or partial match if needed (usually exact is better for sidebar)
-                            const isActive = item.url === location.pathname ||
-                              item.url === currentFull ||
-                              (item.url !== '/' && location.pathname.startsWith(item.url + '/'));
-
+                          {group.items.map((item) => {
+                            const targetUrl = getUrl(item.url);
+                            const isActive = location.pathname === targetUrl;
                             const isChatAlert = item.url === '/team-chat' && chatUnread;
-
-                            let className = "flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors bg-transparent";
-
-                            // Styling logic:
-                            // Active: Blue text, font-semibold (User requested: "text only turning blue", no background)
-                            // Inactive: Zinc text, hover white + dark bg
-                            if (isActive) {
-                              className += " text-blue-500 font-semibold";
-                            } else {
-                              className += " text-zinc-100 font-bold hover:text-white hover:bg-zinc-800";
-                              if (item.highlight === 'red') className = className.replace('text-zinc-100', 'text-red-500 hover:text-red-400');
-                              else if (item.highlight === 'green') className = className.replace('text-zinc-100', 'text-green-500 hover:text-green-400');
-                            }
+                            let className = "flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors bg-transparent " + (isActive ? "text-blue-500 font-semibold" : "text-zinc-100 font-bold hover:text-white hover:bg-zinc-800");
 
                             return (
                               <SidebarMenuSubItem key={`${item.title}-${item.url}`}>
-                                <SidebarMenuSubButton asChild isActive={isActive} className="ring-0 outline-none">
-                                  {item.url.startsWith('#') ? (
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
-                                        if (item.url === '#help' || item.url === '#help-admin') {
-                                          window.dispatchEvent(new CustomEvent('open-help', { detail: { role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer') } }));
-                                        }
-                                        if (item.url === '#help-employee') window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'employee' } }));
-                                        handleNavClick();
-                                      }}
-                                      className={className}
-                                    >
-                                      {item.icon && <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />}
-                                      {open && <span>{item.title}</span>}
-                                    </button>
-                                  ) : (
-                                    <Link
-                                      to={item.url}
-                                      onClick={handleNavClick}
-                                      className={className}
-                                    >
-                                      {item.icon && <item.icon
-                                        className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`}
-                                        style={item.iconColor === 'blue' && !isChatAlert ? { color: '#2563eb' } : undefined}
-                                      />}
-                                      {open && <span>{item.title}</span>}
-                                      {open && isChatAlert && <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />}
-                                      {open && item.badge !== undefined && !isChatAlert && (
-                                        <span
-                                          className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full ${item.badgeColor === 'red' ? 'bg-red-600' : 'bg-blue-600'} px-1 text-xs text-white ${item.key === 'bookings' && item.badge > 0 ? 'animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.6)]' : ''
-                                            }`}
+                                <SidebarMenuSubButton asChild isActive={isActive}>
+                                    <Link to={targetUrl} onClick={handleNavClick} className={className}>
+                                      {item.icon && <item.icon className="h-4 w-4 mr-2" />}
+                                      {open && <span className="flex-1">{item.title}</span>}
+                                      {open && item.helpTopicId && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.dispatchEvent(new CustomEvent('open-help', { 
+                                              detail: { 
+                                                topicId: item.helpTopicId,
+                                                role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
+                                              } 
+                                            }));
+                                          }}
+                                          className="text-muted-foreground hover:text-white transition-colors p-1"
                                         >
-                                          {item.badge}
-                                        </span>
+                                          <HelpCircle className="h-3 w-3" />
+                                        </button>
                                       )}
+                                      {open && item.badge !== undefined && <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">{item.badge}</span>}
                                     </Link>
-                                  )}
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             );
@@ -583,21 +512,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           )}
         </SidebarMenu>
       </SidebarContent>
-      {/* DEBUG FOOTER */}
       <div className="p-2 border-t border-border mt-auto">
         <div className="text-[10px] text-zinc-500 font-mono text-center">
-          {user ? (
-            <>
-              <span className={user.role === 'admin' ? 'text-red-500' : user.role === 'employee' ? 'text-blue-500' : 'text-emerald-500'}>
-                {user.role?.toUpperCase() || 'UNKNOWN'}
-              </span>
-              <span className="block truncate px-1" title={user.email}>{user.email}</span>
-            </>
-          ) : "Logged Out"}
+          {isDemoMode ? <span className="text-amber-500 font-black">DEMO VISITOR</span> : (user ? <span className={user.role === 'admin' ? 'text-red-500' : 'text-blue-500'}>{user.role?.toUpperCase()}</span> : "Logged Out")}
         </div>
       </div>
       <SidebarRail />
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
-    </Sidebar >
+    </Sidebar>
   );
 }
+

@@ -19,6 +19,8 @@ import { Loader2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ChemicalEditForm } from "@/components/chemicals/ChemicalEditForm";
 import { Badge } from "@/components/ui/badge";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_CHEMICAL_LIBRARY } from "@/lib/demoMockData";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
@@ -38,16 +40,23 @@ export default function ChemicalsLibrary() {
 
     const [isCleaning, setIsCleaning] = useState(false);
 
+    const { isDemoMode } = useDemoMode();
+
     useEffect(() => {
         const user = getCurrentUser();
-        setIsAdmin(user?.role === 'admin' || user?.role === 'owner');
+        setIsAdmin(user?.role === 'admin' || user?.role === 'owner' || isDemoMode);
 
         // Seed/Fetch data
         loadChemicals();
-    }, []);
+    }, [isDemoMode]);
 
     const loadChemicals = async () => {
         setLoading(true);
+        if (isDemoMode) {
+            setChemicals(MOCK_CHEMICAL_LIBRARY as any);
+            setLoading(false);
+            return MOCK_CHEMICAL_LIBRARY;
+        }
         const data = await getCombinedSelectableProducts();
         setChemicals(data);
         setLoading(false);

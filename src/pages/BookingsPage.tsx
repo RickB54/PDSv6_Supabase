@@ -30,6 +30,8 @@ import { useLocation } from "react-router-dom";
 import localforage from "localforage";
 import { upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_BOOKINGS } from "@/lib/demoMockData";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -76,6 +78,8 @@ export default function BookingsPage() {
   }, [refresh]);
 
   // Form State
+  const { isDemoMode } = useDemoMode();
+
   const [formData, setFormData] = useState({
     customerId: undefined as string | undefined,
     customer: "",
@@ -222,11 +226,12 @@ export default function BookingsPage() {
         endDate = endOfYear(currentDate);
       }
 
-      const events = await getUnifiedCalendarEvents(startDate, endDate, items);
+      const displayItems = isDemoMode ? MOCK_BOOKINGS : items;
+      const events = await getUnifiedCalendarEvents(startDate, endDate, displayItems as any[]);
 
       // Only update if this is the latest requested load
       if (lastLoadTimeRef.current === timestamp) {
-        setUnifiedEvents(events);
+        setUnifiedEvents(isDemoMode ? events.filter(e => e.type === 'booking') : events);
       }
     } catch (error) {
       console.error('Failed to load unified events:', error);
@@ -556,6 +561,12 @@ export default function BookingsPage() {
   };
 
   const handleSave = async () => {
+    const { isDemoMode } = useDemoMode();
+    if (isDemoMode) {
+      toast.info("Demo Mode (Read-Only): Booking simulation successful. No data was saved.");
+      setIsAddModalOpen(false);
+      return;
+    }
     if (!formData.customer || !formData.service) {
       toast.error("Customer and Service are required");
       return;

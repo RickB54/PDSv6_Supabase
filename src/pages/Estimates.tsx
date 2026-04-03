@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileText, Printer, Save, Trash2, Plus, Pencil, CheckCircle, XCircle, RotateCcw, Search, Calendar } from "lucide-react";
-import { getSupabaseEstimates, upsertSupabaseEstimate } from "@/lib/supa-data";
+import { getSupabaseEstimates, upsertSupabaseEstimate, Customer } from "@/lib/supa-data";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
-import { Customer } from "@/components/customers/CustomerModal";
 import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -31,6 +30,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_ESTIMATES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
 
 interface Estimate {
     id?: string;
@@ -67,11 +68,18 @@ const Estimates = () => {
     const [selectedStatus, setSelectedStatus] = useState<"open" | "accepted" | "declined">("open");
     const [searchTerm, setSearchTerm] = useState("");
 
+    const { isDemoMode } = useDemoMode();
+
     useEffect(() => {
         loadData();
-    }, []);
+    }, [isDemoMode]);
 
     const loadData = async () => {
+        if (isDemoMode) {
+            setEstimates(MOCK_ESTIMATES as any[]);
+            setCustomers(MOCK_CUSTOMERS as any[]);
+            return;
+        }
         const [est, custs] = await Promise.all([getSupabaseEstimates(), getUnifiedCustomers()]);
         setEstimates(est as any as Estimate[]);
         setCustomers(custs as any as Customer[]);

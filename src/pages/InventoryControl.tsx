@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_INVENTORY } from "@/lib/demoMockData";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -56,6 +58,7 @@ const transformRatio = (r: string) => {
 
 
 const InventoryControl = () => {
+    const { isDemoMode } = useDemoMode();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -160,16 +163,19 @@ const InventoryControl = () => {
   }, []);
 
   useEffect(() => {
-    // Always load from localforage first (fast, cached data)
-    loadDataFromCache();
-
     // Check if we've already fetched fresh data in this session
     const hasLoaded = sessionStorage.getItem('inventory-loaded');
 
-    // Only fetch from database if we haven't loaded it yet (first visit in this session)
-    if (!hasLoaded) {
+    if (isDemoMode) {
       loadData();
-      sessionStorage.setItem('inventory-loaded', 'true');
+    } else {
+      // Always load from localforage first (fast, cached data)
+      loadDataFromCache();
+      // Only fetch from database if we haven't loaded it yet (first visit in this session)
+      if (!hasLoaded) {
+        loadData();
+        sessionStorage.setItem('inventory-loaded', 'true');
+      }
     }
 
     // Persist date filter
@@ -184,7 +190,7 @@ const InventoryControl = () => {
     const handleOpenChart = () => setIsDilutionModalOpen(true);
     window.addEventListener('open-dilution-chart', handleOpenChart);
     return () => window.removeEventListener('open-dilution-chart', handleOpenChart);
-  }, []);
+  }, [isDemoMode]);
 
   // Auto-open Material Updates modal ONCE when `?updates=true` or `?updates` is present
   useEffect(() => {
@@ -241,6 +247,14 @@ const InventoryControl = () => {
 
   const loadData = async () => {
     setIsRefreshing(true);
+    if (isDemoMode) {
+      setChemicals(MOCK_INVENTORY.chemicals as any);
+      setSupplies(MOCK_INVENTORY.materials as any);
+      setEquipment(MOCK_INVENTORY.tools as any); // Set equipment from mock tools
+      setUsageHistory([]);
+      setIsRefreshing(false);
+      return;
+    }
     try {
       const [chems, mats, tls, usage, libChems] = await Promise.all([
         inventoryData.getChemicals(),
@@ -1996,6 +2010,11 @@ const InventoryControl = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setUsageEditOpen(false)}>Cancel</Button>
             <Button onClick={async () => {
+              if (isDemoMode) {
+                toast({ title: 'Demo Mode (Read-Only)', description: 'Data cannot be modified during training.' });
+                setUsageEditOpen(false);
+                return;
+              }
               if (!usageEditItem) return;
               try {
                 const updated = { ...usageEditItem, notes: usageEditNotes };
@@ -2116,6 +2135,11 @@ const InventoryControl = () => {
               Cancel
             </Button>
             <Button className="bg-gradient-hero" onClick={async () => {
+              if (isDemoMode) {
+                toast({ title: 'Demo Mode (Read-Only)', description: 'Data cannot be modified during training.' });
+                setUpdatesModalOpen(false);
+                return;
+              }
               const now = new Date().toISOString();
               const matName = materials.find(m => m.id === updateMatId)?.name;
               const chemName = chemicals.find(c => c.id === updateChemId)?.name;

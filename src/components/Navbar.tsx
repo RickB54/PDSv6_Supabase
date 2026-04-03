@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { Button } from "@/components/ui/button";
 import { Menu, X, UserCog, User, ShoppingCart, Sidebar as SidebarIcon, ArrowLeft } from "lucide-react";
 import { getCurrentUser, logout } from "@/lib/auth";
@@ -18,7 +19,8 @@ import { LayoutDashboard, LogOut, Phone } from "lucide-react";
 import { contentService } from "@/lib/content";
 
 export const Navbar = () => {
-  const { toggleSidebar } = useSidebar();
+    const { isDemoMode } = useDemoMode();
+    const { toggleSidebar } = useSidebar();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -92,7 +94,9 @@ export const Navbar = () => {
   return (
     <>
       {businessStatus && !!businessStatus.isTopBannerActive && (
-        <div className={`fixed top-0 left-0 right-0 z-50 py-2 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg animate-in slide-in-from-top duration-500 ${
+        <div className={`fixed left-0 right-0 z-50 py-2 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg animate-in slide-in-from-top duration-500 ${
+          isDemoMode ? 'top-[40px]' : 'top-0'
+        } ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
           businessStatus.mode === 'pre-launch' ? 'bg-red-600' : 'bg-primary'
         }`}>
@@ -105,7 +109,9 @@ export const Navbar = () => {
         </div>
       )}
       <nav className={`fixed left-0 right-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300 ${
-        (businessStatus && !!businessStatus.isTopBannerActive) ? 'top-[32px] sm:top-[36px]' : 'top-0'
+        isDemoMode 
+          ? (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[72px] sm:top-[76px]' : 'top-[40px]')
+          : (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[32px] sm:top-[36px]' : 'top-0')
       }`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">

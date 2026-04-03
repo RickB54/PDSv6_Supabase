@@ -14,9 +14,13 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
 import { GlobalModals } from "@/components/GlobalModals";
-import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled } from "@/lib/auth";
+import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled, finalizeSupabaseSession } from "@/lib/auth";
 import supabase from "@/lib/supabase";
 import "@/lib/storage-utils";
+import { DemoProvider, useDemoMode, DemoBanner } from "@/contexts/DemoContext";
+import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
+import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
+
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -110,22 +114,28 @@ function ConditionalGlobalChat() {
 }
 
 const isAppRoute = (path: string) => {
+
   const websitePrefixes = [
     '/', '/about', '/contact', '/faq', '/services', '/book', '/availability', 
     '/blog', '/checkout', '/thank-you', '/login', '/signup', 
     '/forgot-password', '/update-password', '/portal', '/f150-setup', '/contact-support'
   ];
-  // If it's the exact homepage or exactly in the website list, it's NOT an app route
   if (websitePrefixes.includes(path)) return false;
-  // If it's a blog post or something similar, it's website
   if (path.startsWith('/blog/')) return false;
-  // Otherwise, if it's not specifically one of those, it's likely an app page
-  // (Dashboard, Inventory, checklist, etc)
+  
+  // The /demo path and its children are definitely App routes (for simulation)
+  if (path.startsWith('/demo')) return true;
+
   return true;
 };
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
   const user = getCurrentUser();
+  const { isDemoMode } = useDemoMode();
+
+  // In demo mode, bypass standard auth checks for public routes
+  if (isDemoMode) return <>{children}</>;
+
   if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     if (user.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
@@ -134,6 +144,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   }
   return <>{children}</>;
 };
+
 
 const DefaultRedirect = ({ user }: { user: any }) => {
   if (!user) return <Navigate to="/" replace />;
@@ -227,16 +238,22 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <SidebarProvider defaultOpen={true}>
-          <Toaster />
-          <Sonner />
-          <GlobalModals />
           <BrowserRouter>
-            <ScrollToTop />
-            <ConditionalGlobalChat />
-            <ChatAudioAlert />
-            <LayoutWrapper user={user} setCallAssistantOpen={setCallAssistantOpen} />
-            <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
-            {user && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || user.role as 'admin' | 'employee' | 'customer'} initialTopicId={helpId} />}
+            <DemoProvider>
+              <DemoBanner />
+              <WalkthroughProvider>
+                <Toaster />
+                <Sonner />
+                <GlobalModals />
+                <ScrollToTop />
+                <ConditionalGlobalChat />
+                <ChatAudioAlert />
+                <WalkthroughOverlay />
+                <LayoutWrapper user={user} setCallAssistantOpen={setCallAssistantOpen} />
+                <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
+                {(user || isAppRoute(window.location.pathname)) && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || (user?.role as any) || 'admin'} initialTopicId={helpId} />}
+              </WalkthroughProvider>
+            </DemoProvider>
           </BrowserRouter>
         </SidebarProvider>
       </TooltipProvider>
@@ -246,10 +263,16 @@ const App = () => {
 
 const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssistantOpen: (v: boolean) => void }) => {
   const location = useRouterLocation();
+  const { isDemoMode } = useDemoMode();
   const isApp = isAppRoute(location.pathname);
-  const showDarkTheme = user && (user.role === 'admin' || user.role === 'employee') && isApp;
+  
+  // In demo mode, use admin dark theme even if not logged in
+  const showDarkTheme = isApp && (isDemoMode || (user && (user.role === 'admin' || user.role === 'employee')));
 
-  if (!user) {
+  // Use a mock admin user for layout purposes when in demo mode
+  const effectiveUser = isDemoMode ? (user || { id: 'demo-visitor', email: 'visitor@prime-demo', role: 'admin', name: 'Demo Visitor' }) : user;
+
+  if (!effectiveUser) {
     return (
       <div className="min-h-screen w-full bg-white">
         <Routes>
@@ -272,14 +295,16 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-white">
+    <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className="dark-theme">
-        <AppSidebar key={user.id} user={user} />
+        <AppSidebar key={effectiveUser.id} user={effectiveUser} />
       </div>
-      <div className={`flex-1 overflow-x-hidden pt-0 ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
+      <div className={`flex-1 overflow-x-hidden ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {/* Dashboard Routes */}
+          {/* Dashboard Routes */}
           <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/demo/dashboard" element={<ProtectedRoute allowedRoles={[]}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
           <Route path="/customer-dashboard" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
 
@@ -287,7 +312,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/bookings" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
           <Route path="/bookings-analytics" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
           <Route path="/search-customer" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
+          <Route path="/demo/search-customer" element={<ProtectedRoute allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/prospects" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />
+          <Route path="/demo/prospects" element={<ProtectedRoute allowedRoles={[]}><Prospects /></ProtectedRoute>} />
           <Route path="/service-checklist" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
           <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
@@ -295,6 +322,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
 
           {/* Finance & Sales */}
           <Route path="/invoicing" element={<ProtectedRoute allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
+          <Route path="/demo/invoicing" element={<ProtectedRoute allowedRoles={[]}><Invoicing /></ProtectedRoute>} />
           <Route path="/estimates" element={<ProtectedRoute allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
           <Route path="/accounting" element={<ProtectedRoute allowedRoles={['admin']}><Accounting /></ProtectedRoute>} />
           <Route path="/payroll" element={<ProtectedRoute allowedRoles={['admin']}><Payroll /></ProtectedRoute>} />
@@ -304,9 +332,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/mileage" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
           <Route path="/taxes" element={<ProtectedRoute allowedRoles={['admin']}><Taxes /></ProtectedRoute>} />
 
-
           {/* Inventory & Assets */}
           <Route path="/inventory-control" element={<ProtectedRoute allowedRoles={['admin']}><InventoryControl /></ProtectedRoute>} />
+          <Route path="/demo/inventory-control" element={<ProtectedRoute allowedRoles={[]}><InventoryControl /></ProtectedRoute>} />
           <Route path="/file-manager" element={<ProtectedRoute allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
           <Route path="/mobile-setup" element={<ProtectedRoute allowedRoles={['admin']}><MobileSetup /></ProtectedRoute>} />
           <Route path="/detailing-vendors" element={<ProtectedRoute allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
@@ -342,14 +370,20 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
           <Route path="/vehicle-gallery" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
+          <Route path="/demo/vehicle-gallery" element={<ProtectedRoute allowedRoles={[]}><VehicleGallery /></ProtectedRoute>} />
           <Route path="/app-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><AppManual /></ProtectedRoute>} />
           <Route path="/user-settings" element={<ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}><UserSettings /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+          <Route path="/demo/reports" element={<ProtectedRoute allowedRoles={[]}><Reports /></ProtectedRoute>} />
           <Route path="/blog" element={<PrimeBlog />} />
           <Route path="/follow-up-center" element={<ProtectedRoute allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><BlogReorder /></ProtectedRoute>} />
           <Route path="/f150-setup" element={<PrimeBlog />} />
+
+          {/* Special Demo Root Redirects */}
+          <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
+
 
           {/* Customer-Facing (when logged in) */}
           <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />

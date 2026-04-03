@@ -39,6 +39,7 @@ export type MenuItem = {
     badgeColor?: 'red' | 'blue'; // Color for the badge
     highlight?: 'red' | 'green';
     iconColor?: string; // Custom icon color class (e.g., "text-blue-600")
+    helpTopicId?: string; // ID of the help topic to access
 };
 
 export type MenuGroup = {
@@ -70,21 +71,21 @@ export const getMenuGroups = (counts: {
         {
             title: "Customer Intake", icon: UserPlus,
             items: [
-                { title: "Phone Assistant", url: "#call-assistant", icon: Phone },
-                { title: "Availability Manager", url: "/availability-manager", role: "admin", icon: CalendarCheck, highlight: "green", iconColor: "blue" },
-                { title: "Package Comparison", url: "/package-selection", icon: Package },
-                { title: "Vehicle Classification", url: "/vehicle-classification", icon: FileText },
-                { title: "Client Evaluation", url: "/client-evaluation", icon: ClipboardCheck },
-                { title: "Addon Upsell Script", url: "/addon-upsell-script", icon: FileText }
+                { title: "Phone Assistant", url: "#call-assistant", key: "phone-assistant", icon: Phone },
+                { title: "Availability Manager", url: "/availability-manager", role: "admin", key: "availability-manager", icon: CalendarCheck, highlight: "green", iconColor: "blue" },
+                { title: "Package Comparison", url: "/package-selection", key: "package-selection", icon: Package },
+                { title: "Vehicle Classification", url: "/vehicle-classification", key: "vehicle-classification", icon: FileText },
+                { title: "Client Evaluation", url: "/client-evaluation", key: "client-evaluation", icon: ClipboardCheck },
+                { title: "Addon Upsell Script", url: "/addon-upsell-script", key: "addon-upsell-script", icon: FileText }
             ]
         },
         {
             title: "Operations", icon: ClipboardCheck,
             items: [
-                { title: "Staff Schedule", url: "/staff-schedule", role: "employee", icon: CalendarDays },
+                { title: "Staff Schedule", url: "/staff-schedule", role: "employee", key: "employee-schedule", icon: CalendarDays },
                 { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays, badge: counts.tentativeBookingsCount, badgeColor: counts.bookingsBadgeColor },
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck },
-                { title: "Tasks", url: "/tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare },
+                { title: "Tasks", url: "/tasks", key: "tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users },
                 { title: "Prospects", url: "/prospects", key: "prospects", icon: Users },
                 { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users }
@@ -93,10 +94,10 @@ export const getMenuGroups = (counts: {
         {
             title: "Finance & Sales", icon: DollarSign,
             items: [
-                { title: "Estimates", url: "/estimates", role: "admin", highlight: "green", icon: FileText },
+                { title: "Estimates", url: "/estimates", role: "admin", key: "estimates", highlight: "green", icon: FileText },
                 { title: "Invoicing", url: "/invoicing", role: "admin", key: "invoicing", icon: FileText },
                 { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator },
-                { title: "Mileage", url: "/mileage", icon: Truck },
+                { title: "Mileage", url: "/mileage", key: "mileage", icon: Truck },
                 { title: "Payroll", url: "/payroll", role: "admin", key: "payroll", badge: counts.payrollDueCount > 0 ? counts.payrollDueCount : undefined, icon: DollarSign },
 
                 { title: "Company Budget", url: "/company-budget", role: "admin", key: "company-budget", icon: DollarSign },
@@ -136,9 +137,10 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Prime Training Center", icon: GraduationCap,
+            title: "Prime Learning Center", icon: GraduationCap,
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield },
+                { title: "Interactive App Demo", url: "/learning-library?tab=demo", key: "interactive-demo", icon: Globe, highlight: "green", helpTopicId: "interactive-training-demo" },
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus },
@@ -176,5 +178,6 @@ export const getMenuGroups = (counts: {
             ]
         }
     ];
+
 
 // End of file
