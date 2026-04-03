@@ -143,15 +143,26 @@ export const DemoBanner = () => {
   if (!isDemoMode) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 h-10 flex items-center justify-center px-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 h-10 flex items-center justify-between px-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="flex items-center gap-3 text-white">
         <div className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-white/30">
           Demo/Training Mode
         </div>
         <p className="text-xs font-bold whitespace-nowrap">
-          Interactive Simulation Active — <span className="hidden sm:inline opacity-90 font-medium">All data is mock and read-only. No persistent changes will occur.</span>
+          Interactive Simulation Active — <span className="hidden sm:inline opacity-90 font-medium tracking-tight">All data is mock and read-only. No persistent changes will occur.</span>
         </p>
       </div>
+      
+      <button 
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('open-help', { detail: 'interactive-training-demo' }));
+        }}
+        className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-all group"
+        title="View Sharing Instructions & Help"
+      >
+        <span className="text-[10px] font-bold text-white uppercase tracking-wider hidden xs:inline">Sharing Help</span>
+        <div className="w-4 h-4 rounded-full bg-white text-orange-600 flex items-center justify-center font-bold text-[10px] group-hover:scale-110 transition-transform">?</div>
+      </button>
     </div>
   );
 };
