@@ -119,16 +119,14 @@ export async function blockDateRange(
     reason?: string,
     createdBy?: string
 ): Promise<void> {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const [sY, sM, sD] = startDate.split('-').map(Number);
+    const [eY, eM, eD] = endDate.split('-').map(Number);
+    
+    // Create dates at noon local time to avoid any potential timezone shifting issues
+    const current = new Date(sY, sM - 1, sD, 12, 0, 0, 0);
+    const endCmp = new Date(eY, eM - 1, eD, 12, 0, 0, 0);
+    
     const blocks: any[] = [];
-
-    // Correct date iteration
-    const current = new Date(start);
-    // Add 12 hours to avoid timezone shifting issues on iteration
-    current.setHours(12, 0, 0, 0);
-    const endCmp = new Date(end);
-    endCmp.setHours(12, 0, 0, 0);
 
     while (current <= endCmp) {
         blocks.push({
