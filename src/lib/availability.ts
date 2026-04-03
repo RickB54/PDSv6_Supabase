@@ -72,7 +72,10 @@ export async function blockFullDay(date: string, reason?: string, createdBy?: st
             source_origin: 'Hybrid Availability System'
         });
 
-    if (error) console.error('Error blocking full day:', error);
+    if (error) {
+        console.error('Error blocking full day:', error);
+        throw error;
+    }
 
     // Dispatch event for UI updates
     window.dispatchEvent(new Event('availability-changed'));
@@ -99,7 +102,10 @@ export async function blockTimeRange(
             source_origin: 'Hybrid Availability System'
         });
 
-    if (error) console.error('Error blocking time range:', error);
+    if (error) {
+        console.error('Error blocking time range:', error);
+        throw error;
+    }
 
     window.dispatchEvent(new Event('availability-changed'));
 }
@@ -129,7 +135,7 @@ export async function blockDateRange(
             date: format(current, 'yyyy-MM-dd'),
             reason: reason || 'Blocked by admin',
             created_by: createdBy,
-            source_origin: 'Public Holiday / Range'
+            source_origin: 'Hybrid Availability System'
         });
         current.setDate(current.getDate() + 1);
     }
@@ -139,7 +145,10 @@ export async function blockDateRange(
             .from('availability_blocks')
             .insert(blocks);
 
-        if (error) console.error('Error blocking date range:', error);
+        if (error) {
+            console.error('Error blocking date range:', error);
+            throw error;
+        }
     }
 
     window.dispatchEvent(new Event('availability-changed'));
@@ -158,7 +167,10 @@ export async function unblockDateRange(
         .gte('date', startDate)
         .lte('date', endDate);
 
-    if (error) console.error('Error unblocking date range:', error);
+    if (error) {
+        console.error('Error unblocking date range:', error);
+        throw error;
+    }
 
     window.dispatchEvent(new Event('availability-changed'));
 }
@@ -172,7 +184,10 @@ export async function unblockSlot(id: string): Promise<void> {
         .delete()
         .eq('id', id);
 
-    if (error) console.error('Error deleting block:', error);
+    if (error) {
+        console.error('Error deleting block:', error);
+        throw error;
+    }
 
     window.dispatchEvent(new Event('availability-changed'));
 }
@@ -186,7 +201,10 @@ export async function unblockDay(date: string): Promise<void> {
         .delete()
         .eq('date', date);
 
-    if (error) console.error('Error unblocking day:', error);
+    if (error) {
+        console.error('Error unblocking day:', error);
+        throw error;
+    }
 
     window.dispatchEvent(new Event('availability-changed'));
 }
