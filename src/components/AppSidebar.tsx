@@ -367,14 +367,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       collapsible="icon"
       style={{ top: isDemoMode ? '40px' : '0' }}
     >
-      <div className="p-4 border-b border-border pt-24">
+      <div className="p-4 border-b border-border pt-12">
         {open && (
           <div className="flex items-center w-full">
             <div className="flex items-center gap-3 animate-fade-in flex-1 cursor-pointer" onClick={handleLogoClick}>
               <img src={logo} alt="Prime Auto Detail" className="h-12 w-auto" />
               <div>
-                <h2 className="font-bold text-foreground">Prime Auto</h2>
-                <p className="text-xs text-muted-foreground">Detail</p>
+                <h2 className="font-extrabold text-foreground text-sm tracking-tight">Prime Auto</h2>
+                <p className="text-[10px] text-muted-foreground uppercase font-black">Detail</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-muted-foreground hover:text-white ml-2">

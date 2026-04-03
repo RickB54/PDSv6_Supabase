@@ -37,7 +37,7 @@ export function GlobalRightSidebar() {
 
     return (
         <div 
-          className={`sticky h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-10 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
+          className={`sticky h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
           style={{ top: isDemoMode ? '120px' : '32px' }}
         >
             {/* Toggle */}

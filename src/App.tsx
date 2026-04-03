@@ -301,7 +301,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
 
   return (
     <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
-      <div className="dark-theme">
+      <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
         <AppSidebar key={effectiveUser.id} user={effectiveUser} />
       </div>
       <div className={`flex-1 overflow-x-hidden ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
@@ -416,7 +416,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
         </Routes>
       </div>
       {effectiveUser?.role !== 'customer' && (
-        <div className="dark-theme">
+        <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
           <GlobalRightSidebar />
         </div>
       )}
