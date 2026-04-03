@@ -204,7 +204,9 @@ export async function getRangeBlockedDates(
     // 1. Manual Blocks
     const manualAll = await getManualBlocks();
     const manualMapped = manualAll.filter(b => {
-        const d = new Date(b.date);
+        const parts = b.date.split('-').map(Number);
+        if (parts.length !== 3) return false;
+        const d = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
         return d >= start && d <= end;
     }).map(b => ({
         date: b.date,
@@ -331,7 +333,9 @@ export async function getWeeklyBlocks(
 
     // Filter manual to range
     const manualInRange = manualAll.filter(b => {
-        const d = new Date(b.date);
+        const parts = b.date.split('-').map(Number);
+        if (parts.length !== 3) return false;
+        const d = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
         return d >= startDate && d <= endDate;
     }).map(b => ({
         id: b.id,
