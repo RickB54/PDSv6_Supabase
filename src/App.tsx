@@ -166,22 +166,30 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
 
   const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
+  const publicRoutes = (
+    <>
+      <Route path="/" element={<Index />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/faq" element={<FAQ />} />
+      <Route path="/book" element={<BookNow />} />
+      <Route path="/availability" element={<Availability />} />
+      <Route path="/services" element={<CustomerPortal />} />
+      <Route path="/blog" element={<PrimeBlog />} />
+      <Route path="/thank-you" element={<ThankYou />} />
+    </>
+  );
+
   if (!effectiveUser) {
     return (
       <div className="min-h-screen w-full bg-white">
         <Routes>
-          <Route path="/" element={<Index />} />
+          {publicRoutes}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/book" element={<BookNow />} />
-          <Route path="/availability" element={<Availability />} />
-          <Route path="/services" element={<CustomerPortal />} />
-          <Route path="/blog" element={<PrimeBlog />} />
-          <Route path="/thank-you" element={<ThankYou />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
+          <Route path="/portal" element={<Portal />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
@@ -196,6 +204,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       </div>
       <div className={`flex-1 overflow-x-hidden ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
+          {publicRoutes}
           <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/demo/dashboard" element={<ProtectedRoute allowedRoles={[]}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
@@ -276,7 +285,6 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/portal" element={<ProtectedRoute allowedRoles={['customer']}><Portal /></ProtectedRoute>} />
           <Route path="/contact-support" element={<ContactSupport />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="/" element={<Index />} />
           <Route path="*" element={<DefaultRedirect user={user} />} />
         </Routes>
         <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
