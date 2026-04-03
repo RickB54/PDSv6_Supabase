@@ -55,7 +55,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const navigate = useNavigate();
   const [user, setUser] = useState(userProp || getCurrentUser());
   const { items: allBookings } = useBookingsStore();
-  const { isDemoMode, isAdminPreview, setAdminPreview, canAccess } = useDemoMode();
+  const { isDemoMode, isAdminPreview, setAdminPreview, canAccess, visibleSections } = useDemoMode();
 
   // Helper to get correct URL for demo mode
   const getUrl = (url: string) => {
@@ -255,7 +255,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       const saved = localStorage.getItem('sidebar_groups');
       if (saved) return JSON.parse(saved);
     } catch { }
-    return { 'Customer Intake': true, 'Operations': true }; // Default for demo look
+    return isDemoMode 
+      ? { 'Customer Intake': true, 'Operations': true, 'Finance & Sales': true, 'Reports': true, 'Chemicals': true, 'Inventory & Assets': true, 'Prime Learning Center': true, 'Staff Management': true, 'Marketing & Retention': true, 'Settings': true }
+      : { 'Customer Intake': true, 'Operations': true }; // Default for demo look
   });
 
   const toggleGroup = (title: string, isOpen: boolean) => {
@@ -341,7 +343,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       });
       return group.items.length > 0;
     });
-  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode]);
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections]);
 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 

@@ -26,17 +26,50 @@ const DemoContext = createContext<DemoContextType | undefined>(undefined);
 
 export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const [config, setConfig] = useState<DemoConfig | null>(null);
+  const defaultSections = [
+    "admin-dashboard", "search-customer", "prospects", "inventory-control", 
+    "invoicing", "vehicle-gallery", "reports", "settings", "payroll", 
+    "accounting", "company-budget", "estimates", "chemical-cards", 
+    "dilution-calc", "dilution-chart-interactive", "dilution-chart-reference", 
+    "dilution-chart-modal", "help-admin", "help-employee", "learn-lib", 
+    "orientation", "tasks", "service-checklist", "website-admin",
+    "phone-assistant", "availability-manager", "package-selection",
+    "vehicle-classification", "client-evaluation", "addon-upsell-script",
+    "employee-schedule", "bookings", "user-mgmt", "mileage", "taxes",
+    "package-pricing", "reports-customers", "reports-invoices",
+    "reports-inventory", "reports-employee", "reports-estimates",
+    "reports-accounting", "reports-tax", "chem-train", "cert-prog",
+    "interactive-demo", "staff-schedule", "company-employees",
+    "team-chat", "follow-up-center", "discount-coupons", "blog",
+    "blog-reorder", "user-settings", "vehicle-types", "mobile-setup",
+    "detailing-vendors", "active-jobs", "job-history", "payments-cart",
+    "my-invoices", "personal-notes", "bookings-analytics", "file-manager"
+  ];
+
+  const [config, setConfig] = useState<DemoConfig>({
+    visibleSections: defaultSections,
+    isAdminPreviewEnabled: true
+  });
   const [isAdminPreview, setIsAdminPreview] = useState<boolean>(() => {
     return localStorage.getItem("admin_demo_preview") === "true";
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Derive if we are strictly in the /demo path
+  // 1) Path-based or admin toggle
   const isDemoPath = location.pathname.startsWith("/demo") || location.pathname === "/demo";
+  
+  // 2) Persistence flag (so clicking /dashboard doesn't kick you out)
+  const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
 
-  // Global demo mode active if in path OR admin has toggle on
-  const isDemoMode = isDemoPath || isAdminPreview;
+  useEffect(() => {
+    if (isDemoPath) {
+      localStorage.setItem("demo_mode_active", "true");
+      setStayInDemo(true);
+    }
+  }, [isDemoPath]);
+
+  // Global demo mode check
+  const isDemoMode = stayInDemo || isDemoPath || isAdminPreview;
 
   useEffect(() => {
     localStorage.setItem("admin_demo_preview", isAdminPreview.toString());
@@ -50,30 +83,6 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const meta = await contentService.getServiceMeta("demo_config");
         if (meta && meta.meta) {
           setConfig(meta.meta);
-        } else {
-          // Defaults if not set
-          setConfig({
-            visibleSections: [
-              "admin-dashboard", "search-customer", "prospects", "inventory-control", 
-              "invoicing", "vehicle-gallery", "reports", "settings", "payroll", 
-              "accounting", "company-budget", "estimates", "chemical-cards", 
-              "dilution-calc", "dilution-chart-interactive", "dilution-chart-reference", 
-              "dilution-chart-modal", "help-admin", "help-employee", "learn-lib", 
-              "orientation", "tasks", "service-checklist", "website-admin",
-              "phone-assistant", "availability-manager", "package-selection",
-              "vehicle-classification", "client-evaluation", "addon-upsell-script",
-              "employee-schedule", "bookings", "user-mgmt", "mileage", "taxes",
-              "package-pricing", "reports-customers", "reports-invoices",
-              "reports-inventory", "reports-employee", "reports-estimates",
-              "reports-accounting", "reports-tax", "chem-train", "cert-prog",
-              "interactive-demo", "staff-schedule", "company-employees",
-              "team-chat", "follow-up-center", "discount-coupons", "blog",
-              "blog-reorder", "user-settings", "vehicle-types", "mobile-setup",
-              "detailing-vendors", "active-jobs", "job-history", "payments-cart",
-              "my-invoices", "personal-notes", "bookings-analytics", "file-manager"
-            ],
-            isAdminPreviewEnabled: true
-          });
         }
       } catch (e) {
         console.error("Failed to load demo config", e);
@@ -85,18 +94,28 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const canAccess = (key: string) => {
-    if (!isDemoMode) return true; // Full access locally
+    if (!isDemoMode) return true; // Full access fallback
     
-    // STRICT BLACKLIST: None by default in Demo, ReadOnlyGuard handles interaction safety
-    const blacklisted = [];
+    // BLACKLIST: Specifically hide things that shouldn't be in demo mode even for visitors
+    // E.g. "settings-danger-zone" or "actual-billing" if those were keys
+    const blacklisted: string[] = [];
     if (blacklisted.includes(key)) return false;
 
-    if (!config) return false;
-    return config.visibleSections.includes(key);
+    // Use current config as a primary whitelist if it exists and has and items
+    if (config?.visibleSections && config.visibleSections.length > 0) {
+      return config.visibleSections.includes(key);
+    }
+
+    // Default to TRUE in demo mode to showcase all features
+    return true;
   };
 
   const setAdminPreview = (val: boolean) => {
     setIsAdminPreview(val);
+    if (!val) {
+      localStorage.removeItem("demo_mode_active");
+      setStayInDemo(false);
+    }
     if (val) {
       toast({ title: "Demo Preview Mode ACTIVE", description: "You are now viewing the app exactly as a public visitor would see it. Data is mock and read-only." });
     } else {

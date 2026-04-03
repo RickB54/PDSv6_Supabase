@@ -21,6 +21,7 @@ import {
     Beaker,
     CalendarDays // Added for Staff Schedule
 } from "lucide-react";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 import { getCurrentUser } from "@/lib/auth";
 
@@ -28,16 +29,17 @@ export function GlobalRightSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(true);
+    const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
 
     // Hide on login/public pages if necessary
     if (['/login', '/signup', '/'].includes(location.pathname)) return null;
 
     return (
-        <div className={`
-            sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-20 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300
-            ${collapsed ? 'w-12' : 'w-48 items-start px-2'}
-        `}>
+        <div 
+          className={`sticky h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-10 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
+          style={{ top: isDemoMode ? '120px' : '32px' }}
+        >
             {/* Toggle */}
             <Button
                 variant="ghost"
