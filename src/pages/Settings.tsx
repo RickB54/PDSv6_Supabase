@@ -298,7 +298,7 @@ const Settings = () => {
       if (data.customPackages) localStorage.setItem('customServicePackages', JSON.stringify(data.customPackages));
       if (data.customAddOns) localStorage.setItem('customAddOns', JSON.stringify(data.customAddOns));
       if (data.customServices) localStorage.setItem('customServices', JSON.stringify(data.customServices));
-      const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'http://localhost:6066/api' : '/api';
+      const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:6066/api' : '/api';
       await postFullSync();
       await postServicesFullSync();
       try { await fetch(`${API_BASE}/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
@@ -664,8 +664,8 @@ const Settings = () => {
       } catch { }
 
       // Revalidate live content endpoints on port 6066 if available
-      try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-      try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      try { await fetch(`/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+      try { await fetch(`/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
 
       toast({ title: 'Restored', description: `${mode === 'both' ? 'Defaults' : mode} restored successfully. Live site updated.` });
     } catch (err: any) {

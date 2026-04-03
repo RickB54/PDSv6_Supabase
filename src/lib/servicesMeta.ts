@@ -175,7 +175,7 @@ export async function buildFullSyncPayload(): Promise<any> {
   };
 }
 
-const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'http://localhost:6066/api' : '/api';
+const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:6066/api' : '/api';
 
 export async function postFullSync() {
   try {

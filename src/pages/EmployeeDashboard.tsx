@@ -184,7 +184,7 @@ const EmployeeDashboard = () => {
 
       // Attempt background email via local API (port 6066)
       try {
-        await fetch("http://localhost:6066/api/email/admin", {
+        await fetch("/api/email/admin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ from: actor, subject, message, priority, pdfDataUrl })

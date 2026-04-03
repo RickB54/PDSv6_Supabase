@@ -337,12 +337,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
         if (isDemoMode && item.key && !canAccess(item.key)) return false;
         if (item.role === 'admin' && !isAdmin && !isDemoMode) return false;
         
-        // Refined Filter for Demo Visitors & Customers (only real employees/admins see full intake)
-        if (isDemoMode && !isRealAdminOrEmployee && group.title === "Customer Intake") {
-          const allowedKeys = ["package-selection", "vehicle-classification"];
-          if (!allowedKeys.includes(item.key || "")) return false;
-        }
-
         return true;
       });
       return group.items.length > 0;

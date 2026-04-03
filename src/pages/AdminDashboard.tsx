@@ -830,7 +830,7 @@ export default function AdminDashboard() {
                               setVehicleTypes(Array.isArray(updated) ? updated : []);
                               // Push live vehicle types to server so all dropdowns immediately reflect deletion
                               try {
-                                await fetch('http://localhost:6066/api/vehicle-types/live', {
+                                await fetch('/api/vehicle-types/live', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify(Array.isArray(updated) ? updated : []),
@@ -925,7 +925,7 @@ export default function AdminDashboard() {
                     await api('/api/contact/update', { method: 'POST', body: JSON.stringify(contactInfo) });
                     // Push to live endpoint on 6066 so Contact page reflects changes immediately
                     try {
-                      await fetch('http://localhost:6066/api/contact/live', {
+                      await fetch('/api/contact/live', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(contactInfo),
@@ -1005,7 +1005,7 @@ export default function AdminDashboard() {
                         setVehicleTypes(Array.isArray(updated) ? updated : []);
                         // Push live vehicle types to server so all dropdowns reflect edits immediately
                         try {
-                          await fetch('http://localhost:6066/api/vehicle-types/live', {
+                          await fetch('/api/vehicle-types/live', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(Array.isArray(updated) ? updated : []),
@@ -1084,7 +1084,7 @@ export default function AdminDashboard() {
                       setVehicleTypes(Array.isArray(updated) ? updated : []);
                       // Push live vehicle types to server for immediate dropdown sync
                       try {
-                        await fetch('http://localhost:6066/api/vehicle-types/live', {
+                        await fetch('/api/vehicle-types/live', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(Array.isArray(updated) ? updated : []),

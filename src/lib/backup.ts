@@ -194,8 +194,8 @@ export async function restoreFromJSON(json: string): Promise<{ success: boolean;
     if (lsCount > 0) resultDetails['app_preferences'] = lsCount;
 
     // Trigger package/add-on live sync if present
-    try { await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
-    try { await fetch(`http://localhost:6066/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+    try { await fetch(`/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
+    try { await fetch(`/api/addons/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } }); } catch { }
 
     try {
       await logRestore({

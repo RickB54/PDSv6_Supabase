@@ -177,7 +177,7 @@ export default function PackagePricing() {
     return base * (1 + pct / 100);
   };
 
-  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:6066/api' : '/api';
+  const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://localhost:6066/api' : '/api';
 
   async function getSavedPrices(): Promise<PriceMap> {
     const local = (await localforage.getItem<PriceMap>("savedPrices")) || {};
@@ -310,7 +310,7 @@ export default function PackagePricing() {
   // Helper to silently ping backend live API after saves (no new tab)
   const openPackagesLiveInBrowser = async () => {
     try {
-      const url = `http://localhost:6066/api/packages/live?v=${Date.now()}`;
+      const url = `${API_BASE}/packages/live?v=${Date.now()}`;
       await fetch(url, { headers: { 'Cache-Control': 'no-cache' } });
       try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'packages' } })); } catch { }
     } catch { }
@@ -319,7 +319,7 @@ export default function PackagePricing() {
   // Soft refresh signal for Website preview without opening tabs
   const forceWebsiteTabRefresh = async () => {
     try {
-      await fetch(`http://localhost:6066/api/packages/sync?v=${Date.now()}`, { method: 'POST' });
+      await fetch(`${API_BASE}/packages/sync?v=${Date.now()}`, { method: 'POST' });
     } catch { }
     try { localStorage.setItem('force-refresh', String(Date.now())); } catch { }
     try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'website' } })); } catch { }
@@ -401,7 +401,7 @@ export default function PackagePricing() {
   // Refresh the in-memory live snapshot after a sync so View All reflects latest
   const refreshLiveAfterSync = async () => {
     try {
-      const res = await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, {
+      const res = await fetch(`${API_BASE}/packages/live?v=${Date.now()}`, {
         headers: { 'Cache-Control': 'no-cache' }
       });
       if (res.ok) {

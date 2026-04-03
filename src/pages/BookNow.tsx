@@ -235,7 +235,7 @@ const BookNow = () => {
 
   const fetchLive = async () => {
     try {
-      const res = await fetch(`http://localhost:6066/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
+      const res = await fetch(`/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
       if (res.ok) {
         const ct = res.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
@@ -350,7 +350,7 @@ const BookNow = () => {
   useEffect(() => {
     const loadVehicleTypes = async () => {
       try {
-        const res = await fetch(`http://localhost:6066/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
+        const res = await fetch(`/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
