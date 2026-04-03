@@ -37,6 +37,7 @@ export interface Booking {
   customReminderDate?: string; // For manual anytime scheduling
   isArchived?: boolean;
   vehicleId?: string;
+  source?: string;
 }
 
 const STORAGE_KEY = "bookings";

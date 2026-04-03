@@ -12,6 +12,7 @@ export interface BlockedTimeSlot {
     startTime?: string; // HH:mm (if undefined, blocks entire day)
     endTime?: string; // HH:mm
     reason?: string; // Optional note for admin
+    source?: string; // Origin tracking
     createdAt: string;
 }
 
@@ -49,6 +50,7 @@ export async function getBlockedSlots(): Promise<BlockedTimeSlot[]> {
             startTime: row.start_time ? row.start_time.slice(0, 5) : null,
             endTime: row.end_time ? row.end_time.slice(0, 5) : null,
             reason: row.reason,
+            source: row.source_origin,
             createdAt: row.created_at
         }));
     } catch (error) {
@@ -66,7 +68,8 @@ export async function blockFullDay(date: string, reason?: string, createdBy?: st
         .insert({
             date,
             reason: reason || 'Blocked by admin',
-            created_by: createdBy
+            created_by: createdBy,
+            source_origin: 'Hybrid Availability System'
         });
 
     if (error) console.error('Error blocking full day:', error);
@@ -92,7 +95,8 @@ export async function blockTimeRange(
             start_time: startTime,
             end_time: endTime,
             reason: reason || 'Time blocked',
-            created_by: createdBy
+            created_by: createdBy,
+            source_origin: 'Hybrid Availability System'
         });
 
     if (error) console.error('Error blocking time range:', error);
@@ -124,7 +128,8 @@ export async function blockDateRange(
         blocks.push({
             date: format(current, 'yyyy-MM-dd'),
             reason: reason || 'Blocked by admin',
-            created_by: createdBy
+            created_by: createdBy,
+            source_origin: 'Public Holiday / Range'
         });
         current.setDate(current.getDate() + 1);
     }
@@ -344,10 +349,11 @@ export async function setBulkAvailability(
     
     configs.forEach(config => {
         if (!config.morningOpen && !config.afternoonOpen) {
-            // Both closed -> Full day block
+            // Full day block
             newBlocks.push({
                 date: config.date,
-                reason: reason || 'Bulk blocked'
+                reason: reason || 'Bulk blocked',
+                source_origin: 'Hybrid Availability System'
             });
         } else if (config.morningOpen && !config.afternoonOpen) {
             // Morning open, Afternoon closed -> Block 12:00-16:00
@@ -355,7 +361,8 @@ export async function setBulkAvailability(
                 date: config.date,
                 start_time: '12:00:00',
                 end_time: '16:00:00',
-                reason: reason || 'Bulk partial block (Afternoon closed)'
+                reason: reason || 'Bulk partial block (Afternoon closed)',
+                source_origin: 'Hybrid Availability System'
             });
         } else if (!config.morningOpen && config.afternoonOpen) {
             // Morning closed, Afternoon open -> Block 08:00-12:00
@@ -363,7 +370,8 @@ export async function setBulkAvailability(
                 date: config.date,
                 start_time: '08:00:00',
                 end_time: '12:00:00',
-                reason: reason || 'Bulk partial block (Morning closed)'
+                reason: reason || 'Bulk partial block (Morning closed)',
+                source_origin: 'Hybrid Availability System'
             });
         }
         // If both open -> No block record needed

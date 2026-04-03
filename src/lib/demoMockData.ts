@@ -113,7 +113,8 @@ export const MOCK_BOOKINGS = [
     price: 250.00,
     assignedEmployee: "Sam Staff",
     createdAt: new Date().toISOString(),
-    title: "Full Interior Detail"
+    title: "Full Interior Detail",
+    source: "Public Website"
   },
   { 
     id: "demo-bk-2", 
@@ -126,7 +127,8 @@ export const MOCK_BOOKINGS = [
     price: 1500.00,
     assignedEmployee: "Alex Admin",
     createdAt: new Date().toISOString(),
-    title: "Prime Elite Exterior + Ceramic"
+    title: "Prime Elite Exterior + Ceramic",
+    source: "Business Launch Manager"
   },
   { 
     id: "demo-bk-3", 
@@ -139,7 +141,8 @@ export const MOCK_BOOKINGS = [
     price: 450.00,
     assignedEmployee: "Sam Staff",
     createdAt: new Date().toISOString(),
-    title: "Engine Bay + Exterior"
+    title: "Engine Bay + Exterior",
+    source: "Hybrid Availability System"
   },
   { 
     id: "demo-bk-4", 
@@ -152,7 +155,8 @@ export const MOCK_BOOKINGS = [
     price: 180.00,
     assignedEmployee: null,
     createdAt: new Date().toISOString(),
-    title: "Maintenance Wash"
+    title: "Maintenance Wash",
+    source: "Manual Entry"
   }
 ];
 

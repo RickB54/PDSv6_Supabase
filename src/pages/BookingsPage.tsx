@@ -115,6 +115,7 @@ export default function BookingsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const lastLoadTimeRef = useRef<number>(0);
@@ -2289,7 +2290,25 @@ export default function BookingsPage() {
                   MONTH
                 </Button>
 
-                <div className="w-px h-6 bg-zinc-800 mx-2" />
+                <div className="w-px h-6 bg-zinc-800 mx-1" />
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className={cn("h-8 text-[11px] px-3 font-bold rounded-lg transition-all", sourceFilter ? "bg-purple-600 text-white" : "text-zinc-400")}>
+                      {sourceFilter || 'SOURCE'} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56">
+                    <DropdownMenuItem onClick={() => setSourceFilter(null)} className="cursor-pointer">All Sources</DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuItem onClick={() => setSourceFilter('Business Launch Manager')} className="cursor-pointer">Business Launch Manager</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSourceFilter('Hybrid Availability System')} className="cursor-pointer">Hybrid Availability System</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSourceFilter('Public Website')} className="cursor-pointer">Public Website</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSourceFilter('Manual Entry')} className="cursor-pointer">Manual Entry</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="w-px h-6 bg-zinc-800 mx-1" />
 
                 <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <PopoverTrigger asChild>
@@ -2430,6 +2449,10 @@ export default function BookingsPage() {
                         }
                       }
 
+                      if (sourceFilter) {
+                        customerBookings = customerBookings.filter(b => b.source === sourceFilter);
+                      }
+
                       if (customerBookings.length === 0) return null;
 
                       // Get the most recent booking to extract customer details
@@ -2561,6 +2584,12 @@ export default function BookingsPage() {
                                           >
                                             {booking.status}
                                           </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                                Origin: <span className="text-purple-300 font-medium">{booking.source || 'Manual Entry'}</span>
+                                            </div>
                                         </div>
                                         <div className="flex justify-end mt-2">
                                           <Button

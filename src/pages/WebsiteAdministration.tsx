@@ -312,7 +312,7 @@ export default function WebsiteAdministration() {
           newStatus.blockedStartDate, 
           newStatus.blockedEndDate, 
           newStatus.blockedReason || 'Blocked by Business Launch Manager (Custom Mode)',
-          'System'
+          'Business Launch Manager'
         );
         toast({
           title: "Calendar Sync",
