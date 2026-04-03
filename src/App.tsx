@@ -133,7 +133,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   const user = getCurrentUser();
   const { isDemoMode } = useDemoMode();
 
-  // In demo mode, bypass standard auth checks for public routes
+  // In demo mode, bypass standard auth checks strictly
   if (isDemoMode) return <>{children}</>;
 
   if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
@@ -147,6 +147,8 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 
 
 const DefaultRedirect = ({ user }: { user: any }) => {
+  const { isDemoMode } = useDemoMode();
+  if (isDemoMode) return <Navigate to="/dashboard/admin" replace />;
   if (!user) return <Navigate to="/" replace />;
   if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
   if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
@@ -273,7 +275,8 @@ const App = () => {
 
 const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssistantOpen: (v: boolean) => void }) => {
   const location = useRouterLocation();
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, mockUser } = useDemoMode();
+  const effectiveUser = isDemoMode ? (user || mockUser) : user;
   const isApp = isAppRoute(location.pathname);
   
   // In demo mode, use admin dark theme even if not logged in

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,8 @@ interface JobRecord {
 }
 
 const CompanyEmployees = () => {
-  const user = getCurrentUser();
+  const { isDemoMode, mockUser } = useDemoMode();
+  const user = getCurrentUser() || (isDemoMode ? mockUser : null);
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -93,7 +95,7 @@ const CompanyEmployees = () => {
   const [employeeBadges, setEmployeeBadges] = useState<Record<string, TrainingBadge[]>>({});
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    if (!isDemoMode && user?.role !== 'admin') {
       window.location.href = '/';
       return;
     }

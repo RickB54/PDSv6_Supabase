@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { HelpCircle } from "lucide-react";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { getMenuGroups } from "@/components/menu-config";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -8,8 +9,9 @@ import { getCurrentUser } from "@/lib/auth";
 
 export default function SectionLanding() {
     const { sectionId } = useParams();
+    const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || isDemoMode;
     const isEmployee = user?.role === 'employee';
 
     // We don't have access to the dynamic counts here easily without context or prop drilling, 

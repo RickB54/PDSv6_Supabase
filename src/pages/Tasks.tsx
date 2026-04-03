@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,12 +68,12 @@ export default function Tasks() {
 
     try {
       const actor = getCurrentUser();
-      await sendTeamMessage({
-        sender_email: actor?.email || 'guest@demo.com',
-        sender_name: actor?.name || 'Demo Visitor',
-        recipient_id: chatRecipient,
-        message: text,
-      });
+      await sendTeamMessage(
+        text,
+        actor?.email || 'guest@demo.com',
+        actor?.name || 'Demo Visitor',
+        chatRecipient
+      );
       setNewChatText("");
     } catch {
       toast({ title: "Failed to send message", variant: "destructive" });

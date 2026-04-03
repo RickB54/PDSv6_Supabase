@@ -84,7 +84,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     }
   }, [userProp]);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || isDemoMode;
   const isEmployee = user?.role === 'employee';
   const isCustomer = user?.role === 'customer';
 
@@ -347,6 +347,20 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
+  const handleNavClick = (e: React.MouseEvent, url: string) => {
+    if (openMobile) setOpenMobile(false);
+    
+    if (url.startsWith('#')) {
+      e.preventDefault();
+      if (url === '#call-assistant') {
+        window.dispatchEvent(new Event('open-call-assistant'));
+      } else if (url.startsWith('#help')) {
+        const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
+        window.dispatchEvent(new CustomEvent('open-help', { detail: { role } }));
+      }
+    }
+  };
+
   const toggleAllGroups = () => {
     if (isAnyOpen) {
       const next = MENU_GROUPS.reduce((acc, g) => ({ ...acc, [g.title]: false }), {});
@@ -427,7 +441,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
                 return (
                   <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild tooltip={item.title} onClick={handleNavClick}>
+                    <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl)}>
                       <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {open && <span>{item.title}</span>}
@@ -470,8 +484,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
                             return (
                               <SidebarMenuSubItem key={`${item.title}-${item.url}`}>
-                                <SidebarMenuSubButton asChild isActive={isActive}>
-                                    <Link to={targetUrl} onClick={handleNavClick} className={className}>
+                                <SidebarMenuSubButton asChild isActive={isActive} onClick={(e) => handleNavClick(e, targetUrl)}>
+                                    <Link to={targetUrl} className={className}>
                                       {item.icon && <item.icon className="h-4 w-4 mr-2" />}
                                       {open && <span className="flex-1">{item.title}</span>}
                                       {open && item.helpTopicId && (

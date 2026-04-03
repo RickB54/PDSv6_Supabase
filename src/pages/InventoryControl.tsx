@@ -917,11 +917,13 @@ const InventoryControl = () => {
     // Persist to state immediately
     setChemicals(prev => prev.map(c => c.id === chemicalId ? { ...c, dilutionRatios: updatedRatios } : c));
 
-    // Persist to Supabase (debounced or discrete save would be better, but we'll try direct for now)
-    try {
-      await inventoryData.saveChemical({ ...chem, dilutionRatios: updatedRatios }, false);
-    } catch (err) {
-      console.error("Failed to save chart update", err);
+    // Persist to Supabase if not in demo mode
+    if (!isDemoMode) {
+      try {
+        await inventoryData.saveChemical({ ...chem, dilutionRatios: updatedRatios }, false);
+      } catch (err) {
+        console.error("Failed to save chart update", err);
+      }
     }
   };
 
