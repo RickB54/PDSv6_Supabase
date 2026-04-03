@@ -1665,7 +1665,7 @@ const InventoryControl = () => {
                   <option value="low_stock">Low Threshold</option>
                 </select>
               </div>
-              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || m.price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
+              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || (m as any).price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
               {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
                 <span className="text-red-400 font-medium flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length} Low
@@ -1826,7 +1826,7 @@ const InventoryControl = () => {
                 </select>
               </div>
               <div className="hidden sm:block">
-                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + (t.price || t.cost || 0), 0).toFixed(0)}</span></span>
+                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + ((t as any).price || (t as any).cost || 0), 0).toFixed(0)}</span></span>
               </div>
               {expandedSections.tools ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
