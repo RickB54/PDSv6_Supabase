@@ -1,3 +1,4 @@
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   Home, ClipboardCheck, Search, Calculator, BookOpen, Users,
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
@@ -7,7 +8,6 @@ import {
 } from "lucide-react";
 import { FileText, CheckSquare } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef, useMemo } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -244,10 +244,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     if (isDemoMode) return false;
     return localStorage.getItem('has_unread_chat') === 'true';
   }, [isDemoMode, tick]);
-
-  const handleNavClick = () => {
-    setOpenMobile(false);
-  };
 
   // Group State Persistence
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {

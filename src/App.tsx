@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import Orientation from "./pages/Orientation";
 import ContactSupport from "./pages/ContactSupport";
 import ActiveJobs from "./pages/ActiveJobs";
@@ -9,7 +10,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalRightSidebar } from "@/components/GlobalRightSidebar";
@@ -103,7 +103,6 @@ import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
 import FollowUpCenter from "./pages/FollowUpCenter";
 
-
 const queryClient = new QueryClient();
 
 function ConditionalGlobalChat() {
@@ -114,7 +113,6 @@ function ConditionalGlobalChat() {
 }
 
 const isAppRoute = (path: string) => {
-
   const websitePrefixes = [
     '/', '/about', '/contact', '/faq', '/services', '/book', '/availability', 
     '/blog', '/checkout', '/thank-you', '/login', '/signup', 
@@ -122,10 +120,7 @@ const isAppRoute = (path: string) => {
   ];
   if (websitePrefixes.includes(path)) return false;
   if (path.startsWith('/blog/')) return false;
-  
-  // The /demo path and its children are definitely App routes (for simulation)
   if (path.startsWith('/demo')) return true;
-
   return true;
 };
 
@@ -133,7 +128,6 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   const user = getCurrentUser();
   const { isDemoMode } = useDemoMode();
 
-  // In demo mode, bypass standard auth checks strictly
   if (isDemoMode) return <>{children}</>;
 
   if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
@@ -145,7 +139,6 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   return <>{children}</>;
 };
 
-
 const DefaultRedirect = ({ user }: { user: any }) => {
   const { isDemoMode } = useDemoMode();
   if (isDemoMode) return <Navigate to="/dashboard/admin" replace />;
@@ -155,135 +148,23 @@ const DefaultRedirect = ({ user }: { user: any }) => {
   return <Navigate to="/customer-dashboard" replace />;
 };
 
-const App = () => {
-  const [user, setUser] = useState(getCurrentUser());
-  const [callAssistantOpen, setCallAssistantOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [helpId, setHelpId] = useState<string | undefined>(undefined);
-  const [helpRole, setHelpRole] = useState<'admin' | 'employee' | 'customer' | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    try {
-      if (import.meta.env.VITE_AUTH_MODE === 'supabase') setAuthMode('supabase');
-    } catch { }
-
-    const initAuth = async () => {
-      try {
-        initSupabaseAuth();
-        if (isSupabaseEnabled()) {
-          const { data } = await supabase.auth.getSession();
-          if (data.session?.user && mounted) {
-            const { finalizeSupabaseSession } = await import('@/lib/auth');
-            await finalizeSupabaseSession(data.session.user);
-            setUser(getCurrentUser());
-          }
-        }
-      } catch (e) {
-        console.warn('Auth init failed', e);
-      } finally {
-        if (mounted) setAuthReady(true);
-      }
-    };
-
-    initAuth();
-
-    // SAFETY FALLBACK: Ensure the app loads even if Supabase/Finalize hangs
-    const safetyTimer = setTimeout(() => {
-      if (mounted) setAuthReady(true);
-    }, 5000);
-
-    const updateUser = () => mounted && setUser(getCurrentUser());
-    window.addEventListener('auth-changed', updateUser);
-    window.addEventListener('storage', updateUser);
-    try { initTaskWorkflowListeners(); } catch { }
-
-    // START BOOKINGS REALTIME SUBSCRIPTION
-    let unsubscribeBookings: (() => void) | undefined;
-    import("@/store/bookings").then(m => {
-      const store = m.useBookingsStore.getState();
-      store.refresh();
-      unsubscribeBookings = store.subscribeRealtime();
-    });
-
-    const onOpenCallAssistant = () => setCallAssistantOpen(true);
-    const onOpenHelp = (e: any) => {
-      const currentUser = getCurrentUser();
-      const isDemoSession = localStorage.getItem("demo_mode_active") === "true";
-      let topicId: string | undefined = undefined;
-      
-      // If we are in demo mode, ALWAYS show the full Admin suite of help topics
-      // so visitors can understand all the high-level features.
-      let role: any = isDemoSession ? 'admin' : (currentUser?.role || 'customer');
-
-      if (typeof e.detail === 'string') {
-        topicId = e.detail;
-      } else if (e.detail && typeof e.detail === 'object') {
-        topicId = e.detail.topicId;
-        // Only override role if explicitly provided in detail, otherwise use the demo/auth logic
-        if (e.detail.role) role = e.detail.role;
-      }
-      
-      setHelpRole(role);
-      setHelpId(topicId);
-      setHelpOpen(true);
-    };
-
-    window.addEventListener('open-call-assistant', onOpenCallAssistant);
-    window.addEventListener('open-help', onOpenHelp);
-
-    return () => {
-      mounted = false;
-      clearTimeout(safetyTimer);
-      window.removeEventListener('auth-changed', updateUser);
-      window.removeEventListener('storage', updateUser);
-      window.removeEventListener('open-call-assistant', onOpenCallAssistant);
-      window.removeEventListener('open-help', onOpenHelp);
-      if (unsubscribeBookings) unsubscribeBookings();
-    };
-  }, []);
-
-  if (!authReady) return <div className="flex items-center justify-center min-h-screen bg-black text-white">Initializing...</div>;
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SidebarProvider defaultOpen={true}>
-          <BrowserRouter>
-            <DemoProvider>
-              <DemoBanner />
-              <WalkthroughProvider>
-                <Toaster />
-                <Sonner />
-                <GlobalModals />
-                <ScrollToTop />
-                <ConditionalGlobalChat />
-                <ChatAudioAlert />
-                <WalkthroughOverlay />
-                <LayoutWrapper user={user} setCallAssistantOpen={setCallAssistantOpen} />
-                <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
-                {(user || isAppRoute(window.location.pathname)) && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || (user?.role as any) || 'admin'} initialTopicId={helpId} />}
-              </WalkthroughProvider>
-            </DemoProvider>
-          </BrowserRouter>
-        </SidebarProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-};
-
-const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssistantOpen: (v: boolean) => void }) => {
-  const location = useRouterLocation();
+const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, helpRole, helpId }: {
+  user: any; 
+  setCallAssistantOpen: (v: boolean) => void;
+  helpOpen: boolean;
+  setHelpOpen: (v: boolean) => void;
+  helpRole: any;
+  helpId: string | undefined;
+}) => {
   const { isDemoMode, mockUser } = useDemoMode();
-  const effectiveUser = isDemoMode ? (user || mockUser) : user;
+  const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
   
-  // In demo mode, use admin dark theme even if not logged in
-  const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
+  const effectiveUser = isDemoMode 
+    ? (user || mockUser || { id: 'demo-visitor', email: 'visitor@prime-demo', role: 'admin', name: 'Demo Visitor' }) 
+    : user;
 
-  // Use a mock admin user for layout purposes when in demo mode
-  const effectiveUser = isDemoMode ? (user || { id: 'demo-visitor', email: 'visitor@prime-demo', role: 'admin', name: 'Demo Visitor' }) : user;
+  const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
   if (!effectiveUser) {
     return (
@@ -303,6 +184,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/thank-you" element={<ThankYou />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
       </div>
     );
   }
@@ -314,14 +196,10 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
       </div>
       <div className={`flex-1 overflow-x-hidden ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
-          {/* Dashboard Routes */}
-          {/* Dashboard Routes */}
           <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/demo/dashboard" element={<ProtectedRoute allowedRoles={[]}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
           <Route path="/customer-dashboard" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
-
-          {/* Operations & Bookings */}
           <Route path="/bookings" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
           <Route path="/bookings-analytics" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
           <Route path="/search-customer" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
@@ -332,8 +210,6 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/tasks" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
           <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
           <Route path="/jobs-completed" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><JobsCompleted /></ProtectedRoute>} />
-
-          {/* Finance & Sales */}
           <Route path="/invoicing" element={<ProtectedRoute allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
           <Route path="/demo/invoicing" element={<ProtectedRoute allowedRoles={[]}><Invoicing /></ProtectedRoute>} />
           <Route path="/estimates" element={<ProtectedRoute allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
@@ -344,15 +220,11 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/package-pricing" element={<ProtectedRoute allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
           <Route path="/mileage" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
           <Route path="/taxes" element={<ProtectedRoute allowedRoles={['admin']}><Taxes /></ProtectedRoute>} />
-
-          {/* Inventory & Assets */}
           <Route path="/inventory-control" element={<ProtectedRoute allowedRoles={['admin']}><InventoryControl /></ProtectedRoute>} />
           <Route path="/demo/inventory-control" element={<ProtectedRoute allowedRoles={[]}><InventoryControl /></ProtectedRoute>} />
           <Route path="/file-manager" element={<ProtectedRoute allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
           <Route path="/mobile-setup" element={<ProtectedRoute allowedRoles={['admin']}><MobileSetup /></ProtectedRoute>} />
           <Route path="/detailing-vendors" element={<ProtectedRoute allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
-
-          {/* Training & Staff */}
           <Route path="/training-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
           <Route path="/chemical-training" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
           <Route path="/learning-library" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
@@ -369,8 +241,6 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/exam-admin" element={<ProtectedRoute allowedRoles={['admin']}><ExamAdmin /></ProtectedRoute>} />
           <Route path="/certificate/:id" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Certificate /></ProtectedRoute>} />
           <Route path="/cheat-sheet" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><CheatSheet /></ProtectedRoute>} />
-
-          {/* Intake & Assistance */}
           <Route path="/package-selection" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><PackageSelection /></ProtectedRoute>} />
           <Route path="/vehicle-classification" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><VehicleClassification /></ProtectedRoute>} />
           <Route path="/client-evaluation" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ClientEvaluation /></ProtectedRoute>} />
@@ -378,8 +248,6 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/package-guide" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><PackageExplanationGuide /></ProtectedRoute>} />
           <Route path="/availability-manager" element={<ProtectedRoute allowedRoles={['admin']}><AvailabilityManager /></ProtectedRoute>} />
           <Route path="/website-admin" element={<ProtectedRoute allowedRoles={['admin']}><WebsiteAdministration /></ProtectedRoute>} />
-
-          {/* Common Shared Pages */}
           <Route path="/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
           <Route path="/vehicle-gallery" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
@@ -389,16 +257,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
           <Route path="/demo/reports" element={<ProtectedRoute allowedRoles={[]}><Reports /></ProtectedRoute>} />
-          <Route path="/blog" element={<PrimeBlog />} />
           <Route path="/follow-up-center" element={<ProtectedRoute allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><BlogReorder /></ProtectedRoute>} />
-          <Route path="/f150-setup" element={<PrimeBlog />} />
-
-          {/* Special Demo Root Redirects */}
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
-
-
-          {/* Customer-Facing (when logged in) */}
           <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
           <Route path="/job-history" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
           <Route path="/my-invoices" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><MyInvoices /></ProtectedRoute>} />
@@ -407,21 +268,11 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
           <Route path="/customer-profile" element={<ProtectedRoute allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />
           <Route path="/portal" element={<ProtectedRoute allowedRoles={['customer']}><Portal /></ProtectedRoute>} />
           <Route path="/contact-support" element={<ContactSupport />} />
-
-          {/* Fallbacks */}
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/book" element={<BookNow />} />
-          <Route path="/availability" element={<Availability />} />
-          <Route path="/services" element={<CustomerPortal />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/thank-you" element={<ThankYou />} />
-          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<DefaultRedirect user={user} />} />
         </Routes>
+        <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
       </div>
       {effectiveUser?.role !== 'customer' && (
         <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
@@ -429,6 +280,143 @@ const LayoutWrapper = ({ user, setCallAssistantOpen }: { user: any; setCallAssis
         </div>
       )}
     </div>
+  );
+};
+
+const App = () => {
+  const [user, setUser] = useState(getCurrentUser());
+  const [callAssistantOpen, setCallAssistantOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpId, setHelpId] = useState<string | undefined>(undefined);
+  const [helpRole, setHelpRole] = useState<'admin' | 'employee' | 'customer' | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    console.log("[App] Mounting...");
+    
+    try {
+      if (import.meta.env.VITE_AUTH_MODE === 'supabase') setAuthMode('supabase');
+    } catch { }
+
+    const initAuth = async () => {
+      try {
+        console.log("[App] Initializing Supabase Auth...");
+        initSupabaseAuth();
+        if (isSupabaseEnabled()) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.user && mounted) {
+            console.log("[App] Finalizing Supabase session for:", data.session.user.email);
+            await finalizeSupabaseSession(data.session.user);
+            setUser(getCurrentUser());
+          }
+        }
+      } catch (e) {
+        console.warn('[App] Auth init failed', e);
+      } finally {
+        if (mounted) {
+          console.log("[App] Auth initialization complete.");
+          setAuthReady(true);
+        }
+      }
+    };
+
+    initAuth();
+
+    const safetyTimer = setTimeout(() => {
+      if (mounted && !authReady) {
+        console.log("[App] Safety timer triggered. Forcing authReady=true");
+        setAuthReady(true);
+      }
+    }, 4000);
+
+    const updateUser = () => {
+      if (mounted) {
+        const u = getCurrentUser();
+        console.log("[App] Auth update detected. New user:", u?.email || "null");
+        setUser(u);
+      }
+    };
+    
+    window.addEventListener('auth-changed', updateUser);
+    window.addEventListener('storage', updateUser);
+    try { initTaskWorkflowListeners(); } catch { }
+
+    const onOpenCallAssistant = () => setCallAssistantOpen(true);
+    const onOpenHelp = (e: any) => {
+      const currentUser = getCurrentUser();
+      const isDemoSession = localStorage.getItem("demo_mode_active") === "true";
+      let topicId: string | undefined = undefined;
+      let role: any = isDemoSession ? 'admin' : (currentUser?.role || 'customer');
+
+      if (typeof e.detail === 'string') {
+        topicId = e.detail;
+      } else if (e.detail && typeof e.detail === 'object') {
+        topicId = e.detail.topicId;
+        if (e.detail.role) role = e.detail.role;
+      }
+      
+      setHelpRole(role);
+      setHelpId(topicId);
+      setHelpOpen(true);
+    };
+
+    window.addEventListener('open-call-assistant', onOpenCallAssistant);
+    window.addEventListener('open-help', onOpenHelp);
+
+    return () => {
+      mounted = false;
+      clearTimeout(safetyTimer);
+      window.removeEventListener('auth-changed', updateUser);
+      window.removeEventListener('storage', updateUser);
+      window.removeEventListener('open-call-assistant', onOpenCallAssistant);
+      window.removeEventListener('open-help', onOpenHelp);
+    };
+  }, []);
+
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-white font-mono">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <p className="animate-pulse tracking-widest text-xs uppercase">Initializing System...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <SidebarProvider defaultOpen={true}>
+            <BrowserRouter>
+              <DemoProvider>
+                <DemoBanner />
+                <WalkthroughProvider>
+                  <Toaster />
+                  <Sonner />
+                  <GlobalModals />
+                  <ScrollToTop />
+                  <ConditionalGlobalChat />
+                  <ChatAudioAlert />
+                  <WalkthroughOverlay />
+                  <LayoutWrapper 
+                    user={user} 
+                    setCallAssistantOpen={setCallAssistantOpen} 
+                    helpOpen={helpOpen}
+                    setHelpOpen={setHelpOpen}
+                    helpRole={helpRole}
+                    helpId={helpId}
+                  />
+                  <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
+                </WalkthroughProvider>
+              </DemoProvider>
+            </BrowserRouter>
+          </SidebarProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

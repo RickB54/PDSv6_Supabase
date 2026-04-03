@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { FileText, Download, Search, Filter, Trash2, Eye, BellOff, Bell, Printer } from "lucide-react";
 import { markViewed, isViewed, unmarkViewed } from "@/lib/viewTracker";
 import {
@@ -114,9 +115,10 @@ const FileManager = () => {
     return "all";
   };
 
+  const { isDemoMode } = useDemoMode();
   useEffect(() => {
     // Only admins can access
-    if (user?.role !== 'admin') {
+    if (!isDemoMode && user?.role !== 'admin') {
       window.location.href = '/';
       return;
     }
@@ -136,7 +138,7 @@ const FileManager = () => {
         window.history.replaceState(null, '', url.toString());
       } catch { }
     }
-  }, [user]);
+  }, [user, isDemoMode]);
 
   // Update filter when the URL query changes (e.g., clicking another alert)
   useEffect(() => {

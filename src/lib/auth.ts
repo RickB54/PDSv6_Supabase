@@ -34,10 +34,30 @@ export function setAuthMode(mode: AuthMode) {
 }
 
 export function getCurrentUser(): User | null {
+  // 1) Fast-path for Demo Mode simulation
+  try {
+    if (localStorage.getItem('demo_mode_active') === 'true') {
+      return {
+        id: "demo-admin-sim",
+        name: "Demo Admin",
+        email: "demo@primeautodetail.com",
+        role: "admin"
+      };
+    }
+  } catch { }
+
+  // 2) Supabase Persistence Layer
   if (isSupabaseEnabled()) {
-    const cached = localStorage.getItem('currentUser');
-    if (cached) return JSON.parse(cached);
-    return null;
+    try {
+      const cached = localStorage.getItem('currentUser');
+      if (cached && cached !== 'undefined' && cached !== 'null') {
+        const u = JSON.parse(cached);
+        if (u && u.id) return u;
+      }
+    } catch (e) {
+      console.warn('[Auth] Cached user invalid:', e);
+      localStorage.removeItem('currentUser');
+    }
   }
   return null;
 }
