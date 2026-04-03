@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar } from "lucide-react";
+import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar, HelpCircle } from "lucide-react";
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
@@ -774,7 +774,18 @@ const Settings = () => {
                   <ShieldAlert className="w-6 h-6 text-amber-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-white text-xl">Public Demo System</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-white text-xl">Public Demo System</CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 text-amber-500 hover:text-amber-400 p-0"
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'interactive-training-demo' }))}
+                      title="Learn how to share this demo"
+                    >
+                      <HelpCircle className="w-5 h-5" />
+                    </Button>
+                  </div>
                   <CardDescription className="text-zinc-400">Manage public access and Guided Training Mode</CardDescription>
                 </div>
               </div>
