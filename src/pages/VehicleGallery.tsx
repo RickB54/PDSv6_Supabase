@@ -224,7 +224,9 @@ export default function VehicleGallery() {
                     description: `General gallery item uploaded on ${new Date().toLocaleDateString()}`,
                     category: 'general_gallery',
                     type: 'image',
-                    url: url
+                    thumbnail_url: url,
+                    resource_url: url,
+                    is_published: true
                 };
                 await upsertLibraryItem(galleryItem as any);
                 toast({ title: "Added to Gallery", description: "Successfully added to the General Gallery." });
@@ -474,11 +476,7 @@ export default function VehicleGallery() {
                         <GeneralGalleryView
                             items={generalGalleryItems}
                             onMediaClick={handleMediaClick}
-                            onDelete={(id) => {
-                                if (confirm("Remove this item from the gallery?")) {
-                                    deleteLibraryItem(id).then(() => loadData());
-                                }
-                            }}
+                            onRefresh={loadData}
                             isAdmin={isAdmin}
                             searchQuery={searchQuery}
                         />
@@ -742,55 +740,250 @@ export default function VehicleGallery() {
     );
 }
 
-function GeneralGalleryView({ items, onMediaClick, onDelete, isAdmin, searchQuery }: any) {
-    const filtered = useMemo(() => {
-        if (!searchQuery) return items;
-        const q = searchQuery.toLowerCase();
-        return items.filter((i: any) => 
-            i.title?.toLowerCase().includes(q) || 
-            i.description?.toLowerCase().includes(q)
-        );
-    }, [items, searchQuery]);
+function GeneralGalleryView({ items, onMediaClick, onRefresh, isAdmin, searchQuery }: any) {
+    const { toast } = useToast();
+    const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title'>('date-desc');
+    const [isEditing, setIsEditing] = useState<any | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-    if (filtered.length === 0) {
+    const filteredAndSorted = useMemo(() => {
+        let result = [...items];
+        
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(i => 
+                i.title?.toLowerCase().includes(q) || 
+                i.description?.toLowerCase().includes(q)
+            );
+        }
+
+        return result.sort((a, b) => {
+            if (sortBy === 'date-desc') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            if (sortBy === 'date-asc') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+            if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
+            return 0;
+        });
+    }, [items, searchQuery, sortBy]);
+
+    const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]);
+    };
+
+    const handleBulkDelete = async () => {
+        if (!isAdmin || selectedIds.length === 0) return;
+        if (!confirm(`Permanently delete ${selectedIds.length} items?`)) return;
+
+        setIsBulkDeleting(true);
+        try {
+            await Promise.all(selectedIds.map(id => deleteLibraryItem(id)));
+            toast({ title: "Bulk Delete Successful", description: `Removed ${selectedIds.length} items from gallery.` });
+            setSelectedIds([]);
+            onRefresh();
+        } catch (err) {
+            toast({ title: "Delete Error", description: "Failed to remove some items.", variant: "destructive" });
+        } finally {
+            setIsBulkDeleting(false);
+        }
+    };
+
+    const handleUpdateItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isEditing) return;
+
+        try {
+            const result = await upsertLibraryItem(isEditing);
+            if (result.success) {
+                toast({ title: "Updated", description: "Gallery item updated successfully." });
+                setIsEditing(null);
+                onRefresh();
+            } else {
+                throw new Error("Update failed");
+            }
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to update item metadata.", variant: "destructive" });
+        }
+    };
+
+    if (items.length === 0) {
         return (
-            <div className="text-center py-32 bg-zinc-950/50 border border-zinc-900 rounded-3xl border-dashed">
-                <ImageIcon className="h-16 w-16 mx-auto text-zinc-800 mb-6" />
-                <h3 className="text-2xl font-black text-zinc-500 uppercase tracking-tighter">Empty Gallery</h3>
-                <p className="text-zinc-600 mt-2 max-w-xs mx-auto">Upload standalone images or media items to build your general marketing and library assets.</p>
+            <div className="text-center py-32 bg-zinc-950/50 border border-zinc-900 rounded-[32px] border-dashed">
+                <div className="h-20 w-20 mx-auto rounded-3xl bg-zinc-900/50 flex items-center justify-center mb-6">
+                    <ImageIcon className="h-10 w-10 text-zinc-700" />
+                </div>
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Your Gallery is Empty</h3>
+                <p className="text-zinc-500 mt-2 max-w-xs mx-auto text-sm leading-relaxed">
+                    Start by uploading images or videos to build a professional media library for marketing and internal assets.
+                </p>
+                <Button 
+                    variant="outline" 
+                    className="mt-8 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900"
+                    onClick={() => window.open('/help/gallery', '_blank')}
+                >
+                    Learn about Gallery
+                </Button>
             </div>
         );
     }
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {filtered.map((item: any) => (
-                <div key={item.id} className="group relative aspect-square rounded-3xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 cursor-pointer" onClick={() => onMediaClick(item.url, 'image', item.title)}>
-                    <img src={item.url} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950/30 p-2 rounded-2xl border border-zinc-800">
+                <div className="flex items-center gap-2">
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${sortBy === 'date-desc' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-white'}`}
+                        onClick={() => setSortBy('date-desc')}
+                    >
+                        <Clock className="h-3 w-3 mr-2" /> Latest
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${sortBy === 'title' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-white'}`}
+                        onClick={() => setSortBy('title')}
+                    >
+                        <Filter className="h-3 w-3 mr-2" /> A-Z
+                    </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {selectedIds.length > 0 && (
+                        <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                            <span className="text-[10px] font-black text-blue-500 uppercase px-2">{selectedIds.length} Selected</span>
+                            <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/20"
+                                onClick={handleBulkDelete}
+                                disabled={isBulkDeleting}
+                            >
+                                {isBulkDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                Delete All
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white"
+                                onClick={() => setSelectedIds([])}
+                            >
+                                Clear
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {filteredAndSorted.map((item: any) => {
+                    const isSelected = selectedIds.includes(item.id);
+                    const fileUrl = item.resource_url || item.thumbnail_url;
                     
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                        <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                            <h4 className="text-sm font-black text-white uppercase tracking-tighter truncate">{item.title}</h4>
-                            <div className="flex items-center justify-between mt-3">
-                                <Button size="sm" variant="secondary" className="h-8 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black font-bold uppercase text-[10px] tracking-widest px-4">
-                                    Expand
-                                </Button>
-                                {isAdmin && (
-                                    <Button size="sm" variant="destructive" className="h-8 w-8 rounded-xl flex items-center justify-center p-0" onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                )}
+                    return (
+                        <div 
+                            key={item.id} 
+                            className={`group relative aspect-square rounded-3xl bg-zinc-950 border transition-all duration-500 cursor-pointer overflow-hidden ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-2xl shadow-blue-500/20 scale-95' : 'border-zinc-900 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10'}`}
+                            onClick={() => onMediaClick(fileUrl, 'image', item.title)}
+                        >
+                            <img 
+                                src={fileUrl} 
+                                alt={item.title} 
+                                className={`w-full h-full object-cover transition-transform duration-700 ${isSelected ? 'scale-110 blur-[2px]' : 'group-hover:scale-110'}`} 
+                            />
+                            
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                                <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                    <h4 className="text-sm font-black text-white uppercase tracking-tighter truncate mb-1">{item.title}</h4>
+                                    <p className="text-[10px] text-zinc-500 line-clamp-2 mb-4 leading-relaxed">{item.description || 'No description available.'}</p>
+                                    
+                                    <div className="flex items-center gap-2">
+                                        <Button 
+                                            size="sm" 
+                                            variant="secondary" 
+                                            className="h-8 flex-1 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black font-black uppercase text-[9px] tracking-widest transition-all"
+                                        >
+                                            View
+                                        </Button>
+                                        {isAdmin && (
+                                            <Button 
+                                                size="sm" 
+                                                variant="ghost" 
+                                                className="h-8 w-8 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-emerald-400 p-0"
+                                                onClick={(e) => { e.stopPropagation(); setIsEditing(item); }}
+                                            >
+                                                <Info className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                        <Button 
+                                            size="sm" 
+                                            variant="ghost" 
+                                            asChild
+                                            className="h-8 w-8 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-blue-400 p-0"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <a href={fileUrl} download={`PDS_GALLERY_${item.id}`}>
+                                                <Download className="h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Batch Selection Tool */}
+                            <div 
+                                className={`absolute top-4 left-4 h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-blue-600 border-blue-600 scale-110' : 'bg-black/20 border-white/20 opacity-0 group-hover:opacity-100'}`}
+                                onClick={(e) => handleToggleSelect(item.id, e)}
+                            >
+                                {isSelected && <Plus className="h-3 w-3 text-white rotate-45" />}
+                            </div>
+
+                            <div className="absolute top-4 right-4 z-10 pointer-events-none">
+                                <Badge className={`${item.type === 'video' ? 'bg-pink-600/20 text-pink-400' : 'bg-emerald-600/20 text-emerald-400'} border border-current opacity-20 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest backdrop-blur-md`}>
+                                    {item.type || 'IMAGE'}
+                                </Badge>
                             </div>
                         </div>
-                    </div>
+                    );
+                })}
+            </div>
 
-                    <div className="absolute top-4 right-4 z-10">
-                        <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest backdrop-blur-md">
-                            Library
-                        </Badge>
-                    </div>
-                </div>
-            ))}
+            {/* Metadata Editor Dialog */}
+            <Dialog open={!!isEditing} onOpenChange={() => setIsEditing(null)}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 p-0 overflow-hidden max-w-sm rounded-3xl">
+                    <form onSubmit={handleUpdateItem}>
+                        <div className="p-6 bg-zinc-900/50 border-b border-zinc-800">
+                            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-blue-500">Edit Asset</DialogTitle>
+                        </div>
+                        <div className="p-6 space-y-5">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Asset Title</label>
+                                <Input 
+                                    className="bg-zinc-900 border-zinc-800 rounded-xl h-11 focus:ring-blue-500/20" 
+                                    value={isEditing?.title || ''} 
+                                    onChange={(e) => setIsEditing({ ...isEditing, title: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Description / Caption</label>
+                                <textarea 
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm min-h-[100px] outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    value={isEditing?.description || ''}
+                                    onChange={(e) => setIsEditing({ ...isEditing, description: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter className="p-6 bg-zinc-900/50 border-t border-zinc-800">
+                            <Button type="button" variant="ghost" onClick={() => setIsEditing(null)} className="font-bold text-xs">Cancel</Button>
+                            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs px-8 rounded-xl h-10 shadow-lg shadow-blue-900/40">
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
