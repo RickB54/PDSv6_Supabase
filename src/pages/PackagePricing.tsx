@@ -83,7 +83,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { isSupabaseEnabled } from "@/lib/auth";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
-import browserImageCompression from "browser-image-compression";
+import { compressImageForUpload } from "@/lib/image-compression";
 import { supabase } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 
@@ -1418,11 +1418,7 @@ export default function PackagePricing() {
     try {
       toast.info("Processing image...");
 
-      const compressedFile = await browserImageCompression(file, {
-        maxSizeMB: 0.5,
-        maxWidthOrHeight: 800,
-        useWebWorker: true
-      });
+      const compressedFile = await compressImageForUpload(file);
 
       const ext = file.name.split('.').pop();
       const fileName = `packages/${id}_${Date.now()}.${ext}`;

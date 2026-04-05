@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { FileText, CheckSquare } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +21,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -56,6 +58,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const [user, setUser] = useState(userProp || getCurrentUser());
   const { items: allBookings } = useBookingsStore();
   const { isDemoMode, isAdminPreview, setAdminPreview, canAccess, visibleSections } = useDemoMode();
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Helper to get correct URL for demo mode
   const getUrl = (url: string) => {
@@ -303,6 +306,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined }
   ].filter(item => {
     if (isDemoMode && item.key && !canAccess(item.key)) return false;
+    if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
@@ -318,7 +322,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: "Prime Blog", url: "/blog", icon: Newspaper },
     { title: "User Settings", url: "/user-settings", icon: Settings },
     { title: "Prime Website", url: "/", icon: Globe },
-  ];
+  ].filter(item => {
+    if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
 
   const realUser = useMemo(() => getCurrentUser(), []);
   const isRealAdminOrEmployee = realUser?.role === "admin" || realUser?.role === "employee";
@@ -338,15 +345,23 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       tentativeBookingsCount: badgeCount,
       bookingsBadgeColor: badgeColor
     }).filter(group => {
+      // Check if group title matches search
+      const groupMatches = searchQuery && group.title.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Filter items within the group
       group.items = group.items.filter(item => {
         if (isDemoMode && item.key && !canAccess(item.key)) return false;
         if (item.role === 'admin' && !isAdmin && !isDemoMode) return false;
         
+        // Match item if it contains search OR if its group matches
+        if (searchQuery && !groupMatches && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        
         return true;
       });
-      return group.items.length > 0;
+      
+      return group.items.length > 0 || groupMatches;
     });
-  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections]);
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections, searchQuery]);
 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
@@ -384,21 +399,27 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       collapsible="icon"
       style={{ top: isDemoMode ? '40px' : '0' }}
     >
-      <div className="p-4 border-b border-border pt-12">
-        {open && (
-          <div className="flex items-center w-full">
-            <div className="flex items-center gap-3 animate-fade-in flex-1 cursor-pointer" onClick={handleLogoClick}>
-              <img src={logo} alt="Prime Auto Detail" className="h-12 w-auto" />
-              <div>
-                <h2 className="font-extrabold text-foreground text-sm tracking-tight">Prime Auto</h2>
-                <p className="text-[10px] text-muted-foreground uppercase font-black">Detail</p>
+      <div className={cn("flex flex-col border-b border-white/5", isDemoMode ? "pt-[80px]" : "pt-[80px]")}>
+        <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
+          <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
+            <img src={logo} alt="Prime Auto Detail" className="h-9 w-auto min-w-[36px]" />
+            {open && (
+              <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                <h2 className="font-extrabold text-white text-[13px] tracking-tight whitespace-nowrap uppercase">Prime Auto</h2>
+                <p className="text-[9px] text-zinc-500 uppercase font-black tracking-tighter">Detailing Systems</p>
               </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-muted-foreground hover:text-white ml-2">
-              {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
-            </Button>
+            )}
           </div>
-        )}
+          
+          <div className="flex items-center gap-1">
+            {open && (
+              <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-zinc-500 hover:text-white transition-colors" title="Toggle Groups">
+                {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
+              </Button>
+            )}
+            <SidebarTrigger className="h-8 w-8 text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all" />
+          </div>
+        </div>
       </div>
 
       <SidebarContent>
@@ -411,6 +432,21 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
             >
                Exit Demo Preview
             </Button>
+          </div>
+        )}
+
+        {(open || openMobile) && (
+          <div className="px-4 py-3 border-b border-white/5 bg-white/[0.02]">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Search resources..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-9 bg-zinc-900/50 border border-zinc-800 rounded-lg pl-9 pr-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
+              />
+            </div>
           </div>
         )}
 
@@ -436,7 +472,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
           {(isAdmin || isEmployee) && !isViewingAsCustomer && (
             <>
-              {TOP_ITEMS.map((item) => {
+              {TOP_ITEMS.map((item: any) => {
                 if (item.role === 'admin' && !isAdmin && !isDemoMode) return null;
                 const targetUrl = getUrl(item.url);
                 const isActive = location.pathname === targetUrl;
@@ -455,62 +491,65 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
               })}
 
               {MENU_GROUPS.map((group) => {
-                const isOpen = !!openGroups[group.title];
-                const groupBadgeCount = group.items.reduce((acc, item) => acc + (item.badge || 0), 0);
-
+                const isOpen = openGroups[group.title];
+                const groupBadgeCount = group.items.reduce((acc: number, item: any) => acc + (item.badge || 0), 0);
+                
                 return (
-                  <Collapsible key={group.title} open={isOpen} onOpenChange={(val) => toggleGroup(group.title, val)} className="group/collapsible">
+                  <Collapsible
+                    key={group.title}
+                    open={isOpen}
+                    onOpenChange={(v) => {
+                      const next = { ...openGroups, [group.title]: v };
+                      setOpenGroups(next);
+                      localStorage.setItem('sidebar_groups', JSON.stringify(next));
+                    }}
+                    className="group/collapsible"
+                  >
                     <SidebarMenuItem>
-                      <div className="flex items-center w-full group-data-[state=open]/collapsible:mb-1">
-                        <SidebarMenuButton asChild tooltip={group.title} className="flex-1">
-                          <Link to={`/section/${group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className={`flex items-center gap-2 ${group.items.some(item => location.pathname === getUrl(item.url)) ? 'text-blue-500 font-bold' : 'text-zinc-300 font-bold hover:text-white'}`}>
-                            <group.icon className="h-4 w-4" />
-                            {open && <span>{group.title}</span>}
-                            {open && !isOpen && groupBadgeCount > 0 && <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">{groupBadgeCount}</span>}
-                          </Link>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip={group.title} className="text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full">
+                          <group.icon className="h-4 w-4 mr-2" />
+                          {open && (
+                            <>
+                              <span>{group.title}</span>
+                              {!isOpen && groupBadgeCount > 0 && (
+                                <span className="ml-auto mr-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] text-white">
+                                  {groupBadgeCount}
+                                </span>
+                              )}
+                              <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform duration-200", isOpen && "rotate-90")} />
+                            </>
+                          )}
                         </SidebarMenuButton>
-                        {open && (
-                          <CollapsibleTrigger asChild>
-                            <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-400">
-                              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                            </button>
-                          </CollapsibleTrigger>
-                        )}
-                      </div>
+                      </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {group.items.map((item) => {
+                        <SidebarMenuSub className="border-l border-zinc-800/50 ml-4 pl-2 mb-2">
+                          {group.items.map((item: any) => {
                             const targetUrl = getUrl(item.url);
                             const isActive = location.pathname === targetUrl;
-                            const isChatAlert = item.url === '/team-chat' && chatUnread;
-                            let className = "flex items-center gap-2 px-2 py-1.5 rounded-md w-full transition-colors bg-transparent " + (isActive ? "text-blue-500 font-semibold" : "text-zinc-100 font-bold hover:text-white hover:bg-zinc-800");
+                            const isHiddenItem = isHidden(item.key || '');
+                            if (isHiddenItem && !searchQuery) return null;
 
                             return (
-                              <SidebarMenuSubItem key={`${item.title}-${item.url}`}>
-                                <SidebarMenuSubButton asChild isActive={isActive} onClick={(e) => handleNavClick(e, targetUrl)}>
-                                    <Link to={targetUrl} className={className}>
-                                      {item.icon && <item.icon className="h-4 w-4 mr-2" />}
-                                      {open && <span className="flex-1">{item.title}</span>}
-                                      {open && item.helpTopicId && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            window.dispatchEvent(new CustomEvent('open-help', { 
-                                              detail: { 
-                                                topicId: item.helpTopicId,
-                                                role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
-                                              } 
-                                            }));
-                                          }}
-                                          className="text-muted-foreground hover:text-white transition-colors p-1"
-                                        >
-                                          <HelpCircle className="h-3 w-3" />
-                                        </button>
-                                      )}
-                                      {open && item.badge !== undefined && <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">{item.badge}</span>}
-                                    </Link>
+                              <SidebarMenuSubItem key={item.title}>
+                                <SidebarMenuSubButton asChild isActive={isActive}>
+                                  <Link 
+                                    to={targetUrl} 
+                                    className={cn(
+                                      "flex items-center gap-2 py-2 h-auto text-[11px]",
+                                      isActive ? "text-blue-500 font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
+                                    )} 
+                                    onClick={(e) => handleNavClick(e, targetUrl)}
+                                  >
+                                    {item.icon && <item.icon className={cn("h-3.5 w-3.5", isActive ? "text-blue-500" : "text-zinc-500")} />}
+                                    <span>{item.title}</span>
+                                    {isActive && <div className="ml-auto w-1 h-1 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]" />}
+                                    {item.badge !== undefined && item.badge > 0 && (
+                                      <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white font-black">
+                                        {item.badge}
+                                      </span>
+                                    )}
+                                  </Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             );
@@ -525,9 +564,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           )}
         </SidebarMenu>
       </SidebarContent>
-      <div className="p-2 border-t border-border mt-auto">
-        <div className="text-[10px] text-zinc-500 font-mono text-center">
-          {isDemoMode ? <span className="text-amber-500 font-black">DEMO VISITOR</span> : (user ? <span className={user?.role === 'admin' ? 'text-red-500' : 'text-blue-500'}>{user?.role?.toUpperCase()}</span> : "Logged Out")}
+      <div className="p-2 border-t border-white/5 mt-auto bg-black/40">
+        <div className="text-[9px] text-zinc-600 font-black text-center uppercase tracking-widest">
+          {isDemoMode ? <span className="text-amber-500">Live Simulation</span> : (user ? <span>{user?.role} Portal</span> : "Offline")}
         </div>
       </div>
       <SidebarRail />

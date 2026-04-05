@@ -20,7 +20,7 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supa-data";
-import imageCompression from 'browser-image-compression';
+import { compressImageForUpload } from "@/lib/image-compression";
 import { VoiceInput } from "@/components/VoiceInput";
 import {
     ResizableHandle,
@@ -230,12 +230,8 @@ export default function PersonalNotes() {
         try {
             const files = Array.from(e.target.files);
             const uploadPromises = files.map(async (file) => {
-                // Compress image
-                const compressed = await imageCompression(file, {
-                    maxSizeMB: 1,
-                    maxWidthOrHeight: 1920,
-                    useWebWorker: true
-                });
+                // Compress image using centralized utility
+                const compressed = await compressImageForUpload(file);
 
                 // Upload to Supabase Storage
                 const fileName = `notes/${activeNote.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${file.name}`;

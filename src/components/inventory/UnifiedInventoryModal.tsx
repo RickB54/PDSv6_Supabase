@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import localforage from "localforage";
 import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles } from "lucide-react";
-import browserImageCompression from "browser-image-compression";
+import { compressImageForUpload } from "@/lib/image-compression";
 import { supabase, upsertSupabaseTaxExpense, getSupabaseTaxExpenses } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
 import { DilutionRatio } from "@/types/chemicals";
@@ -218,23 +218,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         toast.info("Processing image...");
         const file = e.target.files[0];
 
-        let fileToUpload = file;
-        
         // Always attempt to compress images to ensure reliable mobile upload
         // regardless of source (local or camera)
-        try {
-          toast.info("Compressing for upload...");
-          const options = {
-            maxSizeMB: 0.8,
-            maxWidthOrHeight: 1600,
-            useWebWorker: true,
-            initialQuality: 0.8
-          };
-          fileToUpload = await browserImageCompression(file, options);
-        } catch (compressionError) {
-          console.warn("Compression failed, uploading original:", compressionError);
-          fileToUpload = file;
-        }
+        const fileToUpload = await compressImageForUpload(file);
 
         // Upload to Supabase Storage
         const ext = file.name?.split('.').pop() || 'jpg';

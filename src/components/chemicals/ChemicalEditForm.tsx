@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supa-data";
 import { ensureAllStorageBuckets } from "@/lib/storage-utils";
 import { ChemicalGalleryModal } from "./ChemicalGalleryModal";
+import { compressImageForUpload } from "@/lib/image-compression";
 
 interface ChemicalEditFormProps {
     initialData: Partial<Chemical>;
@@ -54,15 +55,19 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
         if (!e.target.files || e.target.files.length === 0) return;
 
         const file = e.target.files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${fileName}`;
-
+        
         setUploading(true);
         try {
+            toast({ title: "Processing Image", description: "Compressing for reliable mobile upload..." });
+            const fileToUpload = await compressImageForUpload(file);
+            
+            const fileExt = fileToUpload.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `${fileName}`;
+
             const { error: uploadError } = await supabase.storage
                 .from('chemicals')
-                .upload(filePath, file);
+                .upload(filePath, fileToUpload);
 
             if (uploadError) throw uploadError;
 
