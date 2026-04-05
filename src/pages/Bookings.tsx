@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Circle, Plus, User, Mail, Phone, MapPin, Car, Clock, CreditCard, Package, Info, CheckCircle2, AlertCircle, Trash2, Edit, Printer } from "lucide-react";
+import { CalendarDays, Circle, Plus, User, Mail, Phone, MapPin, Car, Clock, CreditCard, Package, Info, CheckCircle2, AlertCircle, Trash2, Edit, Printer, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { markViewed } from "@/lib/viewTracker";
@@ -494,6 +494,19 @@ export default function Bookings() {
                             onClick={(e) => { e.stopPropagation(); setPreviewBooking(b); }}
                           >
                             <Mail className="w-3.5 h-3.5" /> Preview Email
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 border-zinc-700 hover:bg-zinc-800 text-zinc-300 gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const search = encodeURIComponent(b.customer || '');
+                              window.location.href = `/file-manager?search=${search}`;
+                            }}
+                            title="View Archived Confirmation PDF"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> View Proof
                           </Button>
                           <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-white" onClick={() => remove(b.id)}>
                             <Trash2 className="w-4 h-4" />

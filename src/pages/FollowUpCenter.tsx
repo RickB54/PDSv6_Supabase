@@ -31,7 +31,8 @@ import {
   Shield,
   RotateCcw,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from "lucide-react";
 import { format, addMonths, isBefore, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -308,14 +309,14 @@ export default function FollowUpCenter() {
         </div>
 
         <div className="flex items-center gap-3">
-           <Button 
-             variant="outline" 
-             onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'retention-hub' } }))}
-             className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl px-6"
-           >
-             <HelpCircle className="mr-2 h-4 w-4" />
-             Hub Guide
-           </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'retention-hub' }))}
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-emerald-400 group"
+            >
+              <HelpCircle className="mr-2 h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              Hub Guide
+            </Button>
            
            <Button 
              variant="outline" 
@@ -330,12 +331,12 @@ export default function FollowUpCenter() {
 
            <Button 
              variant="ghost" 
-             onClick={() => window.dispatchEvent(new CustomEvent('open-help'))}
-             className="text-zinc-600 hover:text-white text-[9px] font-black uppercase tracking-[0.2em] transition-all flex flex-col items-center gap-1 group"
+             size="icon"
+             onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'retention-hub' }))}
+             className="text-zinc-600 hover:text-white transition-all group"
+             title="Help Guide"
            >
-             <span className="group-hover:translate-x-1 transition-transform flex items-center">
-               Main Help <ExternalLink className="ml-2 h-3 w-3" />
-             </span>
+             <HelpCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
            </Button>
         </div>
       </div>
@@ -638,10 +639,11 @@ export default function FollowUpCenter() {
                   <table className="w-full text-left">
                      <thead>
                         <tr className="bg-zinc-950/80 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 border-b border-zinc-800">
-                           <th className="px-10 py-6">Recipient Asset</th>
-                           <th className="px-10 py-6 text-center">Dispatch Timestamp</th>
-                           <th className="px-10 py-6 text-center">Intent</th>
+                           <th className="px-10 py-6">Recipient & Contact</th>
+                           <th className="px-10 py-6 text-center">Dispatch Time</th>
+                           <th className="px-10 py-6 text-center">Engagement Type</th>
                            <th className="px-10 py-6 text-center">Loyalty Code</th>
+                           <th className="px-10 py-6 text-center">Audit Log</th>
                            <th className="px-10 py-6 text-right">Verification</th>
                         </tr>
                      </thead>
@@ -654,7 +656,7 @@ export default function FollowUpCenter() {
                               </td>
                               <td className="px-10 py-7 text-center">
                                  <Badge variant="outline" className="bg-zinc-950 border-zinc-800 text-zinc-400 font-black text-[9px] px-3 py-1">
-                                    {format(new Date(log.dateSent), 'MMM dd, yyyy • h:mm a')}
+                                    {format(new Date(log.dateSent), 'MMM dd, h:mm a')}
                                  </Badge>
                               </td>
                               <td className="px-10 py-7 text-center">
@@ -671,6 +673,20 @@ export default function FollowUpCenter() {
                                        {log.couponCode}
                                     </span>
                                  ) : <span className="text-zinc-800 font-black">STANDARD_DISPATCH</span>}
+                              </td>
+                              <td className="px-10 py-7 text-center">
+                                 <Button 
+                                   size="sm" 
+                                   variant="ghost" 
+                                   onClick={() => {
+                                     const search = encodeURIComponent(log.customerName);
+                                     window.location.href = `/file-manager?search=${search}`;
+                                   }}
+                                   className="h-9 w-9 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
+                                   title="View Archived Record"
+                                 >
+                                   <Eye className="h-4 w-4" />
+                                 </Button>
                               </td>
                               <td className="px-10 py-7 text-right">
                                  {log.customNote ? (

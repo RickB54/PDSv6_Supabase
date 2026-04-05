@@ -157,7 +157,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Marketing & Retention", icon: TicketPercent,
             items: [
-                { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green" },
+                { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green", helpTopicId: "retention-hub" },
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent },
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper },
                 { title: "Blog Layout Architect", url: "/blog-reorder", role: "admin", key: "blog-reorder", icon: ListOrdered },

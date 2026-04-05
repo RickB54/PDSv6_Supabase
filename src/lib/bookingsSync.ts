@@ -398,17 +398,111 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
       </div>
     `;
 
-      await supabase.functions.invoke('send-booking-email', {
+      // Generate a PDF record of this outreach for the archive
+      try {
+        const doc = new jsPDF();
+        const year = new Date().getFullYear();
+        const monthName = new Date().toLocaleString('default', { month: 'long' });
+        
+        // PDF Header
+        doc.setFillColor(30, 58, 138); // Dark Blue
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.text('OUTREACH RECORD', 20, 20);
+        
+        // Body Content
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(10);
+        doc.text(`SENT ON: ${new Date().toLocaleString()}`, 140, 20);
+        
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(`TO: ${booking.customer} (${booking.customerEmail})`, 20, 45);
+        doc.text(`SUBJECT: Maintenance Reminder - ${booking.title}`, 20, 55);
+        
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, 60, 190, 60);
+        
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        let currentY = 70;
+        
+        if (options?.customNote) {
+          doc.setFont(undefined, 'bold');
+          doc.text('PERSONAL NOTE:', 20, currentY);
+          currentY += 7;
+          doc.setFont(undefined, 'normal');
+          const lines = doc.splitTextToSize(options.customNote, 170);
+          doc.text(lines, 20, currentY);
+          currentY += (lines.length * 5) + 10;
+        }
+        
+        if (options?.couponCode) {
+          doc.setFont(undefined, 'bold');
+          doc.text(`INCENTIVE: ${options.discountLabel || 'Special Discount'}`, 20, currentY);
+          currentY += 7;
+          doc.setFont(undefined, 'normal');
+          doc.text(`CODE: ${options.couponCode}`, 20, currentY);
+          currentY += 10;
+        }
+        
+        doc.setFont(undefined, 'bold');
+        doc.text('FULL MESSAGE CONTENT:', 20, currentY);
+        currentY += 7;
+        doc.setFont(undefined, 'normal');
+        
+        // Strip HTML for the log PDF
+        const textContent = reminderHtml
+          .replace(/<style[^>]*>.*<\/style>/gms, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+          
+        const contentLines = doc.splitTextToSize(textContent, 170);
+        doc.text(contentLines, 20, currentY);
+        
+        const dataUrl = doc.output('dataurlstring');
+        const fileName = `OUTREACH_${booking.customer.replace(/\s/g, '_')}_${Date.now()}.pdf`;
+        await uploadToFileManager(dataUrl, `Outreach Logs/${year}/${monthName}/`, booking, { 
+          service: "Maintenance Outreach"
+        });
+        
+        console.log('✅ Outreach PDF archived to File Manager');
+      } catch (pdfErr) {
+        console.error('❌ Failed to archive outreach PDF:', pdfErr);
+      }
+
+      // Log engagement BEFORE sending email to ensure audit trail exists even if email fails
+      try {
+        await supabase.from('engagements').insert({
+          customer_name: booking.customer,
+          customer_email: booking.customerEmail,
+          type: 'retention',
+          note: options?.customNote || `${booking.title} maintenance follow-up`,
+          coupon_code: options?.couponCode
+        });
+      } catch (logErr) {
+        console.error('Engagement logging failed', logErr);
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           to: booking.customerEmail,
           subject: options?.couponCode 
             ? `🎁 A Special Gift from Prime Auto Detail for ${booking.customer}`
             : `✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
-          html: reminderHtml
+          customerName: booking.customer,
+          service: booking.title,
+          price: (booking.price || 0).toFixed(2),
+          html: reminderHtml,
+          // Explicitly flag this as a retention email so the edge function doesn't use the 'Request Received' fallback
+          type: 'retention'
         }
       });
-      
-      console.log(`✅ Professional follow-up reminder sent to ${booking.customerEmail}`);
+
+      if (error) throw error;
+      return data;
     }
   } catch (e) {
     console.error('Failed to send follow-up reminder', e);
@@ -507,13 +601,68 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
       </div>
       `;
 
-      await supabase.functions.invoke('send-booking-email', {
+      // Generate PDF record
+      try {
+        const doc = new jsPDF();
+        const year = new Date().getFullYear();
+        const monthName = new Date().toLocaleString('default', { month: 'long' });
+        
+        doc.setFillColor(79, 70, 229); // Indigo
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.text('WELCOME OUTREACH RECORD', 20, 20);
+        
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(`PROSPECT: ${prospect.name} (${prospect.email})`, 20, 45);
+        
+        const textContent = prospectHtml
+          .replace(/<style[^>]*>.*<\/style>/gms, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        const contentLines = doc.splitTextToSize(textContent, 170);
+        doc.text(contentLines, 20, 65);
+        
+        const dataUrl = doc.output('dataurlstring');
+        const fileName = `WELCOME_PROSPECT_${prospect.name.replace(/\s/g, '_')}_${Date.now()}.pdf`;
+        await uploadToFileManager(dataUrl, `Welcome Outreach/${year}/${monthName}/`, { customer: prospect.name } as any, { 
+          service: "Welcome Outreach"
+        });
+      } catch (pdfErr) {
+        console.warn('PDF archive failed', pdfErr);
+      }
+
+      // Log engagement
+      try {
+        await supabase.from('engagements').insert({
+          customer_name: prospect.name,
+          customer_email: prospect.email,
+          type: 'initial',
+          note: `Welcome outreach sent to ${prospect.name}`
+        });
+      } catch (logErr) {
+        console.error('Engagement logging failed', logErr);
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           to: prospect.email,
           subject: `✨ A Special Welcome to Prime Auto Detail for ${prospect.name}`,
-          html: prospectHtml
+          customerName: prospect.name,
+          service: "Initial Welcome",
+          html: prospectHtml,
+          type: 'initial'
         }
       });
+      
+      if (error) throw error;
+      return data;
       
       console.log(`✅ Professional prospect intro sent to ${prospect.email}`);
     }

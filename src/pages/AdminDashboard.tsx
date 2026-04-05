@@ -55,6 +55,7 @@ import api from "@/lib/api";
 import { postFullSync } from "@/lib/servicesMeta";
 import { useToast } from "@/hooks/use-toast";
 import { notify } from "@/store/alerts";
+import { useDemoMode } from "@/contexts/DemoContext";
 import CustomerModal from "@/components/customers/CustomerModal";
 import OrientationModal from "@/components/training/OrientationModal";
 import jsPDF from 'jspdf';
@@ -104,7 +105,20 @@ function isMenuHidden(key: string): boolean {
 
 function MenuVisibilityControls() {
   const [hidden, setHidden] = useState<string[]>(getHiddenMenuItems());
+  const { isDemoMode } = useDemoMode();
   const { toast } = useToast();
+
+  const ensureNotDemo = (action: string) => {
+    if (isDemoMode) {
+      toast({
+        title: "Simulation Active",
+        description: `Persistent ${action} is disabled in the public interactive demo. Your local changes will not affect live business data.`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    return true;
+  };
   const toggleKey = (key: string, show: boolean) => {
     const next = show ? hidden.filter((k) => k !== key) : [...hidden, key];
     setHidden(next);
@@ -119,7 +133,10 @@ function MenuVisibilityControls() {
         const shown = !hidden.includes(item.key);
         return (
           <div key={item.key} className="flex items-center gap-2 p-2 rounded border border-zinc-800 bg-zinc-900">
-            <Checkbox checked={shown} onCheckedChange={(val) => toggleKey(item.key, Boolean(val))} id={`menu_${item.key}`} />
+            <Checkbox checked={shown} onCheckedChange={(val) => {
+              if (!ensureNotDemo("menu visibility toggle")) return;
+              toggleKey(item.key, Boolean(val));
+            }} id={`menu_${item.key}`} />
             <Label htmlFor={`menu_${item.key}`} className="text-sm text-white">{item.label}</Label>
           </div>
         );
@@ -130,6 +147,18 @@ function MenuVisibilityControls() {
 
 export default function AdminDashboard() {
   const { toast } = useToast();
+  const { isDemoMode } = useDemoMode();
+  const ensureNotDemo = (action: string) => {
+    if (isDemoMode) {
+      toast({
+        title: "Simulation Active",
+        description: `Persistent ${action} is disabled in the public interactive demo. Your local changes will not affect live business data.`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    return true;
+  };
   const { latest, unreadCount, markRead, dismiss, dismissAll, refresh } = useAlertsStore();
   const alertsAll = useAlertsStore((s) => s.alerts);
   const [newBookingsToday, setNewBookingsToday] = useState<number>(0);
@@ -247,6 +276,7 @@ export default function AdminDashboard() {
   useEffect(() => { if (employeeMgmtOpen) loadEmployees(); }, [employeeMgmtOpen]);
 
   const createEmployee = async () => {
+    if (!ensureNotDemo("employee creation")) return;
     if (!empNewName || !empNewEmail) {
       toast({ title: 'Name and Email required' });
       return;
@@ -271,6 +301,7 @@ export default function AdminDashboard() {
     }
   };
   const updateEmployee = async () => {
+    if (!ensureNotDemo("employee update")) return;
     if (!empEditId) return;
     const res = await api('/api/users/update', { method: 'POST', body: JSON.stringify({ id: empEditId, name: empEditName, email: empEditEmail }) });
     if (res?.ok) {
@@ -287,6 +318,7 @@ export default function AdminDashboard() {
     else { toast({ title: 'Impersonation failed' }); }
   };
   const deleteEmployee = async (id: string) => {
+    if (!ensureNotDemo("employee deletion")) return;
     if (!confirm('Delete this employee?')) return;
     const res = await api(`/api/users/${id}`, { method: 'DELETE' });
     if (res?.ok) { await loadEmployees(); toast({ title: 'Employee deleted' }); }
@@ -336,6 +368,7 @@ export default function AdminDashboard() {
   });
 
   const handleCreateUser = async () => {
+    if (!ensureNotDemo("user creation")) return;
     try {
       const payload = {
         name: newName.trim(),
@@ -367,6 +400,7 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateRole = async (id: string, role: 'employee' | 'admin') => {
+    if (!ensureNotDemo("role update")) return;
     try {
       // Find the user email from our state list
       const targetUser = users.find(u => u.id === id);
@@ -392,6 +426,7 @@ export default function AdminDashboard() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!ensureNotDemo("user deletion")) return;
     try {
       const res = await api(`/api/users/${id}`, { method: 'DELETE' });
       if (res?.ok) {

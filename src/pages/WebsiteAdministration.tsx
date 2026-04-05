@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import { postFullSync, getAllPackageMeta, setPackageMeta, getCustomPackages, getCustomServices } from "@/lib/servicesMeta";
 import { servicePackages as builtInPackages } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { contentService } from "@/lib/content";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,20 @@ import * as bookingsSvc from "@/services/supabase/bookings";
 
 export default function WebsiteAdministration() {
   const { toast } = useToast();
+  const { isDemoMode } = useDemoMode();
+
+  const ensureNotDemo = (action: string) => {
+    if (isDemoMode) {
+      toast({
+        title: "Simulation Active",
+        description: `Persistent ${action} is disabled in the public interactive demo. Your local changes will not affect live business data.`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    return true;
+  };
+
   const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
   const [showBookNow, setShowBookNow] = useState(false);
   const [helpId, setHelpId] = useState<string | null>(null);
@@ -200,6 +215,7 @@ export default function WebsiteAdministration() {
   };
 
   const handleUnblockRange = async (range: { start: string; end: string; reason: string; ids: string[] }) => {
+    if (!ensureNotDemo("calendar unblocking")) return;
     if (!confirm(`Remove all blocks from ${range.start} to ${range.end}?`)) return;
     const { unblockDateRange } = await import('@/lib/availability');
     await unblockDateRange(range.start, range.end);
@@ -299,6 +315,7 @@ export default function WebsiteAdministration() {
   const [editAbout, setEditAbout] = useState<any | null>(null);
 
   const handleUpdateStatus = async (newStatus: any) => {
+    if (!ensureNotDemo("status deployment")) return;
     setBusinessStatus(newStatus);
     setActiveStatus(newStatus);
     const isLive = newStatus.mode === 'live' || (newStatus.mode === 'custom' && newStatus.showBooking);
@@ -738,8 +755,16 @@ export default function WebsiteAdministration() {
           </DropdownMenu>
 
           <Card 
-            className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-amber-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20`}
+            className={`p-4 bg-zinc-900/40 border-zinc-800/50 flex items-center gap-4 hover:border-amber-900/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-95 group shadow-lg shadow-black/20 ${isDemoMode ? 'opacity-50 grayscale' : ''}`}
             onClick={async () => {
+              if (isDemoMode) {
+                toast({
+                  title: "Demo Mode active",
+                  description: "You cannot toggle test modes while in interactive demo.",
+                  variant: "destructive"
+                });
+                return;
+              }
               const next = !bookingTestMode;
               setBookingTestMode(next);
               await contentService.upsertServiceMeta({
@@ -1205,6 +1230,7 @@ export default function WebsiteAdministration() {
                           variant="destructive"
                           className="h-7 text-[10px] bg-red-900/60 hover:bg-red-700 border border-red-700/50 font-black uppercase"
                           onClick={async () => {
+                            if (!ensureNotDemo("clearing all blocks")) return;
                             if (!confirm(`This will clear ALL ${blockHistory.reduce((t, r) => t + r.ids.length, 0)} blocked dates from the booking calendar. Are you sure?`)) return;
                             const { supabase } = await import('@/lib/supabase');
                             await supabase.from('availability_blocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -1247,6 +1273,7 @@ export default function WebsiteAdministration() {
                             variant="destructive"
                             className="h-7 text-[10px] bg-red-900/40 hover:bg-red-700 border border-red-700/30 text-red-400 hover:text-white font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={async () => {
+                              if (!ensureNotDemo("block removal")) return;
                               await handleUnblockRange(range);
                               if (blockStaffScheduler) {
                                 try {
@@ -1318,6 +1345,7 @@ export default function WebsiteAdministration() {
                       <Switch
                         checked={bookingTestMode}
                         onCheckedChange={async (checked) => {
+                          if (!ensureNotDemo("test mode toggle")) return;
                           setBookingTestMode(checked);
                           await contentService.upsertServiceMeta({
                             key: 'booking_test_mode',
@@ -1372,7 +1400,10 @@ export default function WebsiteAdministration() {
                     <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Register Vehicle Types</h4>
                     <HelpCircle className="h-3.5 w-3.5 text-zinc-700 cursor-pointer hover:text-white" onClick={() => setHelpId('vehicle-types-management')} />
                   </div>
-                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewVehicleOpen(true)}>Add Type</Button>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => {
+                    if (!ensureNotDemo("addition")) return;
+                    setNewVehicleOpen(true);
+                  }}>Add Type</Button>
                 </div>
                 <div className="w-full overflow-x-auto">
                   <Table>
@@ -1391,6 +1422,7 @@ export default function WebsiteAdministration() {
                           <TableCell className="text-right flex justify-end gap-1">
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditVehicle(vt)}><Pencil className="h-3 w-3" /></Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" disabled={vt.protected} onClick={async () => {
+                              if (!ensureNotDemo("deletion")) return;
                               if (!confirm('Delete this vehicle type?')) return;
                               await contentService.deleteVehicleType(vt.id);
                               const updated = await contentService.getVehicleTypes();
@@ -1511,6 +1543,7 @@ export default function WebsiteAdministration() {
                     toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
                   }}>Reset to Default</Button>
                   <Button className="bg-red-700 hover:bg-red-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertServiceMeta({ key: 'home_content', meta: homeData, description: 'Complete Home Content' });
                     notifyChange('home');
                     toast({ title: 'Home settings saved!', description: 'All sections updated live.' });
@@ -1575,6 +1608,7 @@ export default function WebsiteAdministration() {
                             <div className="flex gap-1">
                               <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-white" onClick={() => setEditTestimonial(t)}><Pencil className="h-3 w-3" /></Button>
                               <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-red-500" onClick={async () => {
+                                if (!ensureNotDemo("deletion")) return;
                                 if(!confirm('Delete?')) return;
                                 await contentService.deleteTestimonial(t.id);
                                 const updated = await contentService.getTestimonials();
@@ -1674,6 +1708,7 @@ export default function WebsiteAdministration() {
                     toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
                   }}>Reset to Default</Button>
                   <Button className="bg-blue-700 hover:bg-blue-800 px-8 font-black uppercase italic tracking-tighter" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertServiceMeta({ key: 'about_content', meta: aboutData, description: 'Complete About Content' });
                     notifyChange('about');
                     toast({ title: 'About settings saved!', description: 'Page sections updated.' });
@@ -1684,7 +1719,10 @@ export default function WebsiteAdministration() {
 
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold uppercase text-zinc-400 tracking-widest text-xs">About Sections Table (Legacy)</h4>
-                  <Button className="bg-zinc-800 hover:bg-zinc-700 h-8 text-xs" onClick={() => setNewAboutOpen(true)}>Add Row</Button>
+                  <Button className="bg-zinc-800 hover:bg-zinc-700 h-8 text-xs" onClick={() => {
+                    if (!ensureNotDemo("addition")) return;
+                    setNewAboutOpen(true);
+                  }}>Add Row</Button>
                 </div>
                 <div className="w-full overflow-x-auto mb-6">
                   <Table>
@@ -1703,6 +1741,7 @@ export default function WebsiteAdministration() {
                           <TableCell className="flex gap-2">
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white" onClick={() => setEditAbout(s)}><Pencil className="h-3 w-3" /></Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-red-500" onClick={async () => {
+                              if (!ensureNotDemo("deletion")) return;
                               if (!confirm('Delete this section?')) return;
                               await contentService.deleteAboutSection(s.id);
                               const updated = await contentService.getAboutSections();
@@ -1729,7 +1768,10 @@ export default function WebsiteAdministration() {
               <AccordionContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Manage FAQs</h4>
-                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => setNewFaqOpen(true)}>Add FAQ</Button>
+                  <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => {
+                    if (!ensureNotDemo("addition")) return;
+                    setNewFaqOpen(true);
+                  }}>Add FAQ</Button>
                 </div>
                 <div className="w-full overflow-x-auto">
                   <Table>
@@ -1748,6 +1790,7 @@ export default function WebsiteAdministration() {
                           <TableCell className="text-right flex justify-end gap-1">
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
+                              if (!ensureNotDemo("deletion")) return;
                               if (!confirm('Delete this FAQ?')) return;
                               await contentService.deleteFaq(fq.id);
                               const updated = await contentService.getFaqs();
@@ -1793,6 +1836,7 @@ export default function WebsiteAdministration() {
                 </div>
                 <div className="flex justify-end">
                   <Button className="bg-red-700 hover:bg-red-800 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertContact(contactInfo);
                     notifyChange('contact');
                     toast({ title: 'Contact Sync', description: 'Business details updated.' });
@@ -1819,6 +1863,7 @@ export default function WebsiteAdministration() {
                   />
                   <div className="flex justify-end">
                     <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs uppercase font-bold" onClick={async () => {
+                      if (!ensureNotDemo("save")) return;
                       await contentService.upsertServiceMeta({ key: 'disclaimer', description: servicesDisclaimer });
                       toast({ title: 'Disclaimer Updated' });
                     }}>Save Disclaimer</Button>
@@ -1848,6 +1893,7 @@ export default function WebsiteAdministration() {
                               size="sm"
                               className="h-7 text-[10px] bg-red-700 hover:bg-red-800"
                               onClick={async () => {
+                                if (!ensureNotDemo("save")) return;
                                 const current = learnMoreEdit[pkg.id] || { description: '', stepIds: [] };
                                 await contentService.upsertServiceMeta({
                                   key: pkg.id,
@@ -1940,6 +1986,7 @@ export default function WebsiteAdministration() {
                     toast({ title: 'Defaults Loaded', description: 'Click Save to apply these to the live site.' });
                   }}>Reset to Default</Button>
                   <Button className="bg-amber-600 hover:bg-amber-700 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertServiceMeta({ key: 'footer_content', meta: footerData, description: 'Website Footer Content' });
                     notifyChange('footer');
                     toast({ title: 'Footer Updated', description: 'Changes reflect live on the website.' });
@@ -1996,6 +2043,7 @@ export default function WebsiteAdministration() {
                     { to: "/contact", label: "Contact" },
                   ])}>Reset to Defaults</Button>
                   <Button className="bg-emerald-600 hover:bg-emerald-700 px-6 font-bold uppercase tracking-tighter" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertServiceMeta({ key: 'header_links', meta: { links: headerLinks }, description: 'Main Navigation Menu' });
                     notifyChange('header');
                     toast({ title: 'Menu Saved', description: 'Navigation links updated live.' });
@@ -2019,6 +2067,7 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditTestimonial(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertTestimonial({ id: editTestimonial.id, name: editTestimonial.name, quote: editTestimonial.quote, role: 'Customer' });
                     const updated = await contentService.getTestimonials();
                     setTestimonials(Array.isArray(updated) ? updated : []);
@@ -2043,6 +2092,7 @@ export default function WebsiteAdministration() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewTestimonialOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                  if (!ensureNotDemo("add")) return;
                   const name = (newTestimonialName || '').trim();
                   const quote = (newTestimonialQuote || '').trim();
                   if (!name || !quote) { toast({ title: 'Name and Quote required' }); return; }
@@ -2085,6 +2135,7 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditVehicle(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertVehicleType({
                       id: editVehicle.id,
                       name: editVehicle.name,
@@ -2140,6 +2191,7 @@ export default function WebsiteAdministration() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewVehicleOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                  if (!ensureNotDemo("add")) return;
                   const safeName = (newVehicleName || '').trim();
                   if (!safeName) { toast({ title: 'Name required' }); return; }
                   const slug = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `vt_${Date.now()}`;
@@ -2178,6 +2230,7 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditFaq(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertFaq({ id: editFaq.id, question: editFaq.question, answer: editFaq.answer, sort_order: editFaq.sort_order });
                     const updated = await contentService.getFaqs();
                     setFaqs(updated);
@@ -2202,6 +2255,7 @@ export default function WebsiteAdministration() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewFaqOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                  if (!ensureNotDemo("add")) return;
                   if (!newFaqQ.trim() || !newFaqA.trim()) { toast({ title: 'Required' }); return; }
                   await contentService.upsertFaq({ question: newFaqQ, answer: newFaqA, sort_order: faqs.length });
                   const updated = await contentService.getFaqs();
@@ -2229,6 +2283,7 @@ export default function WebsiteAdministration() {
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setEditAbout(null)}>Cancel</Button>
                   <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                    if (!ensureNotDemo("save")) return;
                     await contentService.upsertAboutSection({ id: editAbout.id, section_title: editAbout.section, content: editAbout.content });
                     const updated = await contentService.getAboutSections();
                     setAboutSections(updated.map(s => ({ ...s, section: s.section_title })));
@@ -2253,6 +2308,7 @@ export default function WebsiteAdministration() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" className="border-red-700 text-red-700 hover:bg-red-700/10" onClick={() => setNewAboutOpen(false)}>Cancel</Button>
                 <Button className="bg-red-700 hover:bg-red-800" onClick={async () => {
+                  if (!ensureNotDemo("add")) return;
                   if (!newAboutSection.trim() || !newAboutContent.trim()) { toast({ title: 'Required' }); return; }
                   await contentService.upsertAboutSection({ section_title: newAboutSection, content: newAboutContent, sort_order: aboutSections.length });
                   const updated = await contentService.getAboutSections();
