@@ -7,6 +7,11 @@ import { toast } from "sonner";
  * high enough quality for inventory and notes.
  */
 export const compressImageForUpload = async (file: File, options = {}) => {
+  // Give the browser UI thread a moment to settle after returning from native camera
+  // This is a known fix for mobile "low memory" crashes where the system is still
+  // recovering from the Camera app's memory usage.
+  await new Promise(resolve => setTimeout(resolve, 500));
+
   const defaultOptions = {
     maxSizeMB: 0.5,           // Target size < 500KB
     maxWidthOrHeight: 1280,  // Maximum dimension 1280px (plenty for thumbnails/previews)
@@ -27,9 +32,14 @@ export const compressImageForUpload = async (file: File, options = {}) => {
     console.log(`Compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
     return compressedFile;
   } catch (error) {
-    console.warn("Image compression failed, falling back to original file:", error);
-    // On some extremely low-memory devices, web workers might fail or browser might hang
-    // We fall back to the original to at least TRY the upload, though it might still be heavy
-    return file;
+    console.warn("Worker-based compression failed, trying main-thread fallback:", error);
+    try {
+      // Fallback for extremely low memory: no web worker
+      const fallbackOptions = { ...defaultOptions, useWebWorker: false };
+      return await browserImageCompression(file, fallbackOptions);
+    } catch (fallbackError) {
+      console.warn("All compression attempts failed, falling back to original file:", fallbackError);
+      return file;
+    }
   }
 };

@@ -178,6 +178,27 @@ const InventoryControl = () => {
       }
     }
 
+    // SESSION RECOVERY: Check if we were in the middle of an edit when the app reloaded
+    // (Common on mobile after OS kills browser to free memory for the Camera app)
+    const checkRecovery = () => {
+      const pendingActive = sessionStorage.getItem('pending_inventory_form_active');
+      const pendingForm = sessionStorage.getItem('pending_inventory_form');
+      if (pendingActive && pendingForm) {
+        try {
+          const parsed = JSON.parse(pendingForm);
+          setModalMode(parsed.mode);
+          setModalOpen(true);
+          // Don't set editing here, UnifiedInventoryModal will restore the form itself
+          console.log("Recovered inventory modal after reload");
+          toast({ title: "Session Recovered", description: "Returning you to your inventory update." });
+        } catch (e) { console.error("Recovery failed", e); }
+      }
+      // Always clear the active flag so we don't loop
+      sessionStorage.removeItem('pending_inventory_form_active');
+    };
+
+    checkRecovery();
+
     // Persist date filter
     const saved = localStorage.getItem('inventory-date-filter');
     if (saved) setDateFilter(saved as any);
@@ -2052,7 +2073,14 @@ const InventoryControl = () => {
       <UnifiedInventoryModal
         mode={modalMode}
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) {
+            // Clean up session draft when closed normally
+            sessionStorage.removeItem('pending_inventory_form');
+            sessionStorage.removeItem('pending_inventory_form_active');
+          }
+        }}
         initial={editing || null}
         onSaved={async () => { await loadData(); }}
       />

@@ -173,11 +173,28 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         price: (initial as any).price ? String((initial as any).price) : "",
         lifeExpectancy: (initial as any).lifeExpectancy || "",
         unitOfMeasure: initialUnit,
-        imageUrl: (initial as any).imageUrl || "",
+        imageUrl: (initial as any).imageUrl || f.imageUrl, // Preserve if already set
         chemicalLibraryId: (initial as any).chemicalLibraryId || "",
         dilutionRatios: (initial as any).dilutionRatios || [],
       }));
     } else {
+      // Check for session-saved "Draft" (recovery from crash)
+      const saved = sessionStorage.getItem('pending_inventory_form');
+      if (saved && open) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.mode === mode) {
+            setForm(parsed.form);
+            setCustomSubtype(parsed.customSubtype);
+            setCustomUnit(parsed.customUnit);
+            // Clear immediately to avoid unwanted loops, 
+            // but we'll re-save if it stays open
+            sessionStorage.removeItem('pending_inventory_form');
+            return;
+          }
+        } catch (e) { console.error("Restore failed", e); }
+      }
+
       setCustomSubtype(false);
       setCustomUnit(false);
       setForm({
@@ -205,6 +222,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       });
     }
   }, [initial, open, mode]);
+
+  // SESSION RECOVERY: Persist form state to SESSION STORAGE on every change
+  // This allows the app to RE-OPEN the modal automatically if the browser reloads
+  // after the user takes a picture (common mobile OOM crash)
+  useEffect(() => {
+    if (open) {
+      sessionStorage.setItem('pending_inventory_form', JSON.stringify({
+        form,
+        mode,
+        customSubtype,
+        customUnit
+      }));
+    } else {
+      // Don't clear immediately, wait for InventoryControl component to decide
+    }
+  }, [form, mode, customSubtype, customUnit, open]);
 
   const numeric = (v: string) => {
     const n = parseFloat(v);
@@ -481,7 +514,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               <button
                 type="button"
                 className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg hover:bg-blue-500 transition-colors"
-                onClick={(e) => { e.stopPropagation(); photoCameraRef.current?.click(); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  // Pre-save state just before triggering camera
+                  sessionStorage.setItem('pending_inventory_form_active', 'true');
+                  photoCameraRef.current?.click(); 
+                }}
               >
                 <Camera className="h-3 w-3 text-white" />
               </button>
