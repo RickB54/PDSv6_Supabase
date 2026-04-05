@@ -9,11 +9,11 @@ import {
     Search, Image as ImageIcon, Video, Maximize2, X, ChevronRight,
     ChevronDown, ChevronUp, ChevronsUp, ChevronsDown, Trash2, Plus, ExternalLink, User, Car, Loader2,
     Calendar, Filter, Share2, Facebook, Copy, Camera, Upload, Download,
-    ArrowLeft, LayoutGrid
+    ArrowLeft, LayoutGrid, HelpCircle
 } from "lucide-react";
 import { uploadFile } from "@/lib/storage-utils";
 import { getCurrentUser } from "@/lib/auth";
-import { getSupabaseCustomers, Customer, Vehicle, upsertSupabaseVehicle, supabase, getSupabaseAllVehicles } from "@/lib/supa-data";
+import { getSupabaseCustomers, Customer, Vehicle, upsertSupabaseVehicle, supabase, getSupabaseAllVehicles, getLibraryItems, upsertLibraryItem, deleteLibraryItem } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
@@ -32,7 +32,9 @@ export default function VehicleGallery() {
     const [loading, setLoading] = useState(true);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
+    const [generalGalleryItems, setGeneralGalleryItems] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeTab, setActiveTab] = useState<'organized' | 'general'>('organized');
 
     // UI State
     const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: 'image' | 'video'; title: string } | null>(null);
@@ -46,7 +48,7 @@ export default function VehicleGallery() {
     const [targetVehicle, setTargetVehicle] = useState<Vehicle | null>(null);
     const [newMediaUrl, setNewMediaUrl] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [newMediaType, setNewMediaType] = useState<'general' | 'before' | 'after' | 'video'>('general');
+    const [newMediaType, setNewMediaType] = useState<'general' | 'before' | 'after' | 'video' | 'gallery'>('general');
     const [saving, setSaving] = useState(false);
 
     // Quick Add Vehicle State
@@ -79,13 +81,15 @@ export default function VehicleGallery() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [customerData, vehicleData] = await Promise.all([
+            const [customerData, vehicleData, galleryData] = await Promise.all([
                 getSupabaseCustomers(),
-                getSupabaseAllVehicles()
+                getSupabaseAllVehicles(),
+                getLibraryItems('general_gallery')
             ]);
 
             setCustomers(customerData);
             setAllVehicles(vehicleData);
+            setGeneralGalleryItems(galleryData);
 
             if (vehicleData.length < 5) {
                 setExpandedVehicleIds(vehicleData.map(v => v.id));
@@ -208,7 +212,7 @@ export default function VehicleGallery() {
     };
 
     const handleAddMedia = async () => {
-        if (!targetVehicle) return;
+        if (!targetVehicle && newMediaType !== 'gallery') return;
         if (newMediaType === 'video' && !newMediaUrl.trim()) return;
         if (newMediaType !== 'video' && !selectedFile && !newMediaUrl.trim()) return;
 
@@ -230,9 +234,22 @@ export default function VehicleGallery() {
             if (newMediaType === 'after') updatedVehicle.afterPhotos = [...(targetVehicle.afterPhotos || []), url];
             if (newMediaType === 'video') updatedVehicle.videoUrls = [...(targetVehicle.videoUrls || []), url];
 
-            await upsertSupabaseVehicle(updatedVehicle as any);
-            addToRecentCustomers(selectedCustomerId);
-            toast({ title: "Media Added", description: "Successfully added to vehicle gallery." });
+            if (newMediaType === 'gallery') {
+                const galleryItem = {
+                    id: crypto.randomUUID(),
+                    title: `Gallery ${new Date().toLocaleDateString()}`,
+                    description: `General gallery item uploaded on ${new Date().toLocaleDateString()}`,
+                    category: 'general_gallery',
+                    type: 'image',
+                    url: url
+                };
+                await upsertLibraryItem(galleryItem as any);
+                toast({ title: "Added to Gallery", description: "Successfully added to the General Gallery." });
+            } else {
+                await upsertSupabaseVehicle(updatedVehicle as any);
+                addToRecentCustomers(selectedCustomerId);
+                toast({ title: "Media Added", description: "Successfully added to vehicle gallery." });
+            }
             setNewMediaUrl("");
             setSelectedFile(null);
             setSelectedCustomerId("");
@@ -262,7 +279,18 @@ export default function VehicleGallery() {
             <main className="container mx-auto px-4 py-6 max-w-7xl animate-in fade-in duration-500">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div className="flex-1 min-w-[280px]">
-                        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Media Library</h1>
+                        <div className="flex items-center gap-3 mb-2">
+                            <h1 className="text-2xl md:text-3xl font-bold text-white">Media Library</h1>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
+                                title="Media Library Help"
+                            >
+                                <HelpCircle className="h-5 w-5" />
+                            </Button>
+                        </div>
                         <p className="text-zinc-400 text-xs md:text-sm">Centralized repository for all vehicle photos and embedded videos.</p>
                     </div>
 
@@ -772,14 +800,14 @@ export default function VehicleGallery() {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Media Category</label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {(['general', 'before', 'after', 'video'] as const).map((t) => (
+                                    {(['general', 'before', 'after', 'video', 'gallery'] as const).map((t) => (
                                         <Button
                                             key={t}
                                             variant={newMediaType === t ? "default" : "outline"}
                                             className={`h-9 text-xs capitalize ${newMediaType === t ? 'bg-blue-600' : 'border-zinc-800'}`}
                                             onClick={() => setNewMediaType(t)}
                                         >
-                                            {t}
+                                            {t === 'gallery' ? 'General Gallery' : t}
                                         </Button>
                                     ))}
                                 </div>

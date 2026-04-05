@@ -164,10 +164,10 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Help", icon: HelpCircle,
+            title: "", icon: HelpCircle,
             items: [
-                { title: "Admin Help Guide", url: "#help-admin", role: "admin", key: "help-admin", icon: HelpCircle, iconColor: "text-sky-500" },
-                { title: "Employee Help Guide", url: "#help-employee", role: "employee", key: "help-employee", icon: HelpCircle, iconColor: "text-emerald-500" },
+                { title: "Admin Portal Help", url: "#help-admin", role: "admin", key: "help-admin", icon: HelpCircle, iconColor: "text-sky-500", helpTopicId: "admin-dashboard" },
+                { title: "Staff Support Help", url: "#help-employee", role: "employee", key: "help-employee", icon: HelpCircle, iconColor: "text-emerald-500", helpTopicId: "checklist-tools-guide" },
             ]
         },
         {

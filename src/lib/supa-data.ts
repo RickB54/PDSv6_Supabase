@@ -1276,12 +1276,17 @@ export interface LibraryItem {
 /**
  * Get all learning library items from Supabase
  */
-export async function getLibraryItems(): Promise<LibraryItem[]> {
+export async function getLibraryItems(category?: string): Promise<LibraryItem[]> {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('learning_library_items')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select('*');
+        
+        if (category) {
+            query = query.eq('category', category);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
 

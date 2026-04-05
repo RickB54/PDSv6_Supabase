@@ -365,7 +365,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
-  const handleNavClick = (e: React.MouseEvent, url: string) => {
+  const handleNavClick = (e: React.MouseEvent, url: string, topicId?: string) => {
     if (openMobile) setOpenMobile(false);
     
     if (url.startsWith('#')) {
@@ -374,7 +374,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
         window.dispatchEvent(new Event('open-call-assistant'));
       } else if (url.startsWith('#help')) {
         const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
-        window.dispatchEvent(new CustomEvent('open-help', { detail: { role } }));
+        window.dispatchEvent(new CustomEvent('open-help', { detail: { role, topicId } }));
       }
     }
   };
@@ -399,7 +399,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       collapsible="icon"
       style={{ top: isDemoMode ? '40px' : '0' }}
     >
-      <div className={cn("flex flex-col border-b border-white/5", isDemoMode ? "pt-[80px]" : "pt-[80px]")}>
+      <div className={cn("flex flex-col border-b border-white/5", isDemoMode ? "pt-0" : "pt-0")}>
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
           <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
             <img src={logo} alt="Prime Auto Detail" className="h-9 w-auto min-w-[36px]" />
@@ -413,11 +413,22 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           
           <div className="flex items-center gap-1">
             {open && (
-              <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-zinc-500 hover:text-white transition-colors" title="Toggle Groups">
-                {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
-              </Button>
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: isAdmin ? 'admin' : 'employee' } }))}
+                  className="h-8 w-8 text-zinc-400 hover:text-emerald-400 transition-colors" 
+                  title="Open Help Guide"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-zinc-500 hover:text-white transition-colors" title="Toggle Groups">
+                  {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
+                </Button>
+              </>
             )}
-            <SidebarTrigger className="h-8 w-8 text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all" />
+            <SidebarTrigger className="h-8 w-8 text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all relative z-[100]" />
           </div>
         </div>
       </div>
@@ -459,7 +470,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title} className="bg-transparent hover:bg-transparent">
-                      <Link to={item.url} className={className} onClick={(e) => handleNavClick(e, item.url)}>
+                      <Link to={item.url} className={className} onClick={(e) => handleNavClick(e, item.url, item.helpTopicId)}>
                         {item.icon && <item.icon className="h-4 w-4" />}
                         {open && <span>{item.title}</span>}
                       </Link>
@@ -480,7 +491,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
                 return (
                   <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl)}>
+                    <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
                       <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {open && <span>{item.title}</span>}
@@ -539,7 +550,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                       "flex items-center gap-2 py-2 h-auto text-[11px]",
                                       isActive ? "text-blue-500 font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
                                     )} 
-                                    onClick={(e) => handleNavClick(e, targetUrl)}
+                                    onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
                                   >
                                     {item.icon && <item.icon className={cn("h-3.5 w-3.5", isActive ? "text-blue-500" : "text-zinc-500")} />}
                                     <span>{item.title}</span>
