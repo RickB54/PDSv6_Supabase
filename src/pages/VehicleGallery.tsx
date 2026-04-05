@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageHeader } from "@/components/PageHeader";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,17 +8,19 @@ import {
     Search, Image as ImageIcon, Video, Maximize2, X, ChevronRight,
     ChevronDown, ChevronUp, ChevronsUp, ChevronsDown, Trash2, Plus, ExternalLink, User, Car, Loader2,
     Calendar, Filter, Share2, Facebook, Copy, Camera, Upload, Download,
-    ArrowLeft, LayoutGrid, HelpCircle
+    ArrowLeft, LayoutGrid, HelpCircle, Clock, Info
 } from "lucide-react";
 import { uploadFile } from "@/lib/storage-utils";
 import { getCurrentUser } from "@/lib/auth";
-import { getSupabaseCustomers, Customer, Vehicle, upsertSupabaseVehicle, supabase, getSupabaseAllVehicles, getLibraryItems, upsertLibraryItem, deleteLibraryItem } from "@/lib/supa-data";
+import { 
+    getSupabaseCustomers, Customer, Vehicle, upsertSupabaseVehicle, 
+    supabase, getSupabaseAllVehicles, getLibraryItems, upsertLibraryItem, 
+    deleteLibraryItem 
+} from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
 import { Badge } from "@/components/ui/badge";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -94,17 +95,6 @@ export default function VehicleGallery() {
             if (vehicleData.length < 5) {
                 setExpandedVehicleIds(vehicleData.map(v => v.id));
             }
-
-            console.log('🖼️ Gallery loaded:', {
-                customerCount: customerData.length,
-                totalVehicles: vehicleData.length,
-                vehiclesWithPhotos: vehicleData.filter(v =>
-                    (v.generalPhotos?.length || 0) +
-                    (v.beforePhotos?.length || 0) +
-                    (v.afterPhotos?.length || 0) +
-                    (v.videoUrls?.length || 0) > 0
-                ).length
-            });
         } catch (err) {
             console.error("Failed to load gallery data:", err);
             toast({ title: "Error", description: "Failed to load vehicle media data.", variant: "destructive" });
@@ -196,7 +186,6 @@ export default function VehicleGallery() {
             await upsertSupabaseVehicle(newVehicle as any);
             await loadData();
 
-            // Find and select the newly created vehicle
             const refreshedCustomer = customers.find(c => c.id === selectedCustomerId);
             const createdVehicle = refreshedCustomer?.vehicles?.find(v => v.id === newVehicle.id);
             if (createdVehicle) {
@@ -217,22 +206,16 @@ export default function VehicleGallery() {
         if (newMediaType !== 'video' && !selectedFile && !newMediaUrl.trim()) return;
 
         setSaving(true);
-        const updatedVehicle = { ...targetVehicle };
+        const updatedVehicle = targetVehicle ? { ...targetVehicle } : null;
         let url = newMediaUrl.trim();
 
         try {
-            // Upload file if selected
             if (newMediaType !== 'video' && selectedFile) {
                 toast({ title: "Uploading...", description: "Transferring media to secure storage." });
                 url = await uploadFile('customer-photos', selectedFile);
             }
 
             if (!url) throw new Error("No URL or file provided");
-
-            if (newMediaType === 'general') updatedVehicle.generalPhotos = [...(targetVehicle.generalPhotos || []), url];
-            if (newMediaType === 'before') updatedVehicle.beforePhotos = [...(targetVehicle.beforePhotos || []), url];
-            if (newMediaType === 'after') updatedVehicle.afterPhotos = [...(targetVehicle.afterPhotos || []), url];
-            if (newMediaType === 'video') updatedVehicle.videoUrls = [...(targetVehicle.videoUrls || []), url];
 
             if (newMediaType === 'gallery') {
                 const galleryItem = {
@@ -245,11 +228,17 @@ export default function VehicleGallery() {
                 };
                 await upsertLibraryItem(galleryItem as any);
                 toast({ title: "Added to Gallery", description: "Successfully added to the General Gallery." });
-            } else {
+            } else if (updatedVehicle) {
+                if (newMediaType === 'general') updatedVehicle.generalPhotos = [...(updatedVehicle.generalPhotos || []), url];
+                if (newMediaType === 'before') updatedVehicle.beforePhotos = [...(updatedVehicle.beforePhotos || []), url];
+                if (newMediaType === 'after') updatedVehicle.afterPhotos = [...(updatedVehicle.afterPhotos || []), url];
+                if (newMediaType === 'video') updatedVehicle.videoUrls = [...(updatedVehicle.videoUrls || []), url];
+                
                 await upsertSupabaseVehicle(updatedVehicle as any);
                 addToRecentCustomers(selectedCustomerId);
                 toast({ title: "Media Added", description: "Successfully added to vehicle gallery." });
             }
+            
             setNewMediaUrl("");
             setSelectedFile(null);
             setSelectedCustomerId("");
@@ -268,283 +257,233 @@ export default function VehicleGallery() {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                <p className="text-zinc-400">Loading Vehicle Gallery...</p>
+                <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs">Accessing Media Library...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            <PageHeader title="Vehicle Media Gallery" />
-            <main className="container mx-auto px-4 py-6 max-w-7xl animate-in fade-in duration-500">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                    <div className="flex-1 min-w-[280px]">
-                        <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-2xl md:text-3xl font-bold text-white">Media Library</h1>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
-                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
-                                title="Media Library Help"
-                            >
-                                <HelpCircle className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <p className="text-zinc-400 text-xs md:text-sm">Centralized repository for all vehicle photos and embedded videos.</p>
+        <div className="min-h-screen bg-black text-white">
+            <Navbar />
+            <main className="container mx-auto px-4 pt-24 pb-12">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-black uppercase tracking-tighter">Media <span className="text-blue-500">Library</span></h1>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-zinc-500 hover:text-white transition-all"
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
+                        >
+                            <HelpCircle className="h-5 w-5" />
+                        </Button>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                        {/* Upload Media Button */}
+                    <div className="flex items-center gap-3 w-full md:w-auto">
                         <Button
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 flex-1 md:flex-none"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-10 flex-1 md:flex-none px-6 rounded-xl font-bold uppercase tracking-tighter shadow-lg shadow-emerald-900/20"
                             onClick={() => setIsAddMediaOpen(true)}
                         >
                             <Upload className="h-4 w-4 mr-2" />
-                            <span className="whitespace-nowrap">Upload Media</span>
+                            Upload Media
                         </Button>
-
-                        {/* Expand/Collapse All */}
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                if (expandedVehicleIds.length > 0) {
-                                    setExpandedVehicleIds([]);
-                                } else {
-                                    setExpandedVehicleIds(filteredVehicles.map(v => v.id));
-                                }
-                            }}
-                            className="text-zinc-400 hover:text-white border border-zinc-800 bg-zinc-950/50 h-9 flex-1 md:flex-none"
-                        >
-                            {expandedVehicleIds.length > 0 ? (
-                                <><ChevronsUp className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Retract All</span></>
-                            ) : (
-                                <><ChevronsDown className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Expand All</span></>
-                            )}
-                        </Button>
-
-                        {/* View Mode Toggle */}
-                        <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-lg w-full md:w-auto overflow-x-auto scrollbar-none">
-                            <Button
-                                size="sm"
-                                variant={viewMode === 'gallery' ? 'default' : 'ghost'}
-                                className={`h-8 text-xs flex-1 md:flex-none px-2 ${viewMode === 'gallery' ? 'bg-blue-600 hover:bg-blue-700' : 'text-zinc-400'}`}
-                                onClick={() => setViewMode('gallery')}
-                                title="Organized by Vehicle"
-                            >
-                                <ImageIcon className="h-3.5 w-3.5 mr-1.5" /> Organized
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={viewMode === 'flat' ? 'default' : 'ghost'}
-                                className={`h-8 text-xs flex-1 md:flex-none px-2 ${viewMode === 'flat' ? 'bg-blue-600 hover:bg-blue-700' : 'text-zinc-400'}`}
-                                onClick={() => setViewMode('flat')}
-                                title="Continuous Grid"
-                            >
-                                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Flat
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                                className={`h-8 text-xs flex-1 md:flex-none px-2 ${viewMode === 'list' ? 'bg-blue-600 hover:bg-blue-700' : 'text-zinc-400'}`}
-                                onClick={() => setViewMode('list')}
-                                title="Grouped by Customer"
-                            >
-                                <Car className="h-3.5 w-3.5 mr-1.5" /> Grouped
-                            </Button>
-                        </div>
-
-                        <div className="relative w-full md:w-80">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                            <Input
-                                placeholder="Search Customer or Vehicle..."
-                                className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-blue-500/20"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
                     </div>
                 </div>
 
-                {filteredCustomers.length === 0 ? (
-                    <div className="text-center py-20 bg-zinc-900/30 border border-zinc-800 rounded-xl border-dashed">
-                        <ImageIcon className="h-12 w-12 mx-auto text-zinc-700 mb-4" />
-                        <h3 className="text-xl font-semibold text-zinc-300">No media found</h3>
-                        <p className="text-zinc-500 mt-2">Try adjusting your search or add media via Customer Cards.</p>
-                    </div>
-                ) : viewMode === 'flat' ? (
-                    <FlatGalleryView
-                        vehicles={filteredVehicles}
-                        onMediaClick={handleMediaClick}
-                        onDeleteMedia={handleDeleteMedia}
-                        isAdmin={isAdmin}
-                    />
-                ) : viewMode === 'gallery' ? (
-                    <UnifiedGalleryView
-                        vehicles={filteredVehicles}
-                        onMediaClick={handleMediaClick}
-                        onDeleteMedia={handleDeleteMedia}
-                        isAdmin={isAdmin}
-                        toast={toast}
-                        expandedVehicleIds={expandedVehicleIds}
-                        onToggleVehicle={(id) => setExpandedVehicleIds(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
-                        onToggleAll={() => {
-                            if (expandedVehicleIds.length > 0) setExpandedVehicleIds([]);
-                            else setExpandedVehicleIds(filteredVehicles.map(v => v.id));
-                        }}
-                    />
-                ) : (
-                    <div className="space-y-6">
-                        {filteredCustomers.map(customer => {
-                            // Filter vehicles to only show those that match search OR if no search show all
-                            const displayVehicles = customer.vehicles || [];
+                <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-zinc-900/30 p-4 rounded-2xl border border-zinc-800">
+                        <TabsList className="bg-zinc-950 border border-zinc-800 p-1 rounded-xl">
+                            <TabsTrigger value="organized" className="px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg uppercase font-bold tracking-tighter">
+                                <Car className="h-4 w-4 mr-2" />
+                                Customers & Vehicles
+                            </TabsTrigger>
+                            <TabsTrigger value="general" className="px-6 data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg uppercase font-bold tracking-tighter">
+                                <LayoutGrid className="h-4 w-4 mr-2" />
+                                General Gallery
+                            </TabsTrigger>
+                        </TabsList>
 
-                            return (
-                                <Card key={customer.id} className="bg-zinc-900/50 border-zinc-800 overflow-hidden hover:border-zinc-700 transition-colors">
-                                    <CardHeader className="bg-zinc-900 pb-4 p-4 md:p-6">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 shrink-0 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30">
-                                                    <User className="h-5 w-5 text-blue-400" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <CardTitle className="text-white text-base md:text-lg truncate">{customer.name}</CardTitle>
-                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 mt-0.5">
-                                                        <Badge variant="outline" className="text-[10px] bg-zinc-800 border-zinc-700 whitespace-nowrap">
-                                                            {customer.type || 'Customer'}
-                                                        </Badge>
-                                                        {customer.email && <span className="flex items-center gap-1 truncate max-w-[150px]"><Filter className="h-3 w-3" /> {customer.email}</span>}
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-full md:w-80">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                                <Input
+                                    placeholder={activeTab === 'organized' ? "Search Customers..." : "Filter gallery..."}
+                                    className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-blue-500/20"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <TabsContent value="organized" className="space-y-6 mt-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                            <div className="flex items-center bg-zinc-950 rounded-xl p-1 border border-zinc-800">
+                                <Button
+                                    variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                                    className={`h-8 text-xs px-4 rounded-lg font-bold uppercase transition-all ${viewMode === 'gallery' ? 'bg-blue-600 text-white' : 'text-zinc-500 hover:text-white'}`}
+                                    onClick={() => setViewMode('gallery')}
+                                >
+                                    Timeline
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'flat' ? 'default' : 'ghost'}
+                                    className={`h-8 text-xs px-4 rounded-lg font-bold uppercase transition-all ${viewMode === 'flat' ? 'bg-blue-600 text-white' : 'text-zinc-500 hover:text-white'}`}
+                                    onClick={() => setViewMode('flat')}
+                                >
+                                    Flat Grid
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                    className={`h-8 text-xs px-4 rounded-lg font-bold uppercase transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-zinc-500 hover:text-white'}`}
+                                    onClick={() => setViewMode('list')}
+                                >
+                                    Grouped
+                                </Button>
+                            </div>
+
+                            {viewMode !== 'flat' && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (expandedVehicleIds.length > 0) setExpandedVehicleIds([]);
+                                        else setExpandedVehicleIds(allVehicles.map(v => v.id));
+                                    }}
+                                    className="text-zinc-400 hover:text-white border border-zinc-800 bg-zinc-950/30 h-8 rounded-lg text-[10px] font-black uppercase px-3"
+                                >
+                                    {expandedVehicleIds.length > 0 ? <><ChevronsUp className="h-3 w-3 mr-2" /> Retract All</> : <><ChevronsDown className="h-3 w-3 mr-2" /> Expand All</>}
+                                </Button>
+                            )}
+                        </div>
+
+                        {filteredCustomers.length === 0 ? (
+                            <div className="text-center py-20 bg-zinc-900/30 border border-zinc-800 rounded-xl border-dashed">
+                                <ImageIcon className="h-12 w-12 mx-auto text-zinc-700 mb-4" />
+                                <h3 className="text-xl font-semibold text-zinc-300">No media found</h3>
+                                <p className="text-zinc-500 mt-2">No vehicles matching your search were found.</p>
+                            </div>
+                        ) : viewMode === 'flat' ? (
+                            <FlatGalleryView 
+                                vehicles={filteredVehicles} 
+                                onMediaClick={handleMediaClick} 
+                                onDeleteMedia={handleDeleteMedia} 
+                                isAdmin={isAdmin} 
+                            />
+                        ) : viewMode === 'gallery' ? (
+                            <UnifiedGalleryView
+                                vehicles={filteredVehicles}
+                                onMediaClick={handleMediaClick}
+                                onDeleteMedia={handleDeleteMedia}
+                                isAdmin={isAdmin}
+                                toast={toast}
+                                expandedVehicleIds={expandedVehicleIds}
+                                onToggleVehicle={(id) => setExpandedVehicleIds(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
+                                onToggleAll={() => {
+                                    if (expandedVehicleIds.length > 0) setExpandedVehicleIds([]);
+                                    else setExpandedVehicleIds(filteredVehicles.map(v => v.id));
+                                }}
+                            />
+                        ) : (
+                            <div className="space-y-6">
+                                {filteredCustomers.map(customer => (
+                                    <Card key={customer.id} className="bg-zinc-900/50 border-zinc-800 overflow-hidden hover:border-zinc-700 transition-colors">
+                                        <CardHeader className="bg-zinc-900 pb-4 p-6">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 shrink-0 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30">
+                                                        <User className="h-5 w-5 text-blue-400" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <CardTitle className="text-white text-base md:text-lg truncate">{customer.name}</CardTitle>
+                                                        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 mt-0.5">
+                                                            <Badge variant="outline" className="text-[10px] bg-zinc-800 border-zinc-700 whitespace-nowrap">
+                                                                {customer.type || 'Customer'}
+                                                            </Badge>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <Badge className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap">
+                                                    {(customer.vehicles || []).length} Vehicle(s)
+                                                </Badge>
                                             </div>
-                                            <Badge className="bg-blue-600 hover:bg-blue-700 self-start sm:self-center whitespace-nowrap">
-                                                {customer.vehicles?.length || 0} Vehicle(s)
-                                            </Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        <Accordion
-                                            type="multiple"
-                                            className="w-full"
-                                            value={expandedVehicleIds}
-                                            onValueChange={setExpandedVehicleIds}
-                                        >
-                                            {displayVehicles.map((vehicle, vIdx) => (
-                                                <AccordionItem key={vehicle.id || vIdx} value={vehicle.id || `v-${vIdx}`} className="border-zinc-800/50 px-4 md:px-6">
-                                                    <AccordionTrigger className="hover:no-underline py-4">
-                                                        <div className="flex items-center justify-between w-full pr-4 gap-2">
-                                                            <div className="flex items-center gap-2 md:gap-3 text-left min-w-0">
-                                                                <Car className="h-4 w-4 text-zinc-500 shrink-0" />
-                                                                <span className="font-medium text-zinc-200 text-sm md:text-base truncate">
-                                                                    {vehicle.year} {vehicle.make} {vehicle.model}
-                                                                </span>
-                                                                <Badge variant="secondary" className="text-[9px] md:text-[10px] bg-zinc-800 text-zinc-400 font-normal whitespace-nowrap hidden xs:inline-flex">
-                                                                    {vehicle.type}
-                                                                </Badge>
+                                        </CardHeader>
+                                        <CardContent className="p-0">
+                                            <Accordion type="multiple" className="w-full" value={expandedVehicleIds} onValueChange={setExpandedVehicleIds}>
+                                                {(customer.vehicles || []).map((vehicle, vIdx) => (
+                                                    <AccordionItem key={vehicle.id || vIdx} value={vehicle.id || `v-${vIdx}`} className="border-zinc-800/50 px-6">
+                                                        <AccordionTrigger className="hover:no-underline py-4">
+                                                            <div className="flex items-center justify-between w-full pr-4 gap-2">
+                                                                <div className="flex items-center gap-3 text-left min-w-0">
+                                                                    <Car className="h-4 w-4 text-zinc-500 shrink-0" />
+                                                                    <span className="font-medium text-zinc-200 text-sm md:text-base truncate">
+                                                                        {vehicle.year} {vehicle.make} {vehicle.model}
+                                                                    </span>
+                                                                </div>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-7 px-3 text-[10px] uppercase font-bold text-zinc-400 border-zinc-800 hover:bg-zinc-800 hover:text-white shrink-0"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setTargetVehicle(vehicle);
+                                                                        setIsAddMediaOpen(true);
+                                                                    }}
+                                                                >
+                                                                    Add Media
+                                                                </Button>
                                                             </div>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="h-7 px-2 text-[9px] md:text-[10px] uppercase font-bold text-zinc-400 border-zinc-800 hover:bg-zinc-800 hover:text-white shrink-0"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setTargetVehicle(vehicle);
-                                                                    setIsAddMediaOpen(true);
-                                                                }}
-                                                            >
-                                                                <Plus className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">Add Media</span>
-                                                            </Button>
-                                                        </div>
-                                                    </AccordionTrigger>
-                                                    <AccordionContent className="pb-6">
-                                                        <Tabs defaultValue="all" className="w-full">
-                                                            <TabsList className="bg-zinc-950 border border-zinc-800 mb-4 h-9">
-                                                                <TabsTrigger value="all" className="text-xs h-7">All Media</TabsTrigger>
-                                                                <TabsTrigger value="before" className="text-xs h-7 text-orange-400">Before</TabsTrigger>
-                                                                <TabsTrigger value="after" className="text-xs h-7 text-emerald-400">After</TabsTrigger>
-                                                                <TabsTrigger value="videos" className="text-xs h-7 text-pink-400">Videos</TabsTrigger>
-                                                            </TabsList>
+                                                        </AccordionTrigger>
+                                                        <AccordionContent className="pb-6">
+                                                            <Tabs defaultValue="all" className="w-full">
+                                                                <TabsList className="bg-zinc-950 border border-zinc-800 mb-4 h-9 p-1">
+                                                                    <TabsTrigger value="all" className="text-xs h-7">All Media</TabsTrigger>
+                                                                    <TabsTrigger value="before" className="text-xs h-7 text-orange-400">Before</TabsTrigger>
+                                                                    <TabsTrigger value="after" className="text-xs h-7 text-emerald-400">After</TabsTrigger>
+                                                                    <TabsTrigger value="videos" className="text-xs h-7 text-pink-400">Videos</TabsTrigger>
+                                                                </TabsList>
+                                                                <TabsContent value="all" className="space-y-6">
+                                                                    <MediaGroup title="General" items={vehicle.generalPhotos || []} type="image" onView={(u: string) => handleMediaClick(u, 'image', `General - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'general', idx)} isAdmin={isAdmin} />
+                                                                    <MediaGroup title="Before" items={vehicle.beforePhotos || []} type="image" accent="orange" onView={(u: string) => handleMediaClick(u, 'image', `Before - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'before', idx)} isAdmin={isAdmin} />
+                                                                    <MediaGroup title="After" items={vehicle.afterPhotos || []} type="image" accent="emerald" onView={(u: string) => handleMediaClick(u, 'image', `After - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'after', idx)} isAdmin={isAdmin} />
+                                                                    <MediaGroup title="Videos" items={vehicle.videoUrls || []} type="video" accent="pink" onView={(u: string) => handleMediaClick(u, 'video', `Video - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'video', idx)} isAdmin={isAdmin} />
+                                                                </TabsContent>
+                                                                <TabsContent value="before">
+                                                                    <MediaGrid items={vehicle.beforePhotos || []} type="image" onView={(u: string) => handleMediaClick(u, 'image', `Before - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'before', idx)} isAdmin={isAdmin} />
+                                                                </TabsContent>
+                                                                <TabsContent value="after">
+                                                                    <MediaGrid items={vehicle.afterPhotos || []} type="image" onView={(u: string) => handleMediaClick(u, 'image', `After - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'after', idx)} isAdmin={isAdmin} />
+                                                                </TabsContent>
+                                                                <TabsContent value="videos">
+                                                                    <MediaGrid items={vehicle.videoUrls || []} type="video" onView={(u: string) => handleMediaClick(u, 'video', `Video - ${vehicle.make}`)} onDelete={(idx: number) => handleDeleteMedia(vehicle, 'video', idx)} isAdmin={isAdmin} />
+                                                                </TabsContent>
+                                                            </Tabs>
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                ))}
+                                            </Accordion>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
 
-                                                            <TabsContent value="all" className="space-y-6">
-                                                                <MediaGroup
-                                                                    title="General Photos"
-                                                                    items={vehicle.generalPhotos || []}
-                                                                    type="image"
-                                                                    onView={(u) => handleMediaClick(u, 'image', `General - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'general', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                                <MediaGroup
-                                                                    title="Before Service"
-                                                                    items={vehicle.beforePhotos || []}
-                                                                    type="image"
-                                                                    accent="orange"
-                                                                    onView={(u) => handleMediaClick(u, 'image', `Before - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'before', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                                <MediaGroup
-                                                                    title="After Service"
-                                                                    items={vehicle.afterPhotos || []}
-                                                                    type="image"
-                                                                    accent="emerald"
-                                                                    onView={(u) => handleMediaClick(u, 'image', `After - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'after', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                                <MediaGroup
-                                                                    title="Embedded Videos"
-                                                                    items={vehicle.videoUrls || []}
-                                                                    type="video"
-                                                                    accent="pink"
-                                                                    onView={(u) => handleMediaClick(u, 'video', `Video - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'video', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                            </TabsContent>
-
-                                                            <TabsContent value="before">
-                                                                <MediaGrid
-                                                                    items={vehicle.beforePhotos || []}
-                                                                    type="image"
-                                                                    onView={(u) => handleMediaClick(u, 'image', `Before - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'before', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                            </TabsContent>
-
-                                                            <TabsContent value="after">
-                                                                <MediaGrid
-                                                                    items={vehicle.afterPhotos || []}
-                                                                    type="image"
-                                                                    onView={(u) => handleMediaClick(u, 'image', `After - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'after', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                            </TabsContent>
-
-                                                            <TabsContent value="videos">
-                                                                <MediaGrid
-                                                                    items={vehicle.videoUrls || []}
-                                                                    type="video"
-                                                                    onView={(u) => handleMediaClick(u, 'video', `Video - ${vehicle.make} ${vehicle.model}`)}
-                                                                    onDelete={(idx) => handleDeleteMedia(vehicle, 'video', idx)}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                            </TabsContent>
-                                                        </Tabs>
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            ))}
-                                        </Accordion>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
+                    <TabsContent value="general" className="mt-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <GeneralGalleryView
+                            items={generalGalleryItems}
+                            onMediaClick={handleMediaClick}
+                            onDelete={(id) => {
+                                if (confirm("Remove this item from the gallery?")) {
+                                    deleteLibraryItem(id).then(() => loadData());
+                                }
+                            }}
+                            isAdmin={isAdmin}
+                            searchQuery={searchQuery}
+                        />
+                    </TabsContent>
+                </Tabs>
 
                 {/* Lightbox / Media Viewer */}
                 <Dialog open={isMediaOpen} onOpenChange={setIsMediaOpen}>
@@ -556,10 +495,13 @@ export default function VehicleGallery() {
                                         {selectedMedia.type === 'image' ? <ImageIcon className="h-4 w-4" /> : <Video className="h-4 w-4" />}
                                         {selectedMedia.title}
                                     </DialogTitle>
+                                    <Button variant="ghost" size="icon" onClick={() => setIsMediaOpen(false)} className="h-8 w-8 text-zinc-500 hover:text-white">
+                                        <X className="h-5 w-5" />
+                                    </Button>
                                 </div>
                                 <div className="flex-1 flex items-center justify-center p-4 min-h-[50vh]">
                                     {selectedMedia.type === 'image' ? (
-                                        <img src={selectedMedia.url} alt="Vehicle" className="max-w-full max-h-[70vh] object-contain rounded-lg" />
+                                        <img src={selectedMedia.url} alt="Vehicle" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl" />
                                     ) : (
                                         <div className="w-full">
                                             <VideoEmbed url={selectedMedia.url} title={selectedMedia.title} />
@@ -567,8 +509,6 @@ export default function VehicleGallery() {
                                     )}
                                 </div>
                                 <div className="p-4 bg-zinc-900 flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800">
-                                    <Button variant="secondary" size="sm" onClick={() => setIsMediaOpen(false)}>Close</Button>
-
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -580,19 +520,6 @@ export default function VehicleGallery() {
                                     >
                                         <Copy className="h-4 w-4 mr-2" /> Copy URL
                                     </Button>
-
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-blue-900/50 text-blue-400 hover:bg-blue-900/20"
-                                        onClick={() => {
-                                            const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(selectedMedia.url)}`;
-                                            window.open(fbUrl, '_blank', 'width=600,height=400');
-                                        }}
-                                    >
-                                        <Facebook className="h-4 w-4 mr-2" /> Share to FB
-                                    </Button>
-
                                     {selectedMedia.type === 'image' && (
                                         <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
                                             <a href={selectedMedia.url} target="_blank" rel="noopener noreferrer">
@@ -608,226 +535,145 @@ export default function VehicleGallery() {
 
                 {/* Add Media Dialog */}
                 <Dialog open={isAddMediaOpen} onOpenChange={setIsAddMediaOpen}>
-                    <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="text-white">Add Vehicle Media</DialogTitle>
+                    <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md p-0 overflow-hidden">
+                        <DialogHeader className="p-6 pb-0">
+                            <DialogTitle className="text-white text-xl font-black uppercase tracking-tighter">Add <span className="text-blue-500">Media</span></DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            {/* Customer Selector with Search */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Customer</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                                    <Input
-                                        placeholder="Type to search customers..."
-                                        className="pl-9 bg-zinc-900 border-zinc-800 text-white text-sm"
-                                        value={selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name || '' : customerSearchQuery}
-                                        onChange={(e) => {
-                                            setCustomerSearchQuery(e.target.value);
-                                            if (selectedCustomerId) {
-                                                setSelectedCustomerId('');
-                                                setTargetVehicle(null);
-                                            }
+                        
+                        <div className="p-6 space-y-6">
+                            {/* Media Category Selection */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                    Destination
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                        variant={newMediaType === 'gallery' ? "default" : "outline"}
+                                        className={`h-11 rounded-xl text-xs font-bold uppercase tracking-tighter transition-all ${newMediaType === 'gallery' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'border-zinc-800 text-zinc-500'}`}
+                                        onClick={() => setNewMediaType('gallery')}
+                                    >
+                                        <LayoutGrid className="h-4 w-4 mr-2" />
+                                        General Gallery
+                                    </Button>
+                                    <Button
+                                        variant={newMediaType !== 'gallery' ? "default" : "outline"}
+                                        className={`h-11 rounded-xl text-xs font-bold uppercase tracking-tighter transition-all ${newMediaType !== 'gallery' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'border-zinc-800 text-zinc-500'}`}
+                                        onClick={() => {
+                                            if (newMediaType === 'gallery') setNewMediaType('general');
                                         }}
-                                        onFocus={(e) => e.target.select()}
-                                    />
+                                    >
+                                        <Car className="h-4 w-4 mr-2" />
+                                        Vehicle Tagged
+                                    </Button>
                                 </div>
-                                {/* Recent Customers */}
-                                {!selectedCustomerId && recentCustomerIds.length > 0 && !customerSearchQuery && (
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {recentCustomerIds.map(id => {
-                                                const customer = customers.find(c => c.id === id);
-                                                if (!customer) return null;
-                                                return (
-                                                    <Button
-                                                        key={id}
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-7 text-[10px] border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800"
-                                                        onClick={() => {
-                                                            setSelectedCustomerId(id);
-                                                            setTargetVehicle(null);
-                                                            setCustomerSearchQuery("");
-                                                        }}
-                                                    >
-                                                        {customer.name}
-                                                    </Button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {!selectedCustomerId && (
-                                    <div className="max-h-48 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg">
-                                        {customers
-                                            .filter(c => !customerSearchQuery || c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()))
-                                            .sort((a, b) => a.name.localeCompare(b.name))
-                                            .map(customer => (
-                                                <button
-                                                    key={customer.id}
-                                                    type="button"
-                                                    className="w-full text-left px-3 py-2 hover:bg-zinc-800 text-sm text-zinc-300 flex items-center justify-between group"
-                                                    onClick={() => {
-                                                        setSelectedCustomerId(customer.id);
-                                                        setTargetVehicle(null);
-                                                        setCustomerSearchQuery("");
-                                                    }}
-                                                >
-                                                    <span>{customer.name}</span>
-                                                    <Badge variant="outline" className="text-[9px] opacity-60 group-hover:opacity-100">
-                                                        {customer.type}
-                                                    </Badge>
-                                                </button>
-                                            ))
-                                        }
-                                        {customers.filter(c => !customerSearchQuery || c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).length === 0 && (
-                                            <p className="p-3 text-xs text-zinc-500 text-center">No customers found</p>
-                                        )}
-                                    </div>
-                                )}
-                                {selectedCustomerId && (
-                                    <div className="p-2 bg-blue-600/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
-                                        <span className="text-sm text-blue-400 font-medium">
-                                            {customers.find(c => c.id === selectedCustomerId)?.name}
-                                        </span>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 w-6 p-0 text-zinc-500 hover:text-white"
-                                            onClick={() => {
-                                                setSelectedCustomerId('');
-                                                setTargetVehicle(null);
-                                            }}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                )}
                             </div>
 
-                            {/* Vehicle Selector - Only show if customer is selected */}
-                            {selectedCustomerId && (() => {
-                                const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-                                const vehicles = selectedCustomer?.vehicles || [];
-
-                                return (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Vehicle</label>
-                                        {vehicles.length > 0 ? (
-                                            <select
-                                                className="w-full p-3 bg-zinc-900 rounded-lg border border-zinc-800 text-zinc-200 text-sm"
-                                                value={targetVehicle?.id || ""}
+                            {/* Conditional Customer/Vehicle Selectors */}
+                            {newMediaType !== 'gallery' && (
+                                <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                            Customer
+                                        </label>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-3.5 h-4 w-4 text-zinc-500" />
+                                            <Input
+                                                placeholder="Search customers..."
+                                                className="pl-9 h-11 bg-zinc-900 border-zinc-800 text-sm rounded-xl"
+                                                value={selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name || '' : customerSearchQuery}
                                                 onChange={(e) => {
-                                                    const vehicle = vehicles.find(v => v.id === e.target.value);
-                                                    setTargetVehicle(vehicle || null);
+                                                    setCustomerSearchQuery(e.target.value);
+                                                    if (selectedCustomerId) {
+                                                        setSelectedCustomerId('');
+                                                        setTargetVehicle(null);
+                                                    }
                                                 }}
-                                            >
-                                                <option value="">Choose a vehicle...</option>
-                                                {vehicles.map((vehicle) => (
-                                                    <option key={vehicle.id} value={vehicle.id}>
-                                                        {vehicle.year} {vehicle.make} {vehicle.model}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                {!showQuickAddVehicle ? (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="w-full border-emerald-600 text-emerald-400 hover:bg-emerald-600/10"
-                                                        onClick={() => setShowQuickAddVehicle(true)}
-                                                    >
-                                                        <Plus className="h-4 w-4 mr-2" />
-                                                        Quick Add Vehicle
-                                                    </Button>
-                                                ) : (
-                                                    <div className="space-y-3 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <h4 className="text-xs font-bold text-emerald-400">ADD NEW VEHICLE</h4>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-6 w-6 p-0 text-zinc-500 hover:text-white"
-                                                                onClick={() => {
-                                                                    setShowQuickAddVehicle(false);
-                                                                    setQuickVehicle({ year: '', make: '', model: '' });
-                                                                }}
-                                                            >
-                                                                <X className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                        <Input
-                                                            placeholder="Year (optional)"
-                                                            className="bg-zinc-900 border-zinc-800 text-white text-sm h-9"
-                                                            value={quickVehicle.year}
-                                                            onChange={(e) => setQuickVehicle({ ...quickVehicle, year: e.target.value })}
-                                                        />
-                                                        <Input
-                                                            placeholder="Make *"
-                                                            className="bg-zinc-900 border-zinc-800 text-white text-sm h-9"
-                                                            value={quickVehicle.make}
-                                                            onChange={(e) => setQuickVehicle({ ...quickVehicle, make: e.target.value })}
-                                                        />
-                                                        <Input
-                                                            placeholder="Model *"
-                                                            className="bg-zinc-900 border-zinc-800 text-white text-sm h-9"
-                                                            value={quickVehicle.model}
-                                                            onChange={(e) => setQuickVehicle({ ...quickVehicle, model: e.target.value })}
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            className="w-full bg-emerald-600 hover:bg-emerald-700 h-9"
-                                                            onClick={handleQuickAddVehicle}
-                                                            disabled={!quickVehicle.make || !quickVehicle.model}
+                                            />
+                                        </div>
+                                        
+                                        {!selectedCustomerId && customerSearchQuery && (
+                                            <div className="max-h-40 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-xl mt-1">
+                                                {customers
+                                                    .filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()))
+                                                    .map(c => (
+                                                        <button 
+                                                            key={c.id} 
+                                                            className="w-full text-left px-4 py-3 hover:bg-blue-600/10 text-sm transition-colors border-b border-zinc-800/50 last:border-0"
+                                                            onClick={() => {
+                                                                setSelectedCustomerId(c.id);
+                                                                setCustomerSearchQuery("");
+                                                            }}
                                                         >
-                                                            <Plus className="h-3 w-3 mr-2" />
-                                                            Create Vehicle
-                                                        </Button>
-                                                    </div>
-                                                )}
+                                                            {c.name}
+                                                        </button>
+                                                    ))
+                                                }
                                             </div>
                                         )}
                                     </div>
-                                );
-                            })()}
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Media Category</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(['general', 'before', 'after', 'video', 'gallery'] as const).map((t) => (
-                                        <Button
-                                            key={t}
-                                            variant={newMediaType === t ? "default" : "outline"}
-                                            className={`h-9 text-xs capitalize ${newMediaType === t ? 'bg-blue-600' : 'border-zinc-800'}`}
-                                            onClick={() => setNewMediaType(t)}
-                                        >
-                                            {t === 'gallery' ? 'General Gallery' : t}
-                                        </Button>
-                                    ))}
+                                    {selectedCustomerId && (
+                                        <div className="space-y-3 animate-in fade-in duration-300">
+                                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                                Vehicle & Type
+                                            </label>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                <select 
+                                                    className="w-full h-11 bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                    value={targetVehicle?.id || ""}
+                                                    onChange={(e) => {
+                                                        const v = customers.find(c => c.id === selectedCustomerId)?.vehicles?.find(v => v.id === e.target.value);
+                                                        setTargetVehicle(v || null);
+                                                    }}
+                                                >
+                                                    <option value="">Select vehicle...</option>
+                                                    {(customers.find(c => c.id === selectedCustomerId)?.vehicles || []).map(v => (
+                                                        <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}</option>
+                                                    ))}
+                                                </select>
+
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(['general', 'before', 'after', 'video'] as const).map(t => (
+                                                        <Button
+                                                            key={t}
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className={`h-8 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${newMediaType === t ? 'bg-blue-600 text-white border-blue-600' : 'border-zinc-800 text-zinc-500 hover:text-white'}`}
+                                                            onClick={() => setNewMediaType(t)}
+                                                        >
+                                                            {t}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                                    {newMediaType === 'video' ? 'YouTube/Video URL' : 'Media Option'}
+                            {/* Media Capture/Upload Section */}
+                            <div className="space-y-4 pt-2">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Media Source
                                 </label>
-
+                                
                                 {newMediaType === 'video' ? (
-                                    <Input
-                                        placeholder="https://youtube.com/watch?v=..."
-                                        className="bg-zinc-900 border-zinc-800 text-white"
-                                        value={newMediaUrl}
-                                        onChange={(e) => setNewMediaUrl(e.target.value)}
-                                    />
-                                ) : (
                                     <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <Input
+                                            placeholder="YouTube or Video URL..."
+                                            className="h-11 bg-zinc-900 border-zinc-800 rounded-xl"
+                                            value={newMediaUrl}
+                                            onChange={(e) => setNewMediaUrl(e.target.value)}
+                                        />
+                                        <p className="text-[10px] text-zinc-500 italic">Supports YouTube, Vimeo, and direct links.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div className="relative">
                                                 <input
                                                     type="file"
@@ -835,8 +681,9 @@ export default function VehicleGallery() {
                                                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                                 />
-                                                <Button variant="outline" className="w-full h-12 border-dashed border-zinc-700 hover:bg-zinc-900 text-zinc-400">
-                                                    <Upload className="h-4 w-4 mr-2" /> Upload
+                                                <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col gap-2 border-dashed border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 transition-all group">
+                                                    <Upload className="h-6 w-6 text-zinc-500 group-hover:text-emerald-400 group-hover:scale-110 transition-all" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Library</span>
                                                 </Button>
                                             </div>
                                             <div className="relative">
@@ -847,60 +694,193 @@ export default function VehicleGallery() {
                                                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                                 />
-                                                <Button variant="outline" className="w-full h-12 border-dashed border-zinc-700 hover:bg-zinc-900 text-zinc-400">
-                                                    <Camera className="h-4 w-4 mr-2" /> Camera
+                                                <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col gap-2 border-dashed border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 transition-all group">
+                                                    <Camera className="h-6 w-6 text-zinc-500 group-hover:text-blue-400 group-hover:scale-110 transition-all" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Camera</span>
                                                 </Button>
                                             </div>
                                         </div>
-
-                                        {selectedFile && (
-                                            <div className="p-2 bg-blue-600/10 border border-blue-500/20 rounded text-blue-400 text-xs flex justify-between items-center">
-                                                <span className="truncate max-w-[200px] font-medium">{selectedFile.name}</span>
-                                                <Button variant="ghost" size="sm" className="h-5 w-5 p-0 hover:text-white" onClick={() => setSelectedFile(null)}>✕</Button>
+                                        
+                                        {selectedFile ? (
+                                            <div className="bg-blue-600/10 border border-blue-600/20 rounded-xl p-3 flex items-center justify-between">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <ImageIcon className="h-4 w-4 text-blue-400 shrink-0" />
+                                                    <span className="text-xs font-bold text-blue-300 truncate">{selectedFile.name}</span>
+                                                </div>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-400 hover:text-white" onClick={() => setSelectedFile(null)}>
+                                                    <X className="h-4 w-4" />
+                                                </Button>
                                             </div>
+                                        ) : (
+                                            <Input
+                                                placeholder="Or paste an image URL..."
+                                                className="h-11 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                                                value={newMediaUrl}
+                                                onChange={(e) => setNewMediaUrl(e.target.value)}
+                                            />
                                         )}
-
-                                        <div className="relative">
-                                            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-800" /></div>
-                                            <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-zinc-950 px-2 text-zinc-600">or use URL</span></div>
-                                        </div>
-
-                                        <Input
-                                            placeholder="https://example.com/image.jpg"
-                                            className="bg-zinc-900 border-zinc-800 text-white text-sm"
-                                            value={newMediaUrl}
-                                            onChange={(e) => { setNewMediaUrl(e.target.value); if (e.target.value) setSelectedFile(null); }}
-                                        />
                                     </div>
                                 )}
-
-                                <p className="text-[10px] text-zinc-500 italic">
-                                    {newMediaType === 'video'
-                                        ? 'Paste the full link to the video (YouTube/Vimeo/FB/TikTok preferred).'
-                                        : 'Upload a photo directly or paste a link to an existing image file.'}
-                                </p>
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button variant="ghost" onClick={() => {
-                                setIsAddMediaOpen(false);
-                                setSelectedCustomerId("");
-                                setTargetVehicle(null);
-                                setNewMediaUrl("");
-                                setSelectedFile(null);
-                            }} className="text-zinc-400">Cancel</Button>
-                            <Button
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+
+                        <DialogFooter className="p-6 bg-zinc-900/50 border-t border-zinc-800 gap-3 sm:gap-0">
+                            <Button variant="ghost" onClick={() => setIsAddMediaOpen(false)} className="text-zinc-500 font-bold uppercase tracking-widest text-xs h-11 px-6">Cancel</Button>
+                            <Button 
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs h-11 px-8 rounded-xl shadow-lg shadow-blue-900/40"
                                 onClick={handleAddMedia}
-                                disabled={saving || !targetVehicle || (newMediaType === 'video' ? !newMediaUrl.trim() : (!newMediaUrl.trim() && !selectedFile))}
+                                disabled={saving || (newMediaType !== 'gallery' && !targetVehicle) || (newMediaType === 'video' ? !newMediaUrl.trim() : (!newMediaUrl.trim() && !selectedFile))}
                             >
                                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                                Save Media
+                                Save to {newMediaType === 'gallery' ? 'Library' : 'Vehicle'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </main>
+        </div>
+    );
+}
+
+function GeneralGalleryView({ items, onMediaClick, onDelete, isAdmin, searchQuery }: any) {
+    const filtered = useMemo(() => {
+        if (!searchQuery) return items;
+        const q = searchQuery.toLowerCase();
+        return items.filter((i: any) => 
+            i.title?.toLowerCase().includes(q) || 
+            i.description?.toLowerCase().includes(q)
+        );
+    }, [items, searchQuery]);
+
+    if (filtered.length === 0) {
+        return (
+            <div className="text-center py-32 bg-zinc-950/50 border border-zinc-900 rounded-3xl border-dashed">
+                <ImageIcon className="h-16 w-16 mx-auto text-zinc-800 mb-6" />
+                <h3 className="text-2xl font-black text-zinc-500 uppercase tracking-tighter">Empty Gallery</h3>
+                <p className="text-zinc-600 mt-2 max-w-xs mx-auto">Upload standalone images or media items to build your general marketing and library assets.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {filtered.map((item: any) => (
+                <div key={item.id} className="group relative aspect-square rounded-3xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 cursor-pointer" onClick={() => onMediaClick(item.url, 'image', item.title)}>
+                    <img src={item.url} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                        <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                            <h4 className="text-sm font-black text-white uppercase tracking-tighter truncate">{item.title}</h4>
+                            <div className="flex items-center justify-between mt-3">
+                                <Button size="sm" variant="secondary" className="h-8 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black font-bold uppercase text-[10px] tracking-widest px-4">
+                                    Expand
+                                </Button>
+                                {isAdmin && (
+                                    <Button size="sm" variant="destructive" className="h-8 w-8 rounded-xl flex items-center justify-center p-0" onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="absolute top-4 right-4 z-10">
+                        <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest backdrop-blur-md">
+                            Library
+                        </Badge>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function UnifiedGalleryView({ vehicles, onMediaClick, onDeleteMedia, isAdmin, toast, expandedVehicleIds, onToggleVehicle, onToggleAll }: any) {
+    const [activeCategory, setActiveCategory] = useState<'all' | 'general' | 'before' | 'after' | 'video'>('all');
+
+    const allMedia = useMemo(() => {
+        const media: any[] = [];
+        vehicles.forEach((v: Vehicle) => {
+            const customerName = (v as any).customer_info?.name || 'Unassigned';
+            const vehicleLabel = `${v.year} ${v.make} ${v.model}`;
+
+            if (activeCategory === 'all' || activeCategory === 'general') {
+                v.generalPhotos?.forEach((url, idx) => media.push({ url, type: 'image', category: 'general', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
+            }
+            if (activeCategory === 'all' || activeCategory === 'before') {
+                v.beforePhotos?.forEach((url, idx) => media.push({ url, type: 'image', category: 'before', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
+            }
+            if (activeCategory === 'all' || activeCategory === 'after') {
+                v.afterPhotos?.forEach((url, idx) => media.push({ url, type: 'image', category: 'after', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
+            }
+            if (activeCategory === 'all' || activeCategory === 'video') {
+                v.videoUrls?.forEach((url, idx) => media.push({ url, type: 'video', category: 'video', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
+            }
+        });
+        return media;
+    }, [vehicles, activeCategory]);
+
+    const categoryColors: Record<string, string> = {
+        general: 'bg-blue-600',
+        before: 'bg-orange-600',
+        after: 'bg-emerald-600',
+        video: 'bg-pink-600'
+    };
+
+    if (allMedia.length === 0) {
+        return (
+            <div className="text-center py-20 bg-zinc-900/30 border border-zinc-800 rounded-xl border-dashed">
+                <ImageIcon className="h-10 w-10 mx-auto text-zinc-700 mb-4" />
+                <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-tighter">No items to show</h3>
+                <p className="text-zinc-600 text-sm mt-1">None of your vehicles have media in this category yet.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-wrap items-center gap-2">
+                {(['all', 'general', 'before', 'after', 'video'] as const).map(cat => (
+                    <Button 
+                        key={cat} 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`h-8 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-white'}`}
+                        onClick={() => setActiveCategory(cat)}
+                    >
+                        {cat}
+                    </Button>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {allMedia.map((media, idx) => (
+                    <div
+                        key={`${media.url}-${idx}`}
+                        className="group relative aspect-square rounded-2xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-blue-500/50 hover:shadow-2xl transition-all cursor-pointer"
+                        onClick={() => onMediaClick(media.url, media.type, media.vehicle)}
+                    >
+                        {media.type === 'image' ? (
+                            <img src={media.url} alt={media.vehicle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        ) : (
+                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                                <Video className="h-8 w-8 text-pink-400 opacity-50" />
+                            </div>
+                        )}
+
+                        <div className="absolute top-3 left-3 z-10">
+                            <Badge className={`${categoryColors[media.category]} text-white text-[8px] px-2 py-0.5 uppercase font-black tracking-widest border-0`}>
+                                {media.category}
+                            </Badge>
+                        </div>
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end">
+                            <p className="text-[10px] font-black text-white uppercase tracking-tighter truncate">{media.vehicle}</p>
+                            <p className="text-[8px] text-zinc-500 font-bold uppercase truncate">{media.customer}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -911,7 +891,6 @@ function FlatGalleryView({ vehicles, onMediaClick, onDeleteMedia, isAdmin }: any
         vehicles.forEach((v: Vehicle) => {
             const customerName = (v as any).customer_info?.name || 'Unassigned';
             const vehicleLabel = `${v.year} ${v.make} ${v.model}`;
-
             v.generalPhotos?.forEach((url, idx) => media.push({ url, type: 'image', category: 'general', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
             v.beforePhotos?.forEach((url, idx) => media.push({ url, type: 'image', category: 'before', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
             v.afterPhotos?.forEach((url, idx) => media.push({ url, type: 'image', category: 'after', vehicle: vehicleLabel, customer: customerName, vehicleId: v.id, index: idx }));
@@ -927,148 +906,20 @@ function FlatGalleryView({ vehicles, onMediaClick, onDeleteMedia, isAdmin }: any
         video: 'bg-pink-600'
     };
 
-    if (allMedia.length === 0) {
-        return (
-            <div className="text-center py-20 bg-zinc-900/30 border border-zinc-800 rounded-xl border-dashed">
-                <ImageIcon className="h-12 w-12 mx-auto text-zinc-700 mb-4" />
-                <h3 className="text-xl font-semibold text-zinc-300">No media available</h3>
-                <p className="text-zinc-500 mt-2">None of the currently filtered vehicles have any media items.</p>
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 mb-20">
-            <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <LayoutGrid className="h-5 w-5 text-blue-500" />
-                    Continuous Gallery <span className="text-zinc-500 text-sm font-normal">({allMedia.length} items total)</span>
-                </h2>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {allMedia.map((media, idx) => (
-                    <div
-                        key={`${media.url}-${idx}`}
-                        className="group relative aspect-square rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 transition-all shadow-lg cursor-pointer"
-                        onClick={() => onMediaClick(media.url, media.type, media.vehicle)}
-                    >
-                        {media.type === 'image' ? (
-                            <img
-                                src={media.url}
-                                alt={media.vehicle}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                loading="lazy"
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                                <Video className="h-12 w-12 text-pink-400 opacity-50" />
-                            </div>
-                        )}
-
-                        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                            <Badge className={`${categoryColors[media.category]} text-white text-[8px] px-1.5 py-0 uppercase font-black border-0`}>
-                                {media.category}
-                            </Badge>
-                        </div>
-
-                        {/* Vehicle/Customer context at bottom */}
-                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                            <p className="text-[10px] font-bold text-white truncate">{media.vehicle}</p>
-                            <p className="text-[8px] text-zinc-400 truncate">{media.customer}</p>
-                        </div>
-
-                        {/* Hover Actions */}
-                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 z-20">
-                            <Button size="sm" variant="secondary" className="h-8 text-xs font-bold" onClick={(e) => { e.stopPropagation(); onMediaClick(media.url, media.type, media.vehicle); }}>View</Button>
-                            {isAdmin && (
-                                <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="h-8 text-xs font-bold"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const vehicle = vehicles.find((v: any) => v.id === media.vehicleId);
-                                        if (vehicle) onDeleteMedia(vehicle, media.category, media.index);
-                                    }}
-                                >
-                                    Delete
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
+    if (allMedia.length === 0) return (
+        <div className="text-center py-20 bg-zinc-900/30 border border-zinc-800 rounded-3xl border-dashed">
+            <ImageIcon className="h-12 w-12 mx-auto text-zinc-800 mb-4" />
+            <p className="text-zinc-600 font-bold uppercase tracking-widest text-xs">No media assets found</p>
         </div>
     );
-}
-
-function MediaGroup({ title, items, type, accent = "blue", onView, onDelete, isAdmin }: any) {
-    if (items.length === 0) return null;
-
-    const accentClasses: any = {
-        blue: "text-blue-400 border-blue-900/40",
-        orange: "text-orange-400 border-orange-900/40",
-        emerald: "text-emerald-400 border-emerald-900/40",
-        pink: "text-pink-400 border-pink-900/40",
-    };
 
     return (
-        <div className="space-y-3">
-            <h4 className={`text-xs font-bold uppercase tracking-wider ${accentClasses[accent]}`}>
-                {title} <span className="text-zinc-500 ml-1">({items.length})</span>
-            </h4>
-            <MediaGrid items={items} type={type} onView={onView} onDelete={onDelete} isAdmin={isAdmin} />
-        </div>
-    );
-}
-
-function MediaGrid({ items, type, onView, onDelete, isAdmin }: any) {
-    if (items.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-8 bg-zinc-950/50 rounded-lg border border-zinc-800">
-                <ImageIcon className="h-6 w-6 text-zinc-800 mb-2" />
-                <p className="text-xs text-zinc-600">No media available in this category</p>
-            </div>
-        );
-    }
-
-    return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {items.map((url: string, idx: number) => (
-                <div key={idx} className="group relative aspect-square rounded-lg bg-zinc-950 border border-zinc-800 overflow-hidden hover:border-zinc-600 transition-all shadow-lg">
-                    {type === 'image' ? (
-                        <img
-                            src={url}
-                            alt={`Vehicle ${idx}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                    ) : (
-                        <div className="w-full h-full bg-zinc-900 p-0.5">
-                            <VideoEmbed url={url} className="h-full rounded-md" />
-                        </div>
-                    )}
-
-                    {/* Overlays */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            className="h-8 text-xs bg-white/10 hover:bg-white/20 border-white/10 text-white"
-                            onClick={() => onView(url)}
-                        >
-                            <Maximize2 className="h-3 w-3 mr-1" /> View
-                        </Button>
-                        {isAdmin && (
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                className="h-8 text-xs bg-red-600/80 hover:bg-red-600"
-                                onClick={() => onDelete(idx)}
-                            >
-                                <Trash2 className="h-3 w-3 mr-1" /> Delete
-                            </Button>
-                        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {allMedia.map((m, i) => (
+                <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-900 hover:border-blue-500 transition-all cursor-pointer" onClick={() => onMediaClick(m.url, m.type, m.vehicle)}>
+                    <img src={m.url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <div className="absolute top-2 left-2 z-10">
+                        <Badge className={`${categoryColors[m.category]} text-[8px] font-black uppercase tracking-widest px-2 py-0.5`}>{m.category}</Badge>
                     </div>
                 </div>
             ))}
@@ -1076,168 +927,38 @@ function MediaGrid({ items, type, onView, onDelete, isAdmin }: any) {
     );
 }
 
-// New Unified Gallery View - Shows ALL media from ALL vehicles with tags
-function UnifiedGalleryView({ vehicles, onMediaClick, onDeleteMedia, isAdmin, toast, expandedVehicleIds, onToggleVehicle, onToggleAll }: {
-    vehicles: Vehicle[];
-    onMediaClick: (url: string, type: 'image' | 'video', title: string) => void;
-    onDeleteMedia: (vehicle: Vehicle, type: 'general' | 'before' | 'after' | 'video', index: number) => void;
-    isAdmin: boolean;
-    toast: any;
-    expandedVehicleIds: string[];
-    onToggleVehicle: (id: string) => void;
-    onToggleAll: () => void;
-}) {
-    const [activeTab, setActiveTab] = useState('all');
-
-    // Filter vehicles that actually have media
-    const vehiclesWithMedia = vehicles.filter(v =>
-        (v.generalPhotos?.length || 0) +
-        (v.beforePhotos?.length || 0) +
-        (v.afterPhotos?.length || 0) +
-        (v.videoUrls?.length || 0) > 0
-    );
-
-    const toggleVehicle = (id: string) => {
-        onToggleVehicle(id);
-    };
-
-    const toggleAllCount = () => {
-        onToggleAll();
-    };
-
-    const categoryColors: Record<string, string> = {
-        general: 'bg-blue-600',
-        before: 'bg-orange-600',
-        after: 'bg-emerald-600',
-        video: 'bg-pink-600'
-    };
-
-    const renderMediaGrid = (vehicle: Vehicle, categories: string[]) => {
-        const allMedia: any[] = [];
-
-        if (categories.includes('all') || categories.includes('general')) {
-            vehicle.generalPhotos?.forEach((url, idx) => allMedia.push({ url, type: 'image', category: 'general', index: idx }));
-        }
-        if (categories.includes('all') || categories.includes('before')) {
-            vehicle.beforePhotos?.forEach((url, idx) => allMedia.push({ url, type: 'image', category: 'before', index: idx }));
-        }
-        if (categories.includes('all') || categories.includes('after')) {
-            vehicle.afterPhotos?.forEach((url, idx) => allMedia.push({ url, type: 'image', category: 'after', index: idx }));
-        }
-        if (categories.includes('all') || categories.includes('video')) {
-            vehicle.videoUrls?.forEach((url, idx) => allMedia.push({ url, type: 'video', category: 'video', index: idx }));
-        }
-
-        if (allMedia.length === 0) return null;
-
-        return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4 border rounded-xl bg-zinc-950/20 border-zinc-800 mt-2">
-                {allMedia.map((media, idx) => (
-                    <div
-                        key={`${media.url}-${idx}`}
-                        className="group relative aspect-square rounded-lg bg-zinc-950 border border-zinc-800 overflow-hidden hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 transition-all shadow-lg cursor-pointer"
-                        onClick={() => onMediaClick(media.url, media.type, `${vehicle.year} ${vehicle.make} ${vehicle.model}`)}
-                    >
-                        {/* Media Content */}
-                        {media.type === 'image' ? (
-                            <img
-                                src={media.url}
-                                alt={vehicle.make}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                                <Video className="h-12 w-12 text-pink-400 opacity-50" />
-                            </div>
-                        )}
-
-                        {/* Category Badge */}
-                        <div className="absolute top-2 left-2 z-10">
-                            <Badge className={`${categoryColors[media.category]} text-white text-[9px] px-2 py-0.5 uppercase font-bold`}>
-                                {media.category}
-                            </Badge>
-                        </div>
-
-                        {/* Hover Actions */}
-                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 z-20">
-                            <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); onMediaClick(media.url, media.type, vehicle.make); }}>View</Button>
-                            {isAdmin && (
-                                <Button size="sm" variant="destructive" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); onDeleteMedia(vehicle, media.category, media.index); }}>Delete</Button>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    };
-
+function MediaGroup({ title, items, type, accent = "blue", onView, onDelete, isAdmin }: any) {
+    if (items.length === 0) return null;
+    const accentColors: any = { blue: "text-blue-400", orange: "text-orange-400", emerald: "text-emerald-400", pink: "text-pink-400" };
     return (
-        <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 bg-zinc-900/50 p-2 rounded-2xl border border-zinc-800 overflow-hidden">
-                    <TabsList className="bg-transparent gap-1 w-full justify-start overflow-x-auto scrollbar-none pb-1 md:pb-0">
-                        <TabsTrigger value="all" className="rounded-xl px-4 md:px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white whitespace-nowrap">ALL MEDIA</TabsTrigger>
-                        <TabsTrigger value="general" className="rounded-xl px-3 md:px-4 data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase whitespace-nowrap">General</TabsTrigger>
-                        <TabsTrigger value="before" className="rounded-xl px-3 md:px-4 data-[state=active]:bg-orange-600 data-[state=active]:text-white uppercase whitespace-nowrap">Before</TabsTrigger>
-                        <TabsTrigger value="after" className="rounded-xl px-3 md:px-4 data-[state=active]:bg-emerald-600 data-[state=active]:text-white uppercase whitespace-nowrap">After</TabsTrigger>
-                        <TabsTrigger value="video" className="rounded-xl px-3 md:px-4 data-[state=active]:bg-pink-600 data-[state=active]:text-white uppercase whitespace-nowrap">Videos</TabsTrigger>
-                    </TabsList>
+        <div className="space-y-3">
+            <h4 className={`text-[10px] font-black uppercase tracking-widest ${accentColors[accent]} flex items-center gap-2`}>
+                <div className={`h-1 w-1 rounded-full ${accent === 'blue' ? 'bg-blue-500' : accent === 'orange' ? 'bg-orange-500' : accent === 'emerald' ? 'bg-emerald-500' : 'bg-pink-500'}`} />
+                {title} <span className="text-zinc-600 ml-1">({items.length})</span>
+            </h4>
+            <MediaGrid items={items} type={type} onView={onView} onDelete={onDelete} isAdmin={isAdmin} />
+        </div>
+    );
+}
 
-                    <Button variant="ghost" size="sm" onClick={toggleAllCount} className="text-zinc-500 hover:text-white h-9">
-                        {expandedVehicleIds.length > 0 ? <><ChevronsUp className="h-4 w-4 mr-2" /> Retract All</> : <><ChevronsDown className="h-4 w-4 mr-2" /> Expand All</>}
-                    </Button>
+function MediaGrid({ items, type, onView, onDelete, isAdmin }: any) {
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+            {items.map((url: string, idx: number) => (
+                <div key={idx} className="group relative aspect-square rounded-xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-zinc-500 transition-all shadow-xl cursor-pointer" onClick={() => onView(url)}>
+                    <img src={url} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white text-white hover:text-black" onClick={(e) => { e.stopPropagation(); onView(url); }}>
+                            <Maximize2 className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
+                            <Button size="icon" variant="destructive" className="h-8 w-8 rounded-lg bg-red-600/80 hover:bg-red-600" onClick={(e) => { e.stopPropagation(); onDelete(idx); }}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
-
-                {vehiclesWithMedia.length === 0 ? (
-                    <div className="text-center py-20 bg-zinc-900/30 border border-zinc-800 rounded-xl border-dashed">
-                        <ImageIcon className="h-12 w-12 mx-auto text-zinc-700 mb-4" />
-                        <h3 className="text-xl font-semibold text-zinc-300">No media in this category</h3>
-                        <p className="text-zinc-500 mt-2">Try selecting a different category or upload more media.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                        {vehiclesWithMedia.map((vehicle) => {
-                            const isExpanded = expandedVehicleIds.includes(vehicle.id);
-                            const customerName = (vehicle as any).customer_info?.name || 'Unassigned';
-                            const grid = renderMediaGrid(vehicle, [activeTab]);
-
-                            if (!grid) return null;
-
-                            return (
-                                <div key={vehicle.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden transition-all hover:border-zinc-700">
-                                    <div
-                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800/50"
-                                        onClick={() => toggleVehicle(vehicle.id)}
-                                    >
-                                        <div className="flex items-center gap-4 min-w-0">
-                                            <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400">
-                                                <Car className="h-5 w-5" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h3 className="font-bold text-white text-sm md:text-lg truncate">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
-                                                <p className="text-[10px] md:text-xs text-zinc-500 flex items-center gap-1 truncate">
-                                                    <User className="h-3 w-3" /> {customerName}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                                            <Badge variant="outline" className="text-[9px] md:text-[10px] border-zinc-700 text-zinc-400 whitespace-nowrap">
-                                                {(vehicle.generalPhotos?.length || 0) + (vehicle.beforePhotos?.length || 0) + (vehicle.afterPhotos?.length || 0) + (vehicle.videoUrls?.length || 0)} items
-                                            </Badge>
-                                            {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
-                                        </div>
-                                    </div>
-                                    {isExpanded && (
-                                        <div className="p-2 md:p-4 animate-in slide-in-from-top-2 duration-300">
-                                            {grid}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </Tabs>
+            ))}
         </div>
     );
 }
