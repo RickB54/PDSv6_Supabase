@@ -534,8 +534,17 @@ export default function VehicleGallery() {
                 {/* Add Media Dialog */}
                 <Dialog open={isAddMediaOpen} onOpenChange={setIsAddMediaOpen}>
                     <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md p-0 overflow-hidden">
-                        <DialogHeader className="p-6 pb-0">
-                            <DialogTitle className="text-white text-xl font-black uppercase tracking-tighter">Add <span className="text-blue-500">Media</span></DialogTitle>
+                        <DialogHeader className="p-6 pb-0 flex flex-row items-center justify-between">
+                            <DialogTitle className="text-white text-xl font-black uppercase tracking-tighter shrink-0">Add <span className="text-blue-500">Media</span></DialogTitle>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 text-zinc-500 hover:text-white transition-all ring-offset-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-800"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
+                                title="Media Library Help"
+                            >
+                                <HelpCircle className="h-5 w-5" />
+                            </Button>
                         </DialogHeader>
                         
                         <div className="p-6 space-y-6">
@@ -700,14 +709,37 @@ export default function VehicleGallery() {
                                         </div>
                                         
                                         {selectedFile ? (
-                                            <div className="bg-blue-600/10 border border-blue-600/20 rounded-xl p-3 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 overflow-hidden">
-                                                    <ImageIcon className="h-4 w-4 text-blue-400 shrink-0" />
-                                                    <span className="text-xs font-bold text-blue-300 truncate">{selectedFile.name}</span>
+                                            <div className="space-y-3 animate-in zoom-in-95 duration-300">
+                                                <div className="relative aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 group shadow-2xl">
+                                                    <img 
+                                                        src={URL.createObjectURL(selectedFile)} 
+                                                        alt="Upload Preview" 
+                                                        className="w-full h-full object-cover" 
+                                                        onLoad={(e) => {
+                                                            // Optional: revoke after load if you don't need it anymore, 
+                                                            // but we keep it for now as it's small.
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
+                                                        <Button 
+                                                            variant="destructive" 
+                                                            size="icon" 
+                                                            className="h-12 w-12 rounded-full shadow-lg shadow-red-900/40" 
+                                                            onClick={() => setSelectedFile(null)}
+                                                        >
+                                                            <Trash2 className="h-6 w-6" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-400 hover:text-white" onClick={() => setSelectedFile(null)}>
-                                                    <X className="h-4 w-4" />
-                                                </Button>
+                                                <div className="bg-blue-600/10 border border-blue-600/20 rounded-xl p-3 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <ImageIcon className="h-4 w-4 text-blue-400 shrink-0" />
+                                                        <span className="text-xs font-bold text-blue-300 truncate">{selectedFile.name}</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-zinc-500 font-mono">
+                                                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                                    </div>
+                                                </div>
                                             </div>
                                         ) : (
                                             <Input
@@ -818,8 +850,8 @@ function GeneralGalleryView({ items, onMediaClick, onRefresh, isAdmin, searchQue
                 </p>
                 <Button 
                     variant="outline" 
-                    className="mt-8 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900"
-                    onClick={() => window.open('/help/gallery', '_blank')}
+                    className="mt-8 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 px-8 rounded-xl font-bold uppercase tracking-tighter h-11"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
                 >
                     Learn about Gallery
                 </Button>
