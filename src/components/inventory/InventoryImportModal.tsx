@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet, Clipboard, Copy } from "lucide-react";
+import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet, Clipboard, Copy, Camera, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { saveChemical, saveTool, saveMaterial, getChemicals, getTools, getMaterials } from "@/lib/inventory-data";
+import { saveChemical, saveTool, saveMaterial, getChemicals, getTools, getMaterials, uploadInventoryImage } from "@/lib/inventory-data";
 import { DETAILING_CHEMICALS } from "@/data/detailingChemicals";
 import { DETAILING_TOOLS } from "@/data/detailingTools";
 import { DETAILING_MATERIALS } from "@/data/detailingMaterials";
@@ -31,6 +31,61 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     };
 
     const [activeTab, setActiveTab] = useState<"chemicals" | "supplies" | "equipment">(normalizeTab(defaultTab));
+    const [step, setStep] = useState<"upload" | "preview" | "ai_results" | "manual_entry">("upload");
+    const [isImporting, setIsImporting] = useState(false);
+    const [isProcessingImage, setIsProcessingImage] = useState(false);
+    const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+    const [parsedItems, setParsedItems] = useState<any[]>([]);
+    const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+    const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
+    const [aiQuery, setAiQuery] = useState("");
+    const [aiResults, setAiResults] = useState<SearchResult[]>([]);
+    const [isAiSearching, setIsAiSearching] = useState(false);
+    const [quickPasteText, setQuickPasteText] = useState("");
+    
+    const [manualRows, setManualRows] = useState<any[]>(() => {
+        const saved = localStorage.getItem('ultra_v6_manual_rows');
+        if (saved) {
+            try {
+                const rows = JSON.parse(saved);
+                return rows.map((r: any) => ({ ...r, imageFile: null, imageUrl: null }));
+            } catch (e) { console.error("Restore failed", e); }
+        }
+        return [{ name: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }];
+    });
+
+    // Persistent storage for manual entry rows
+    useEffect(() => {
+        if (step === "manual_entry") {
+            const serializable = manualRows.map(r => ({ ...r, imageFile: null, imageUrl: null }));
+            localStorage.setItem('ultra_v6_manual_rows', JSON.stringify(serializable));
+        }
+    }, [manualRows, step]);
+
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const [activeRowIdx, setActiveRowIdx] = useState<number | null>(null);
+
+    const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || activeRowIdx === null) return;
+        
+        setIsProcessingImage(true);
+        const url = URL.createObjectURL(file);
+        
+        const newRows = [...manualRows];
+        newRows[activeRowIdx] = { ...newRows[activeRowIdx], imageFile: file, imageUrl: url };
+        setManualRows(newRows);
+        
+        setIsProcessingImage(false);
+        setActiveRowIdx(null);
+        toast.info("Photo prepared for upload.");
+    };
+
+    const triggerCamera = (idx: number) => {
+        setActiveRowIdx(idx);
+        cameraInputRef.current?.click();
+    };
 
     // Reset tab when reopening with a new default
     useEffect(() => {
@@ -38,17 +93,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             setActiveTab(normalizeTab(defaultTab));
         }
     }, [open, defaultTab]);
-    const [isImporting, setIsImporting] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
-    const [parsedItems, setParsedItems] = useState<any[]>([]);
-    const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-    const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
-    const [step, setStep] = useState<"upload" | "preview" | "ai_results" | "manual_entry">("upload");
-    const [manualRows, setManualRows] = useState<any[]>([{ name: "", field2: "", field3: "", field4: "" }]);
-    const [aiQuery, setAiQuery] = useState("");
-    const [aiResults, setAiResults] = useState<SearchResult[]>([]);
-    const [isAiSearching, setIsAiSearching] = useState(false);
-    const [quickPasteText, setQuickPasteText] = useState("");
 
     // Load existing items when tab changes to check for duplicates
     useEffect(() => {
@@ -500,7 +544,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     };
 
     const addManualRow = () => {
-        setManualRows([...manualRows, { name: "", field2: "", field3: "", field4: "" }]);
+        setManualRows([...manualRows, { name: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
     };
 
     const updateManualRow = (index: number, field: string, value: string) => {
@@ -514,40 +558,90 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         setManualRows(manualRows.filter((_, i) => i !== index));
     };
 
-    const handleManualSubmit = () => {
+    const handleManualSubmit = async () => {
         const validRows = manualRows.filter(r => r.name.trim());
         if (validRows.length === 0) {
             toast.error("Please enter at least one product name.");
             return;
         }
 
-        const data: any[] = validRows.map(row => {
-            const item: any = { name: row.name, importSource: 'Manual Entry' };
-            if (activeTab === "chemicals") {
-                item.bottleSize = row.field2 || "16 oz";
-                item.currentStock = Number(row.field3.replace(/[$,]/g, '')) || 0;
-                item.description = row.field4;
-                item.brand = "";
-                item.costPerBottle = 0;
-            } else if (activeTab === "equipment") {
-                item.price = Number(row.field2.replace(/[$,]/g, '')) || 0;
-                item.notes = row.field3;
-                item.purchaseDate = new Date().toISOString().split('T')[0];
-            } else if (activeTab === "supplies") {
-                item.category = row.field2 || "General";
-                item.quantity = Number(row.field3.replace(/[$,]/g, '')) || 0;
-                item.notes = row.field4;
-            }
-            return item;
-        });
+        // Validate Price requirement - user explicitly asked for this
+        const missingPrice = validRows.some(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
+        if (missingPrice) {
+            toast.error("Every item requires a valid price before saving.");
+            return;
+        }
 
-        setParsedItems(data);
-        const newSelection = new Set<number>();
-        data.forEach((_, i) => newSelection.add(i));
-        setSelectedIndices(newSelection);
-        setStep("preview");
-        setManualRows([{ name: "", field2: "", field3: "", field4: "" }]);
-        toast.success(`Converted ${data.length} manual entries to import list.`);
+        setIsImporting(true);
+        setIsUploadingPhotos(true);
+        let importedCount = 0;
+
+        try {
+            for (const row of validRows) {
+                let finalImageUrl = "";
+                
+                // Upload photo if captured
+                if (row.imageFile) {
+                    try {
+                        const uploadedUrl = await uploadInventoryImage(row.imageFile);
+                        if (uploadedUrl) finalImageUrl = uploadedUrl;
+                    } catch (uploadErr) {
+                        console.error("Photo upload failed for row", row.name, uploadErr);
+                        toast.error(`Failed to upload photo for ${row.name}. Saving without photo.`);
+                    }
+                }
+
+                const priceValue = Number(row.price.toString().replace(/[$,]/g, '')) || 0;
+                const stockValue = Number(row.field3.toString()) || 0;
+
+                if (activeTab === "chemicals") {
+                    await saveChemical({
+                        name: row.name,
+                        brand: "",
+                        bottleSize: row.field2 || "16 oz",
+                        costPerBottle: priceValue,
+                        threshold: 1,
+                        currentStock: stockValue,
+                        imageUrl: finalImageUrl
+                    }, true);
+                } else if (activeTab === "equipment") {
+                    await saveTool({
+                        name: row.name,
+                        price: priceValue,
+                        purchaseDate: new Date().toISOString().split('T')[0],
+                        warranty: "",
+                        lifeExpectancy: "",
+                        notes: row.field4 || "",
+                        imageUrl: finalImageUrl
+                    }, true);
+                } else if (activeTab === "supplies") {
+                    await saveMaterial({
+                        name: row.name,
+                        category: row.field2 || "General",
+                        subtype: "",
+                        costPerItem: priceValue,
+                        quantity: stockValue,
+                        lowThreshold: 1,
+                        notes: row.field4 || "",
+                        imageUrl: finalImageUrl
+                    }, true);
+                }
+                importedCount++;
+            }
+
+            toast.success(`Successfully imported ${importedCount} items.`);
+            localStorage.removeItem('ultra_v6_manual_rows'); // Clear on success
+            onOpenChange(false); // Close modal on completion as requested
+            setManualRows([{ name: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+            setStep("upload");
+
+        } catch (error) {
+            console.error("Direct Import Error", error);
+            toast.error("Failed to import some items. Please check connection.");
+        } finally {
+            setIsImporting(false);
+            setIsUploadingPhotos(false);
+        }
     };
 
     const addAiItem = (result: SearchResult) => {
@@ -848,61 +942,101 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
                             <ScrollArea className="flex-1 -mx-2 px-2">
                                 <div className="space-y-6 pb-20">
-                                    <div className="grid grid-cols-12 gap-2 text-[12px] font-black uppercase tracking-widest text-white px-1">
-                                        <div className="col-span-12 md:col-span-5 mb-1 px-1">Item Name / Brand</div>
-                                        <div className="hidden md:block md:col-span-3 mb-1 px-1">{activeTab === 'chemicals' ? 'Unit Size' : activeTab === 'equipment' ? 'Price Tag' : 'Category'}</div>
-                                        <div className="hidden md:block md:col-span-2 mb-1 px-1">Current Stock</div>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        capture="environment" 
+                                        ref={cameraInputRef} 
+                                        className="hidden" 
+                                        onChange={handlePhotoCapture} 
+                                    />
+                                    
+                                    <div className="grid grid-cols-12 gap-2 text-[11px] font-black uppercase tracking-widest text-zinc-500 px-1">
+                                        <div className="col-span-8 md:col-span-5 px-1">Product Details</div>
+                                        <div className="col-span-2 md:col-span-2 px-1 text-center font-black text-emerald-400">Price</div>
+                                        <div className="col-span-2 md:col-span-2 px-1 text-center font-black text-blue-400">Stock</div>
                                     </div>
                                     
                                     {manualRows.map((row, idx) => (
-                                        <div key={idx} className="space-y-2 bg-zinc-950 p-4 rounded-xl border-2 border-zinc-800 shadow-xl">
-                                            <div className="grid grid-cols-12 gap-2 items-center">
-                                                <div className="col-span-10 md:col-span-5">
-                                                    <Label className="md:hidden text-[10px] text-zinc-500 font-bold mb-1 block uppercase">Name</Label>
+                                        <div key={idx} className="space-y-3 bg-zinc-950 p-4 rounded-xl border-2 border-zinc-800 shadow-xl relative overflow-hidden group">
+                                            {/* Header with Photo and Name */}
+                                            <div className="grid grid-cols-12 gap-3 items-center">
+                                                <div className="col-span-3 md:col-span-2">
+                                                    <div 
+                                                        onClick={() => triggerCamera(idx)}
+                                                        className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden bg-black/40 ${row.imageUrl ? 'border-emerald-500/50' : 'border-zinc-700 hover:border-indigo-500'}`}
+                                                    >
+                                                        {row.imageUrl ? (
+                                                            <img src={row.imageUrl} className="w-full h-full object-cover" alt="Preview" />
+                                                        ) : (
+                                                            <>
+                                                                <Camera className="w-6 h-6 text-zinc-600 group-hover:text-indigo-400" />
+                                                                <span className="text-[7px] font-black text-zinc-600 mt-1 uppercase">Snap</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-9 md:col-span-10 flex flex-col gap-2">
                                                     <Input 
                                                         value={row.name}
                                                         onChange={(e) => updateManualRow(idx, 'name', e.target.value)}
-                                                        placeholder="ENTER NAME HERE"
-                                                        className="bg-black border-zinc-700 h-14 text-white text-lg font-black placeholder:text-zinc-300 focus:border-indigo-400 ring-2 ring-zinc-800"
+                                                        placeholder="BRAND / PRODUCT NAME"
+                                                        className="bg-black border-zinc-700 h-10 text-white text-sm font-black placeholder:text-zinc-500 focus:border-indigo-400"
                                                     />
+                                                    <div className="grid grid-cols-12 gap-2">
+                                                        <div className="col-span-4">
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500">$</span>
+                                                                <Input 
+                                                                    value={row.price || ""}
+                                                                    onChange={(e) => updateManualRow(idx, 'price', e.target.value)}
+                                                                    placeholder="0.00"
+                                                                    className="bg-black border-zinc-900 h-9 pl-5 text-emerald-400 text-xs font-black placeholder:text-emerald-900/50 text-center"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-4">
+                                                            <Input 
+                                                                value={row.field3}
+                                                                onChange={(e) => updateManualRow(idx, 'field3', e.target.value)}
+                                                                placeholder="STOCK"
+                                                                className="bg-black border-zinc-900 h-9 text-blue-400 text-xs font-black placeholder:text-blue-900/50 text-center"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-4 flex justify-end gap-1">
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                onClick={() => removeManualRow(idx)}
+                                                                className="h-9 w-9 text-zinc-800 hover:text-red-500 hover:bg-red-500/10"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="col-span-6 md:col-span-3">
-                                                    <Label className="md:hidden text-[10px] text-zinc-500 font-bold mb-1 block uppercase">{activeTab === 'chemicals' ? 'Size' : activeTab === 'equipment' ? 'Price' : 'Category'}</Label>
+                                            </div>
+
+                                            {/* Options: Size/Notes */}
+                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-900">
+                                                <div className="space-y-1">
+                                                    <Label className="text-[8px] text-zinc-600 font-black uppercase px-1">{activeTab === 'chemicals' ? 'Unit Size' : 'Category'}</Label>
                                                     <Input 
                                                         value={row.field2}
                                                         onChange={(e) => updateManualRow(idx, 'field2', e.target.value)}
-                                                        placeholder={activeTab === 'chemicals' ? 'Size' : activeTab === 'equipment' ? 'Price' : 'Cat'}
-                                                        className="bg-zinc-900 border-zinc-700 h-12 text-white text-base font-medium placeholder:text-zinc-600 focus:border-indigo-500"
+                                                        placeholder={activeTab === 'chemicals' ? 'e.g. 16oz / 1gal' : 'Category'}
+                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400"
                                                     />
                                                 </div>
-                                                <div className="col-span-4 md:col-span-2">
-                                                    <Label className="md:hidden text-[10px] text-zinc-500 font-bold mb-1 block uppercase">Stock</Label>
+                                                <div className="space-y-1">
+                                                    <Label className="text-[8px] text-zinc-600 font-black uppercase px-1">Location / Notes</Label>
                                                     <Input 
-                                                        type="text"
-                                                        value={row.field3}
-                                                        onChange={(e) => updateManualRow(idx, 'field3', e.target.value)}
-                                                        placeholder="0"
-                                                        className="bg-zinc-900 border-zinc-700 h-12 text-white text-lg font-bold placeholder:text-zinc-600 text-center focus:border-indigo-500"
+                                                        value={row.field4}
+                                                        onChange={(e) => updateManualRow(idx, 'field4', e.target.value)}
+                                                        placeholder="Notes..."
+                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400 italic"
                                                     />
                                                 </div>
-                                                <div className="col-span-2 md:col-span-2 flex justify-end">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        onClick={() => removeManualRow(idx)}
-                                                        className="h-12 w-12 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-                                                    >
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 pt-1 border-t border-zinc-900 mt-1">
-                                                <Input 
-                                                    value={row.field4}
-                                                    onChange={(e) => updateManualRow(idx, 'field4', e.target.value)}
-                                                    placeholder="Notes (Status, location, etc...)"
-                                                    className="bg-zinc-900/50 border-none h-9 text-xs text-white placeholder:text-zinc-500 italic"
-                                                />
                                             </div>
                                         </div>
                                     ))}
@@ -910,9 +1044,9 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                     <Button 
                                         onClick={addManualRow} 
                                         variant="outline" 
-                                        className="w-full h-16 border-2 border-dashed border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900/50 font-black text-lg bg-zinc-950 mb-10"
+                                        className="w-full h-14 border-2 border-dashed border-zinc-800 text-zinc-500 hover:text-indigo-400 hover:bg-zinc-900/50 font-black text-sm bg-zinc-950 mb-10 transition-all active:scale-95"
                                     >
-                                        <Plus className="w-6 h-6 mr-3" /> ADD ANOTHER ITEM
+                                        <Plus className="w-5 h-5 mr-2" /> ADD ANOTHER ITEM
                                     </Button>
                                 </div>
                             </ScrollArea>
@@ -927,9 +1061,17 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                 </Button>
                                 <Button 
                                     onClick={handleManualSubmit} 
-                                    className="w-full md:flex-1 bg-green-600 hover:bg-green-500 text-white font-black h-14 text-xl shadow-lg"
+                                    disabled={isImporting || isUploadingPhotos}
+                                    className="w-full md:flex-1 bg-green-600 hover:bg-green-500 text-white font-black h-14 text-xl shadow-lg gap-2"
                                 >
-                                    SAVE & IMPORT NOW
+                                    {isImporting ? (
+                                        <>
+                                            <Loader2 className="w-6 h-6 animate-spin" />
+                                            {isUploadingPhotos ? "UPLOADING PHOTOS..." : "IMPORTING ITEMS..."}
+                                        </>
+                                    ) : (
+                                        "SAVE & IMPORT NOW"
+                                    )}
                                 </Button>
                             </div>
                         </div>

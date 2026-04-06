@@ -1,7 +1,32 @@
-// Inventory data layer - handles Supabase operations for inventory
 import { supabase } from './supabase';
 const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
 import { upsertExpense } from './db';
+import { compressImageForUpload } from './image-compression';
+
+export async function uploadInventoryImage(file: File): Promise<string | null> {
+    if (isDemoActive()) return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Not authenticated');
+
+    const compressed = await compressImageForUpload(file);
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    const filePath = `${session.user.id}/${fileName}`;
+
+    const { data, error } = await supabase.storage
+        .from('blog-media')
+        .upload(filePath, compressed);
+
+    if (error) {
+        console.error('Upload error:', error);
+        return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from('blog-media')
+        .getPublicUrl(filePath);
+
+    return publicUrl;
+}
 
 import { DilutionRatio } from '@/types/chemicals';
 
