@@ -242,7 +242,8 @@ export default function VehicleGallery() {
                     is_published: true,
                     created_at: new Date().toISOString()
                 };
-                await upsertLibraryItem(galleryItem as any);
+                const res = await upsertLibraryItem(galleryItem as any);
+                if (!res.success) throw res.error;
                 
                 // If Demo Mode, manually update state since the DB won't persist it
                 if (isDemoMode) {

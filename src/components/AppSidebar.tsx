@@ -36,6 +36,7 @@ import { isViewed } from "@/lib/viewTracker";
 import localforage from "localforage";
 import { useBookingsStore } from "@/store/bookings";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { contentService } from "@/lib/content";
 
 export type MenuItem = { 
   title: string; 
@@ -59,6 +60,29 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const { items: allBookings } = useBookingsStore();
   const { isDemoMode, isAdminPreview, setAdminPreview, canAccess, visibleSections } = useDemoMode();
   const [searchQuery, setSearchQuery] = useState("");
+  const [businessStatus, setBusinessStatus] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const meta = await contentService.getServiceMeta("global_settings");
+        if (meta && meta.meta && meta.meta.businessStatus) {
+           setBusinessStatus(meta.meta.businessStatus);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const topOffset = useMemo(() => {
+    let offset = 0;
+    if (isDemoMode) offset += 40;
+    if (businessStatus?.isTopBannerActive) {
+      offset += 36; // Matching Navbar sm:top-[36px]
+    }
+    // Add Navbar height (64px) to ensure the sidebar starts exactly BELOW it
+    offset += 64; 
+    return `${offset}px`;
+  }, [isDemoMode, businessStatus]);
 
   // Helper to get correct URL for demo mode
   const getUrl = (url: string) => {
@@ -397,7 +421,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     <Sidebar 
       className="border-r border-border" 
       collapsible="icon"
-      style={{ top: isDemoMode ? '40px' : '0' }}
+      style={{ top: topOffset }}
     >
       <div className={cn("flex flex-col border-b border-white/5", isDemoMode ? "pt-0" : "pt-0")}>
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
@@ -412,7 +436,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           </div>
           
           <div className="flex items-center gap-1">
-            {(open || !isMobile) && (
+            {open && (
               <>
                 <Button 
                   variant="ghost" 

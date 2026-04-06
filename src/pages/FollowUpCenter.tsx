@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { Navbar } from "@/components/Navbar";
 import { useBookingsStore, Booking } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { useFollowUpStore, FollowUpLog } from "@/store/followup";
@@ -289,9 +290,11 @@ export default function FollowUpCenter() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+    <div className="min-h-screen bg-black text-white">
+      <Navbar />
+      <main className="container mx-auto px-4 pt-48 pb-12">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
@@ -722,7 +725,6 @@ export default function FollowUpCenter() {
              </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
 
       {/* CLIENT RETENTION DIALOG */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -914,6 +916,8 @@ export default function FollowUpCenter() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </Tabs>
+      </main>
     </div>
   );
 }
