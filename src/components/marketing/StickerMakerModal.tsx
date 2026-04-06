@@ -44,13 +44,16 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
         labelsPerPage: 10,
         columns: 2,
         rows: 5,
-        margin: 0.05, // Small safe margin inside the sticker
-        gap: 0.2, // inches between stickers
+        margin: 0.02,
+        gap: 0.2,
         pageZoom: 0.8,
-        stickerWidth: 3.5, // Standard card width
-        stickerHeight: 2.0, // Standard card height
-        borderRadius: 8, // px
+        stickerWidth: 3.5,
+        stickerHeight: 2.0,
+        borderRadius: 8,
         showCutMarks: true,
+        imageScale: 100,
+        imageOffsetX: 0,
+        imageOffsetY: 0,
         brightness: 100,
         contrast: 100
     });
@@ -144,13 +147,16 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
             labelsPerPage: 10,
             columns: 2,
             rows: 5,
-            margin: 0.5,
+            margin: 0.02,
             gap: 0.2,
             pageZoom: config.pageZoom,
             stickerWidth: 3.5,
             stickerHeight: 2.0,
             borderRadius: 8,
             showCutMarks: true,
+            imageScale: 100,
+            imageOffsetX: 0,
+            imageOffsetY: 0,
             brightness: 100,
             contrast: 100
         });
@@ -257,7 +263,7 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                             <div className="space-y-6 px-1">
                                 <div className="space-y-4">
                                     <div className="flex justify-between text-[11px] font-bold">
-                                        <span className="text-zinc-400">Total stickers</span>
+                                        <span className="text-zinc-400">Total stickers (up to 24)</span>
                                         <span className="text-white">{config.labelsPerPage}</span>
                                     </div>
                                     <Slider 
@@ -272,53 +278,102 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-4 pt-2 border-t border-white/5">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                        Precise Image Framing
+                                    </Label>
+                                    
                                     <div className="space-y-2">
-                                        <Label className="text-[9px] text-zinc-500">Columns</Label>
-                                        <Input 
-                                            type="number" 
-                                            value={config.columns} 
-                                            onChange={(e) => setConfig(prev => ({ ...prev, columns: parseInt(e.target.value) || 1 }))}
-                                            className="h-8 bg-black border-zinc-800 text-[11px]"
+                                        <div className="flex justify-between text-[9px] text-zinc-400">
+                                            <span>Image Scale</span>
+                                            <span>{config.imageScale}%</span>
+                                        </div>
+                                        <Slider 
+                                            value={[config.imageScale]} 
+                                            min={50} 
+                                            max={150} 
+                                            onValueChange={([val]) => setConfig(prev => ({ ...prev, imageScale: val }))}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[9px] text-zinc-500">Sticker Padding</Label>
-                                        <Input 
-                                            type="number" 
-                                            step="0.05"
-                                            value={config.margin} 
-                                            onChange={(e) => setConfig(prev => ({ ...prev, margin: parseFloat(e.target.value) || 0 }))}
-                                            className="h-8 bg-black border-zinc-800 text-[11px]"
-                                        />
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[9px] text-zinc-400">
+                                                <span>Offset X</span>
+                                                <span>{config.imageOffsetX}%</span>
+                                            </div>
+                                            <Slider 
+                                                value={[config.imageOffsetX]} 
+                                                min={-50} 
+                                                max={50} 
+                                                onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetX: val }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[9px] text-zinc-400">
+                                                <span>Offset Y</span>
+                                                <span>{config.imageOffsetY}%</span>
+                                            </div>
+                                            <Slider 
+                                                value={[config.imageOffsetY]} 
+                                                min={-50} 
+                                                max={50} 
+                                                onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetY: val }))}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] text-zinc-500 uppercase tracking-tighter">Gap Between Stickers</Label>
-                                    <Slider 
-                                        value={[config.gap * 100]} 
-                                        max={50} 
-                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, gap: val / 100 }))}
-                                    />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] text-zinc-500 uppercase tracking-tighter">Border Radius</Label>
-                                    <Slider 
-                                        value={[config.borderRadius]} 
-                                        max={40} 
-                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, borderRadius: val }))}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] text-zinc-500 uppercase tracking-tighter">Total Width (Small Adjustment)</Label>
-                                    <Slider 
-                                        value={[config.stickerWidth * 100]} 
-                                        min={200}
-                                        max={400}
-                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, stickerWidth: val / 100 }))}
-                                    />
+                                <div className="space-y-4 pt-2 border-t border-white/5">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                        Grid & Sheet Settings
+                                    </Label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[9px] text-zinc-500">Columns</Label>
+                                            <Input 
+                                                type="number" 
+                                                value={config.columns} 
+                                                onChange={(e) => setConfig(prev => ({ ...prev, columns: parseInt(e.target.value) || 1 }))}
+                                                className="h-8 bg-black border-zinc-800 text-[11px]"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 text-right">
+                                            <Label className="text-[9px] text-zinc-500">Cut Marks</Label>
+                                            <div className="flex justify-end pt-1">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={config.showCutMarks}
+                                                    onChange={(e) => setConfig(prev => ({ ...prev, showCutMarks: e.target.checked }))}
+                                                    className="rounded border-zinc-700 bg-zinc-950 text-blue-600 h-4 w-4"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-[9px] text-zinc-400">
+                                            <span>Gaps</span>
+                                            <span>{(config.gap * 100).toFixed(0)}%</span>
+                                        </div>
+                                        <Slider 
+                                            value={[config.gap * 100]} 
+                                            max={50} 
+                                            onValueChange={([val]) => setConfig(prev => ({ ...prev, gap: val / 100 }))}
+                                        />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-[9px] text-zinc-400">
+                                            <span>Rounding</span>
+                                            <span>{config.borderRadius}px</span>
+                                        </div>
+                                        <Slider 
+                                            value={[config.borderRadius]} 
+                                            max={40} 
+                                            onValueChange={([val]) => setConfig(prev => ({ ...prev, borderRadius: val }))}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -373,7 +428,6 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                         overflow: 'hidden',
                                         borderRadius: `${config.borderRadius}px`,
                                         backgroundColor: '#000000',
-                                        padding: `${config.margin}in`, // This puts the image INSIDE with a margin
                                         boxSizing: 'border-box'
                                     }}
                                 >
@@ -381,9 +435,11 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                         src={img || imageUrl} 
                                         alt="Sticker" 
                                         style={{ 
-                                            width: '100%', 
+                                            width: `${config.imageScale}%`, 
                                             height: '100%', 
-                                            objectFit: 'contain'
+                                            objectFit: 'contain',
+                                            transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)`,
+                                            transition: 'none'
                                         }} 
                                     />
                                     {/* Corner Cut Helper Marks */}
