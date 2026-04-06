@@ -220,23 +220,31 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                 Sticker Image Source
                             </Label>
                             <div className="space-y-3">
-                                <div className="aspect-video bg-black rounded-lg border border-zinc-800 overflow-hidden relative group">
-                                    <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
-                                        <Input 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={handleImageUpload}
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                        />
-                                        <div className="text-center">
-                                            <Plus className="h-6 w-6 text-white mx-auto mb-1" />
-                                            <span className="text-[10px] font-black text-white uppercase">Replace Image</span>
-                                        </div>
-                                    </div>
+                                <div className="aspect-video bg-black rounded-lg border border-zinc-800 overflow-hidden relative">
+                                    <img 
+                                        src={imageUrl} 
+                                        alt="Current Sticker" 
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = "https://via.placeholder.com/400x225/000000/FFFFFF?text=No+Image+Selected";
+                                        }}
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <Input 
+                                        type="file" 
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                    />
+                                    <Button variant="outline" className="w-full h-10 border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 font-black uppercase text-[10px] tracking-widest">
+                                        <Plus className="h-3 w-3 mr-2" />
+                                        Select New Image
+                                    </Button>
                                 </div>
                                 <p className="text-[10px] text-zinc-500 italic text-center px-4">
-                                    Upload your QR card image for automatic formatting
+                                    You can upload your own QR card image or use the default one
                                 </p>
                             </div>
                         </div>
