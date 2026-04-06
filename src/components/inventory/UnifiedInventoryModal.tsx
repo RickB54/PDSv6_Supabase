@@ -13,6 +13,7 @@ import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chem
 import { DilutionRatio } from "@/types/chemicals";
 import { generateTemplate } from "@/lib/chemical-ai";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { uploadFile } from "@/lib/storage-utils";
 
 // Updated naming: material → supply, tool → equipment
 // Backward compatibility maintained in data layer
@@ -261,25 +262,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         toast.info("Processing image...");
         const file = e.target.files[0];
 
-        // Always attempt to compress images to ensure reliable mobile upload
-        // regardless of source (local or camera)
-        const fileToUpload = await compressImageForUpload(file);
-
-        // Upload to Supabase Storage
-        const ext = file.name?.split('.').pop() || 'jpg';
-        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
-        const filePath = `inventory/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('blog-media') // Reusing bucket as per plan
-          .upload(filePath, fileToUpload);
-
-        if (uploadError) throw uploadError;
-
-        // Get URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('blog-media')
-          .getPublicUrl(filePath);
+        // Use the centralized upload utility which includes mobile-optimized compression
+        const publicUrl = await uploadFile('blog-media', file);
 
         setForm(prev => ({ ...prev, imageUrl: publicUrl }));
         toast.success("Image uploaded to cloud");

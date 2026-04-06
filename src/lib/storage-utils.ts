@@ -86,10 +86,24 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
 /**
  * Uploads a file to a specific Supabase Storage bucket.
  * Returns the public URL of the uploaded file.
+ * Automatically compresses images to prevent mobile device out-of-memory errors.
  */
-export const uploadFile = async (bucket: string, file: File, path?: string): Promise<string> => {
+export const uploadFile = async (bucket: string, file: File, path?: string, skipCompression: boolean = false): Promise<string> => {
+    let fileToUpload = file;
+    
+    // Automatically apply compression for image uploads unless explicitly skipped
+    if (!skipCompression && file.type.startsWith('image/')) {
+        try {
+            const { compressImageForUpload } = await import('./image-compression');
+            fileToUpload = await compressImageForUpload(file);
+        } catch (compErr) {
+            console.warn("Auto-compression failed before upload:", compErr);
+            // Continue with original file if compression fails
+        }
+    }
+
     const fileName = path || `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, {
+    const { data, error } = await supabase.storage.from(bucket).upload(fileName, fileToUpload, {
         cacheControl: '3600',
         upsert: true
     });

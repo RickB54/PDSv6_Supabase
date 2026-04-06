@@ -7,16 +7,17 @@ import { toast } from "sonner";
  * high enough quality for inventory and notes.
  */
 export const compressImageForUpload = async (file: File, options = {}) => {
-  // Give the browser UI thread a moment to settle after returning from native camera
+  // Give the browser UI thread more time to settle after returning from native camera
   // This is a known fix for mobile "low memory" crashes where the system is still
   // recovering from the Camera app's memory usage.
-  await new Promise(resolve => setTimeout(resolve, 500));
+  // Increased to 1.5s for older devices.
+  await new Promise(resolve => setTimeout(resolve, 1500));
 
   const defaultOptions = {
-    maxSizeMB: 0.5,           // Target size < 500KB
-    maxWidthOrHeight: 1280,  // Maximum dimension 1280px (plenty for thumbnails/previews)
+    maxSizeMB: 0.4,           // Target size < 400KB (safer for mobile)
+    maxWidthOrHeight: 1024,  // Maximum dimension 1024px (optimized for speed/RAM)
     useWebWorker: true,      // Use web worker to keep main thread responsive
-    initialQuality: 0.7,      // Start with 70% quality
+    initialQuality: 0.6,      // Lower initial quality to reduce initial canvas pressure
     alwaysKeepResolution: false,
     ...options
   };
