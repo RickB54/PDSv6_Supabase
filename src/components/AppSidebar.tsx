@@ -396,6 +396,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       e.preventDefault();
       if (url === '#call-assistant') {
         window.dispatchEvent(new Event('open-call-assistant'));
+      } else if (url === '#sticker-maker') {
+        window.dispatchEvent(new Event('open-sticker-maker'));
       } else if (url.startsWith('#help')) {
         const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
         window.dispatchEvent(new CustomEvent('open-help', { detail: { role, topicId } }));
