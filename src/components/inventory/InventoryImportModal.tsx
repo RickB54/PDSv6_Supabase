@@ -81,15 +81,26 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const emptyRow = () => ({ name: "", brand: "", productName: "", category: "", bottleSize: "", notes: "", price: "", quantity: "", imageFile: null, imageUrl: null });
 
     const [manualRows, setManualRows] = useState<any[]>(() => {
-        const saved = localStorage.getItem('ultra_v6_manual_rows');
-        if (saved) {
-            try {
-                const rows = JSON.parse(saved);
-                return rows.map((r: any) => ({ ...emptyRow(), ...r, imageFile: null, imageUrl: null }));
-            } catch (e) { console.error("Restore failed", e); }
+        // Only restore from localStorage if we crashed while the modal was open
+        // This prevents stale old-format rows from poisoning a fresh session
+        const modalWasOpen = localStorage.getItem('inventory_import_modal_open') === 'true';
+        if (modalWasOpen) {
+            const saved = localStorage.getItem('ultra_v6_manual_rows');
+            if (saved) {
+                try {
+                    const rows = JSON.parse(saved);
+                    return rows.map((r: any) => ({ ...emptyRow(), ...r, imageFile: null, imageUrl: null }));
+                } catch (e) { console.error("Restore failed", e); }
+            }
         }
         return [emptyRow()];
     });
+
+    // Always-fresh ref so handleManualSubmit never reads a stale closure snapshot
+    const manualRowsRef = useRef(manualRows);
+    useEffect(() => {
+        manualRowsRef.current = manualRows;
+    }, [manualRows]);
 
     // Persistent storage for manual entry rows
     useEffect(() => {
@@ -142,29 +153,38 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     };
 
     const handleManualSubmit = async () => {
-        // Validation varies by tab
-        const validRows = manualRows.filter(r => {
+        // Always read from the ref to get the absolute latest state from ALL rows,
+        // including those that have scrolled out of the visible viewport
+        const currentRows = manualRowsRef.current;
+
+        // Filter by tab — all items with a name (or brand/productName for chemicals)
+        const validRows = currentRows.filter(r => {
             if (activeTab === "chemicals") return r.productName?.trim() || r.brand?.trim();
-            return r.name?.trim(); // Supplies & Equipment just need a name
+            return r.name?.trim();
         });
+
         if (validRows.length === 0) {
             toast.error("Please enter at least one item name.");
             return;
         }
 
-        // Price is mandatory for all items
-        const missingPrice = validRows.some(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
-        if (missingPrice) {
-            toast.error("Every item requires a valid price before saving.");
+        // Check that EVERY valid row has a price
+        const rowsMissingPrice = validRows.filter(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
+        if (rowsMissingPrice.length > 0) {
+            const names = rowsMissingPrice.map(r => r.name || r.productName || "(unnamed)").join(", ");
+            toast.error(`Price missing for: ${names}`);
             return;
         }
 
         setIsImporting(true);
         setIsUploadingPhotos(true);
         let importedCount = 0;
+        const failedItems: string[] = [];
 
-        try {
-            for (const row of validRows) {
+        for (const row of validRows) {
+            // Each item is wrapped in its OWN try/catch
+            // A failure on item 1 NEVER prevents items 2, 3, etc. from saving
+            try {
                 let finalImageUrl = "";
 
                 // Upload photo if captured
@@ -173,8 +193,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         const uploadedUrl = await uploadInventoryImage(row.imageFile);
                         if (uploadedUrl) finalImageUrl = uploadedUrl;
                     } catch (uploadErr) {
-                        console.error("Photo upload failed for row", row.name || row.productName, uploadErr);
-                        toast.error(`Photo upload failed for ${row.name || row.productName}. Saving without photo.`);
+                        console.error("Photo upload failed", uploadErr);
+                        // Continue saving the item without the photo
                     }
                 }
 
@@ -182,7 +202,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 const qtyValue = Number(row.quantity || "0") || 0;
 
                 if (activeTab === "chemicals") {
-                    // Chemicals: Brand + Product Name + Bottle Size
                     const chemName = row.productName?.trim() || row.brand?.trim() || "Unnamed Chemical";
                     await saveChemical({
                         name: chemName,
@@ -195,7 +214,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     }, true);
 
                 } else if (activeTab === "equipment") {
-                    // Equipment: Item Name + Category + Notes (no brand)
                     await saveTool({
                         name: row.name?.trim() || "Unnamed Equipment",
                         price: priceValue,
@@ -208,7 +226,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     }, true);
 
                 } else if (activeTab === "supplies") {
-                    // Supplies: Item Name + Category + Notes (no brand)
                     await saveMaterial({
                         name: row.name?.trim() || "Unnamed Supply",
                         category: row.category || "General",
@@ -219,22 +236,33 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         imageUrl: finalImageUrl
                     }, true);
                 }
-                importedCount++;
-            }
 
-            toast.success(`Successfully imported ${importedCount} items.`);
+                importedCount++;
+
+            } catch (itemError) {
+                console.error("Failed to save item:", row.name || row.productName, itemError);
+                failedItems.push(row.name || row.productName || "(unnamed)");
+            }
+        }
+
+        setIsImporting(false);
+        setIsUploadingPhotos(false);
+
+        if (importedCount > 0) {
+            toast.success(`Successfully imported ${importedCount} of ${validRows.length} items.`);
+        }
+        if (failedItems.length > 0) {
+            toast.error(`Failed to save: ${failedItems.join(", ")}. Check connection.`);
+        }
+
+        if (importedCount === validRows.length) {
+            // All saved — clean up and close
             localStorage.removeItem('ultra_v6_manual_rows');
             onOpenChange(false);
             setManualRows([emptyRow()]);
             setStep("upload");
-
-        } catch (error) {
-            console.error("Direct Import Error", error);
-            toast.error("Failed to import some items. Please check connection.");
-        } finally {
-            setIsImporting(false);
-            setIsUploadingPhotos(false);
         }
+        // If some failed, keep the modal open so user can retry
     };
 
     const addAiItem = (result: SearchResult) => {
