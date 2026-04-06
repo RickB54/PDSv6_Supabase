@@ -289,9 +289,14 @@ export default function StickerMaker() {
                                 <Sparkles className="h-3 w-3 text-emerald-400" />
                                 Sheet Alignment
                             </Label>
-                            <Button variant="ghost" size="sm" onClick={handleResetAlignment} className="h-6 text-[8px] font-black uppercase text-rose-500 hover:text-rose-400 px-2 rounded-full border border-rose-500/20">
-                                <RotateCcw className="h-2 w-2 mr-1" />
-                                Reset
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleResetAlignment} 
+                                className="h-7 text-[9px] font-black uppercase bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white transition-all px-3"
+                            >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Reset All
                             </Button>
                         </div>
                         
