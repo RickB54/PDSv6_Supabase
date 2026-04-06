@@ -283,17 +283,26 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[9px] text-zinc-500">Gap (inches)</Label>
+                                        <Label className="text-[9px] text-zinc-500">Sticker Padding</Label>
                                         <Input 
                                             type="number" 
                                             step="0.05"
-                                            value={config.gap} 
-                                            onChange={(e) => setConfig(prev => ({ ...prev, gap: parseFloat(e.target.value) || 0 }))}
+                                            value={config.margin} 
+                                            onChange={(e) => setConfig(prev => ({ ...prev, margin: parseFloat(e.target.value) || 0 }))}
                                             className="h-8 bg-black border-zinc-800 text-[11px]"
                                         />
                                     </div>
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] text-zinc-500 uppercase tracking-tighter">Gap Between Stickers</Label>
+                                    <Slider 
+                                        value={[config.gap * 100]} 
+                                        max={50} 
+                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, gap: val / 100 }))}
+                                    />
+                                </div>
+                                
                                 <div className="space-y-2">
                                     <Label className="text-[9px] text-zinc-500 uppercase tracking-tighter">Border Radius</Label>
                                     <Slider 
@@ -302,15 +311,14 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                         onValueChange={([val]) => setConfig(prev => ({ ...prev, borderRadius: val }))}
                                     />
                                 </div>
-
-                                <div className="flex items-center gap-3 bg-zinc-800/30 p-2 rounded-lg border border-white/5">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={config.showCutMarks}
-                                        onChange={(e) => setConfig(prev => ({ ...prev, showCutMarks: e.target.checked }))}
-                                        className="rounded border-zinc-700 bg-zinc-950 text-blue-600"
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] text-zinc-500 uppercase tracking-tighter">Total Width (Small Adjustment)</Label>
+                                    <Slider 
+                                        value={[config.stickerWidth * 100]} 
+                                        min={200}
+                                        max={400}
+                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, stickerWidth: val / 100 }))}
                                     />
-                                    <span className="text-[10px] font-bold text-zinc-300">Show Helper Cut Marks</span>
                                 </div>
                             </div>
                         </div>
@@ -339,17 +347,18 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                             style={{ 
                                 width: '8.5in',
                                 height: '11in',
+                                minWidth: '8.5in',
+                                minHeight: '11in',
                                 backgroundColor: 'white',
-                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                                padding: '0.4in', // Fixed safe page margin
+                                boxSizing: 'border-box',
                                 transform: `scale(${config.pageZoom})`,
                                 transformOrigin: 'top center',
-                                padding: `${config.margin}in`,
-                                boxSizing: 'border-box',
                                 display: 'grid',
-                                gridTemplateColumns: `repeat(${config.columns}, ${config.stickerWidth}in)`,
+                                gridTemplateColumns: `repeat(${config.columns}, 1fr)`,
                                 gap: `${config.gap}in`,
                                 alignContent: 'start',
-                                justifyContent: 'center'
+                                justifyItems: 'center'
                             }}
                         >
                             {sheetLabels.map((img, idx) => (
@@ -358,11 +367,14 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                     style={{ 
                                         width: `${config.stickerWidth}in`,
                                         height: `${config.stickerHeight}in`,
+                                        maxWidth: '100%',
                                         border: config.showCutMarks ? '1px dashed #00000020' : 'none',
                                         position: 'relative',
                                         overflow: 'hidden',
                                         borderRadius: `${config.borderRadius}px`,
-                                        backgroundColor: '#000000'
+                                        backgroundColor: '#000000',
+                                        padding: `${config.margin}in`, // This puts the image INSIDE with a margin
+                                        boxSizing: 'border-box'
                                     }}
                                 >
                                     <img 
