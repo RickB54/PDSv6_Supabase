@@ -103,8 +103,24 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const loadConfig = async () => {
       try {
+        // Fast-path: check cache first
+        const cached = localStorage.getItem("demo_config_cache");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setConfig(parsed);
+          if (parsed.publicDemoEnabled === false) {
+            setPublicDemoDisabled(true);
+            if (parsed.disabledReason) setDisabledReason(parsed.disabledReason);
+          }
+          // If we have a cache, we can mark loading as finished technically, 
+          // but we'll still fetch fresh data in background.
+          // For now, let's just make it feel faster.
+          setIsLoading(false);
+        }
+
         const meta = await contentService.getServiceMeta("demo_config");
         if (meta && meta.meta) {
+          localStorage.setItem("demo_config_cache", JSON.stringify(meta.meta));
           setConfig(meta.meta);
           if (meta.meta.publicDemoEnabled === false) {
             setPublicDemoDisabled(true);

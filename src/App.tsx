@@ -160,12 +160,17 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
 
-  if (isLoading) {
+  // ONLY block public/website routes if we are explicitly in demo mode paths.
+  // Otherwise, we allow the main content to render while security config loads in background.
+  if (isLoading && isApp) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-white font-mono">
+      <div className="flex items-center justify-center min-h-screen bg-black text-white font-mono animate-in fade-in duration-300">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          <p className="animate-pulse tracking-widest text-xs uppercase">Verifying Security Posture...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20 border-t-white"></div>
+          <div className="flex flex-col items-center">
+            <p className="animate-pulse tracking-[0.2em] text-[10px] uppercase font-black">Verifying Security Posture</p>
+            <p className="text-[8px] text-white/40 mt-1 uppercase tracking-widest">Global Sync Required</p>
+          </div>
         </div>
       </div>
     );
