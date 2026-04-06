@@ -168,12 +168,11 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             return;
         }
 
-        // Check that EVERY valid row has a price
-        const rowsMissingPrice = validRows.filter(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
+        // Price is now OPTIONAL — warn but don't block
+        const rowsMissingPrice = validRows.filter(r => !r.price || r.price.toString().trim() === '');
         if (rowsMissingPrice.length > 0) {
             const names = rowsMissingPrice.map(r => r.name || r.productName || "(unnamed)").join(", ");
-            toast.error(`Price missing for: ${names}`);
-            return;
+            toast.warning(`No price entered for: ${names}. Saving as $0.00 — you can update later.`);
         }
 
         setIsImporting(true);

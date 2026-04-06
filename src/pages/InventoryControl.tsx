@@ -1747,7 +1747,9 @@ const InventoryControl = () => {
                           {m.name}
                         </TableCell>
                         <TableCell className="text-zinc-300">{m.category}</TableCell>
-                        <TableCell className="text-zinc-300">${(m.costPerItem || 0).toFixed(2)}</TableCell>
+                        <TableCell className={`font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                          {!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}
+                        </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                             {typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
@@ -1779,7 +1781,9 @@ const InventoryControl = () => {
                           {m.imageUrl && <img src={m.imageUrl} alt={m.name} className="h-8 w-8 rounded object-cover" />}
                           {m.name}
                         </div>
-                        <div className="text-sm text-zinc-300">{m.category} • ${(m.costPerItem || 0).toFixed(2)}</div>
+                        <div className={`text-sm font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                          {m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)}`}
+                        </div>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                         {m.quantity} units
@@ -1904,7 +1908,9 @@ const InventoryControl = () => {
                           {t.name}
                         </TableCell>
                         <TableCell className="text-zinc-300">{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell className="text-zinc-300">${(t.price || 0).toFixed(2)}</TableCell>
+                        <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                          {!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}
+                        </TableCell>
                         <TableCell><span className="text-xs text-zinc-300 truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
@@ -1931,7 +1937,9 @@ const InventoryControl = () => {
                           {t.imageUrl && <img src={t.imageUrl} alt={t.name} className="h-8 w-8 rounded object-cover" />}
                           {t.name}
                         </div>
-                        <div className="text-sm text-zinc-300">${(t.price || 0).toFixed(2)} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
+                        <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                          {!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
+                        </div>
                       </div>
                     </div>
                     {t.notes && <div className="text-xs text-zinc-300">{t.notes}</div>}
