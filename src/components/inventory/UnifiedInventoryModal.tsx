@@ -138,10 +138,16 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [isUploading, setIsUploading] = useState(false);
 
   // Track if user selected "Custom" for dropdowns
+  const [customCategory, setCustomCategory] = useState(false);
   const [customSubtype, setCustomSubtype] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
 
   // Dropdown options
+  const categoryOptions = {
+    supply: ["Rag", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Other", "Custom"],
+    equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
+  };
+
   const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
 
   const chemicalUnits = ["oz", "mL", "L", "Gallons", "Quarts", "Pints", "Custom"];
@@ -160,6 +166,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       const initialUnit = (initial as any).unitOfMeasure || "";
 
       // Check if values are custom (not in predefined lists)
+      const initialCat = (initial as any).category || "";
+      const isCustomCat = initialCat && 
+        (mode === 'equipment' || mode === 'tool' ? 
+          !categoryOptions.equipment.includes(initialCat) : 
+          !categoryOptions.supply.includes(initialCat));
+      
+      setCustomCategory(isCustomCat);
       setCustomSubtype(initialSubtype && !sizeOptions.includes(initialSubtype));
       setCustomUnit(initialUnit && !getUnitOptions().includes(initialUnit));
 
@@ -206,6 +219,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         } catch (e) { console.error("Restore failed", e); }
       }
 
+      setCustomCategory(false);
       setCustomSubtype(false);
       setCustomUnit(false);
       setForm({
@@ -242,13 +256,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       localStorage.setItem('pending_inventory_form', JSON.stringify({
         form,
         mode,
+        customCategory,
         customSubtype,
         customUnit
       }));
-    } else {
-      // Don't clear immediately, wait for InventoryControl component to decide
     }
-  }, [form, mode, customSubtype, customUnit, open]);
+  }, [form, mode, customCategory, customSubtype, customUnit, open]);
 
   const numeric = (v: string) => {
     const n = parseFloat(v);
@@ -571,16 +584,46 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs text-zinc-400">Category</Label>
-                    <select
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                    >
-                      <option>Rag</option>
-                      <option>Brush</option>
-                      <option>Tool</option>
-                      <option>Other</option>
-                    </select>
+                    {!customCategory ? (
+                      <select
+                        value={categoryOptions.supply.includes(form.category) ? form.category : "Custom"}
+                        onChange={(e) => {
+                          if (e.target.value === "Custom") {
+                            setCustomCategory(true);
+                            setForm({ ...form, category: "" });
+                          } else {
+                            setForm({ ...form, category: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select category...</option>
+                        {categoryOptions.supply.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.category}
+                          onChange={(e) => setForm({ ...form, category: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter custom category..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCustomCategory(false);
+                            setForm({ ...form, category: "Other" });
+                          }}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Subtype / Size</Label>
@@ -630,17 +673,46 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               {(mode === 'equipment' || mode === 'tool') && (
                 <div>
                   <Label className="text-xs text-zinc-400">Category</Label>
-                  <select
-                    value={form.category || "Power Tool"}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                  >
-                    <option>Power Tool</option>
-                    <option>Hand Tool</option>
-                    <option>Equipment</option>
-                    <option>Accessory</option>
-                    <option>Other</option>
-                  </select>
+                  {!customCategory ? (
+                    <select
+                      value={categoryOptions.equipment.includes(form.category) ? form.category : "Custom"}
+                      onChange={(e) => {
+                        if (e.target.value === "Custom") {
+                          setCustomCategory(true);
+                          setForm({ ...form, category: "" });
+                        } else {
+                          setForm({ ...form, category: e.target.value });
+                        }
+                      }}
+                      className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="">Select category...</option>
+                      {categoryOptions.equipment.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.category}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                        placeholder="Enter custom category..."
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCustomCategory(false);
+                          setForm({ ...form, category: "Other" });
+                        }}
+                        className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

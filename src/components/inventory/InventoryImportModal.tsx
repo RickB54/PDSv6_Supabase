@@ -552,7 +552,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     else throw new Error("Invalid Format");
                 }
             } else {
-                // Improved CSV Parsing for LibreOffice/Excel compatibility
+                // Improved CSV Parsing
                 const parseLine = (line: string) => {
                     const result = [];
                     let curVal = "";
@@ -589,22 +589,16 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 data = lines.slice(1).map(line => {
                     const values = parseLine(line);
                     const row: any = {};
-                    
-                    // Map by header name instead of index to be robust
                     headers.forEach((header, i) => {
                         let val = values[i] || "";
-                        
-                        // Clean numeric fields
                         const numFields = ['costperbottle', 'threshold', 'currentstock', 'price', 'costperitem', 'quantity', 'lowthreshold'];
                         if (numFields.includes(header)) {
-                             // Handle currency symbols if present
                             const numericVal = Number(val.replace(/[$,]/g, ''));
                             row[header === 'costperbottle' ? 'costPerBottle' : 
                                 header === 'currentstock' ? 'currentStock' : 
                                 header === 'costperitem' ? 'costPerItem' : 
                                 header === 'lowthreshold' ? 'lowThreshold' : header] = isNaN(numericVal) ? 0 : numericVal;
                         } else {
-                            // Map case-sensitive property names back for consistency with component state
                             const propertyMap: Record<string, string> = {
                                 'name': 'name',
                                 'brand': 'brand',
@@ -631,13 +625,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             const itemsWithSource = data.map(i => ({ ...i, importSource: format === 'csv' ? 'Manual Import' : 'JSON Import' }));
             setParsedItems(itemsWithSource);
 
-            // Auto-select items that are NOT duplicates
             const newSelection = new Set<number>();
             itemsWithSource.forEach((item, index) => {
                 const name = item.name?.toLowerCase().trim();
-                if (name && !existingNames.has(name)) {
-                    newSelection.add(index);
-                }
+                if (name && !existingNames.has(name)) newSelection.add(index);
             });
             setSelectedIndices(newSelection);
             setStep("preview");
@@ -655,20 +646,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         }
 
         const lines = text.split(/\r?\n/).filter(l => l.trim());
-        if (lines.length === 0) {
-            toast.error("No valid lines found.");
-            return;
-        }
-
         const data: any[] = lines.map(line => {
-            // Split by comma first, then try to handle bullet points or other separators
             let parts = line.split(',').map(p => p.trim());
-            
-            // If comma split didn't work (just one part), try to handle common bullet formats
             if (parts.length === 1) {
-                // Remove leading bullets/dashes/numbers
                 const cleanLine = line.replace(/^[•\-\*\d\.]+\s*/, "").trim();
-                // Try splitting by common separators if no comma
                 const altParts = cleanLine.split(/[:\-]/).map(p => p.trim());
                 if (altParts.length > 1) parts = altParts;
                 else parts = [cleanLine];
@@ -676,37 +657,22 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
             const row: any = {};
             if (activeTab === "chemicals") {
-                // Name, Size, Stock/Notes
                 row.name = parts[0] || "New Chemical";
                 row.bottleSize = parts[1] || "16 oz";
-                // If part 2 is a number, treat as stock, otherwise treat as notes
                 const p2 = parts[2] || "";
-                if (p2 && !isNaN(Number(p2.replace(/[$,]/g, '')))) {
-                    row.currentStock = Number(p2.replace(/[$,]/g, ''));
-                } else if (p2) {
-                    row.description = p2;
-                }
-                if (parts[3]) row.description = (row.description ? row.description + " - " : "") + parts[3];
-                row.brand = "";
-                row.costPerBottle = 0;
-                row.threshold = 1;
+                if (p2 && !isNaN(Number(p2.replace(/[$,]/g, '')))) row.currentStock = Number(p2.replace(/[$,]/g, ''));
+                else if (p2) row.description = p2;
             } else if (activeTab === "equipment") {
-                // Name, Price, Notes
                 row.name = parts[0] || "New Equipment";
                 const priceMatch = (parts[1] || "").replace(/[$,]/g, '');
                 row.price = isNaN(Number(priceMatch)) ? 0 : Number(priceMatch);
                 row.notes = parts[2] || "";
-                row.purchaseDate = new Date().toISOString().split('T')[0];
             } else if (activeTab === "supplies") {
-                // Name, Category, Quantity
                 row.name = parts[0] || "New Supply";
                 row.category = parts[1] || "General";
                 const qtyMatch = (parts[2] || "").replace(/[$,]/g, '');
                 row.quantity = isNaN(Number(qtyMatch)) ? 0 : Number(qtyMatch);
-                row.lowThreshold = 1;
-                row.costPerItem = 0;
             }
-
             return { ...row, importSource: 'Quick Paste' };
         });
 
@@ -715,7 +681,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         data.forEach((_, i) => newSelection.add(i));
         setSelectedIndices(newSelection);
         setStep("preview");
-        setQuickPasteText(""); // Clear for next time
+        setQuickPasteText("");
         toast.success(`Parsed ${data.length} items from text.`);
     };
 
@@ -756,28 +722,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         setParsedItems(newItems);
     };
 
-    const addItem = () => {
-        let newItem: any = {};
-        if (activeTab === "chemicals") {
-            newItem = { name: "", brand: "", bottleSize: "", costPerBottle: 0, currentStock: 0, threshold: 1, description: "", importSource: 'Manual Entry' };
-        } else if (activeTab === "equipment") {
-            newItem = { name: "", price: 0, purchaseDate: "", notes: "", importSource: 'Manual Entry' };
-        } else if (activeTab === "supplies") {
-            newItem = { name: "", category: "", costPerItem: 0, quantity: 0, lowThreshold: 1, notes: "", importSource: 'Manual Entry' };
-        }
-
-        const newItems = [...parsedItems, newItem];
-        setParsedItems(newItems);
-        const newSelection = new Set(selectedIndices);
-        newSelection.add(newItems.length - 1);
-        setSelectedIndices(newSelection);
-
-        setTimeout(() => {
-            const el = document.getElementById("imports-end-anchor");
-            el?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-    };
-
     const removeItem = (index: number) => {
         const newItems = parsedItems.filter((_, i) => i !== index);
         setParsedItems(newItems);
@@ -797,7 +741,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         if (!aiQuery.trim()) return;
 
         setIsAiSearching(true);
-        // Simulate "thinking" time for AI feel
         setTimeout(() => {
             const results = searchAI(aiQuery, existingNames);
             setAiResults(results);
@@ -813,575 +756,327 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full sm:max-w-[800px] h-[95vh] sm:h-auto sm:max-h-[85vh] flex flex-col p-2 sm:p-6 bg-zinc-950 border-zinc-800">
-                <DialogHeader>
-                    <DialogTitle>Import {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</DialogTitle>
+            <DialogContent className="w-full sm:max-w-[1100px] h-[95vh] sm:h-[90vh] sm:max-h-[900px] flex flex-col p-2 sm:p-6 bg-zinc-950 border-zinc-800 overflow-hidden shadow-2xl">
+                <DialogHeader className="shrink-0 mb-2 px-2">
+                    <DialogTitle className="text-2xl font-black text-white flex items-center gap-3 tracking-tighter uppercase whitespace-normal leading-tight">
+                        <Plus className="w-8 h-8 text-indigo-500 shrink-0" />
+                        {activeTab} Documentation Suite
+                    </DialogTitle>
                 </DialogHeader>
 
-                <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex-1 flex flex-col min-h-0">
-                    <div className="flex justify-between items-center mb-4">
-                        <TabsList className="grid w-[400px] grid-cols-3">
-                            <TabsTrigger value="chemicals" disabled={step === "preview" || step === "ai_results"}>Chemicals</TabsTrigger>
-                            <TabsTrigger value="supplies" disabled={step === "preview" || step === "ai_results"} className="flex flex-col items-center leading-none py-1">
-                                <span>Supplies</span>
-                                <span className="text-[9px] opacity-70">(Consumable)</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="equipment" disabled={step === "preview" || step === "ai_results"} className="flex flex-col items-center leading-none py-1">
-                                <span>Equipment</span>
-                                <span className="text-[9px] opacity-70">(Durable)</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        {step === "preview" && (
-                            <Button size="sm" onClick={() => addItem()} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
-                                <Plus className="w-4 h-4" /> Add Item
-                            </Button>
-                        )}
-                    </div>
+                <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <TabsList className="grid grid-cols-3 bg-zinc-900 border border-zinc-800 p-1 shrink-0 mb-4 h-12">
+                        <TabsTrigger value="chemicals" className="font-bold uppercase text-[10px] sm:text-xs">Chemicals</TabsTrigger>
+                        <TabsTrigger value="supplies" className="font-bold uppercase text-[10px] sm:text-xs">Supplies</TabsTrigger>
+                        <TabsTrigger value="equipment" className="font-bold uppercase text-[10px] sm:text-xs">Equipment</TabsTrigger>
+                    </TabsList>
 
-                    <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-zinc-950/20 rounded-lg overflow-hidden">
-                        <ScrollArea className="flex-1">
-                            <div className="p-4">
-                                {step === "upload" ? (
-                                    <div className="space-y-6">
-                            {/* NEW: Quick Manual Entry Button */}
-                            <div className="bg-gradient-to-br from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 p-6 rounded-xl shadow-xl shadow-indigo-950/20">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                    <div className="space-y-1">
-                                        <h3 className="font-bold flex items-center gap-2 text-xl text-white">
-                                            <Plus className="w-6 h-6 text-indigo-400" /> Enter Stock Directly
+                    <div className="flex-1 min-h-0 flex flex-col">
+                        {step === "upload" ? (
+                            <ScrollArea className="flex-1">
+                                <div className="space-y-6 pb-6 pr-4 pl-1">
+                                    <div className="bg-gradient-to-br from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 p-6 rounded-xl shadow-xl">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                            <div className="space-y-1">
+                                                <h3 className="font-bold flex items-center gap-2 text-xl text-white uppercase tracking-tighter">
+                                                    <Plus className="w-6 h-6 text-indigo-400" /> Ultra-V6 Entry
+                                                </h3>
+                                                <p className="text-sm text-indigo-200/70">
+                                                    Rapid manual entry for mobile cameras.
+                                                </p>
+                                            </div>
+                                            <Button 
+                                                onClick={() => setStep("manual_entry")} 
+                                                className="w-full sm:w-auto bg-white text-indigo-900 hover:bg-indigo-50 font-black px-8 py-6 rounded-lg text-lg shadow-lg"
+                                            >
+                                                START ENTRY
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl space-y-4">
+                                        <h3 className="font-bold flex items-center gap-2 text-lg text-white uppercase tracking-tight">
+                                            <BookOpen className="w-5 h-5 text-blue-400" /> Load Catalog
                                         </h3>
-                                        <p className="text-sm text-indigo-200/70">
-                                            Super fast for truck inventory! Tap and type items one-by-one.
+                                        <p className="text-sm text-zinc-400">
+                                            Import pre-configured {activeTab} lists.
                                         </p>
-                                    </div>
-                                    <Button 
-                                        onClick={() => setStep("manual_entry")} 
-                                        className="w-full sm:w-auto bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-8 py-6 rounded-lg text-lg transition-transform active:scale-95"
-                                    >
-                                        Start Quick Entry
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="bg-zinc-900/80 border border-zinc-700 p-6 rounded-xl space-y-4">
-                                <h3 className="font-bold flex items-center gap-2 text-lg text-white">
-                                    <BookOpen className="w-5 h-5 text-blue-400" /> Use Standard Catalog
-                                </h3>
-                                <p className="text-sm text-zinc-400">
-                                    Load our pre-filled list of common {activeTab} with recommended prices.
-                                </p>
-                                <Button onClick={loadStandardCatalog} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                                    Browse Standard Catalog
-                                </Button>
-                            </div>
-
-                            <div className="relative py-2">
-                                <div className="absolute inset-0 flex items-center">
-                                    <span className="w-full border-t border-zinc-800" />
-                                </div>
-                                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
-                                    <span className="bg-zinc-900 px-3 text-zinc-500">Other Import Methods</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-zinc-950/60 border border-zinc-800 p-6 rounded-xl space-y-4 shadow-inner">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <h3 className="font-bold flex items-center gap-2 text-lg text-purple-400">
-                                            <Clipboard className="w-5 h-5 text-purple-400" /> Quick Import from Google Keep
-                                        </h3>
-                                        <p className="text-xs text-zinc-400 font-medium">
-                                            Paste your notes directly from your phone!
-                                        </p>
-                                    </div>
-                                    <Button 
-                                        variant="secondary" 
-                                        size="sm" 
-                                        onClick={pasteFromClipboard} 
-                                        className="h-9 text-xs bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700 font-bold shadow-md"
-                                    >
-                                        <Copy className="w-4 h-4 mr-2" /> Paste Text
-                                    </Button>
-                                </div>
-                                <div className="space-y-3">
-                                    <Textarea
-                                        value={quickPasteText}
-                                        onChange={(e) => setQuickPasteText(e.target.value)}
-                                        placeholder="One item per line (e.g. ONR, 32 oz, half full)"
-                                        className="min-h-[100px] bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600 focus:border-purple-500/50"
-                                    />
-                                    <Button 
-                                        onClick={() => handleQuickPaste()} 
-                                        disabled={!quickPasteText.trim()}
-                                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold h-12"
-                                    >
-                                        Parse & Import
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-6 border border-dashed rounded-xl border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60 transition-colors">
-                                    <h3 className="font-bold flex items-center gap-2 text-white mb-4">
-                                        <Upload className="w-5 h-5 text-green-500" /> JSON File
-                                    </h3>
-                                    <Input
-                                        type="file"
-                                        accept=".json"
-                                        onChange={(e) => handleFileChange(e, 'json')}
-                                        className="cursor-pointer bg-zinc-950 border-zinc-800 text-white mb-4"
-                                    />
-                                    <Button variant="ghost" size="sm" onClick={() => downloadTemplate('json')} className="text-zinc-400 hover:text-white hover:bg-zinc-800">
-                                        <Download className="w-4 h-4 mr-2" /> Template
-                                    </Button>
-                                </div>
-
-                                <div className="p-6 border border-dashed rounded-xl border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60 transition-colors">
-                                    <h3 className="font-bold flex items-center gap-2 text-white mb-4">
-                                        <FileSpreadsheet className="w-5 h-5 text-blue-500" /> CSV File
-                                    </h3>
-                                    <Input
-                                        type="file"
-                                        accept=".csv"
-                                        onChange={(e) => handleFileChange(e, 'csv')}
-                                        className="cursor-pointer bg-zinc-950 border-zinc-800 text-white mb-4"
-                                    />
-                                    <Button variant="ghost" size="sm" onClick={() => downloadTemplate('csv')} className="text-zinc-400 hover:text-white hover:bg-zinc-800">
-                                        <Download className="w-4 h-4 mr-2" /> Template
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : step === "manual_entry" ? (
-                        <div className="flex flex-col flex-1 min-h-0">
-                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-zinc-800">
-                                <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="text-zinc-100 hover:text-white font-bold bg-zinc-800 px-4">
-                                    <ArrowLeft className="w-5 h-5 mr-2" /> EXIT & BACK
-                                </Button>
-                                <h3 className="font-black text-white uppercase tracking-tighter text-2xl">ULTRA-V6 DIRECT ENTRY</h3>
-                                <div className="w-[80px]" /> {/* Spacer */}
-                            </div>
-
-                            <div className="bg-indigo-600 border-2 border-indigo-400 p-4 rounded-xl mb-6 shadow-lg shadow-indigo-900/40">
-                                <p className="text-sm font-bold text-white flex items-center gap-2">
-                                    <AlertCircle className="w-5 h-5 shrink-0" />
-                                    TAP FIELDS BELOW TO ENTER STOCK — SUPER FAST FOR MOBILE!
-                                </p>
-                            </div>
-
-                            <ScrollArea className="flex-1 -mx-2 px-2">
-                                <div className="space-y-6 pb-20 px-1">
-                                    <input 
-                                        type="file" 
-                                        accept="image/*" 
-                                        capture="environment" 
-                                        ref={cameraInputRef} 
-                                        className="hidden" 
-                                        onChange={handlePhotoCapture} 
-                                    />
-                                    
-                                    <div className="grid grid-cols-12 gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">
-                                        <div className="col-span-8 md:col-span-6 px-1">Identifier & Branding</div>
-                                        <div className="col-span-2 md:col-span-2 px-1 text-center font-black text-emerald-400">Price</div>
-                                        <div className="col-span-2 md:col-span-2 px-1 text-center font-black text-blue-400">Stock</div>
-                                    </div>
-                                    
-                                    {manualRows.map((row, idx) => (
-                                        <div key={idx} className="space-y-3 bg-zinc-950 p-4 rounded-xl border-2 border-zinc-800 shadow-xl relative overflow-hidden group">
-                                            {/* Header with Photo and Name */}
-                                            <div className="grid grid-cols-12 gap-3 items-center">
-                                                <div className="col-span-3 md:col-span-2">
-                                                    <div 
-                                                        onClick={() => triggerCamera(idx)}
-                                                        className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden bg-black/40 ${row.imageUrl ? 'border-emerald-500/50' : 'border-zinc-700 hover:border-indigo-500'}`}
-                                                    >
-                                                        {row.imageUrl ? (
-                                                            <img src={row.imageUrl} className="w-full h-full object-cover" alt="Preview" />
-                                                        ) : (
-                                                            <>
-                                                                <Camera className="w-6 h-6 text-zinc-600 group-hover:text-indigo-400" />
-                                                                <span className="text-[7px] font-black text-zinc-600 mt-1 uppercase">Snap</span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="col-span-9 md:col-span-10 flex flex-col gap-2">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <Input 
-                                                            value={row.brand || ""}
-                                                            onChange={(e) => updateManualRow(idx, 'brand', e.target.value)}
-                                                            placeholder="BRAND NAME"
-                                                            className="bg-black border-zinc-700 h-9 text-zinc-400 text-[10px] font-black placeholder:text-zinc-700 focus:border-indigo-400"
-                                                        />
-                                                        <Input 
-                                                            value={row.productName || ""}
-                                                            onChange={(e) => updateManualRow(idx, 'productName', e.target.value)}
-                                                            placeholder="PRODUCT / ITEM NAME"
-                                                            className="bg-black border-zinc-700 h-9 text-white text-[10px] font-black placeholder:text-zinc-600 focus:border-indigo-400"
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-12 gap-2">
-                                                        <div className="col-span-4">
-                                                            <div className="relative">
-                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500">$</span>
-                                                                <Input 
-                                                                    value={row.price || ""}
-                                                                    onChange={(e) => updateManualRow(idx, 'price', e.target.value)}
-                                                                    placeholder="0.00"
-                                                                    className="bg-black border-zinc-900 h-9 pl-5 text-emerald-400 text-xs font-black placeholder:text-emerald-900/50 text-center"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="col-span-4">
-                                                            <Input 
-                                                                value={row.field3}
-                                                                onChange={(e) => updateManualRow(idx, 'field3', e.target.value)}
-                                                                placeholder="STOCK"
-                                                                className="bg-black border-zinc-900 h-9 text-blue-400 text-xs font-black placeholder:text-blue-900/50 text-center"
-                                                            />
-                                                        </div>
-                                                        <div className="col-span-4 flex justify-end gap-1">
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                onClick={() => removeManualRow(idx)}
-                                                                className="h-9 w-9 text-zinc-800 hover:text-red-500 hover:bg-red-500/10"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Options: Size/Notes */}
-                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-900">
-                                                <div className="space-y-1">
-                                                    <Label className="text-[8px] text-zinc-600 font-black uppercase px-1">{activeTab === 'chemicals' ? 'Unit Size' : 'Category'}</Label>
-                                                    <Input 
-                                                        value={row.field2}
-                                                        onChange={(e) => updateManualRow(idx, 'field2', e.target.value)}
-                                                        placeholder={activeTab === 'chemicals' ? 'e.g. 16oz / 1gal' : 'Category'}
-                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400 focus:bg-zinc-800"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-[8px] text-zinc-600 font-black uppercase px-1">Location / Notes</Label>
-                                                    <Input 
-                                                        value={row.field4}
-                                                        onChange={(e) => updateManualRow(idx, 'field4', e.target.value)}
-                                                        placeholder="Notes..."
-                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400 italic focus:bg-zinc-800"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    <Button 
-                                        onClick={addManualRow} 
-                                        variant="outline" 
-                                        className="w-full h-14 border-2 border-dashed border-zinc-800 text-zinc-500 hover:text-indigo-400 hover:bg-zinc-900/50 font-black text-sm bg-zinc-950 transition-all active:scale-95"
-                                    >
-                                        <Plus className="w-5 h-5 mr-2" /> ADD ANOTHER ITEM
-                                    </Button>
-                                    <div className="h-20" /> {/* Spacer for footer visibility on PC */}
-                                </div>
-                            </ScrollArea>
-
-                            <div className="pt-6 border-t border-zinc-800 flex flex-col md:flex-row gap-3 bg-zinc-950 p-2">
-                                <Button 
-                                    onClick={() => setStep("upload")} 
-                                    variant="outline" 
-                                    className="w-full md:w-1/3 bg-zinc-800 border-zinc-700 text-white font-black h-14 text-lg"
-                                >
-                                    CANCEL
-                                </Button>
-                                <Button 
-                                    onClick={handleManualSubmit} 
-                                    disabled={isImporting || isUploadingPhotos}
-                                    className="w-full md:flex-1 bg-green-600 hover:bg-green-500 text-white font-black h-14 text-xl shadow-lg gap-2"
-                                >
-                                    {isImporting ? (
-                                        <>
-                                            <Loader2 className="w-6 h-6 animate-spin" />
-                                            {isUploadingPhotos ? "UPLOADING PHOTOS..." : "IMPORTING ITEMS..."}
-                                        </>
-                                    ) : (
-                                        "SAVE & IMPORT NOW"
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
-                    ) : step === "ai_results" ? (
-                        <div className="flex flex-col flex-1 min-h-0">
-                            {/* AI Results View */}
-                            <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-                                <Button variant="ghost" size="sm" onClick={() => setStep("preview")} className="text-muted-foreground hover:text-foreground">
-                                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Import List
-                                </Button>
-                                <span className="text-sm font-medium text-purple-400 flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4" /> AI Found {aiResults.length} Suggestions
-                                </span>
-                            </div>
-
-                            <ScrollArea className="flex-1 border rounded-md bg-zinc-950/30">
-                                {aiResults.map((result) => (
-                                    <div key={result.id} className="p-4 border-b flex items-start gap-4 hover:bg-zinc-900/50 transition-colors">
-                                        <div className="bg-zinc-900 p-2 rounded-md border border-zinc-800">
-                                            {result.type === 'chemicals' && <BookOpen className="w-5 h-5 text-blue-500" />}
-                                            {result.type === 'tools' && <BookOpen className="w-5 h-5 text-amber-500" />}
-                                            {result.type === 'materials' && <BookOpen className="w-5 h-5 text-purple-500" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start">
-                                                <h4 className="font-semibold text-sm">{result.name}</h4>
-                                                <div className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                                                    {result.type}
-                                                </div>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{result.description}</p>
-                                        </div>
-                                        <Button size="sm" onClick={() => addAiItem(result)} className="h-8 bg-zinc-800 hover:bg-zinc-700 hover:text-white text-zinc-300">
-                                            <Plus className="w-3 h-3 mr-1" /> Add
+                                        <Button onClick={loadStandardCatalog} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                                            Browse Catalog
                                         </Button>
                                     </div>
-                                ))}
-                                {aiResults.length === 0 && (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        No new suggestions found based on your query.
+
+                                    <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-1">
+                                                <h3 className="font-bold flex items-center gap-2 text-lg text-purple-400 uppercase tracking-tight">
+                                                    <Clipboard className="w-5 h-5" /> Quick Paste
+                                                </h3>
+                                                <p className="text-xs text-zinc-500">
+                                                    Paste inventory from notes.
+                                                </p>
+                                            </div>
+                                            <Button variant="secondary" size="sm" onClick={pasteFromClipboard} className="bg-zinc-800 font-bold">
+                                                <Copy className="w-4 h-4 mr-2" /> Paste
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Textarea
+                                                value={quickPasteText}
+                                                onChange={(e) => setQuickPasteText(e.target.value)}
+                                                placeholder="e.g. Iron Decon, 16oz"
+                                                className="min-h-[100px] bg-black border-zinc-800 focus:border-indigo-500"
+                                            />
+                                            <Button onClick={() => handleQuickPaste()} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black h-12">
+                                                PROCESS PASTE
+                                            </Button>
+                                        </div>
                                     </div>
-                                )}
+
+                                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                                        <form onSubmit={(e) => { e.preventDefault(); handleAISearch(e); }} className="space-y-3">
+                                            <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block">AI Search Bar</span>
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                                                <Input
+                                                    value={aiQuery}
+                                                    onChange={(e) => setAiQuery(e.target.value)}
+                                                    placeholder="Search catalog..."
+                                                    className="pl-10 bg-black border-zinc-800 h-12 font-bold"
+                                                />
+                                            </div>
+                                            <Button type="submit" disabled={isAiSearching} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black h-12 uppercase tracking-wide">
+                                                {isAiSearching ? "Thinking..." : "Find suggested items"}
+                                            </Button>
+                                        </form>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                         <div className="p-4 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/20 hover:bg-zinc-900/40 transition-colors">
+                                            <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-2">JSON FILE</h4>
+                                            <Input type="file" accept=".json" onChange={(e) => handleFileChange(e, 'json')} className="h-10 text-[10px] bg-black border-zinc-900" />
+                                         </div>
+                                         <div className="p-4 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/20 hover:bg-zinc-900/40 transition-colors">
+                                            <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-2">CSV FILE</h4>
+                                            <Input type="file" accept=".csv" onChange={(e) => handleFileChange(e, 'csv')} className="h-10 text-[10px] bg-black border-zinc-900" />
+                                         </div>
+                                    </div>
+                                </div>
                             </ScrollArea>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col flex-1 min-h-0">
-                            {/* Preview Toolbar */}
-                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b shrink-0">
-                                <Button variant="ghost" size="sm" onClick={() => { setStep("upload"); setFile(null); }} className="text-muted-foreground hover:text-foreground">
-                                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Choice
-                                </Button>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" className="h-8 px-2 text-xs" onClick={() => toggleAll(true)}>Select All</Button>
-                                    <Button variant="outline" className="h-8 px-2 text-xs" onClick={() => toggleAll(false)}>Deselect All</Button>
-                                    <span className="text-sm font-medium ml-2 text-muted-foreground">
-                                        {selectedIndices.size} selected
-                                    </span>
+                        ) : step === "manual_entry" ? (
+                            <div className="flex flex-col flex-1 min-h-0">
+                                <div className="flex items-center justify-between mb-4 pb-2 border-b border-zinc-800 shrink-0">
+                                    <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="text-zinc-400 font-bold">
+                                        <ArrowLeft className="w-4 h-4 mr-2" /> BACK
+                                    </Button>
+                                    <h3 className="font-black text-white uppercase text-xl truncate">ULTRA-V6 DIRECT ENTRY</h3>
+                                    <Button onClick={addManualRow} className="bg-indigo-600 hover:bg-indigo-500 font-bold h-9">
+                                        <Plus className="w-4 h-4 mr-1" /> ADD
+                                    </Button>
+                                </div>
+
+                                <ScrollArea className="flex-1 px-1">
+                                    <div className="space-y-4 pb-12">
+                                        <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} className="hidden" onChange={handlePhotoCapture} />
+                                        {manualRows.map((row, idx) => (
+                                            <div key={idx} className="group relative bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 shadow-inner">
+                                                <div className="grid grid-cols-12 gap-3 items-start">
+                                                    <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Brand Name</Label>
+                                                            <Input value={row.brand} onChange={(e) => updateManualRow(idx, 'brand', e.target.value)} placeholder="e.g. Meguiar's" className="h-10 bg-black border-zinc-800 text-white font-bold" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Product Name</Label>
+                                                            <Input value={row.productName} onChange={(e) => updateManualRow(idx, 'productName', e.target.value)} placeholder="e.g. Hyper Dressing" className="h-10 bg-black border-zinc-800 text-white font-bold" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Price / Cost ($) <span className="text-red-500">*</span></Label>
+                                                            <Input type="number" value={row.price} onChange={(e) => updateManualRow(idx, 'price', e.target.value)} placeholder="0.00" className="h-10 bg-black border-zinc-800 text-indigo-400 font-black text-lg focus:ring-2 ring-indigo-500/50" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Category / Size / Notes</Label>
+                                                            <Input value={row.field2} onChange={(e) => updateManualRow(idx, 'field2', e.target.value)} placeholder="e.g. 1gal / Shelf 1" className="h-10 bg-black border-zinc-800 text-zinc-400" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-span-12 md:col-span-4 flex items-center gap-3 h-full pt-1">
+                                                        <div 
+                                                            onClick={() => triggerCamera(idx)}
+                                                            className="flex-1 aspect-video rounded-xl border-2 border-dashed border-zinc-800 bg-black flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-indigo-500/50 transition-all"
+                                                        >
+                                                            {row.imageUrl ? (
+                                                                <img src={row.imageUrl} alt="Stock" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    {isProcessingImage && activeRowIdx === idx ? <Loader2 className="w-6 h-6 animate-spin text-indigo-400" /> : <Camera className="w-8 h-8 text-zinc-700 group-hover:text-indigo-400 transition-colors" />}
+                                                                    <span className="text-[7px] font-black text-zinc-800 uppercase group-hover:text-zinc-600">Snap Photo</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <Button variant="ghost" size="icon" onClick={() => removeManualRow(idx)} className="h-12 w-12 text-zinc-800 hover:text-red-500 hover:bg-red-500/10 shrink-0">
+                                                            <Trash2 className="w-6 h-6" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <Button onClick={addManualRow} variant="outline" className="w-full h-16 border-2 border-dashed border-zinc-800 font-bold text-zinc-500 hover:text-white hover:border-indigo-500 transition-all uppercase tracking-widest text-xs">
+                                            <Plus className="w-5 h-5 mr-2" /> ADD ROW
+                                        </Button>
+                                        <div className="h-24" />
+                                    </div>
+                                </ScrollArea>
+
+                                <div className="shrink-0 p-4 border-t border-zinc-800 bg-zinc-950/80 backdrop-blur-md flex flex-col sm:flex-row gap-3">
+                                    <Button onClick={() => setStep("upload")} variant="outline" className="flex-1 font-bold h-16 text-lg">CANCEL</Button>
+                                    <Button onClick={handleManualSubmit} disabled={isImporting || isUploadingPhotos} className="flex-[2] bg-green-600 hover:bg-green-500 text-white font-black h-16 text-2xl shadow-[0_0_30px_rgba(22,163,74,0.3)] border-2 border-green-500/50 transition-all active:scale-[0.98]">
+                                        {isImporting ? (
+                                            <div className="flex items-center gap-3">
+                                                <Loader2 className="w-8 h-8 animate-spin" />
+                                                <span className="uppercase">{isUploadingPhotos ? "Uploading Photos..." : "Importing..."}</span>
+                                            </div>
+                                        ) : "SAVE & UPLOAD NOW"}
+                                    </Button>
                                 </div>
                             </div>
+                        ) : step === "ai_results" ? (
+                            <div className="flex flex-col flex-1 min-h-0">
+                                <div className="flex items-center gap-3 mb-4 shrink-0">
+                                    <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="font-bold bg-zinc-900 border border-zinc-800">
+                                        <ArrowLeft className="w-4 h-4 mr-2" /> BACK
+                                    </Button>
+                                    <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest border-l pl-4 border-zinc-800">AI RESULTS ({aiResults.length})</h3>
+                                </div>
+                                <ScrollArea className="flex-1 bg-black/40 rounded-xl border border-zinc-900">
+                                    <div className="p-4 space-y-3">
+                                        {aiResults.map((result) => (
+                                            <div key={result.id} className="p-4 border border-zinc-800 bg-zinc-900/40 rounded-xl flex items-center gap-4 hover:border-indigo-500/30 transition-all group">
+                                                <div className="p-3 rounded-lg bg-zinc-900 text-indigo-400 font-bold border border-zinc-800">
+                                                    {result.type === 'chemicals' ? <BookOpen className="w-6 h-6"/> : <FileText className="w-6 h-6"/>}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-black text-white text-lg truncate uppercase tracking-tighter">{result.name}</h4>
+                                                    <p className="text-xs text-zinc-500 line-clamp-1 italic">{result.description}</p>
+                                                </div>
+                                                <Button size="lg" onClick={() => addAiItem(result)} className="bg-indigo-600 hover:bg-indigo-500 font-black h-12 px-8 shadow-lg shadow-indigo-950/20 active:scale-95 transition-transform">
+                                                    ADD
+                                                </Button>
+                                            </div>
+                                        ))}
+                                        {aiResults.length === 0 && (
+                                            <div className="text-center py-20 text-zinc-600 flex flex-col items-center gap-4">
+                                                <Search className="w-12 h-12 opacity-20" />
+                                                <p className="font-bold uppercase tracking-widest text-sm">No items found.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col flex-1 min-h-0">
+                                <div className="flex items-center justify-between gap-4 mb-4 pb-2 border-b border-zinc-800 px-2 shrink-0">
+                                    <Button variant="ghost" size="sm" onClick={() => { setStep("upload"); setFile(null); }} className="text-zinc-500 font-bold">
+                                        <ArrowLeft className="w-4 h-4 mr-2" /> RESET
+                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" className="h-8 text-[10px] font-black border-zinc-800 uppercase" onClick={() => toggleAll(true)}>ALL</Button>
+                                        <Button variant="outline" className="h-8 text-[10px] font-black border-zinc-800 uppercase" onClick={() => toggleAll(false)}>NONE</Button>
+                                        <span className="text-xs font-black text-indigo-400 ml-2 uppercase tracking-widest bg-indigo-500/10 px-3 py-1.5 rounded-full">
+                                            {selectedIndices.size} Items Ready
+                                        </span>
+                                    </div>
+                                </div>
 
-                            {/* Item List */}
-                            <div className="flex-1 min-h-0 border rounded-md bg-background pr-2">
-                                <div className="divide-y">
-                                    {(() => {
-                                        const sources = Array.from(new Set(parsedItems.map(i => i.importSource || 'Other')));
-                                        return sources.map(source => {
-                                            const groupItems = parsedItems
-                                                .map((item, index) => ({ item, index }))
-                                                .filter(obj => (obj.item.importSource || 'Other') === source);
-                                            
-                                            if (groupItems.length === 0) return null;
+                                <ScrollArea className="flex-1 bg-zinc-950 rounded-2xl border-2 border-zinc-900 shadow-inner">
+                                    <div className="p-4 space-y-10">
+                                        {(() => {
+                                            const sources = Array.from(new Set(parsedItems.map(i => i.importSource || 'Other')));
+                                            return sources.map(source => {
+                                                const groupItems = parsedItems
+                                                    .map((item, index) => ({ item, index }))
+                                                    .filter(obj => (obj.item.importSource || 'Other') === source);
+                                                
+                                                if (groupItems.length === 0) return null;
 
-                                            return (
-                                                <div key={source} className="flex flex-col">
-                                                    <div className="bg-zinc-100 dark:bg-zinc-800/50 px-4 py-2 text-[10px] font-black uppercase tracking-widest flex items-center justify-between sticky top-0 z-10 border-b">
-                                                        <div className="flex items-center gap-2">
-                                                            {source === 'Manual Import' ? <FileSpreadsheet className="w-3 h-3 text-blue-500" /> : 
-                                                             source === 'Catalog' ? <BookOpen className="w-3 h-3 text-purple-500" /> :
-                                                             source === 'AI Suggestion' ? <Sparkles className="w-3 h-3 text-emerald-500" /> :
-                                                             source === 'Quick Paste' ? <Clipboard className="w-3 h-3 text-purple-400" /> :
-                                                             <FileText className="w-3 h-3 text-zinc-500" />}
-                                                            {source} Section
+                                                return (
+                                                    <div key={source} className="space-y-4">
+                                                        <div className="flex items-center gap-4 px-2">
+                                                            <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-zinc-900" />
+                                                            <span className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.3em]">{source} ({groupItems.length})</span>
+                                                            <div className="h-[2px] flex-1 bg-gradient-to-l from-transparent to-zinc-900" />
                                                         </div>
-                                                        <span className="opacity-50">{groupItems.length} items</span>
-                                                    </div>
-                                                    
-                                                    {groupItems.map(({ item, index }) => {
-                                                        const duplicate = isDuplicate(item.name || "");
-                                                        const isSelected = selectedIndices.has(index);
-                                                        return (
-                                                            <div
-                                                                key={index}
-                                                                className={`flex items-start gap-3 p-4 transition-colors ${isSelected ? 'bg-muted/40' : 'hover:bg-muted/20'}`}
-                                                            >
-                                                                <Checkbox
-                                                                    id={`item-${index}`}
-                                                                    checked={isSelected}
-                                                                    onCheckedChange={() => toggleSelection(index)}
-                                                                    className="mt-3"
-                                                                />
-                                                                <div className="flex-1 flex flex-col gap-2">
-                                                                    {/* Row 1: Name and Metadata */}
-                                                                    <div className="flex flex-col gap-2 w-full">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <Input
-                                                                                value={item.name}
-                                                                                onChange={(e) => updateItem(index, 'name', e.target.value)}
-                                                                                placeholder="Item Name"
-                                                                                className={`h-9 font-medium ${duplicate ? 'border-orange-500/50' : ''}`}
-                                                                            />
-                                                                            {duplicate ? (
-                                                                                <div className="shrink-0 text-[10px] uppercase font-bold tracking-wider bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-1 rounded border border-orange-500/20 flex items-center gap-1 h-9">
-                                                                                    <AlertCircle className="w-3 h-3" /> Exists
+                                                        <div className="grid grid-cols-1 gap-3">
+                                                            {groupItems.map(({ item, index }) => {
+                                                                const duplicate = isDuplicate(item.name || "");
+                                                                const isSelected = selectedIndices.has(index);
+                                                                return (
+                                                                    <div key={index} className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all group ${isSelected ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-zinc-900/40 border-zinc-900 hover:border-zinc-800'}`}>
+                                                                        <Checkbox 
+                                                                            checked={isSelected} 
+                                                                            onCheckedChange={() => toggleSelection(index)}
+                                                                            className="mt-2 w-5 h-5"
+                                                                        />
+                                                                        <div className="flex-1 min-w-0 space-y-4">
+                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                                <div className="space-y-1">
+                                                                                    <Label className="text-[8px] font-black text-zinc-600 uppercase ml-1">Item Name</Label>
+                                                                                    <Input value={item.name} onChange={(e) => updateItem(index, 'name', e.target.value)} className={`h-11 font-black bg-black border-zinc-800 focus:ring-2 ${duplicate ? 'ring-orange-500/30 border-orange-500/50' : 'ring-indigo-500/30'}`} />
                                                                                 </div>
-                                                                            ) : (
-                                                                                <div className="shrink-0 text-[10px] uppercase font-bold tracking-wider bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded border border-green-500/20 flex items-center gap-1 h-9">
-                                                                                    <Check className="w-3 h-3" /> New
+                                                                                <div className="space-y-1">
+                                                                                    <Label className="text-[8px] font-black text-zinc-600 uppercase ml-1">Brand / Subtype</Label>
+                                                                                    <Input value={item.brand} onChange={(e) => updateItem(index, 'brand', e.target.value)} placeholder="Brand" className="h-11 bg-black border-zinc-800 font-bold italic text-zinc-400" />
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                                                <div className="space-y-1">
+                                                                                    <Label className="text-[8px] font-black text-zinc-600 uppercase ml-1">Price ($)</Label>
+                                                                                    <Input type="number" value={item.price || item.costPerBottle || item.costPerItem} onChange={(e) => updateItem(index, activeTab === 'chemicals' ? 'costPerBottle' : activeTab === 'supplies' ? 'costPerItem' : 'price', e.target.value)} className="h-9 bg-zinc-900 border-none text-indigo-400 font-black" />
+                                                                                </div>
+                                                                                <div className="space-y-1">
+                                                                                    <Label className="text-[8px] font-black text-zinc-600 uppercase ml-1">Stock / Qty</Label>
+                                                                                    <Input type="number" value={item.currentStock || item.quantity} onChange={(e) => updateItem(index, activeTab === 'supplies' ? 'quantity' : 'currentStock', e.target.value)} className="h-9 bg-zinc-900 border-none font-bold" />
+                                                                                </div>
+                                                                                <div className="space-y-1 col-span-2">
+                                                                                    <Label className="text-[8px] font-black text-zinc-600 uppercase ml-1">Category / Size</Label>
+                                                                                    <Input value={item.category || item.bottleSize} onChange={(e) => updateItem(index, activeTab === 'chemicals' ? 'bottleSize' : 'category', e.target.value)} className="h-9 bg-zinc-900 border-none text-zinc-500" />
+                                                                                </div>
+                                                                            </div>
+                                                                            {duplicate && (
+                                                                                <div className="flex items-center gap-2 text-[9px] font-black text-orange-500 uppercase bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20 w-fit">
+                                                                                    <AlertCircle className="w-3 h-3" /> Item already exists in catalog
                                                                                 </div>
                                                                             )}
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() => removeItem(index)}
-                                                                                className="h-9 w-9 text-muted-foreground hover:text-red-500"
-                                                                            >
-                                                                                <Trash2 className="w-4 h-4" />
-                                                                            </Button>
                                                                         </div>
-                                                                        {(() => {
-                                                                            const validationMsg = validateClassification(item, activeTab);
-                                                                            if (validationMsg) {
-                                                                                return (
-                                                                                    <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-md animate-in fade-in slide-in-from-top-1">
-                                                                                        <AlertCircle className="w-3 h-3 shrink-0" />
-                                                                                        <span className="font-medium">{validationMsg}</span>
-                                                                                    </div>
-                                                                                );
-                                                                            }
-                                                                            return null;
-                                                                        })()}
+                                                                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)} className="opacity-40 group-hover:opacity-100 text-zinc-700 hover:text-red-500 transition-opacity">
+                                                                            <Trash2 className="w-5 h-5" />
+                                                                        </Button>
                                                                     </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                        <div id="imports-end-anchor" className="h-20" />
+                                    </div>
+                                </ScrollArea>
 
-                                                                    {/* Row 2: Detailed Inputs */}
-                                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                                        {activeTab === "chemicals" && (
-                                                                            <>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Brand</Label>
-                                                                                    <Input value={item.brand || ""} onChange={(e) => updateItem(index, 'brand', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Bottle Size</Label>
-                                                                                    <Input value={item.bottleSize} onChange={(e) => updateItem(index, 'bottleSize', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Cost ($)</Label>
-                                                                                    <Input type="number" value={item.costPerBottle} onChange={(e) => updateItem(index, 'costPerBottle', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Stock</Label>
-                                                                                    <Input type="number" value={item.currentStock} onChange={(e) => updateItem(index, 'currentStock', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Threshold</Label>
-                                                                                    <Input type="number" value={item.threshold} onChange={(e) => updateItem(index, 'threshold', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                            </>
-                                                                        )}
-                                                                        {activeTab === "equipment" && (
-                                                                            <>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Price ($)</Label>
-                                                                                    <Input type="number" value={item.price} onChange={(e) => updateItem(index, 'price', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5 md:col-span-2">
-                                                                                    <Label className="text-[10px]">Warranty</Label>
-                                                                                    <Input value={item.warranty} onChange={(e) => updateItem(index, 'warranty', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                            </>
-                                                                        )}
-                                                                        {activeTab === "supplies" && (
-                                                                            <>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Cost/Item ($)</Label>
-                                                                                    <Input type="number" value={item.costPerItem} onChange={(e) => updateItem(index, 'costPerItem', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Qty</Label>
-                                                                                    <Input type="number" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Low Threshold</Label>
-                                                                                    <Input type="number" value={item.lowThreshold} onChange={(e) => updateItem(index, 'lowThreshold', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <Label className="text-[10px]">Category</Label>
-                                                                                    <Input value={item.category} onChange={(e) => updateItem(index, 'category', e.target.value)} className="h-7 text-xs" />
-                                                                                </div>
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-
-                                                                    {/* Row 3: Description/Notes */}
-                                                                    <div className="space-y-0.5">
-                                                                        <Label className="text-[10px]">Description / Notes</Label>
-                                                                        <Input
-                                                                            value={activeTab === 'equipment' ? item.notes : item.description || item.notes || ""}
-                                                                            onChange={(e) => updateItem(index, activeTab === 'equipment' ? 'notes' : 'description', e.target.value)}
-                                                                            className="h-7 text-xs text-muted-foreground"
-                                                                            placeholder="Details..."
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            );
-                                        });
-                                    })()}
-                                    <div id="imports-end-anchor" />
+                                <div className="shrink-0 pt-6 flex flex-col sm:flex-row gap-4 mt-4 border-t-2 border-zinc-900 bg-zinc-950">
+                                    <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 font-black h-16 text-lg uppercase tracking-widest border-2 border-zinc-800">Cancel</Button>
+                                    <Button 
+                                        onClick={handleImport}
+                                        disabled={isImporting || selectedIndices.size === 0}
+                                        className="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white font-black h-16 text-2xl shadow-[0_0_40px_rgba(79,70,229,0.3)] uppercase tracking-tighter transition-all active:scale-[0.98]"
+                                    >
+                                        {isImporting ? <Loader2 className="w-8 h-8 animate-spin" /> : <div className="flex items-center gap-3"><Save className="w-7 h-7" /> IMPORT {selectedIndices.size} ITEMS</div>}
+                                    </Button>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            </ScrollArea>
-        </div>
-    </Tabs>
-
-                <DialogFooter className="mt-6 sm:justify-between sticky bottom-0">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    {step === "preview" && (
-                        <Button
-                            onClick={handleImport}
-                            disabled={isImporting || selectedIndices.size === 0}
-                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition-all gap-2"
-                        >
-                            <Save className="w-4 h-4" />
-                            {isImporting ? "Importing Items..." : `Import ${selectedIndices.size} Items`}
-                        </Button>
-                    )}
-                </DialogFooter>
-
-                {/* AI Search Bar - Fixed Footer Area */}
-                <div className="mt-2 pt-2 border-t border-zinc-900 bg-zinc-950 shrink-0">
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        handleAISearch(e);
-                    }} className="flex flex-col gap-1 p-1">
-                        <div className="relative">
-                            <Sparkles className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isAiSearching ? 'text-purple-400 animate-pulse' : 'text-purple-500'}`} />
-                            <Input
-                                value={aiQuery}
-                                onChange={(e) => setAiQuery(e.target.value)}
-                                placeholder={isAiSearching ? "AI IS THINKING..." : "QUICK FIND: 'sprayers'"}
-                                className="h-14 pl-10 pr-4 bg-black border-2 border-indigo-500 text-white text-lg font-black placeholder:text-zinc-500 focus:ring-indigo-500/50 w-full"
-                            />
-                        </div>
-                        <Button
-                            type="submit"
-                            className="h-14 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black border-2 border-indigo-400 uppercase tracking-widest text-lg"
-                            disabled={isAiSearching || !aiQuery.trim()}
-                        >
-                            <Search className="w-6 h-6 mr-2" /> Find Items
-                        </Button>
-                    </form>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center py-1">
-                        AI-Powered Inventory Search
-                    </p>
-                </div>
+                        )}
+                    </div>
+                </Tabs>
             </DialogContent>
-        </Dialog >
+        </Dialog>
     );
 }
