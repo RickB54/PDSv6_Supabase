@@ -131,9 +131,10 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     if (!session?.user) throw new Error('Not authenticated');
 
     const dbData: any = {
+        id: chemical.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
         user_id: session.user.id,
         name: chemical.name,
-        brand: chemical.brand || null, // NEW: Save brand
+        brand: chemical.brand || null,
         bottle_size: chemical.bottleSize,
         cost_per_bottle: chemical.costPerBottle,
         threshold: chemical.threshold,
@@ -143,7 +144,6 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         dilution_ratios: chemical.dilutionRatios || [],
         updated_at: new Date().toISOString()
     };
-    if (chemical.id) dbData.id = chemical.id;
 
     const { error } = await supabase
         .from('chemicals')
@@ -365,6 +365,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
     if (!session?.user) throw new Error('Not authenticated');
 
     const dbData: any = {
+        id: material.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
         user_id: session.user.id,
         name: material.name,
         category: material.category,
@@ -376,7 +377,6 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         image_url: material.imageUrl,
         updated_at: new Date().toISOString()
     };
-    if (material.id) dbData.id = material.id;
 
     const { error } = await supabase
         .from('materials')
@@ -442,6 +442,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
     if (!session?.user) throw new Error('Not authenticated');
 
     const dbData: any = {
+        id: tool.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
         user_id: session.user.id,
         name: tool.name,
         category: tool.category,
@@ -453,7 +454,6 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         image_url: tool.imageUrl,
         updated_at: new Date().toISOString()
     };
-    if (tool.id) dbData.id = tool.id;
 
     const { error } = await supabase
         .from('tools')
