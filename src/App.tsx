@@ -102,6 +102,7 @@ import MileageTracking from "./pages/MileageTracking";
 import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
 import FollowUpCenter from "./pages/FollowUpCenter";
+import StickerMaker from "./pages/StickerMaker";
 
 const queryClient = new QueryClient();
 
@@ -290,6 +291,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
           <Route path="/demo/reports" element={<ProtectedRoute allowedRoles={[]}><Reports /></ProtectedRoute>} />
           <Route path="/follow-up-center" element={<ProtectedRoute allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
+          <Route path="/sticker-maker" element={<ProtectedRoute allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><BlogReorder /></ProtectedRoute>} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
           <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />

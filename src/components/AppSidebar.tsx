@@ -4,9 +4,9 @@ import {
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
   TicketPercent, GraduationCap, Shield, CalendarDays,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
-  MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle
+  MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle,
+  FileText, CheckSquare, Sparkles
 } from "lucide-react";
-import { FileText, CheckSquare } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -396,8 +396,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       e.preventDefault();
       if (url === '#call-assistant') {
         window.dispatchEvent(new Event('open-call-assistant'));
-      } else if (url === '#sticker-maker') {
-        window.dispatchEvent(new Event('open-sticker-maker'));
       } else if (url.startsWith('#help')) {
         const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
         window.dispatchEvent(new CustomEvent('open-help', { detail: { role, topicId } }));

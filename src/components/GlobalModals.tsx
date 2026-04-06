@@ -5,15 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useNotesStore } from "@/store/notes";
 import { useTasksStore } from "@/store/tasks";
-import { Sparkles } from "lucide-react";
-import { FileText, CheckSquare } from "lucide-react";
+import { Sparkles, FileText, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
-import StickerMakerModal from './marketing/StickerMakerModal';
 
 export const GlobalModals: React.FC = () => {
     const [noteOpen, setNoteOpen] = useState(false);
     const [taskOpen, setTaskOpen] = useState(false);
-    const [stickerOpen, setStickerOpen] = useState(false);
 
     // Note State
     const [noteTitle, setNoteTitle] = useState('');
@@ -38,16 +35,13 @@ export const GlobalModals: React.FC = () => {
             setTaskTitle(`Follow up: ${e.detail?.path || ''}`);
             setTaskOpen(true);
         };
-        const handleSticker = () => setStickerOpen(true);
 
         window.addEventListener('open-quick-note', handleNote);
         window.addEventListener('open-quick-task', handleTask);
-        window.addEventListener('open-sticker-maker', handleSticker);
 
         return () => {
             window.removeEventListener('open-quick-note', handleNote);
             window.removeEventListener('open-quick-task', handleTask);
-            window.removeEventListener('open-sticker-maker', handleSticker);
         };
     }, []);
 
@@ -174,8 +168,6 @@ export const GlobalModals: React.FC = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
-            <StickerMakerModal open={stickerOpen} onOpenChange={setStickerOpen} />
         </>
     );
 };
