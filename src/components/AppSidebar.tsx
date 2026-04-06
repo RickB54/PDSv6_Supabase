@@ -107,6 +107,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     if (url === '/accounting') return '/demo/accounting';
     if (url === '/payroll') return '/demo/payroll';
     if (url === '/company-budget') return '/demo/company-budget';
+    if (url === '/sticker-maker') return '/demo/sticker-maker';
 
     return url;
   };

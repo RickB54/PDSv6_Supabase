@@ -292,6 +292,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/demo/reports" element={<ProtectedRoute allowedRoles={[]}><Reports /></ProtectedRoute>} />
           <Route path="/follow-up-center" element={<ProtectedRoute allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
           <Route path="/sticker-maker" element={<ProtectedRoute allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
+          <Route path="/demo/sticker-maker" element={<ProtectedRoute allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><BlogReorder /></ProtectedRoute>} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
           <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />

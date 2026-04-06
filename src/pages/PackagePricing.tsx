@@ -2259,7 +2259,7 @@ export default function PackagePricing() {
                     const f = e.target.files?.[0]; if (!f) return;
                     try {
                       toast.info("Uploading...");
-                      const compressed = await browserImageCompression(f, { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true });
+                      const compressed = await compressImageForUpload(f);
                       const ext = f.name.split('.').pop();
                       const fileName = `packages/new_${Date.now()}.${ext}`;
                       const { error } = await supabase.storage.from('blog-media').upload(fileName, compressed);
