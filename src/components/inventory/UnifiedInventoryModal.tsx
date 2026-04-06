@@ -512,7 +512,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               <input ref={photoCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
               <button
                 type="button"
-                className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg hover:bg-blue-500 transition-colors"
+                disabled={isUploading}
+                className={`absolute -bottom-1 -right-1 rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg transition-colors ${isUploading ? 'bg-zinc-700 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-500'}`}
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   // Pre-save state just before triggering camera
@@ -520,7 +521,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   photoCameraRef.current?.click(); 
                 }}
               >
-                <Camera className="h-3 w-3 text-white" />
+                {isUploading ? (
+                  <RefreshCw className="h-3 w-3 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-3 w-3 text-white" />
+                )}
               </button>
             </div>
           </div>
@@ -548,17 +553,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     onChange={(e) => setForm({ ...form, brand: e.target.value })}
                     className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     placeholder="e.g., Superior Products, Meguiar's"
-                  />
-                </div>
-              )}
-              {mode === 'chemical' && (
-                <div>
-                  <Label className="text-xs text-zinc-400">Bottle Size</Label>
-                  <Input
-                    value={form.bottleSize}
-                    onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
-                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    placeholder="e.g., 32 oz, 1 L"
                   />
                 </div>
               )}

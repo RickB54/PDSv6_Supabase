@@ -8,16 +8,15 @@ import { toast } from "sonner";
  */
 export const compressImageForUpload = async (file: File, options = {}) => {
   // Give the browser UI thread more time to settle after returning from native camera
-  // This is a known fix for mobile "low memory" crashes where the system is still
-  // recovering from the Camera app's memory usage.
-  // Increased to 1.5s for older devices.
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
+  // Give the browser UI thread a moment to settle after returning from native camera.
+  // This helps prevent "low memory" crashes on mobile by following the system's
+  // memory reclamation cycle. 500ms is the "sweet spot" for snappy but stable.
+  await new Promise(resolve => setTimeout(resolve, 500));
   const defaultOptions = {
-    maxSizeMB: 0.4,           // Target size < 400KB (safer for mobile)
-    maxWidthOrHeight: 1024,  // Maximum dimension 1024px (optimized for speed/RAM)
-    useWebWorker: true,      // Use web worker to keep main thread responsive
-    initialQuality: 0.6,      // Lower initial quality to reduce initial canvas pressure
+    maxSizeMB: 0.3,           // Target size < 300KB (even safer for mobile)
+    maxWidthOrHeight: 800,   // Slightly smaller dimensions for faster processing/lower RAM
+    useWebWorker: true,
+    initialQuality: 0.5,      // Lower initial quality to reduce initial canvas pressure
     alwaysKeepResolution: false,
     ...options
   };
