@@ -159,6 +159,38 @@ export default function StickerMaker() {
         toast({ title: "Alignment Reset", description: "All master shifts and row offsets cleared." });
     };
 
+    const handleExportSetup = () => {
+        const setup = {
+            config,
+            imageUrl,
+            timestamp: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Sticker_Setup_${Date.now()}.sticker`;
+        link.click();
+        toast({ title: "Setup Exported", description: "Your .sticker calibration file has been downloaded." });
+    };
+
+    const handleImportSetup = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const setup = JSON.parse(event.target?.result as string);
+                if (setup.config) setConfig(setup.config);
+                if (setup.imageUrl) setImageUrl(setup.imageUrl);
+                toast({ title: "Setup Recalled", description: "All image and offset settings restored." });
+            } catch (err) {
+                toast({ title: "Import Error", description: "Could not read sticker file.", variant: "destructive" });
+            }
+        };
+        reader.readAsText(file);
+    };
+
     return (
         <div className="min-h-screen bg-zinc-950 flex flex-col font-sans">
             <style dangerouslySetInnerHTML={{ __html: `
@@ -213,6 +245,40 @@ export default function StickerMaker() {
 
             <main className="flex-1 flex overflow-hidden">
                 <aside className="w-80 border-r border-white/5 bg-zinc-900/20 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                    <section className="space-y-4">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                            <Plus className="h-3 w-3 text-purple-400" />
+                            Setup Vault (Project Files)
+                        </Label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleExportSetup}
+                                className="h-10 text-[9px] font-black uppercase bg-purple-500/5 border-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white"
+                            >
+                                <Plus className="h-3 w-3 mr-2" />
+                                Export
+                            </Button>
+                            <div className="relative">
+                                <Input 
+                                    type="file" 
+                                    accept=".sticker,.json"
+                                    onChange={handleImportSetup}
+                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                />
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full h-10 text-[9px] font-black uppercase bg-purple-500/5 border-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white"
+                                >
+                                    <RotateCcw className="h-3 w-3 mr-2" />
+                                    Recall
+                                </Button>
+                            </div>
+                        </div>
+                    </section>
+
                     <section className="space-y-4">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                             <Grid3X3 className="h-3 w-3 text-emerald-400" />
