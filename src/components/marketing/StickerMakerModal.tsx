@@ -44,11 +44,11 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
         labelsPerPage: 10,
         columns: 2,
         rows: 5,
-        margin: 0.5, // inches
-        gap: 0.2, // inches
+        margin: 0.05, // Small safe margin inside the sticker
+        gap: 0.2, // inches between stickers
         pageZoom: 0.8,
-        stickerWidth: 3.5, // inches
-        stickerHeight: 2.0, // inches
+        stickerWidth: 3.5, // Standard card width
+        stickerHeight: 2.0, // Standard card height
         borderRadius: 8, // px
         showCutMarks: true,
         brightness: 100,
