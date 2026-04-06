@@ -346,10 +346,10 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                 padding: `${config.margin}in`,
                                 boxSizing: 'border-box',
                                 display: 'grid',
-                                gridTemplateColumns: `repeat(${config.columns}, 1fr)`,
+                                gridTemplateColumns: `repeat(${config.columns}, ${config.stickerWidth}in)`,
                                 gap: `${config.gap}in`,
                                 alignContent: 'start',
-                                justifyContent: 'items-center'
+                                justifyContent: 'center'
                             }}
                         >
                             {sheetLabels.map((img, idx) => (
@@ -358,11 +358,11 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                     style={{ 
                                         width: `${config.stickerWidth}in`,
                                         height: `${config.stickerHeight}in`,
-                                        border: config.showCutMarks ? '1px dashed #eee' : 'none',
+                                        border: config.showCutMarks ? '1px dashed #00000020' : 'none',
                                         position: 'relative',
                                         overflow: 'hidden',
                                         borderRadius: `${config.borderRadius}px`,
-                                        backgroundColor: '#000'
+                                        backgroundColor: '#000000'
                                     }}
                                 >
                                     <img 
@@ -371,7 +371,7 @@ export default function StickerMakerModal({ open, onOpenChange }: StickerMakerMo
                                         style={{ 
                                             width: '100%', 
                                             height: '100%', 
-                                            objectFit: 'cover'
+                                            objectFit: 'contain'
                                         }} 
                                     />
                                     {/* Corner Cut Helper Marks */}
