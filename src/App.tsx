@@ -156,9 +156,20 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   helpRole: any;
   helpId: string | undefined;
 }) => {
-  const { isDemoMode, mockUser } = useDemoMode();
+  const { isDemoMode, mockUser, isLoading } = useDemoMode();
   const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-white font-mono">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <p className="animate-pulse tracking-widest text-xs uppercase">Verifying Security Posture...</p>
+        </div>
+      </div>
+    );
+  }
   
   const effectiveUser = isDemoMode 
     ? (user || mockUser || { id: 'demo-visitor', email: 'visitor@prime-demo', role: 'admin', name: 'Demo Visitor' }) 

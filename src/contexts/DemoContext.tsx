@@ -60,7 +60,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAdminPreview, setIsAdminPreview] = useState<boolean>(() => {
     return localStorage.getItem("admin_demo_preview") === "true";
   });
-  const [isPublicDemoDisabled, setPublicDemoDisabled] = useState<boolean>(true);
+  const [isPublicDemoDisabled, setPublicDemoDisabled] = useState<boolean>(false);
   const [disabledReason, setDisabledReason] = useState<string>("System Maintenance");
   const [isLoading, setIsLoading] = useState(true);
 

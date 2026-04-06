@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,15 @@ export default function Login() {
     const [searchParams] = useSearchParams();
     const demoDisabled = searchParams.get('demo_disabled') === 'true';
     const disabledReason = searchParams.get('reason');
+
+    useEffect(() => {
+        if (demoDisabled) {
+            toast.error("Demo Mode Offline", {
+                description: `Access suspended. Reason: ${disabledReason || 'System Maintenance'}.`,
+                duration: 6000,
+            });
+        }
+    }, [demoDisabled, disabledReason]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
