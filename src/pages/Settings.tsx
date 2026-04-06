@@ -16,6 +16,7 @@ import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/l
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getMenuGroups, TOP_ITEMS } from "@/components/menu-config";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMemo } from "react";
 import { saveBackupToSupabase, listSupabaseBackups, loadBackupFromSupabase, deleteSupabaseBackup, BackupMetadata } from '@/lib/supabase-backup';
 import { deleteCustomersOlderThan, deleteInvoicesOlderThan, deleteExpensesOlderThan, deleteInventoryUsageOlderThan, deleteBookingsOlderThan, deleteEmployeesOlderThan, deleteEverything as deleteAllSupabase, deleteEverythingExceptInventory, previewDeleteCustomers, previewDeleteInvoices, previewDeleteExpenses, previewDeleteInventory, previewDeleteAll, previewDeleteAllExceptInventory } from '@/services/supabase/adminOps';
@@ -808,6 +809,35 @@ const Settings = () => {
                     onCheckedChange={(val) => setPublicDemoDisabled(!val)}
                     className="data-[state=checked]:bg-emerald-600"
                   />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 gap-1 text-[9px] text-zinc-500 hover:text-amber-500 uppercase tracking-tighter">
+                        <TestTube2 className="w-3 h-3" />
+                        Test Instructions
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 shadow-2xl p-4">
+                      <div className="space-y-3">
+                        <h4 className="font-bold text-amber-500 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          How to Test as a Visitor
+                        </h4>
+                        <p className="text-xs text-zinc-400 leading-relaxed">
+                          Follow these steps to confirm the kill-switch is active for the public:
+                        </p>
+                        <ol className="text-[11px] text-zinc-300 space-y-2 list-decimal pl-4">
+                          <li>Set the <strong>Live DEMO URL</strong> toggle to <span className="text-red-500 font-bold">OFFLINE</span>.</li>
+                          <li>Turn <span className="text-amber-500 font-bold">OFF</span> "Admin Preview Mode" below.</li>
+                          <li>Open an <strong>Incognito/Private</strong> window in your browser.</li>
+                          <li>Navigate to <code>/demo</code> on your domain.</li>
+                          <li><strong>Pass Score:</strong> You should see a "Disabled" error toast and be redirected instantly.</li>
+                        </ol>
+                        <div className="pt-2 border-t border-zinc-800 text-[10px] text-zinc-500 italic">
+                          Note: Your "Admin Preview" toggle allows YOU to see the demo even when it's offline for everyone else.
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 {isPublicDemoDisabled && (
                   <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-lg border border-red-900/30 animate-in slide-in-from-right-4">
