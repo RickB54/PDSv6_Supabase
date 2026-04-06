@@ -30,8 +30,38 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         return tab as "chemicals" | "supplies" | "equipment";
     };
 
-    const [activeTab, setActiveTab] = useState<"chemicals" | "supplies" | "equipment">(normalizeTab(defaultTab));
-    const [step, setStep] = useState<"upload" | "preview" | "ai_results" | "manual_entry">("upload");
+    const [activeTab, setActiveTab] = useState<"chemicals" | "supplies" | "equipment">(() => {
+        const saved = localStorage.getItem('inventory_import_active_tab');
+        return (saved as any) || normalizeTab(defaultTab);
+    });
+    const [step, setStep] = useState<"upload" | "preview" | "ai_results" | "manual_entry">(() => {
+        const saved = localStorage.getItem('inventory_import_step');
+        return (saved as any) || "upload";
+    });
+
+    // Auto-persist modal state to survive mobile memory crashes
+    useEffect(() => {
+        if (open) {
+            localStorage.setItem('inventory_import_modal_open', 'true');
+            localStorage.setItem('inventory_import_active_tab', activeTab);
+            localStorage.setItem('inventory_import_step', step);
+        } else {
+            localStorage.removeItem('inventory_import_modal_open');
+            localStorage.removeItem('inventory_import_active_tab');
+            localStorage.removeItem('inventory_import_step');
+            localStorage.removeItem('ultra_v6_manual_rows');
+        }
+    }, [open, activeTab, step]);
+
+    // Handle initial mount check for recovery
+    useEffect(() => {
+        const shouldBeOpen = localStorage.getItem('inventory_import_modal_open') === 'true';
+        if (shouldBeOpen && !open) {
+            onOpenChange(true);
+            toast.info("Resuming your inventory import...", { duration: 3000 });
+        }
+    }, []);
+
     const [isImporting, setIsImporting] = useState(false);
     const [isProcessingImage, setIsProcessingImage] = useState(false);
     const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
@@ -52,7 +82,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                 return rows.map((r: any) => ({ ...r, imageFile: null, imageUrl: null }));
             } catch (e) { console.error("Restore failed", e); }
         }
-        return [{ name: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }];
+        return [{ brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }];
     });
 
     // Persistent storage for manual entry rows
@@ -85,6 +115,242 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const triggerCamera = (idx: number) => {
         setActiveRowIdx(idx);
         cameraInputRef.current?.click();
+    };
+
+    const addManualRow = () => {
+        setManualRows([...manualRows, { brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+    };
+
+    const updateManualRow = (index: number, field: string, value: string) => {
+        const newRows = [...manualRows];
+        newRows[index] = { ...newRows[index], [field]: value };
+        setManualRows(newRows);
+    };
+
+    const removeManualRow = (index: number) => {
+        if (manualRows.length <= 1) {
+            setManualRows([{ brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+            return;
+        }
+        setManualRows(manualRows.filter((_, i) => i !== index));
+    };
+
+    const handleManualSubmit = async () => {
+        const validRows = manualRows.filter(r => r.productName?.trim() || r.brand?.trim());
+        if (validRows.length === 0) {
+            toast.error("Please enter at least one product name.");
+            return;
+        }
+
+        // Validate Price requirement - user explicitly asked for this
+        const missingPrice = validRows.some(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
+        if (missingPrice) {
+            toast.error("Every item requires a valid price before saving.");
+            return;
+        }
+
+        setIsImporting(true);
+        setIsUploadingPhotos(true);
+        let importedCount = 0;
+
+        try {
+            for (const row of validRows) {
+                let finalImageUrl = "";
+                
+                // Upload photo if captured
+                if (row.imageFile) {
+                    try {
+                        const uploadedUrl = await uploadInventoryImage(row.imageFile);
+                        if (uploadedUrl) finalImageUrl = uploadedUrl;
+                    } catch (uploadErr) {
+                        console.error("Photo upload failed for row", row.productName, uploadErr);
+                        toast.error(`Photo upload failed for ${row.productName}. Saving without photo.`);
+                    }
+                }
+
+                const priceValue = Number(row.price.toString().replace(/[$,]/g, '')) || 0;
+                const stockValue = Number(row.field3.toString()) || 0;
+                const finalName = row.productName || row.brand || "Unnamed Product";
+
+                if (activeTab === "chemicals") {
+                    await saveChemical({
+                        name: finalName,
+                        brand: row.brand || "",
+                        bottleSize: row.field2 || "16 oz",
+                        costPerBottle: priceValue,
+                        threshold: 1,
+                        currentStock: stockValue,
+                        imageUrl: finalImageUrl
+                    }, true);
+                } else if (activeTab === "equipment") {
+                    await saveTool({
+                        name: finalName,
+                        price: priceValue,
+                        purchaseDate: new Date().toISOString().split('T')[0],
+                        warranty: "",
+                        lifeExpectancy: "",
+                        notes: row.field4 || `${row.brand || ''} ${row.field4 || ''}`.trim(),
+                        imageUrl: finalImageUrl
+                    }, true);
+                } else if (activeTab === "supplies") {
+                    await saveMaterial({
+                        name: finalName,
+                        category: row.field2 || "General",
+                        subtype: row.brand || "",
+                        costPerItem: priceValue,
+                        quantity: stockValue,
+                        lowThreshold: 1,
+                        notes: row.field4 || "",
+                        imageUrl: finalImageUrl
+                    }, true);
+                }
+                importedCount++;
+            }
+
+            toast.success(`Successfully imported ${importedCount} items.`);
+            localStorage.removeItem('ultra_v6_manual_rows'); // Clear on success
+            onOpenChange(false); // Close modal on completion as requested
+            setManualRows([{ brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+            setStep("upload");
+
+        } catch (error) {
+            console.error("Direct Import Error", error);
+            toast.error("Failed to import some items. Please check connection.");
+        } finally {
+            setIsImporting(false);
+            setIsUploadingPhotos(false);
+        }
+    };
+
+    const addAiItem = (result: SearchResult) => {
+        // Convert SearchResult to parsedItem format based on type
+        let newItem: any = {};
+        if (result.type === 'chemicals') {
+            const item = result.originalItem;
+            newItem = {
+                name: item.name,
+                bottleSize: item.bottleSize || "16 oz",
+                costPerBottle: item.suggestedPrice || 0,
+                threshold: item.threshold || 5,
+                currentStock: 0,
+                description: item.description,
+                category: item.category,
+                importSource: 'AI Suggestion'
+            };
+            if (activeTab !== 'chemicals') setActiveTab('chemicals');
+        } else if (result.type === 'tools') {
+            const item = result.originalItem;
+            newItem = {
+                name: item.name,
+                price: item.suggestedPrice || 0,
+                purchaseDate: new Date().toISOString().split('T')[0],
+                warranty: item.warranty || "",
+                lifeExpectancy: item.lifeExpectancy || "",
+                notes: item.description,
+                category: item.category,
+                importSource: 'AI Suggestion'
+            };
+            if (activeTab !== 'equipment') setActiveTab('equipment');
+        } else if (result.type === 'materials') {
+            const item = result.originalItem;
+            newItem = {
+                name: item.name,
+                category: item.type || "General",
+                subtype: item.subtype || "",
+                costPerItem: item.suggestedPrice || 0,
+                quantity: 0,
+                lowThreshold: item.threshold || 5,
+                notes: item.description,
+                importSource: 'AI Suggestion'
+            };
+            if (activeTab !== 'supplies') setActiveTab('supplies');
+        }
+
+        const newItems = [...parsedItems, newItem];
+        setParsedItems(newItems);
+        // Select the new item
+        const newSelection = new Set(selectedIndices);
+        newSelection.add(newItems.length - 1);
+        setSelectedIndices(newSelection);
+
+        toast.success(`Added "${newItem.name}" to import list.`);
+        setStep("preview"); // Switch back to preview to show it added
+
+        // Scroll to bottom
+        setTimeout(() => {
+            const el = document.getElementById("imports-end-anchor");
+            el?.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+    };
+
+    const handleImport = async () => {
+        if (selectedIndices.size === 0) {
+            toast.warning("No items selected for import.");
+            return;
+        }
+
+        setIsImporting(true);
+        try {
+            let importedCount = 0;
+            const itemsToImport = parsedItems.filter((_, index) => selectedIndices.has(index));
+
+            if (activeTab === "chemicals") {
+                for (const row of itemsToImport) {
+                    if (!row.name) continue;
+                    await saveChemical({
+                        name: row.name,
+                        brand: row.brand || "",
+                        bottleSize: row.bottleSize || "16 oz",
+                        costPerBottle: Number(row.costPerBottle) || 0,
+                        threshold: Number(row.threshold) || 1,
+                        currentStock: Number(row.currentStock) || 0,
+                        imageUrl: ""
+                    }, true);
+                    importedCount++;
+                }
+            } else if (activeTab === "equipment") {
+                for (const row of itemsToImport) {
+                    if (!row.name) continue;
+                    await saveTool({
+                        name: row.name,
+                        price: Number(row.price) || 0,
+                        purchaseDate: row.purchaseDate || new Date().toISOString().split('T')[0],
+                        warranty: row.warranty || "",
+                        lifeExpectancy: row.lifeExpectancy || "",
+                        notes: row.notes || "",
+                        imageUrl: ""
+                    }, true);
+                    importedCount++;
+                }
+            } else if (activeTab === "supplies") {
+                for (const row of itemsToImport) {
+                    if (!row.name) continue;
+                    await saveMaterial({
+                        name: row.name,
+                        category: row.category || "General",
+                        subtype: row.brand || "",
+                        costPerItem: Number(row.costPerItem) || 0,
+                        quantity: Number(row.quantity) || 0,
+                        lowThreshold: Number(row.lowThreshold) || 1,
+                        notes: row.notes || "",
+                        imageUrl: ""
+                    }, true);
+                    importedCount++;
+                }
+            }
+
+            toast.success(`Successfully imported ${importedCount} items.`);
+            onOpenChange(false);
+            setFile(null);
+            setParsedItems([]);
+            setStep("upload");
+
+        } catch (error) {
+            console.error("Import Error", error);
+            toast.error("Failed to import selected items.");
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     // Reset tab when reopening with a new default
@@ -543,243 +809,6 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         }, 800);
     };
 
-    const addManualRow = () => {
-        setManualRows([...manualRows, { name: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
-    };
-
-    const updateManualRow = (index: number, field: string, value: string) => {
-        const newRows = [...manualRows];
-        newRows[index] = { ...newRows[index], [field]: value };
-        setManualRows(newRows);
-    };
-
-    const removeManualRow = (index: number) => {
-        if (manualRows.length <= 1) return;
-        setManualRows(manualRows.filter((_, i) => i !== index));
-    };
-
-    const handleManualSubmit = async () => {
-        const validRows = manualRows.filter(r => r.name.trim());
-        if (validRows.length === 0) {
-            toast.error("Please enter at least one product name.");
-            return;
-        }
-
-        // Validate Price requirement - user explicitly asked for this
-        const missingPrice = validRows.some(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
-        if (missingPrice) {
-            toast.error("Every item requires a valid price before saving.");
-            return;
-        }
-
-        setIsImporting(true);
-        setIsUploadingPhotos(true);
-        let importedCount = 0;
-
-        try {
-            for (const row of validRows) {
-                let finalImageUrl = "";
-                
-                // Upload photo if captured
-                if (row.imageFile) {
-                    try {
-                        const uploadedUrl = await uploadInventoryImage(row.imageFile);
-                        if (uploadedUrl) finalImageUrl = uploadedUrl;
-                    } catch (uploadErr) {
-                        console.error("Photo upload failed for row", row.name, uploadErr);
-                        toast.error(`Failed to upload photo for ${row.name}. Saving without photo.`);
-                    }
-                }
-
-                const priceValue = Number(row.price.toString().replace(/[$,]/g, '')) || 0;
-                const stockValue = Number(row.field3.toString()) || 0;
-
-                if (activeTab === "chemicals") {
-                    await saveChemical({
-                        name: row.name,
-                        brand: "",
-                        bottleSize: row.field2 || "16 oz",
-                        costPerBottle: priceValue,
-                        threshold: 1,
-                        currentStock: stockValue,
-                        imageUrl: finalImageUrl
-                    }, true);
-                } else if (activeTab === "equipment") {
-                    await saveTool({
-                        name: row.name,
-                        price: priceValue,
-                        purchaseDate: new Date().toISOString().split('T')[0],
-                        warranty: "",
-                        lifeExpectancy: "",
-                        notes: row.field4 || "",
-                        imageUrl: finalImageUrl
-                    }, true);
-                } else if (activeTab === "supplies") {
-                    await saveMaterial({
-                        name: row.name,
-                        category: row.field2 || "General",
-                        subtype: "",
-                        costPerItem: priceValue,
-                        quantity: stockValue,
-                        lowThreshold: 1,
-                        notes: row.field4 || "",
-                        imageUrl: finalImageUrl
-                    }, true);
-                }
-                importedCount++;
-            }
-
-            toast.success(`Successfully imported ${importedCount} items.`);
-            localStorage.removeItem('ultra_v6_manual_rows'); // Clear on success
-            onOpenChange(false); // Close modal on completion as requested
-            setManualRows([{ name: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
-            setStep("upload");
-
-        } catch (error) {
-            console.error("Direct Import Error", error);
-            toast.error("Failed to import some items. Please check connection.");
-        } finally {
-            setIsImporting(false);
-            setIsUploadingPhotos(false);
-        }
-    };
-
-    const addAiItem = (result: SearchResult) => {
-        // Convert SearchResult to parsedItem format based on type
-        let newItem: any = {};
-        if (result.type === 'chemicals') {
-            const item = result.originalItem;
-            newItem = {
-                name: item.name,
-                bottleSize: item.bottleSize || "16 oz",
-                costPerBottle: item.suggestedPrice || 0,
-                threshold: item.threshold || 5,
-                currentStock: 0,
-                description: item.description,
-                category: item.category,
-                importSource: 'AI Suggestion'
-            };
-            if (activeTab !== 'chemicals') setActiveTab('chemicals');
-        } else if (result.type === 'tools') {
-            const item = result.originalItem;
-            newItem = {
-                name: item.name,
-                price: item.suggestedPrice || 0,
-                purchaseDate: new Date().toISOString().split('T')[0],
-                warranty: item.warranty || "",
-                lifeExpectancy: item.lifeExpectancy || "",
-                notes: item.description,
-                category: item.category,
-                importSource: 'AI Suggestion'
-            };
-            if (activeTab !== 'equipment') setActiveTab('equipment');
-        } else if (result.type === 'materials') {
-            const item = result.originalItem;
-            newItem = {
-                name: item.name,
-                category: item.type || "General",
-                subtype: item.subtype || "",
-                costPerItem: item.suggestedPrice || 0,
-                quantity: 0,
-                lowThreshold: item.threshold || 5,
-                notes: item.description,
-                importSource: 'AI Suggestion'
-            };
-            if (activeTab !== 'supplies') setActiveTab('supplies');
-        }
-
-        const newItems = [...parsedItems, newItem];
-        setParsedItems(newItems);
-        // Select the new item
-        const newSelection = new Set(selectedIndices);
-        newSelection.add(newItems.length - 1);
-        setSelectedIndices(newSelection);
-
-        toast.success(`Added "${newItem.name}" to import list.`);
-        setStep("preview"); // Switch back to preview to show it added
-
-        // Scroll to bottom
-        setTimeout(() => {
-            const el = document.getElementById("imports-end-anchor");
-            el?.scrollIntoView({ behavior: "smooth" });
-        }, 300);
-    };
-
-    const handleImport = async () => {
-        if (selectedIndices.size === 0) {
-            toast.warning("No items selected for import.");
-            return;
-        }
-
-        setIsImporting(true);
-        try {
-            let importedCount = 0;
-            const itemsToImport = parsedItems.filter((_, index) => selectedIndices.has(index));
-
-            if (activeTab === "chemicals") {
-                for (const row of itemsToImport) {
-                    if (!row.name) continue;
-                    await saveChemical({
-                        name: row.name,
-                        brand: row.brand || "",
-                        bottleSize: row.bottleSize || "16 oz",
-                        costPerBottle: Number(row.costPerBottle) || 0,
-                        threshold: Number(row.threshold) || 1,
-                        currentStock: Number(row.currentStock) || 0,
-                        // Note: chemicals table doesn't have notes/description column mapped in saveChemical currently, 
-                        // but we can add it if schema supports it or ignore it. 
-                        // Based on inventory-data.ts, there is no generic description field exposed in saveChemical args 
-                        // aside from maybe mapping to 'bottleSize' or strict fields.
-                        // We will stick to strict fields for now.
-                        imageUrl: ""
-                    }, true);
-                    importedCount++;
-                }
-            } else if (activeTab === "equipment") {
-                for (const row of itemsToImport) {
-                    if (!row.name) continue;
-                    await saveTool({
-                        name: row.name,
-                        price: Number(row.price) || 0,
-                        purchaseDate: row.purchaseDate || new Date().toISOString().split('T')[0],
-                        warranty: row.warranty || "",
-                        lifeExpectancy: row.lifeExpectancy || "",
-                        notes: row.notes || "",
-                        imageUrl: ""
-                    }, true);
-                    importedCount++;
-                }
-            } else if (activeTab === "supplies") {
-                for (const row of itemsToImport) {
-                    if (!row.name) continue;
-                    await saveMaterial({
-                        name: row.name,
-                        category: row.category || "General",
-                        subtype: row.subtype || "",
-                        costPerItem: Number(row.costPerItem) || 0,
-                        quantity: Number(row.quantity) || 0,
-                        lowThreshold: Number(row.lowThreshold) || 1,
-                        notes: row.notes || "",
-                        imageUrl: ""
-                    }, true);
-                    importedCount++;
-                }
-            }
-
-            toast.success(`Successfully imported ${importedCount} items.`);
-            onOpenChange(false);
-            setFile(null);
-            setParsedItems([]);
-            setStep("upload");
-
-        } catch (error) {
-            console.error("Import Error", error);
-            toast.error("Failed to import selected items.");
-        } finally {
-            setIsImporting(false);
-        }
-    };
-
     const isDuplicate = (name: string) => existingNames.has((name || "").toLowerCase().trim());
 
     return (
@@ -941,7 +970,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                             </div>
 
                             <ScrollArea className="flex-1 -mx-2 px-2">
-                                <div className="space-y-6 pb-20">
+                                <div className="space-y-6 pb-20 px-1">
                                     <input 
                                         type="file" 
                                         accept="image/*" 
@@ -951,8 +980,8 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                         onChange={handlePhotoCapture} 
                                     />
                                     
-                                    <div className="grid grid-cols-12 gap-2 text-[11px] font-black uppercase tracking-widest text-zinc-500 px-1">
-                                        <div className="col-span-8 md:col-span-5 px-1">Product Details</div>
+                                    <div className="grid grid-cols-12 gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">
+                                        <div className="col-span-8 md:col-span-6 px-1">Identifier & Branding</div>
                                         <div className="col-span-2 md:col-span-2 px-1 text-center font-black text-emerald-400">Price</div>
                                         <div className="col-span-2 md:col-span-2 px-1 text-center font-black text-blue-400">Stock</div>
                                     </div>
@@ -977,12 +1006,20 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                     </div>
                                                 </div>
                                                 <div className="col-span-9 md:col-span-10 flex flex-col gap-2">
-                                                    <Input 
-                                                        value={row.name}
-                                                        onChange={(e) => updateManualRow(idx, 'name', e.target.value)}
-                                                        placeholder="BRAND / PRODUCT NAME"
-                                                        className="bg-black border-zinc-700 h-10 text-white text-sm font-black placeholder:text-zinc-500 focus:border-indigo-400"
-                                                    />
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <Input 
+                                                            value={row.brand || ""}
+                                                            onChange={(e) => updateManualRow(idx, 'brand', e.target.value)}
+                                                            placeholder="BRAND NAME"
+                                                            className="bg-black border-zinc-700 h-9 text-zinc-400 text-[10px] font-black placeholder:text-zinc-700 focus:border-indigo-400"
+                                                        />
+                                                        <Input 
+                                                            value={row.productName || ""}
+                                                            onChange={(e) => updateManualRow(idx, 'productName', e.target.value)}
+                                                            placeholder="PRODUCT / ITEM NAME"
+                                                            className="bg-black border-zinc-700 h-9 text-white text-[10px] font-black placeholder:text-zinc-600 focus:border-indigo-400"
+                                                        />
+                                                    </div>
                                                     <div className="grid grid-cols-12 gap-2">
                                                         <div className="col-span-4">
                                                             <div className="relative">
@@ -1025,7 +1062,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                         value={row.field2}
                                                         onChange={(e) => updateManualRow(idx, 'field2', e.target.value)}
                                                         placeholder={activeTab === 'chemicals' ? 'e.g. 16oz / 1gal' : 'Category'}
-                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400"
+                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400 focus:bg-zinc-800"
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
@@ -1034,7 +1071,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                                         value={row.field4}
                                                         onChange={(e) => updateManualRow(idx, 'field4', e.target.value)}
                                                         placeholder="Notes..."
-                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400 italic"
+                                                        className="bg-zinc-900/30 border-none h-7 text-[10px] text-zinc-400 italic focus:bg-zinc-800"
                                                     />
                                                 </div>
                                             </div>
@@ -1044,10 +1081,11 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                     <Button 
                                         onClick={addManualRow} 
                                         variant="outline" 
-                                        className="w-full h-14 border-2 border-dashed border-zinc-800 text-zinc-500 hover:text-indigo-400 hover:bg-zinc-900/50 font-black text-sm bg-zinc-950 mb-10 transition-all active:scale-95"
+                                        className="w-full h-14 border-2 border-dashed border-zinc-800 text-zinc-500 hover:text-indigo-400 hover:bg-zinc-900/50 font-black text-sm bg-zinc-950 transition-all active:scale-95"
                                     >
                                         <Plus className="w-5 h-5 mr-2" /> ADD ANOTHER ITEM
                                     </Button>
+                                    <div className="h-20" /> {/* Spacer for footer visibility on PC */}
                                 </div>
                             </ScrollArea>
 
