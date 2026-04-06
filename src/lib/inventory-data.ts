@@ -60,11 +60,12 @@ export interface Material {
 export interface Tool {
     id: string;
     name: string;
-    warranty: string;
+    category?: string; // ADDED: For custom categories
     purchaseDate: string;
-    price: number;
+    warranty: string;
     lifeExpectancy: string;
     notes: string;
+    price: number;
     imageUrl?: string;
     createdAt?: string;
 }
@@ -423,6 +424,7 @@ export async function getTools(): Promise<Tool[]> {
     return (data || []).map(item => ({
         id: item.id,
         name: item.name,
+        category: item.category || 'General',
         warranty: item.warranty || '',
         purchaseDate: item.purchase_date || '',
         price: item.price || 0,
@@ -442,6 +444,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
     const dbData: any = {
         user_id: session.user.id,
         name: tool.name,
+        category: tool.category,
         warranty: tool.warranty,
         purchase_date: tool.purchaseDate && tool.purchaseDate.trim() ? tool.purchaseDate : null,
         price: tool.price,

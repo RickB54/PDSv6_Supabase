@@ -186,12 +186,14 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                     await saveTool({
                         name: finalName,
                         price: priceValue,
+                        category: row.field2 || "General",
                         purchaseDate: new Date().toISOString().split('T')[0],
                         warranty: "",
                         lifeExpectancy: "",
-                        notes: row.field4 || `${row.brand || ''} ${row.field4 || ''}`.trim(),
+                        notes: row.field2 || "",
                         imageUrl: finalImageUrl
                     }, true);
+
                 } else if (activeTab === "supplies") {
                     await saveMaterial({
                         name: finalName,
