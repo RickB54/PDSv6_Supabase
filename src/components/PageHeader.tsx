@@ -152,11 +152,11 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-1.5 sm:gap-2 hover:bg-muted/50 p-1 sm:p-2 min-w-0">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-1.5 sm:gap-2 hover:bg-muted/50 p-1 sm:p-2 min-w-0 pr-3 sm:pr-4">
                     <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
                       <User className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="truncate hidden sm:inline max-w-[100px]">Hi, {user.name || user.email}</span>
+                    <span className="truncate max-w-[140px] xs:max-w-[160px] sm:max-w-[200px] text-xs sm:text-sm">Hi, {user.name || user.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-900 text-white w-48">

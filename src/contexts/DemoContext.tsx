@@ -98,7 +98,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isDemoPath, isHome, isPublicDemoDisabled]);
 
   // Global demo mode check
-  const isDemoMode = stayInDemo || isDemoPath || isAdminPreview;
+  // Public users lose access if isPublicDemoDisabled is true.
+  // Admins keep access via isAdminPreview.
+  const isDemoMode = isAdminPreview || ((stayInDemo || isDemoPath) && !isPublicDemoDisabled);
 
   useEffect(() => {
     localStorage.setItem("admin_demo_preview", isAdminPreview.toString());
