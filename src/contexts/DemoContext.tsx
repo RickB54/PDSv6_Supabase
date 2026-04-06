@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { contentService } from "@/lib/content";
 import { toast } from "@/components/ui/use-toast";
 
@@ -32,6 +32,7 @@ const DemoContext = createContext<DemoContextType | undefined>(undefined);
 
 export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const defaultSections = [
     "admin-dashboard", "search-customer", "prospects", "inventory-control", 
     "invoicing", "vehicle-gallery", "reports", "settings", "payroll", 
@@ -59,7 +60,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAdminPreview, setIsAdminPreview] = useState<boolean>(() => {
     return localStorage.getItem("admin_demo_preview") === "true";
   });
-  const [isPublicDemoDisabled, setPublicDemoDisabled] = useState<boolean>(false);
+  const [isPublicDemoDisabled, setPublicDemoDisabled] = useState<boolean>(true);
   const [disabledReason, setDisabledReason] = useState<string>("System Maintenance");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,22 +72,13 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
 
   useEffect(() => {
-    // RELAXED persistence for Demo Mode:
-    // We only clear it if the user EXPLICITLY clicks an 'Exit Demo' button (implemented elsewhere),
-    // or if we add a 'logout' logic. Landing on HOME should not clear a deliberate session.
-    /*
-    if (isHome) {
-      localStorage.removeItem("demo_mode_active");
-      setStayInDemo(false);
-      return;
-    }
-    */
+    if (isLoading) return; // IMPORTANT: Wait for DB config to load before redirecting anyone
 
     if (isDemoPath && !isPublicDemoDisabled) {
       localStorage.setItem("demo_mode_active", "true");
       setStayInDemo(true);
-    } else if (isDemoPath && isPublicDemoDisabled) {
-      // If they land on /demo but it's disabled
+    } else if (isDemoPath && isPublicDemoDisabled && !isAdminPreview) {
+      // If they land on /demo but it's disabled, KICK THEM TO HOME
       localStorage.removeItem("demo_mode_active");
       setStayInDemo(false);
       toast({ 
@@ -94,8 +86,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: `Access to the public simulation has been suspended. Reason: ${disabledReason || 'System Maintenance'}.`, 
         variant: "destructive" 
       });
+      navigate("/");
     }
-  }, [isDemoPath, isHome, isPublicDemoDisabled]);
+  }, [isDemoPath, isHome, isPublicDemoDisabled, isLoading, isAdminPreview]);
 
   // Global demo mode check
   // Public users lose access if isPublicDemoDisabled is true.
