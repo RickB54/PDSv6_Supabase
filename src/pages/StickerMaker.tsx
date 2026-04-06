@@ -12,11 +12,9 @@ import {
     Settings2,
     Sparkles,
     Maximize2,
-    CreditCard,
     Grid3X3,
     ChevronLeft
 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Slider } from '@/components/ui/slider';
 import { 
     Select, 
@@ -25,13 +23,6 @@ import {
     SelectTrigger, 
     SelectValue 
 } from '@/components/ui/select';
-import { 
-    Card, 
-    CardContent, 
-    CardHeader, 
-    CardTitle, 
-    CardDescription 
-} from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
@@ -50,9 +41,9 @@ export default function StickerMaker() {
         labelsPerPage: 10,
         columns: 2,
         rows: 5,
-        margin: 0.4, // Sheet margin
-        stickerPadding: 0.02, // Interior image padding
-        gap: 0.1, // inches between stickers
+        margin: 0.4, 
+        stickerPadding: 0.02, 
+        gap: 0.1, 
         pageZoom: 0.7,
         stickerWidth: 3.5,
         stickerHeight: 2.0,
@@ -63,7 +54,7 @@ export default function StickerMaker() {
         imageOffsetY: 0,
         sheetOffsetX: 0,
         sheetOffsetY: 0,
-        rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0] // Support up to 8 rows for calibration
+        rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0]
     });
 
     const [sheetLabels, setSheetLabels] = useState<Array<string | null>>(Array(10).fill(imageUrl));
@@ -71,12 +62,10 @@ export default function StickerMaker() {
     const sheetRef = useRef<HTMLDivElement>(null);
     const pageContainerRef = useRef<HTMLDivElement>(null);
 
-    // Auto-update labels
     useEffect(() => {
         setSheetLabels(Array(config.labelsPerPage).fill(imageUrl));
     }, [imageUrl, config.labelsPerPage]);
 
-    // Handle Presets
     useEffect(() => {
         if (preset === 'business-card') {
             setConfig(prev => ({
@@ -99,7 +88,6 @@ export default function StickerMaker() {
                 gap: 0.05
             }));
         }
-        // Custom lets you change everything manually
     }, [preset]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,8 +112,6 @@ export default function StickerMaker() {
         try {
             setLoading(true);
             toast({ title: "Generating PDF...", description: "Optimizing high-resolution sticker sheet." });
-            
-            // To get high quality, we'll temporarily remove scaling
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: [8.5, 11] });
             const canvas = await html2canvas(sheetRef.current, {
                 scale: 3,
@@ -133,11 +119,9 @@ export default function StickerMaker() {
                 backgroundColor: '#ffffff',
                 logging: false,
             });
-
             const imgData = canvas.toDataURL('image/png', 1.0);
             pdf.addImage(imgData, 'PNG', 0, 0, 8.5, 11, undefined, 'FAST');
             pdf.save(`Prime_Stickers_${Date.now()}.pdf`);
-            
             toast({ title: "Success!", description: "PDF downloaded successfully." });
         } catch (error) {
             console.error(error);
@@ -145,6 +129,16 @@ export default function StickerMaker() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleResetAlignment = () => {
+        setConfig(prev => ({
+            ...prev,
+            sheetOffsetX: 0,
+            sheetOffsetY: 0,
+            rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0]
+        }));
+        toast({ title: "Alignment Reset", description: "All master shifts and row offsets cleared." });
     };
 
     return (
@@ -173,7 +167,6 @@ export default function StickerMaker() {
                 }
             `}} />
 
-            {/* Header */}
             <header className="h-16 border-b border-white/5 bg-zinc-900/50 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-50">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-zinc-500 hover:text-white">
@@ -201,21 +194,20 @@ export default function StickerMaker() {
             </header>
 
             <main className="flex-1 flex overflow-hidden">
-                {/* Left Controls */}
-                <aside className="w-80 border-r border-white/5 bg-zinc-900/20 overflow-y-auto p-6 space-y-8">
+                <aside className="w-80 border-r border-white/5 bg-zinc-900/20 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                     <section className="space-y-4">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                             <Grid3X3 className="h-3 w-3 text-emerald-400" />
-                            Slot Dimension Preset
+                            Dimensions Preset
                         </Label>
                         <Select value={preset} onValueChange={(v: Preset) => setPreset(v)}>
                             <SelectTrigger className="w-full bg-black border-zinc-800 text-white font-bold h-11">
                                 <SelectValue placeholder="Choose a size..." />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                <SelectItem value="business-card" className="focus:bg-blue-600">Standard Business Card (3.5" x 2")</SelectItem>
-                                <SelectItem value="small-sticker" className="focus:bg-blue-600">Circle/Small Sticker (2.25" x 1.25")</SelectItem>
-                                <SelectItem value="custom" className="focus:bg-blue-600">Full Custom Dimensions</SelectItem>
+                                <SelectItem value="business-card">Standard Business Card (3.5" x 2")</SelectItem>
+                                <SelectItem value="small-sticker">Small Sticker (2.25" x 1.25")</SelectItem>
+                                <SelectItem value="custom">Full Custom Dimensions</SelectItem>
                             </SelectContent>
                         </Select>
                     </section>
@@ -223,15 +215,14 @@ export default function StickerMaker() {
                     <section className="space-y-4">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                             <ImageIcon className="h-3 w-3 text-blue-400" />
-                            Branding Design Source
+                            Design Source
                         </Label>
                         <div className="space-y-4">
-                            <div className="aspect-video bg-black rounded-xl border border-white/5 overflow-hidden shadow-2xl relative group">
+                            <div className="aspect-video bg-black rounded-xl border border-white/5 overflow-hidden shadow-2xl relative">
                                 <img 
                                     src={imageUrl} 
                                     alt="Preview" 
                                     className="w-full h-full object-contain"
-                                    onError={(e) => (e.currentTarget.src = "https://via.placeholder.com/400x225/000?text=No+Image")}
                                 />
                             </div>
                             <div className="relative">
@@ -241,7 +232,7 @@ export default function StickerMaker() {
                                     onChange={handleImageUpload}
                                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                 />
-                                <Button variant="outline" className="w-full h-10 border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 font-black uppercase text-[10px] tracking-widest">
+                                <Button variant="outline" className="w-full h-10 border-blue-500/20 bg-blue-500/5 text-blue-400 font-black uppercase text-[10px]">
                                     <Plus className="h-3 w-3 mr-2" />
                                     Replace Image
                                 </Button>
@@ -252,13 +243,13 @@ export default function StickerMaker() {
                     <section className="space-y-6 pt-4 border-t border-white/5">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                             <Settings2 className="h-3 w-3 text-blue-400" />
-                            Precise Design Controls
+                            Sticker Design
                         </Label>
                         
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <div className="flex justify-between text-[9px] font-bold text-zinc-400">
-                                    <span>ZOOM SCALE</span>
+                                    <span>IMAGE ZOOM</span>
                                     <span className="text-blue-400">{config.imageScale}%</span>
                                 </div>
                                 <Slider 
@@ -268,201 +259,95 @@ export default function StickerMaker() {
                                     onValueChange={([val]) => setConfig(prev => ({ ...prev, imageScale: val }))}
                                 />
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <span className="text-[9px] font-bold text-zinc-500">OFFSET X</span>
-                                    <Slider 
-                                        value={[config.imageOffsetX]} 
-                                        min={-100} 
-                                        max={100} 
-                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetX: val }))}
-                                    />
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase">Shift X</span>
+                                    <Slider value={[config.imageOffsetX]} min={-100} max={100} onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetX: val }))} />
                                 </div>
                                 <div className="space-y-2">
-                                    <span className="text-[9px] font-bold text-zinc-500">OFFSET Y</span>
-                                    <Slider 
-                                        value={[config.imageOffsetY]} 
-                                        min={-100} 
-                                        max={100} 
-                                        onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetY: val }))}
-                                    />
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase">Shift Y</span>
+                                    <Slider value={[config.imageOffsetY]} min={-100} max={100} onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetY: val }))} />
                                 </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-[9px] font-bold text-zinc-400">
-                                    <span>INT. PADDING</span>
-                                    <span>{(config.stickerPadding * 100).toFixed(0)}%</span>
-                                </div>
-                                <Slider 
-                                    value={[config.stickerPadding * 100]} 
-                                    min={0} 
-                                    max={40} 
-                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, stickerPadding: val / 100 }))}
-                                />
                             </div>
                         </div>
                     </section>
 
                     <section className="space-y-6 pt-4 border-t border-white/5">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                            <Sparkles className="h-3 w-3 text-emerald-400" />
-                            Master Sheet Alignment (Calibration)
-                        </Label>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                <Sparkles className="h-3 w-3 text-emerald-400" />
+                                Sheet Alignment
+                            </Label>
+                            <Button variant="ghost" size="sm" onClick={handleResetAlignment} className="h-6 text-[8px] font-black uppercase text-rose-500 hover:text-rose-400 px-2 rounded-full border border-rose-500/20">
+                                <RotateCcw className="h-2 w-2 mr-1" />
+                                Reset
+                            </Button>
+                        </div>
                         
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <div className="flex justify-between text-[9px] font-bold text-zinc-400">
-                                    <span>VERTICAL SHIFT (UP/DOWN)</span>
-                                    <span className="text-emerald-400">{config.sheetOffsetY > 0 ? '+' : ''}{config.sheetOffsetY.toFixed(2)}"</span>
+                                    <span>VERTICAL SHIFT</span>
+                                    <span className="text-emerald-400">{config.sheetOffsetY.toFixed(2)}"</span>
                                 </div>
-                                <Slider 
-                                    value={[config.sheetOffsetY * 100]} 
-                                    min={-100} 
-                                    max={100} 
-                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, sheetOffsetY: val / 100 }))}
-                                />
+                                <Slider value={[config.sheetOffsetY * 100]} min={-100} max={100} onValueChange={([val]) => setConfig(prev => ({ ...prev, sheetOffsetY: val / 100 }))} />
                             </div>
-
                             <div className="space-y-2">
                                 <div className="flex justify-between text-[9px] font-bold text-zinc-400">
-                                    <span>HORIZONTAL SHIFT (L/R)</span>
-                                    <span className="text-emerald-400">{config.sheetOffsetX > 0 ? '+' : ''}{config.sheetOffsetX.toFixed(2)}"</span>
+                                    <span>HORIZONTAL SHIFT</span>
+                                    <span className="text-emerald-400">{config.sheetOffsetX.toFixed(2)}"</span>
                                 </div>
-                                <Slider 
-                                    value={[config.sheetOffsetX * 100]} 
-                                    min={-100} 
-                                    max={100} 
-                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, sheetOffsetX: val / 100 }))}
-                                />
+                                <Slider value={[config.sheetOffsetX * 100]} min={-100} max={100} onValueChange={([val]) => setConfig(prev => ({ ...prev, sheetOffsetX: val / 100 }))} />
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/5">
+                            <Label className="text-[8px] font-black uppercase text-zinc-500 mb-2 block">Row Fine-Tuning</Label>
+                            <div className="space-y-3 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                                {Array.from({ length: Math.ceil(config.labelsPerPage / config.columns) }).map((_, rIdx) => (
+                                    <div key={rIdx} className="space-y-1">
+                                        <div className="flex justify-between text-[7px] font-bold text-zinc-400">
+                                            <span>Row {rIdx + 1}</span>
+                                        </div>
+                                        <Slider 
+                                            value={[config.rowOffsets[rIdx] * 100]} 
+                                            min={-50} 
+                                            max={50} 
+                                            onValueChange={([val]) => {
+                                                const newOffsets = [...config.rowOffsets];
+                                                newOffsets[rIdx] = val / 100;
+                                                setConfig(prev => ({ ...prev, rowOffsets: newOffsets }));
+                                            }}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </section>
- 
+
                     <section className="space-y-6 pt-4 border-t border-white/5">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                            <Settings2 className="h-3 w-3 text-emerald-400" />
-                            Row-by-Row Fine Tuning
-                        </Label>
-                        
-                        <div className="space-y-4 max-h-[300px] overflow-y-auto px-1 pr-4 custom-scrollbar">
-                            {Array.from({ length: Math.ceil(config.labelsPerPage / config.columns) }).map((_, rIdx) => (
-                                <div key={rIdx} className="space-y-2 pb-2 border-b border-white/5 last:border-0">
-                                    <div className="flex justify-between text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">
-                                        <span>ROW {rIdx + 1} OFFSET</span>
-                                        <span className={config.rowOffsets && config.rowOffsets[rIdx] === 0 ? "text-zinc-600" : "text-emerald-400"}>
-                                            {config.rowOffsets && config.rowOffsets[rIdx] > 0 ? '+' : ''}{config.rowOffsets ? config.rowOffsets[rIdx].toFixed(2) : '0.00'}"
-                                        </span>
-                                    </div>
-                                    <Slider 
-                                        value={[config.rowOffsets ? config.rowOffsets[rIdx] * 100 : 0]} 
-                                        min={-50} 
-                                        max={50} 
-                                        onValueChange={([val]) => {
-                                            const newOffsets = [...config.rowOffsets];
-                                            newOffsets[rIdx] = val / 100;
-                                            setConfig(prev => ({ ...prev, rowOffsets: newOffsets }));
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </section>
- 
-                    <section className="space-y-6 pt-4 border-t border-white/5">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Sheet Calibration</Label>
-                        
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Grid Setup</Label>
                         <div className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-[9px] font-bold text-zinc-400">
-                                    <span>TOTAL SLOTS</span>
-                                    <span>{config.labelsPerPage}</span>
-                                </div>
-                                <Slider 
-                                    value={[config.labelsPerPage]} 
-                                    min={1} 
-                                    max={40} 
-                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, labelsPerPage: val }))}
-                                />
-                            </div>
-
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] text-zinc-500">COLUMNS</Label>
-                                    <Input 
-                                        type="number" 
-                                        value={config.columns} 
-                                        onChange={(e) => setConfig(prev => ({ ...prev, columns: parseInt(e.target.value) || 1 }))}
-                                        className="h-8 bg-black border-white/5 text-[11px]"
-                                    />
+                                <div>
+                                    <Label className="text-[9px] text-zinc-500 uppercase">Cols</Label>
+                                    <Input type="number" value={config.columns} onChange={(e) => setConfig(prev => ({ ...prev, columns: parseInt(e.target.value) || 1 }))} className="h-8 bg-black text-[11px]" />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] text-zinc-500">GAPS (IN)</Label>
-                                    <Input 
-                                        type="number" 
-                                        step="0.05"
-                                        value={config.gap} 
-                                        onChange={(e) => setConfig(prev => ({ ...prev, gap: parseFloat(e.target.value) || 0 }))}
-                                        className="h-8 bg-black border-white/5 text-[11px]"
-                                    />
+                                <div>
+                                    <Label className="text-[9px] text-zinc-500 uppercase">Gap</Label>
+                                    <Input type="number" step="0.05" value={config.gap} onChange={(e) => setConfig(prev => ({ ...prev, gap: parseFloat(e.target.value) || 0 }))} className="h-8 bg-black text-[11px]" />
                                 </div>
                             </div>
-
-                            {preset === 'custom' && (
-                                <div className="grid grid-cols-2 gap-4 pt-2">
-                                    <div className="space-y-2">
-                                        <Label className="text-[9px] text-emerald-500">WIDTH (IN)</Label>
-                                        <Input 
-                                            type="number" 
-                                            step="0.1"
-                                            value={config.stickerWidth} 
-                                            onChange={(e) => setConfig(prev => ({ ...prev, stickerWidth: parseFloat(e.target.value) || 1 }))}
-                                            className="h-8 bg-black border-emerald-500/20 text-[11px]"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[9px] text-emerald-500">HEIGHT (IN)</Label>
-                                        <Input 
-                                            type="number" 
-                                            step="0.1"
-                                            value={config.stickerHeight} 
-                                            onChange={(e) => setConfig(prev => ({ ...prev, stickerHeight: parseFloat(e.target.value) || 1 }))}
-                                            className="h-8 bg-black border-emerald-500/20 text-[11px]"
-                                        />
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </section>
-
-                    <div className="mt-auto pt-6">
-                        <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Sparkles className="h-4 w-4 text-blue-400" />
-                                <span className="text-[10px] font-black text-blue-300 uppercase">Pro Tip</span>
-                            </div>
-                            <p className="text-[10px] text-blue-100/60 leading-relaxed font-bold uppercase tracking-tight">
-                                For precision alignment, set your printer scaling to "None" or "100%".
-                            </p>
-                        </div>
-                    </div>
                 </aside>
 
-                {/* Main Preview Area */}
-                <div 
-                    ref={pageContainerRef}
-                    className="flex-1 bg-zinc-950/40 p-12 overflow-auto flex justify-center items-start pattern-grid"
-                >
+                <div ref={pageContainerRef} className="flex-1 bg-zinc-950/40 p-12 overflow-auto flex justify-center items-start pattern-grid">
                     <div 
                         ref={sheetRef}
                         id="sticker-print-sheet"
                         style={{ 
-                            width: '8.5in',
-                            height: '11in',
-                            minWidth: '8.5in',
-                            minHeight: '11in',
-                            backgroundColor: 'white',
+                            width: '8.5in', height: '11in', backgroundColor: 'white',
                             paddingTop: `${0.4 + config.sheetOffsetY}in`,
                             paddingLeft: `${0.4 + config.sheetOffsetX}in`,
                             paddingRight: `${0.4 - config.sheetOffsetX}in`,
@@ -470,54 +355,26 @@ export default function StickerMaker() {
                             boxSizing: 'border-box',
                             transform: `scale(${config.pageZoom})`,
                             transformOrigin: 'top center',
-                            display: 'grid',
-                            gridTemplateColumns: `repeat(${config.columns}, 1fr)`,
-                            columnGap: `${config.gap}in`,
-                            rowGap: `${config.gap * 1.5}in`,
-                            alignContent: 'start',
-                            justifyItems: 'center',
-                            boxShadow: '0 50px 100px -20px rgba(0,0,0,0.5)',
+                            display: 'grid', gridTemplateColumns: `repeat(${config.columns}, 1fr)`,
+                            columnGap: `${config.gap}in`, rowGap: `${config.gap * 1.5}in`,
+                            alignContent: 'start', justifyItems: 'center', boxShadow: '0 50px 100px -20px rgba(0,0,0,0.5)',
                             position: 'relative'
                         }}
                     >
-                        {/* Page Center Guide (Invisible in Print) */}
-                        <div className="absolute inset-y-0 left-1/2 w-px bg-blue-500/5 -translate-x-1/2 pointer-events-none print:hidden" />
-                        
                         {sheetLabels.map((img, idx) => {
                             const rowIndex = Math.floor(idx / config.columns);
-                            const rowOffset = (config.rowOffsets as number[])[rowIndex] || 0;
-                            
+                            const rowOffset = config.rowOffsets[rowIndex] || 0;
                             return (
                                 <div 
                                     key={idx} 
-                                    className="group relative"
                                     style={{ 
-                                        width: `${config.stickerWidth}in`,
-                                        height: `${config.stickerHeight}in`,
-                                        maxWidth: '100%',
-                                        backgroundColor: '#000000',
-                                        borderRadius: `${config.borderRadius}px`,
-                                        overflow: 'hidden',
-                                        padding: `${config.stickerPadding}in`,
-                                        boxSizing: 'border-box',
-                                        marginTop: `${rowOffset}in`,
-                                        marginBottom: `${-rowOffset}in`
+                                        width: `${config.stickerWidth}in`, height: `${config.stickerHeight}in`,
+                                        backgroundColor: '#000', borderRadius: `${config.borderRadius}px`,
+                                        overflow: 'hidden', padding: `${config.stickerPadding}in`, boxSizing: 'border-box',
+                                        marginTop: `${rowOffset}in`, marginBottom: `${-rowOffset}in`
                                     }}
                                 >
-                                    <img 
-                                        src={img || imageUrl} 
-                                        alt="User Component" 
-                                        style={{ 
-                                            width: `${config.imageScale}%`, 
-                                            height: '100%', 
-                                            objectFit: 'contain',
-                                            transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)`,
-                                            transition: 'none'
-                                        }} 
-                                    />
-                                    {config.showCutMarks && (
-                                        <div className="absolute inset-0 pointer-events-none opacity-30 border border-white/10" />
-                                    )}
+                                    <img src={img || imageUrl} alt="" style={{ width: `${config.imageScale}%`, height: '100%', objectFit: 'contain', transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)` }} />
                                 </div>
                             );
                         })}
@@ -525,21 +382,10 @@ export default function StickerMaker() {
                 </div>
             </main>
 
-            {/* Float Controls for Zoom */}
             <div className="fixed bottom-8 right-8 flex items-center gap-4 bg-zinc-900 border border-white/5 p-2 rounded-full shadow-2xl backdrop-blur-xl">
-                 <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setConfig(prev => ({ ...prev, pageZoom: Math.max(0.1, prev.pageZoom - 0.1) }))}
-                    className="rounded-full h-10 w-10 text-zinc-400 hover:text-white"
-                 > - </Button>
+                 <Button variant="ghost" size="sm" onClick={() => setConfig(prev => ({ ...prev, pageZoom: Math.max(0.1, prev.pageZoom - 0.1) }))} className="rounded-full h-10 w-10 text-zinc-400"> - </Button>
                  <span className="text-[10px] font-black text-white w-12 text-center">{(config.pageZoom * 100).toFixed(0)}%</span>
-                 <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setConfig(prev => ({ ...prev, pageZoom: Math.min(2.0, prev.pageZoom + 0.1) }))}
-                    className="rounded-full h-10 w-10 text-zinc-400 hover:text-white"
-                 > + </Button>
+                 <Button variant="ghost" size="sm" onClick={() => setConfig(prev => ({ ...prev, pageZoom: Math.min(2.0, prev.pageZoom + 0.1) }))} className="rounded-full h-10 w-10 text-zinc-400"> + </Button>
             </div>
         </div>
     );
