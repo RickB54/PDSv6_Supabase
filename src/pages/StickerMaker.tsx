@@ -37,25 +37,33 @@ export default function StickerMaker() {
     const [imageUrl, setImageUrl] = useState(DEFAULT_IMAGE);
     const [preset, setPreset] = useState<Preset>('business-card');
     
-    const [config, setConfig] = useState({
-        labelsPerPage: 10,
-        columns: 2,
-        rows: 5,
-        margin: 0.4, 
-        stickerPadding: 0.02, 
-        gap: 0.1, 
-        pageZoom: 0.7,
-        stickerWidth: 3.5,
-        stickerHeight: 2.0,
-        borderRadius: 8,
-        showCutMarks: true,
-        imageScale: 100,
-        imageOffsetX: 0,
-        imageOffsetY: 0,
-        sheetOffsetX: 0,
-        sheetOffsetY: 0,
-        rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0]
+    const [config, setConfig] = useState(() => {
+        const saved = localStorage.getItem('sticker_maker_config');
+        if (saved) return JSON.parse(saved);
+        return {
+            labelsPerPage: 10,
+            columns: 2,
+            rows: 5,
+            margin: 0.4, 
+            stickerPadding: 0.02, 
+            gap: 0.1, 
+            pageZoom: 0.7,
+            stickerWidth: 3.5,
+            stickerHeight: 2.0,
+            borderRadius: 8,
+            showCutMarks: true,
+            imageScale: 100,
+            imageOffsetX: 0,
+            imageOffsetY: 0,
+            sheetOffsetX: 0,
+            sheetOffsetY: 0,
+            rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0]
+        };
     });
+
+    useEffect(() => {
+        localStorage.setItem('sticker_maker_config', JSON.stringify(config));
+    }, [config]);
 
     const [sheetLabels, setSheetLabels] = useState<Array<string | null>>(Array(10).fill(imageUrl));
     const [loading, setLoading] = useState(false);
@@ -289,6 +297,15 @@ export default function StickerMaker() {
                                 <Sparkles className="h-3 w-3 text-emerald-400" />
                                 Sheet Alignment
                             </Label>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => toast({ title: "Calibration Saved!", description: "All offsets and row settings have been committed to memory." })} 
+                                className="h-7 text-[9px] font-black uppercase bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all px-3"
+                            >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Save Setup
+                            </Button>
                             <Button 
                                 variant="outline" 
                                 size="sm" 
