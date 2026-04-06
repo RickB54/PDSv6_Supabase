@@ -60,7 +60,9 @@ export default function StickerMaker() {
         showCutMarks: true,
         imageScale: 100,
         imageOffsetX: 0,
-        imageOffsetY: 0
+        imageOffsetY: 0,
+        sheetOffsetX: 0,
+        sheetOffsetY: 0
     });
 
     const [sheetLabels, setSheetLabels] = useState<Array<string | null>>(Array(10).fill(imageUrl));
@@ -303,6 +305,41 @@ export default function StickerMaker() {
                     </section>
 
                     <section className="space-y-6 pt-4 border-t border-white/5">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                            <Sparkles className="h-3 w-3 text-emerald-400" />
+                            Master Sheet Alignment (Calibration)
+                        </Label>
+                        
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-[9px] font-bold text-zinc-400">
+                                    <span>VERTICAL SHIFT (UP/DOWN)</span>
+                                    <span className="text-emerald-400">{config.sheetOffsetY > 0 ? '+' : ''}{config.sheetOffsetY.toFixed(2)}"</span>
+                                </div>
+                                <Slider 
+                                    value={[config.sheetOffsetY * 100]} 
+                                    min={-100} 
+                                    max={100} 
+                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, sheetOffsetY: val / 100 }))}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-[9px] font-bold text-zinc-400">
+                                    <span>HORIZONTAL SHIFT (L/R)</span>
+                                    <span className="text-emerald-400">{config.sheetOffsetX > 0 ? '+' : ''}{config.sheetOffsetX.toFixed(2)}"</span>
+                                </div>
+                                <Slider 
+                                    value={[config.sheetOffsetX * 100]} 
+                                    min={-100} 
+                                    max={100} 
+                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, sheetOffsetX: val / 100 }))}
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-6 pt-4 border-t border-white/5">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Sheet Calibration</Label>
                         
                         <div className="space-y-4">
@@ -395,7 +432,10 @@ export default function StickerMaker() {
                             minWidth: '8.5in',
                             minHeight: '11in',
                             backgroundColor: 'white',
-                            padding: '0.4in',
+                            paddingTop: `${0.4 + config.sheetOffsetY}in`,
+                            paddingLeft: `${0.4 + config.sheetOffsetX}in`,
+                            paddingRight: `${0.4 - config.sheetOffsetX}in`,
+                            paddingBottom: `${0.4 - config.sheetOffsetY}in`,
                             boxSizing: 'border-box',
                             transform: `scale(${config.pageZoom})`,
                             transformOrigin: 'top center',
