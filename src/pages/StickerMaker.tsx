@@ -62,7 +62,8 @@ export default function StickerMaker() {
         imageOffsetX: 0,
         imageOffsetY: 0,
         sheetOffsetX: 0,
-        sheetOffsetY: 0
+        sheetOffsetY: 0,
+        rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0] // Support up to 8 rows for calibration
     });
 
     const [sheetLabels, setSheetLabels] = useState<Array<string | null>>(Array(10).fill(imageUrl));
@@ -338,7 +339,37 @@ export default function StickerMaker() {
                             </div>
                         </div>
                     </section>
-
+ 
+                    <section className="space-y-6 pt-4 border-t border-white/5">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                            <Settings2 className="h-3 w-3 text-emerald-400" />
+                            Row-by-Row Fine Tuning
+                        </Label>
+                        
+                        <div className="space-y-4 max-h-[300px] overflow-y-auto px-1 pr-4 custom-scrollbar">
+                            {Array.from({ length: Math.ceil(config.labelsPerPage / config.columns) }).map((_, rIdx) => (
+                                <div key={rIdx} className="space-y-2 pb-2 border-b border-white/5 last:border-0">
+                                    <div className="flex justify-between text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">
+                                        <span>ROW {rIdx + 1} OFFSET</span>
+                                        <span className={config.rowOffsets && config.rowOffsets[rIdx] === 0 ? "text-zinc-600" : "text-emerald-400"}>
+                                            {config.rowOffsets && config.rowOffsets[rIdx] > 0 ? '+' : ''}{config.rowOffsets ? config.rowOffsets[rIdx].toFixed(2) : '0.00'}"
+                                        </span>
+                                    </div>
+                                    <Slider 
+                                        value={[config.rowOffsets ? config.rowOffsets[rIdx] * 100 : 0]} 
+                                        min={-50} 
+                                        max={50} 
+                                        onValueChange={([val]) => {
+                                            const newOffsets = [...config.rowOffsets];
+                                            newOffsets[rIdx] = val / 100;
+                                            setConfig(prev => ({ ...prev, rowOffsets: newOffsets }));
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+ 
                     <section className="space-y-6 pt-4 border-t border-white/5">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Sheet Calibration</Label>
                         
@@ -452,37 +483,44 @@ export default function StickerMaker() {
                         {/* Page Center Guide (Invisible in Print) */}
                         <div className="absolute inset-y-0 left-1/2 w-px bg-blue-500/5 -translate-x-1/2 pointer-events-none print:hidden" />
                         
-                        {sheetLabels.map((img, idx) => (
-                            <div 
-                                key={idx} 
-                                className="group relative"
-                                style={{ 
-                                    width: `${config.stickerWidth}in`,
-                                    height: `${config.stickerHeight}in`,
-                                    maxWidth: '100%',
-                                    backgroundColor: '#000000',
-                                    borderRadius: `${config.borderRadius}px`,
-                                    overflow: 'hidden',
-                                    padding: `${config.stickerPadding}in`,
-                                    boxSizing: 'border-box'
-                                }}
-                            >
-                                <img 
-                                    src={img || imageUrl} 
-                                    alt="User Component" 
+                        {sheetLabels.map((img, idx) => {
+                            const rowIndex = Math.floor(idx / config.columns);
+                            const rowOffset = (config.rowOffsets as number[])[rowIndex] || 0;
+                            
+                            return (
+                                <div 
+                                    key={idx} 
+                                    className="group relative"
                                     style={{ 
-                                        width: `${config.imageScale}%`, 
-                                        height: '100%', 
-                                        objectFit: 'contain',
-                                        transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)`,
-                                        transition: 'none'
-                                    }} 
-                                />
-                                {config.showCutMarks && (
-                                    <div className="absolute inset-0 pointer-events-none opacity-30 border border-white/10" />
-                                )}
-                            </div>
-                        ))}
+                                        width: `${config.stickerWidth}in`,
+                                        height: `${config.stickerHeight}in`,
+                                        maxWidth: '100%',
+                                        backgroundColor: '#000000',
+                                        borderRadius: `${config.borderRadius}px`,
+                                        overflow: 'hidden',
+                                        padding: `${config.stickerPadding}in`,
+                                        boxSizing: 'border-box',
+                                        marginTop: `${rowOffset}in`,
+                                        marginBottom: `${-rowOffset}in`
+                                    }}
+                                >
+                                    <img 
+                                        src={img || imageUrl} 
+                                        alt="User Component" 
+                                        style={{ 
+                                            width: `${config.imageScale}%`, 
+                                            height: '100%', 
+                                            objectFit: 'contain',
+                                            transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)`,
+                                            transition: 'none'
+                                        }} 
+                                    />
+                                    {config.showCutMarks && (
+                                        <div className="absolute inset-0 pointer-events-none opacity-30 border border-white/10" />
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </main>
