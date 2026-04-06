@@ -74,15 +74,21 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [quickPasteText, setQuickPasteText] = useState("");
     
+    // Unified row shape for all tabs:
+    //   Chemicals  → brand, productName (=name), bottleSize, price, quantity
+    //   Supplies   → name, category, notes, price, quantity
+    //   Equipment  → name, category, notes, price
+    const emptyRow = () => ({ name: "", brand: "", productName: "", category: "", bottleSize: "", notes: "", price: "", quantity: "", imageFile: null, imageUrl: null });
+
     const [manualRows, setManualRows] = useState<any[]>(() => {
         const saved = localStorage.getItem('ultra_v6_manual_rows');
         if (saved) {
             try {
                 const rows = JSON.parse(saved);
-                return rows.map((r: any) => ({ ...r, imageFile: null, imageUrl: null }));
+                return rows.map((r: any) => ({ ...emptyRow(), ...r, imageFile: null, imageUrl: null }));
             } catch (e) { console.error("Restore failed", e); }
         }
-        return [{ brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }];
+        return [emptyRow()];
     });
 
     // Persistent storage for manual entry rows
@@ -118,7 +124,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     };
 
     const addManualRow = () => {
-        setManualRows([...manualRows, { brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+        setManualRows([...manualRows, emptyRow()]);
     };
 
     const updateManualRow = (index: number, field: string, value: string) => {
@@ -129,20 +135,24 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
     const removeManualRow = (index: number) => {
         if (manualRows.length <= 1) {
-            setManualRows([{ brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+            setManualRows([emptyRow()]);
             return;
         }
         setManualRows(manualRows.filter((_, i) => i !== index));
     };
 
     const handleManualSubmit = async () => {
-        const validRows = manualRows.filter(r => r.productName?.trim() || r.brand?.trim());
+        // Validation varies by tab
+        const validRows = manualRows.filter(r => {
+            if (activeTab === "chemicals") return r.productName?.trim() || r.brand?.trim();
+            return r.name?.trim(); // Supplies & Equipment just need a name
+        });
         if (validRows.length === 0) {
-            toast.error("Please enter at least one product name.");
+            toast.error("Please enter at least one item name.");
             return;
         }
 
-        // Validate Price requirement - user explicitly asked for this
+        // Price is mandatory for all items
         const missingPrice = validRows.some(r => !r.price || isNaN(Number(r.price.toString().replace(/[$,]/g, ''))));
         if (missingPrice) {
             toast.error("Every item requires a valid price before saving.");
@@ -156,53 +166,56 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         try {
             for (const row of validRows) {
                 let finalImageUrl = "";
-                
+
                 // Upload photo if captured
                 if (row.imageFile) {
                     try {
                         const uploadedUrl = await uploadInventoryImage(row.imageFile);
                         if (uploadedUrl) finalImageUrl = uploadedUrl;
                     } catch (uploadErr) {
-                        console.error("Photo upload failed for row", row.productName, uploadErr);
-                        toast.error(`Photo upload failed for ${row.productName}. Saving without photo.`);
+                        console.error("Photo upload failed for row", row.name || row.productName, uploadErr);
+                        toast.error(`Photo upload failed for ${row.name || row.productName}. Saving without photo.`);
                     }
                 }
 
                 const priceValue = Number(row.price.toString().replace(/[$,]/g, '')) || 0;
-                const stockValue = Number(row.field3.toString()) || 0;
-                const finalName = row.productName || row.brand || "Unnamed Product";
+                const qtyValue = Number(row.quantity || "0") || 0;
 
                 if (activeTab === "chemicals") {
+                    // Chemicals: Brand + Product Name + Bottle Size
+                    const chemName = row.productName?.trim() || row.brand?.trim() || "Unnamed Chemical";
                     await saveChemical({
-                        name: finalName,
+                        name: chemName,
                         brand: row.brand || "",
-                        bottleSize: row.field2 || "16 oz",
+                        bottleSize: row.bottleSize || "16 oz",
                         costPerBottle: priceValue,
                         threshold: 1,
-                        currentStock: stockValue,
+                        currentStock: qtyValue,
                         imageUrl: finalImageUrl
                     }, true);
+
                 } else if (activeTab === "equipment") {
+                    // Equipment: Item Name + Category + Notes (no brand)
                     await saveTool({
-                        name: finalName,
+                        name: row.name?.trim() || "Unnamed Equipment",
                         price: priceValue,
-                        category: row.field2 || "General",
+                        category: row.category || "General",
                         purchaseDate: new Date().toISOString().split('T')[0],
                         warranty: "",
                         lifeExpectancy: "",
-                        notes: row.field2 || "",
+                        notes: row.notes || "",
                         imageUrl: finalImageUrl
                     }, true);
 
                 } else if (activeTab === "supplies") {
+                    // Supplies: Item Name + Category + Notes (no brand)
                     await saveMaterial({
-                        name: finalName,
-                        category: row.field2 || "General",
-                        subtype: row.brand || "",
+                        name: row.name?.trim() || "Unnamed Supply",
+                        category: row.category || "General",
                         costPerItem: priceValue,
-                        quantity: stockValue,
+                        quantity: qtyValue,
                         lowThreshold: 1,
-                        notes: row.field4 || "",
+                        notes: row.notes || "",
                         imageUrl: finalImageUrl
                     }, true);
                 }
@@ -210,9 +223,9 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             }
 
             toast.success(`Successfully imported ${importedCount} items.`);
-            localStorage.removeItem('ultra_v6_manual_rows'); // Clear on success
-            onOpenChange(false); // Close modal on completion as requested
-            setManualRows([{ brand: "", productName: "", price: "", field2: "", field3: "", field4: "", imageFile: null, imageUrl: null }]);
+            localStorage.removeItem('ultra_v6_manual_rows');
+            onOpenChange(false);
+            setManualRows([emptyRow()]);
             setStep("upload");
 
         } catch (error) {
@@ -884,25 +897,76 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                             <div key={idx} className="group relative bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 shadow-inner">
                                                 <div className="grid grid-cols-12 gap-3 items-start">
                                                     <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        <div className="space-y-1">
-                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Brand Name</Label>
-                                                            <Input value={row.brand} onChange={(e) => updateManualRow(idx, 'brand', e.target.value)} placeholder="e.g. Meguiar's" className="h-10 bg-black border-zinc-800 text-white font-bold" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Product Name</Label>
-                                                            <Input value={row.productName} onChange={(e) => updateManualRow(idx, 'productName', e.target.value)} placeholder="e.g. Hyper Dressing" className="h-10 bg-black border-zinc-800 text-white font-bold" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Price / Cost ($) <span className="text-red-500">*</span></Label>
-                                                            <Input type="number" value={row.price} onChange={(e) => updateManualRow(idx, 'price', e.target.value)} placeholder="0.00" className="h-10 bg-black border-zinc-800 text-indigo-400 font-black text-lg focus:ring-2 ring-indigo-500/50" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Category / Size / Notes</Label>
-                                                            <Input value={row.field2} onChange={(e) => updateManualRow(idx, 'field2', e.target.value)} placeholder="e.g. 1gal / Shelf 1" className="h-10 bg-black border-zinc-800 text-zinc-400" />
-                                                        </div>
+
+                                                        {/* ── CHEMICALS: Brand + Product Name + Bottle Size ── */}
+                                                        {activeTab === "chemicals" && (
+                                                            <>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Brand Name</Label>
+                                                                    <Input value={row.brand} onChange={(e) => updateManualRow(idx, 'brand', e.target.value)} placeholder="e.g. Meguiar's" className="h-10 bg-black border-zinc-800 text-white font-bold" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Product Name <span className="text-red-500">*</span></Label>
+                                                                    <Input value={row.productName} onChange={(e) => updateManualRow(idx, 'productName', e.target.value)} placeholder="e.g. Hyper Dressing" className="h-10 bg-black border-zinc-800 text-white font-bold" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Price / Cost ($) <span className="text-red-500">*</span></Label>
+                                                                    <Input type="number" value={row.price} onChange={(e) => updateManualRow(idx, 'price', e.target.value)} placeholder="0.00" className="h-10 bg-black border-zinc-800 text-indigo-400 font-black text-lg focus:ring-2 ring-indigo-500/50" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Bottle Size</Label>
+                                                                    <Input value={row.bottleSize} onChange={(e) => updateManualRow(idx, 'bottleSize', e.target.value)} placeholder="e.g. 32 oz, 1 gal" className="h-10 bg-black border-zinc-800 text-zinc-400" />
+                                                                </div>
+                                                            </>
+                                                        )}
+
+                                                        {/* ── SUPPLIES: Item Name + Category + Notes ── */}
+                                                        {activeTab === "supplies" && (
+                                                            <>
+                                                                <div className="space-y-1 sm:col-span-2">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Item Name <span className="text-red-500">*</span></Label>
+                                                                    <Input value={row.name} onChange={(e) => updateManualRow(idx, 'name', e.target.value)} placeholder="e.g. Microfiber Towel" className="h-10 bg-black border-zinc-800 text-white font-bold" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Category</Label>
+                                                                    <Input value={row.category} onChange={(e) => updateManualRow(idx, 'category', e.target.value)} placeholder="e.g. Microfiber, PPE" className="h-10 bg-black border-zinc-800 text-zinc-400" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Price / Cost ($) <span className="text-red-500">*</span></Label>
+                                                                    <Input type="number" value={row.price} onChange={(e) => updateManualRow(idx, 'price', e.target.value)} placeholder="0.00" className="h-10 bg-black border-zinc-800 text-indigo-400 font-black text-lg focus:ring-2 ring-indigo-500/50" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Notes (optional)</Label>
+                                                                    <Input value={row.notes} onChange={(e) => updateManualRow(idx, 'notes', e.target.value)} placeholder="Additional info..." className="h-10 bg-black border-zinc-800 text-zinc-400" />
+                                                                </div>
+                                                            </>
+                                                        )}
+
+                                                        {/* ── EQUIPMENT: Item Name + Category + Notes ── */}
+                                                        {activeTab === "equipment" && (
+                                                            <>
+                                                                <div className="space-y-1 sm:col-span-2">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Item Name <span className="text-red-500">*</span></Label>
+                                                                    <Input value={row.name} onChange={(e) => updateManualRow(idx, 'name', e.target.value)} placeholder="e.g. Dual Action Polisher" className="h-10 bg-black border-zinc-800 text-white font-bold" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Category</Label>
+                                                                    <Input value={row.category} onChange={(e) => updateManualRow(idx, 'category', e.target.value)} placeholder="e.g. Power Tool, Vehicle" className="h-10 bg-black border-zinc-800 text-zinc-400" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Price / Cost ($) <span className="text-red-500">*</span></Label>
+                                                                    <Input type="number" value={row.price} onChange={(e) => updateManualRow(idx, 'price', e.target.value)} placeholder="0.00" className="h-10 bg-black border-zinc-800 text-indigo-400 font-black text-lg focus:ring-2 ring-indigo-500/50" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <Label className="text-[8px] font-black uppercase text-zinc-600 ml-1">Notes (optional)</Label>
+                                                                    <Input value={row.notes} onChange={(e) => updateManualRow(idx, 'notes', e.target.value)} placeholder="Warranty, condition..." className="h-10 bg-black border-zinc-800 text-zinc-400" />
+                                                                </div>
+                                                            </>
+                                                        )}
+
                                                     </div>
                                                     <div className="col-span-12 md:col-span-4 flex items-center gap-3 h-full pt-1">
-                                                        <div 
+                                                        <div
                                                             onClick={() => triggerCamera(idx)}
                                                             className="flex-1 aspect-video rounded-xl border-2 border-dashed border-zinc-800 bg-black flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-indigo-500/50 transition-all"
                                                         >
