@@ -239,9 +239,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
                 importedCount++;
 
-            } catch (itemError) {
-                console.error("Failed to save item:", row.name || row.productName, itemError);
-                failedItems.push(row.name || row.productName || "(unnamed)");
+            } catch (itemError: any) {
+                const errMsg = itemError?.message || String(itemError) || "Unknown error";
+                console.error("Failed to save item:", row.name || row.productName, errMsg, itemError);
+                failedItems.push(`${row.name || row.productName || "(unnamed)"} [${errMsg}]`);
             }
         }
 

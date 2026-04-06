@@ -459,7 +459,17 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         .from('tools')
         .upsert(dbData);
 
-    if (error) throw error;
+    if (error) {
+        // If category column doesn't exist in DB yet, retry without it
+        if (error.message?.includes('category') || error.code === '42703') {
+            console.warn('category column not in tools table, retrying without it');
+            const { category: _cat, ...dbDataWithoutCat } = dbData;
+            const { error: retryErr } = await supabase.from('tools').upsert(dbDataWithoutCat);
+            if (retryErr) throw retryErr;
+        } else {
+            throw error;
+        }
+    }
 
     // Record as expense in budget if this is a new purchase
     if (isNew && tool.price) {
