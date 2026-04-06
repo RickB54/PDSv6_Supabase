@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { loginSupabase } from "@/lib/auth";
 import { toast } from "sonner";
 
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldAlert } from "lucide-react";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -16,6 +16,9 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const demoDisabled = searchParams.get('demo_disabled') === 'true';
+    const disabledReason = searchParams.get('reason');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,6 +56,18 @@ export default function Login() {
                     <CardDescription>
                         Enter your email below to login to your account
                     </CardDescription>
+                    {demoDisabled && (
+                        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg animate-in slide-in-from-top-2">
+                            <h4 className="text-red-500 font-bold text-sm flex items-center gap-2 mb-1">
+                                <ShieldAlert className="w-4 h-4" />
+                                Demo Mode Offline
+                            </h4>
+                            <p className="text-red-400/80 text-[11px] leading-relaxed">
+                                Access to the public simulation has been suspended. 
+                                <br />Reason: <span className="text-red-400 font-black uppercase tracking-tight">{disabledReason || 'System Maintenance'}</span>
+                            </p>
+                        </div>
+                    )}
                 </CardHeader>
                 <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">

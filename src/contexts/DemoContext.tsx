@@ -78,15 +78,11 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem("demo_mode_active", "true");
       setStayInDemo(true);
     } else if (isDemoPath && isPublicDemoDisabled && !isAdminPreview) {
-      // If they land on /demo but it's disabled, KICK THEM TO HOME
+      // If they land on /demo but it's disabled, KICK THEM TO LOGIN or HOME
       localStorage.removeItem("demo_mode_active");
       setStayInDemo(false);
-      toast({ 
-        title: "Demo Temporarily Disabled", 
-        description: `Access to the public simulation has been suspended. Reason: ${disabledReason || 'System Maintenance'}.`, 
-        variant: "destructive" 
-      });
-      navigate("/");
+      const reasonParam = encodeURIComponent(disabledReason || 'System Maintenance');
+      navigate(`/login?demo_disabled=true&reason=${reasonParam}`);
     }
   }, [isDemoPath, isHome, isPublicDemoDisabled, isLoading, isAdminPreview]);
 
