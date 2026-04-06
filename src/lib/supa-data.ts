@@ -8,7 +8,7 @@ export { supabase };
 
 
 // Types
-const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
+export const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
 
 export interface Employee {
     id?: string;
@@ -109,6 +109,15 @@ const anonClient = createClient(
 );
 
 export const getSupabaseEmployees = async (): Promise<Employee[]> => {
+    if (isDemoActive()) {
+        const { MOCK_EMPLOYEES } = await import('./demoMockData');
+        return MOCK_EMPLOYEES.map(e => ({
+            id: e.id,
+            name: e.name,
+            email: e.email,
+            role: e.role.charAt(0).toUpperCase() + e.role.slice(1)
+        }));
+    }
     try {
         // 1. Fetch from Supabase using singleton anon client
 
@@ -202,6 +211,10 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
  * Deduplicates by name/phone if Supabase contains duplicates.
  */
 export const getSupabaseCustomers = async (): Promise<Customer[]> => {
+    if (isDemoActive()) {
+        const { MOCK_CUSTOMERS } = await import('./demoMockData');
+        return MOCK_CUSTOMERS as Customer[];
+    }
     try {
         // 1. Fetch CRM customers with their vehicles
         // IMPORTANT: Photos are in customers table, NOT vehicles table
@@ -964,6 +977,33 @@ export interface StaffShift {
 }
 
 export const getStaffShifts = async (start: string, end: string) => {
+    if (isDemoActive()) {
+        // Return some localized mock shifts for the schedule UI
+        return [
+            { 
+                id: 'mock-shift-1', 
+                employee_id: 'demo-emp-2', 
+                employee_name: 'Sam Staff', 
+                date: new Date().toISOString().split('T')[0], 
+                start_time: '10:00', 
+                end_time: '17:00', 
+                role: 'Detailer',
+                status: 'scheduled',
+                color: 'blue'
+            },
+            { 
+                id: 'mock-shift-2', 
+                employee_id: 'demo-emp-1', 
+                employee_name: 'Alex Admin', 
+                date: new Date().toISOString().split('T')[0], 
+                start_time: '08:00', 
+                end_time: '14:00', 
+                role: 'Manager',
+                status: 'scheduled',
+                color: 'purple'
+            }
+        ];
+    }
     // Determine range or fetch all. For now, fetch all relative to date range, or just all for simplicity if dataset small.
     // Let's filter by date string range for efficiency.
     const { data, error } = await supabase

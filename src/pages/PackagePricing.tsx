@@ -72,7 +72,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Info, RefreshCw } from "lucide-react";
+import { Trash2, Info, RefreshCw, ShieldAlert } from "lucide-react";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
@@ -84,7 +84,7 @@ import { isSupabaseEnabled } from "@/lib/auth";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { compressImageForUpload } from "@/lib/image-compression";
-import { supabase } from "@/lib/supa-data";
+import { supabase, isDemoActive } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 
 type Pricing = { compact: number; midsize: number; truck: number; luxury: number };
@@ -239,6 +239,10 @@ export default function PackagePricing() {
   }
 
   async function saveToBackend(updated: PriceMap) {
+    if (isDemoActive()) {
+      console.warn("Demo Mode: saveToBackend blocked.");
+      return;
+    }
     try {
       await fetch(`${API_BASE}/packages/prices`, {
         method: "POST",
@@ -1265,6 +1269,10 @@ export default function PackagePricing() {
   };
 
   const saveOne = async (keys: string[]) => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: Individual price locking is disabled.");
+      return;
+    }
     // Preserve previous baseline as backup before overwriting
     await saveBackupPrices(savedPrices);
     const updated: PriceMap = { ...savedPrices };
@@ -1319,6 +1327,10 @@ export default function PackagePricing() {
   };
 
   const saveAll = async () => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: Global price saving is disabled.");
+      return;
+    }
     // 1. APPLY ALL PENDING VISIBILITY CHANGES FIRST
     // This is critical because saveToBackend reads from getPackageMeta which reads from localStorage.
     Object.keys(pendingVisibilityPkg).forEach(pid => {
@@ -1358,6 +1370,10 @@ export default function PackagePricing() {
   };
 
   const restoreAllPrices = async () => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: Pricing restoration is disabled.");
+      return;
+    }
     // First, check for a persistent restore point (survives Delete All Data)
     const persistent = getPersistentBackup();
     if (!persistent || Object.keys(persistent).length === 0) {
@@ -1415,6 +1431,10 @@ export default function PackagePricing() {
   };
 
   const handleImageUpload = async (id: string, file: File) => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: Image uploads are disabled.");
+      return;
+    }
     try {
       toast.info("Processing image...");
 
@@ -1497,6 +1517,10 @@ export default function PackagePricing() {
   };
 
   const saveEditServices = async () => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: Custom service management is disabled.");
+      return;
+    }
     if (!editServicesFor || !editServicesType) return;
     // Persist all custom rows globally (even unchecked). Create IDs for new rows with non-empty names.
     const finalCustomIds: string[] = [];
@@ -1548,6 +1572,10 @@ export default function PackagePricing() {
   };
 
   const confirmDelete = async (type: 'package' | 'addon', id: string) => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: Deletion is disabled.");
+      return;
+    }
     try {
       if (type === 'package') {
         const isCustom = !!getCustomPackages().find(p => p.id === id);
@@ -1588,6 +1616,10 @@ export default function PackagePricing() {
   };
 
   const handleNewPackageSave = async () => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: New package creation is disabled.");
+      return;
+    }
     const id = `custom-${Date.now()}`;
     const stepsUnion = [...builtInPackages.flatMap(p => p.steps)].reduce<Record<string, { id: string; name: string; category: 'exterior' | 'interior' | 'final' }>>((acc, s) => { acc[s.id] = s; return acc; }, {});
     const defaultSteps = Object.values(stepsUnion).slice(0, 8); // pick some defaults
@@ -1621,6 +1653,10 @@ export default function PackagePricing() {
   };
 
   const handleNewAddonSave = async () => {
+    if (isDemoActive()) {
+      toast.error("Demo Mode: New add-on creation is disabled.");
+      return;
+    }
     const id = `custom-addon-${Date.now()}`;
     const pricing = {
       compact: Math.ceil(parseFloat(newAddonForm.pricing.compact || "") || 0),
@@ -1726,6 +1762,16 @@ export default function PackagePricing() {
             Edit Pricing
           </h2>
           <p className="text-zinc-400 mb-6 ml-3">Changes apply everywhere, including the live website.</p>
+
+          {isDemoActive() && (
+            <div className="mb-6 p-4 bg-red-950/40 border border-red-500 rounded-lg flex items-center gap-3 animate-pulse">
+              <ShieldAlert className="w-6 h-6 text-red-500" />
+              <div>
+                <p className="font-black text-white uppercase tracking-wider">Demo / Simulation Mode READ-ONLY</p>
+                <p className="text-zinc-300 text-sm">Administrative pricing actions are strictly disabled to protect your live website data.</p>
+              </div>
+            </div>
+          )}
 
 
 
