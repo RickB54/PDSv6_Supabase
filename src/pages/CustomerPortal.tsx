@@ -283,8 +283,19 @@ const CustomerPortal = () => {
     .filter((p: any) => {
       // Check metadata visibility (admin toggle)
       const meta = packageMetaLive[p.id];
+      
       // STRICT: Must be visible AND NOT deleted/archived
-      const isVisible = meta ? (meta.visible !== false && meta.deleted !== true) : true;
+      // Default behavior: 
+      // - If we have meta, follow it.
+      // - If no meta and it's a Prime Elite package, hide it by default.
+      // - For others (Essential), show by default.
+      let isVisible = true;
+      if (meta) {
+        isVisible = meta.visible !== false && meta.deleted !== true;
+      } else if (p.id.startsWith('prime-elite')) {
+        isVisible = false;
+      }
+      
       return isVisible;
     })
     .filter((p: any) => p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')) // Strictly Prime tiers
