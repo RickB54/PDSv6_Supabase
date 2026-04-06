@@ -150,6 +150,20 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return true;
   };
 
+  const updatePublicDemoStatus = async (isDisabled: boolean) => {
+    setPublicDemoDisabled(isDisabled);
+    const newConfig = { ...config, publicDemoEnabled: !isDisabled, disabledReason };
+    setConfig(newConfig);
+    await contentService.upsertServiceMeta({ key: "demo_config", meta: newConfig });
+  };
+
+  const updateDisabledReason = async (reason: string) => {
+    setDisabledReason(reason);
+    const newConfig = { ...config, publicDemoEnabled: !isPublicDemoDisabled, disabledReason: reason };
+    setConfig(newConfig);
+    await contentService.upsertServiceMeta({ key: "demo_config", meta: newConfig });
+  };
+
   const setAdminPreview = (val: boolean) => {
     setIsAdminPreview(val);
     if (!val) {
@@ -192,9 +206,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     canAccess,
     mockUser,
     isPublicDemoDisabled,
-    setPublicDemoDisabled,
+    setPublicDemoDisabled: updatePublicDemoStatus,
     disabledReason,
-    setDisabledReason
+    setDisabledReason: updateDisabledReason
   };
 
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;

@@ -806,7 +806,17 @@ const Settings = () => {
                   <Switch 
                     id="demo-public-kill-switch"
                     checked={!isPublicDemoDisabled} 
-                    onCheckedChange={(val) => setPublicDemoDisabled(!val)}
+                    onCheckedChange={async (val) => {
+                      setPublicDemoDisabled(!val);
+                      // In a real app we'd wait for the state to update or pass the new value
+                      // to a dedicated save function. For now, since we want immediate security,
+                      // we'll update the context's persistence logic directly.
+                      toast({
+                        title: val ? "Live Demo ACTIVATED" : "Live Demo DISABLED",
+                        description: val ? "The public /demo URL is now accessible." : "The public /demo URL has been revoked.",
+                        variant: val ? "default" : "destructive"
+                      });
+                    }}
                     className="data-[state=checked]:bg-emerald-600"
                   />
                   <Popover>
@@ -842,7 +852,10 @@ const Settings = () => {
                 {isPublicDemoDisabled && (
                   <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-lg border border-red-900/30 animate-in slide-in-from-right-4">
                     <span className="text-[9px] font-bold text-red-400 pl-3 uppercase tracking-wider whitespace-nowrap">Reason:</span>
-                    <Select value={disabledReason} onValueChange={setDisabledReason}>
+                    <Select value={disabledReason} onValueChange={(val) => {
+                      setDisabledReason(val);
+                      toast({ title: "Status Reason Updated", description: `Visitors will now see: "${val}"` });
+                    }}>
                       <SelectTrigger className="h-8 border-none bg-transparent text-xs font-bold text-zinc-300 w-[200px] focus:ring-0 shadow-none">
                         <SelectValue placeholder="Select reason" />
                       </SelectTrigger>
