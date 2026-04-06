@@ -63,13 +63,16 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
 
   useEffect(() => {
-    // If we land on the HOME PAGE explicitly, clear the demo lock/cache
-    // This allows the user to 'break out' of demo mode by just going to the root URL
+    // RELAXED persistence for Demo Mode:
+    // We only clear it if the user EXPLICITLY clicks an 'Exit Demo' button (implemented elsewhere),
+    // or if we add a 'logout' logic. Landing on HOME should not clear a deliberate session.
+    /*
     if (isHome) {
       localStorage.removeItem("demo_mode_active");
       setStayInDemo(false);
       return;
     }
+    */
 
     if (isDemoPath) {
       localStorage.setItem("demo_mode_active", "true");
@@ -82,6 +85,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     localStorage.setItem("admin_demo_preview", isAdminPreview.toString());
+    // Also sync to a flag supa-data can read easily
+    if (isAdminPreview) localStorage.setItem("demo_mode_active", "true");
+    
     // Dispatch event to notify layout/components
     window.dispatchEvent(new Event("demo-mode-changed"));
   }, [isAdminPreview]);

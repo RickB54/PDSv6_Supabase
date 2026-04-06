@@ -11,7 +11,8 @@ import { useToast } from "@/components/ui/use-toast";
 import localforage from "localforage";
 import { UserCheck, ShieldAlert, User, WifiOff, Plus } from "lucide-react";
 import CustomerModal from "@/components/customers/CustomerModal";
-import { upsertSupabaseCustomer, deleteSupabaseCustomer, Customer } from "@/lib/supa-data";
+import { upsertSupabaseCustomer, deleteSupabaseCustomer, Customer, getSupabaseEmployees } from "@/lib/supa-data";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { upsertCustomer } from "@/lib/db";
 
 type Role = "admin" | "employee" | "customer";
@@ -49,8 +50,21 @@ export default function AdminUsers() {
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const { isDemoMode } = useDemoMode();
 
   const fetchUsers = async () => {
+    if (isDemoMode) {
+      setLoading(true);
+      // Construct a few mock users from MOCK_EMPLOYEES and others
+      const mockUsers: AppUser[] = [
+        { id: 'demo1', role: 'admin', name: 'Demo Admin', email: 'admin@primeautodetail.com', updated_at: new Date().toISOString() },
+        { id: 'demo2', role: 'employee', name: 'John Tech', email: 'john@primeautodetail.com', updated_at: new Date().toISOString() },
+        { id: 'demo3', role: 'customer', name: 'Mary Customer', email: 'mary@gmail.com', updated_at: new Date().toISOString() }
+      ];
+      setUsers(mockUsers);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       // 1. Fetch Supabase Data (Profiles & Invites & Customers)
@@ -155,6 +169,11 @@ export default function AdminUsers() {
   useEffect(() => { fetchUsers(); }, []);
 
   const onChangeRole = async (id: string, role: Role) => {
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Role updated locally." });
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+      return;
+    }
     setSavingId(id);
     try {
       const user = users.find(u => u.id === id);
@@ -200,6 +219,13 @@ export default function AdminUsers() {
 
   const saveName = async () => {
     if (!editId) return;
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Name updated locally." });
+      setUsers(prev => prev.map(u => u.id === editId ? { ...u, name: editName } : u));
+      setEditId(null);
+      setEditName("");
+      return;
+    }
     try {
       if (editId.startsWith('local_')) {
         // Update local only
@@ -228,6 +254,11 @@ export default function AdminUsers() {
 
   const deleteUser = async (id: string, role: Role) => {
     if (!confirm("Permanently delete this user/customer?")) return;
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Delete simulated locally." });
+      setUsers(prev => prev.filter(u => u.id !== id));
+      return;
+    }
     try {
       if (id.startsWith('local_')) {
         const localEmployees = (await localforage.getItem<any[]>('company-employees')) || [];
@@ -277,6 +308,16 @@ export default function AdminUsers() {
   const createGeneric = async (role: Role, name: string, email: string) => {
     if (!name || !email) {
       toast({ title: "Name and Email required" });
+      return;
+    }
+
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "New user authorization simulated." });
+      setUsers(prev => [{ id: `demo_${Date.now()}`, role, name, email, updated_at: new Date().toISOString(), isPending: true }, ...prev]);
+      // Clear forms
+      if (role === 'employee') { setNewEmpName(""); setNewEmpEmail(""); }
+      else if (role === 'customer') { setNewCustName(""); setNewCustEmail(""); }
+      else if (role === 'admin') { setNewAdminName(""); setNewAdminEmail(""); }
       return;
     }
 

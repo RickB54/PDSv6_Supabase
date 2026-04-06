@@ -35,6 +35,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_INVOICES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
+
 interface Invoice {
   id?: string;
   invoiceNumber?: number;
@@ -54,6 +57,7 @@ const Invoicing = () => {
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const { isDemoMode } = useDemoMode();
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [services, setServices] = useState<{ name: string; price: number }[]>([]);
   const [newService, setNewService] = useState({ name: "", price: "" });
@@ -71,9 +75,22 @@ const Invoicing = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isDemoMode]);
 
   const loadData = async () => {
+    if (isDemoMode) {
+      setInvoices(MOCK_INVOICES.map((inv: any) => ({
+        ...inv,
+        invoiceNumber: parseInt(inv.invoiceNumber?.replace('INV-', '') || '100'),
+        customerId: inv.id,
+        vehicle: "Demo Vehicle",
+        services: [{ name: "Detail Service", price: inv.total }],
+        date: new Date(inv.createdAt).toLocaleDateString(),
+        createdAt: inv.createdAt
+      })));
+      setCustomers(MOCK_CUSTOMERS as any[]);
+      return;
+    }
     const [invs, custs] = await Promise.all([getSupabaseInvoices(), getSupabaseCustomers()]);
     // Assign invoice numbers starting from 100 if missing
     const invoicesWithNumbers = (invs as Invoice[]).map((inv, idx) => ({
@@ -100,6 +117,14 @@ const Invoicing = () => {
   const createInvoice = async () => {
     if (!selectedCustomer || services.length === 0) {
       toast({ title: "Error", description: "Please select a customer and add services", variant: "destructive" });
+      return;
+    }
+
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Invoice simulated locally. No real data was created." });
+      setSelectedCustomer("");
+      setServices([]);
+      setShowCreateForm(false);
       return;
     }
 
@@ -160,6 +185,11 @@ const Invoicing = () => {
   };
 
   const handleDeleteInvoice = async (id: string) => {
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Delete simulated locally." });
+      setDeleteId(null);
+      return;
+    }
     await deleteSupabaseInvoice(id);
     setDeleteId(null);
     toast({ title: "Deleted", description: "Invoice deleted successfully" });
@@ -206,6 +236,14 @@ const Invoicing = () => {
     if (!selectedInvoice) return;
     const amt = parseFloat(paymentAmount);
     if (Number.isNaN(amt) || amt <= 0) return;
+
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Payment recorded in local state." });
+      setPaymentDialogOpen(false);
+      setPaymentAmount("");
+      return;
+    }
+
     const newPaid = (selectedInvoice.paidAmount || 0) + amt;
     const status = newPaid >= selectedInvoice.total ? "paid" : "partially-paid";
     const updated: Invoice = { ...selectedInvoice, paidAmount: newPaid, paymentStatus: status, paidDate: new Date().toISOString() };
@@ -221,6 +259,12 @@ const Invoicing = () => {
     if (!selectedInvoice) return;
     const amt = parseFloat(editPaidValue);
     if (Number.isNaN(amt) || amt < 0) return; // Allow 0 to reset
+
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Manual payment update simulated." });
+      setIsEditingPaid(false);
+      return;
+    }
 
     // Determine status based on new amount
     const status = amt >= selectedInvoice.total ? "paid" : amt > 0 ? "partially-paid" : "unpaid";

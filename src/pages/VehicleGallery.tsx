@@ -18,17 +18,20 @@ import {
     deleteLibraryItem 
 } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 
 export default function VehicleGallery() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const user = getCurrentUser();
-    const isAdmin = user?.role === 'admin';
+    const { isDemoMode, isReadOnly } = useDemoMode();
+    const isAdmin = user?.role === 'admin' || isDemoMode;
 
     const [loading, setLoading] = useState(true);
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -48,6 +51,8 @@ export default function VehicleGallery() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
     const [targetVehicle, setTargetVehicle] = useState<Vehicle | null>(null);
     const [newMediaUrl, setNewMediaUrl] = useState("");
+    const [newMediaTitle, setNewMediaTitle] = useState("");
+    const [newMediaDescription, setNewMediaDescription] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [newMediaType, setNewMediaType] = useState<'general' | 'before' | 'after' | 'video' | 'gallery'>('general');
     const [saving, setSaving] = useState(false);
@@ -202,51 +207,68 @@ export default function VehicleGallery() {
 
     const handleAddMedia = async () => {
         if (!targetVehicle && newMediaType !== 'gallery') return;
-        if (newMediaType === 'video' && !newMediaUrl.trim()) return;
-        if (newMediaType !== 'video' && !selectedFile && !newMediaUrl.trim()) return;
+        const urlToUse = newMediaUrl.trim();
+        if (newMediaType === 'video' && !urlToUse) return;
+        if (newMediaType !== 'video' && !selectedFile && !urlToUse) return;
 
         setSaving(true);
         const updatedVehicle = targetVehicle ? { ...targetVehicle } : null;
-        let url = newMediaUrl.trim();
 
         try {
-            if (newMediaType !== 'video' && selectedFile) {
+            let finalUrl = urlToUse;
+
+            if (isDemoMode) {
+                // Mock Upload in Demo Mode
+                if (selectedFile) {
+                    finalUrl = `https://images.unsplash.com/photo-${Math.floor(Math.random() * 100000)}?auto=format&fit=crop&q=80&w=1200`;
+                    toast({ title: "Demo Mode: Mock Upload", description: "In a real session, this would upload to secure storage." });
+                }
+            } else if (newMediaType !== 'video' && selectedFile) {
                 toast({ title: "Uploading...", description: "Transferring media to secure storage." });
-                url = await uploadFile('customer-photos', selectedFile);
+                finalUrl = await uploadFile('customer-photos', selectedFile);
             }
 
-            if (!url) throw new Error("No URL or file provided");
+            if (!finalUrl) throw new Error("No URL or file provided");
 
             if (newMediaType === 'gallery') {
                 const galleryItem = {
                     id: crypto.randomUUID(),
-                    title: `Gallery ${new Date().toLocaleDateString()}`,
-                    description: `General gallery item uploaded on ${new Date().toLocaleDateString()}`,
+                    title: newMediaTitle || `Gallery ${new Date().toLocaleDateString()}`,
+                    description: newMediaDescription || `General gallery item uploaded on ${new Date().toLocaleDateString()}`,
                     category: 'general_gallery',
                     type: 'image',
-                    thumbnail_url: url,
-                    resource_url: url,
-                    is_published: true
+                    thumbnail_url: finalUrl,
+                    resource_url: finalUrl,
+                    is_published: true,
+                    created_at: new Date().toISOString()
                 };
                 await upsertLibraryItem(galleryItem as any);
+                
+                // If Demo Mode, manually update state since the DB won't persist it
+                if (isDemoMode) {
+                    setGeneralGalleryItems([galleryItem, ...generalGalleryItems]);
+                }
+                
                 toast({ title: "Added to Gallery", description: "Successfully added to the General Gallery." });
             } else if (updatedVehicle) {
-                if (newMediaType === 'general') updatedVehicle.generalPhotos = [...(updatedVehicle.generalPhotos || []), url];
-                if (newMediaType === 'before') updatedVehicle.beforePhotos = [...(updatedVehicle.beforePhotos || []), url];
-                if (newMediaType === 'after') updatedVehicle.afterPhotos = [...(updatedVehicle.afterPhotos || []), url];
-                if (newMediaType === 'video') updatedVehicle.videoUrls = [...(updatedVehicle.videoUrls || []), url];
+                if (newMediaType === 'general') updatedVehicle.generalPhotos = [...(updatedVehicle.generalPhotos || []), finalUrl];
+                if (newMediaType === 'before') updatedVehicle.beforePhotos = [...(updatedVehicle.beforePhotos || []), finalUrl];
+                if (newMediaType === 'after') updatedVehicle.afterPhotos = [...(updatedVehicle.afterPhotos || []), finalUrl];
+                if (newMediaType === 'video') updatedVehicle.videoUrls = [...(updatedVehicle.videoUrls || []), finalUrl];
                 
                 await upsertSupabaseVehicle(updatedVehicle as any);
-                addToRecentCustomers(selectedCustomerId);
+                if (selectedCustomerId) addToRecentCustomers(selectedCustomerId);
                 toast({ title: "Media Added", description: "Successfully added to vehicle gallery." });
             }
             
             setNewMediaUrl("");
+            setNewMediaTitle("");
+            setNewMediaDescription("");
             setSelectedFile(null);
             setSelectedCustomerId("");
             setTargetVehicle(null);
             setIsAddMediaOpen(false);
-            loadData();
+            if (!isDemoMode) loadData();
         } catch (err: any) {
             console.error("Failed to add media:", err);
             toast({ title: "Operation Failed", description: err.message || "Could not add media. Please try again.", variant: "destructive" });
@@ -275,7 +297,11 @@ export default function VehicleGallery() {
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-zinc-500 hover:text-white transition-all"
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }));
+                            }}
                         >
                             <HelpCircle className="h-5 w-5" />
                         </Button>
@@ -479,6 +505,7 @@ export default function VehicleGallery() {
                             onRefresh={loadData}
                             isAdmin={isAdmin}
                             searchQuery={searchQuery}
+                            loading={loading}
                         />
                     </TabsContent>
                 </Tabs>
@@ -540,7 +567,11 @@ export default function VehicleGallery() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 text-zinc-500 hover:text-white transition-all ring-offset-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-800"
-                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }))}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.dispatchEvent(new CustomEvent('open-help', { detail: 'media-library' }));
+                                }}
                                 title="Media Library Help"
                             >
                                 <HelpCircle className="h-5 w-5" />
@@ -751,6 +782,30 @@ export default function VehicleGallery() {
                                         )}
                                     </div>
                                 )}
+
+                                {/* Metadata for Gallery items */}
+                                {newMediaType === 'gallery' && (selectedFile || newMediaUrl.trim()) && (
+                                    <div className="space-y-4 pt-4 border-t border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-500">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-1">Asset Title</Label>
+                                            <Input
+                                                placeholder="e.g. Porsche 911 Showroom Finish"
+                                                className="h-11 bg-zinc-900 border-zinc-800 rounded-xl text-xs focus:ring-blue-500/20"
+                                                value={newMediaTitle}
+                                                onChange={(e) => setNewMediaTitle(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest pl-1">Description (Internal Notes)</Label>
+                                            <textarea
+                                                placeholder="Add context about this marketing asset..."
+                                                className="w-full min-h-[80px] bg-zinc-900 border border-zinc-800 rounded-xl text-xs p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-zinc-300 resize-none"
+                                                value={newMediaDescription}
+                                                onChange={(e) => setNewMediaDescription(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -772,7 +827,7 @@ export default function VehicleGallery() {
     );
 }
 
-function GeneralGalleryView({ items, onMediaClick, onRefresh, isAdmin, searchQuery }: any) {
+function GeneralGalleryView({ items, onMediaClick, onRefresh, isAdmin, searchQuery, loading }: any) {
     const { toast } = useToast();
     const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title'>('date-desc');
     const [isEditing, setIsEditing] = useState<any | null>(null);
@@ -879,6 +934,18 @@ function GeneralGalleryView({ items, onMediaClick, onRefresh, isAdmin, searchQue
                     >
                         <Filter className="h-3 w-3 mr-2" /> A-Z
                     </Button>
+                    <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white"
+                        onClick={() => {
+                            if (selectedIds.length === filteredAndSorted.length) setSelectedIds([]);
+                            else setSelectedIds(filteredAndSorted.map(i => i.id));
+                        }}
+                    >
+                        {selectedIds.length === filteredAndSorted.length ? 'Deselect All' : 'Select All'}
+                    </Button>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -905,6 +972,15 @@ function GeneralGalleryView({ items, onMediaClick, onRefresh, isAdmin, searchQue
                             </Button>
                         </div>
                     )}
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-900"
+                        onClick={() => onRefresh()}
+                        title="Refresh Gallery"
+                    >
+                        <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
                 </div>
             </div>
 

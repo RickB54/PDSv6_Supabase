@@ -62,6 +62,7 @@ import jsPDF from 'jspdf';
 import { savePDFToArchive } from '@/lib/pdfArchive';
 import { useBookingsStore } from "@/store/bookings";
 import { PrimeCentralHub } from "@/components/admin/PrimeCentralHub";
+import { MOCK_EMPLOYEES, MOCK_INVOICES, MOCK_INVENTORY, MOCK_PAYROLL, MOCK_BOOKINGS } from "@/lib/demoMockData";
 
 type Job = { finishedAt: string; totalRevenue: number; status: string };
 
@@ -223,6 +224,10 @@ export default function AdminDashboard() {
 
   // Removed auto-open for Website Administration to decouple from Admin Dashboard
   const loadUsers = async () => {
+    if (isDemoMode) {
+      setUsers(MOCK_EMPLOYEES);
+      return;
+    }
     try {
       // Fetch all profiles and invites
       const { data: profiles } = await supabase.from('app_users').select('*');
@@ -256,6 +261,10 @@ export default function AdminDashboard() {
   }, [userAdminOpen]);
 
   const loadEmployees = async () => {
+    if (isDemoMode) {
+      setEmployees(MOCK_EMPLOYEES.filter(e => e.role === 'employee'));
+      return;
+    }
     try {
       // Fetch both active profiles AND pending invites
       const { data: profiles } = await supabase.from('app_users').select('*').eq('role', 'employee');
@@ -462,9 +471,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const todayStr = new Date().toDateString();
-    const count = items.filter(b => new Date(b.date).toDateString() === todayStr && !isViewed("booking", b.id)).length;
+    const source = isDemoMode ? MOCK_BOOKINGS : items;
+    const count = (Array.isArray(source) ? source : []).filter(b => new Date(b.date).toDateString() === todayStr && !isViewed("booking", b.id)).length;
     setNewBookingsToday(count);
-  }, [items]);
+  }, [items, isDemoMode]);
 
   // Helper: unread alert count by type
   const badgeByType = useMemo(() => {
@@ -472,6 +482,17 @@ export default function AdminDashboard() {
   }, [alertsAll]);
 
   useEffect(() => {
+    if (isDemoMode) {
+      setUnpaidInvoices(MOCK_INVOICES.filter(inv => inv.paymentStatus !== 'paid').length);
+      const lowInv = (MOCK_INVENTORY.chemicals.filter(c => c.currentStock < c.threshold).length) +
+        (MOCK_INVENTORY.materials.filter(m => (m.quantity || 0) < (m.lowThreshold || 0)).length);
+      setCriticalInventory(lowInv);
+      setNewFilesToday(3);
+      setUnviewedFilesCount(12);
+      setOverdueCount(MOCK_PAYROLL.filter(p => p.status !== 'paid').length);
+      setTotalDue(MOCK_PAYROLL.filter(p => p.status !== 'paid').reduce((s, p) => s + p.grossPay, 0));
+      return;
+    }
     // Invoices unpaid
     getInvoices<any>().then(list => {
       const count = list.filter((inv: any) => (inv.paymentStatus || "unpaid") !== "paid").length;
@@ -540,7 +561,7 @@ export default function AdminDashboard() {
         }
       } catch { }
     })();
-  }, []);
+  }, [isDemoMode]);
 
   // Real-time Alerts: reflect changes across tabs and actions
   useEffect(() => {

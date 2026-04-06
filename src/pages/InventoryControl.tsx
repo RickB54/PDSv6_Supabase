@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { MOCK_INVENTORY } from "@/lib/demoMockData";
+import { MOCK_INVENTORY, MOCK_EMPLOYEES } from "@/lib/demoMockData";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -203,6 +203,10 @@ const InventoryControl = () => {
     const saved = localStorage.getItem('inventory-date-filter');
     if (saved) setDateFilter(saved as any);
     (async () => {
+      if (isDemoMode) {
+        setEmployees(MOCK_EMPLOYEES);
+        return;
+      }
       const emps = await getSupabaseEmployees();
       setEmployees(emps as any[]);
     })();

@@ -228,3 +228,38 @@ export const MOCK_CHEMICAL_LIBRARY = [
     pdsUrl: "#"
   }
 ];
+export const MOCK_GALLERY = [
+  {
+    id: "demo-gal-1",
+    title: "Prime Showroom Finish",
+    description: "Deep gloss reflection on a black Porsche 911 after multi-stage correction.",
+    category: "general_gallery",
+    type: "image",
+    thumbnail_url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800",
+    resource_url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1200",
+    is_published: true,
+    created_at: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: "demo-gal-2",
+    title: "Eco-Friendly Foam Bath",
+    description: "Using our signature pH-neutral snow foam for safe dwell time.",
+    category: "general_gallery",
+    type: "image",
+    thumbnail_url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=800",
+    resource_url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1200",
+    is_published: true,
+    created_at: new Date(Date.now() - 3600000 * 5).toISOString()
+  },
+  {
+    id: "demo-gal-3",
+    title: "Clay Bar Decontamination",
+    description: "Removing industrial fallout to ensure a smooth bonding surface for coatings.",
+    category: "general_gallery",
+    type: "image",
+    thumbnail_url: "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=800",
+    resource_url: "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=1200",
+    is_published: true,
+    created_at: new Date(Date.now() - 3600000).toISOString()
+  }
+];

@@ -105,6 +105,18 @@ const Prospects = () => {
   const openEdit = (c: Customer) => { setEditing(c); setModalOpen(true); };
 
   const onSaveModal = async (data: any) => {
+    if (isDemoMode) {
+      toast({ 
+        title: "Simulation Mode", 
+        description: "Prospect saved locally for this session. No data was sent to the server.",
+        variant: "default"
+      });
+      const saved = await upsertCustomer(data as any);
+      await refresh();
+      setModalOpen(false);
+      return;
+    }
+
     if (!data.type) data.type = 'prospect';
     try {
       // Ensure we don't send a local/timestamp ID to Supabase UUID column
@@ -148,6 +160,12 @@ const Prospects = () => {
   };
 
   const handleArchiveId = async (c: Customer) => {
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Status updated locally." });
+      await upsertCustomer({ ...c, is_archived: !c.is_archived } as any);
+      await refresh();
+      return;
+    }
     const newVal = !c.is_archived;
     try {
       await upsertSupabaseCustomer({ ...c, is_archived: newVal });

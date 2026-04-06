@@ -23,6 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { MOCK_EMPLOYEES, MOCK_CUSTOMERS, MOCK_PROSPECTS } from "@/lib/demoMockData";
 
 export default function UserManagement() {
   const { toast } = useToast();
@@ -55,6 +56,10 @@ export default function UserManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: 'employee' | 'admin' | 'customer' | null; id: string | null; warning?: string }>({ open: false, type: null, id: null });
 
   const loadEmployees = async () => {
+    if (isDemoMode) {
+      setEmployees(MOCK_EMPLOYEES.filter(e => e.role === 'employee'));
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from("app_users")
@@ -69,6 +74,10 @@ export default function UserManagement() {
   };
 
   const loadAdmins = async () => {
+    if (isDemoMode) {
+      setAdmins(MOCK_EMPLOYEES.filter(e => e.role === 'admin' || e.role === 'owner'));
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from("app_users")
@@ -83,6 +92,28 @@ export default function UserManagement() {
   };
 
   const loadCustomers = async () => {
+    if (isDemoMode) {
+      const mockMerged = [
+        ...MOCK_CUSTOMERS.map(c => ({
+          id: c.id,
+          full_name: c.name,
+          email: c.email,
+          phone: c.phone,
+          type: 'customer',
+          created_at: c.created_at
+        })),
+        ...MOCK_PROSPECTS.map(p => ({
+          id: p.id,
+          full_name: p.name,
+          email: p.email,
+          phone: p.phone,
+          type: 'prospect',
+          created_at: p.created_at
+        }))
+      ];
+      setCustomers(mockMerged);
+      return;
+    }
     try {
       // 1. Fetch from 'customers' table (CRM)
       const { data: crmData, error: crmError } = await supabase

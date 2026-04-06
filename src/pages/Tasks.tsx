@@ -15,11 +15,12 @@ import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
 import { useTasksStore, parseTaskInput, Task, TaskPriority, TaskStatus } from "@/store/tasks";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseCustomers, getTeamMessages, sendTeamMessage, deleteTeamMessage, TeamMessage } from "@/lib/supa-data"; // NEW IMPORT
+import { getSupabaseEmployees, getSupabaseCustomers, getTeamMessages, sendTeamMessage, deleteTeamMessage, TeamMessage } from "@/lib/supa-data";
 import { supabase } from "@/lib/supabase";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { pushEmployeeNotification } from "@/lib/employeeNotifications";
+import { MOCK_EMPLOYEES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
 import { CalendarDays, CheckSquare, Trash2, Edit, Clock, User, Paperclip, ListChecks, Filter, GripVertical, ChevronDown, Save, X, MessageSquare, HelpCircle, LayoutTemplate, ArrowUpDown, ChevronsUpDown, Plus } from "lucide-react";
 import {
   AlertDialog,
@@ -84,6 +85,11 @@ export default function Tasks() {
   useEffect(() => {
     (async () => {
       try {
+        if (isDemoMode) {
+          setEmployees(MOCK_EMPLOYEES);
+          setCustomers(MOCK_CUSTOMERS.map(c => ({ id: c.id, name: c.name, email: c.email, phone: c.phone })));
+          return;
+        }
         const [empList, custList] = await Promise.all([
           getSupabaseEmployees(),
           getSupabaseCustomers()
@@ -92,13 +98,21 @@ export default function Tasks() {
         setCustomers(Array.isArray(custList) ? custList : []);
       } catch { setEmployees([]); setCustomers([]); }
     })();
-  }, []);
+  }, [isDemoMode]);
   useEffect(() => {
     // Load team chat history from Supabase
     (async () => {
+      if (isDemoMode) {
+        setChatMessages([
+          { id: 'm1', content: 'Welcome to the Demo! This is where your team chat history appears.', sender_name: 'System', sender_email: 'system@demo.com', created_at: new Date().toISOString(), recipient: 'all' } as any
+        ]);
+        return;
+      }
       const msgs = await getTeamMessages();
       setChatMessages(msgs);
     })();
+
+    if (isDemoMode) return;
 
     // Subscribe to Realtime Updates
     const channel = supabase
@@ -110,7 +124,7 @@ export default function Tasks() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [isDemoMode]);
   useEffect(() => {
     // Mark read receipt when opening tasks
     Object.values(editingMap).forEach(task => {

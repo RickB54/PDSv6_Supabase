@@ -1,12 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from './supabase';
 import localforage from 'localforage';
+import { MOCK_GALLERY } from './demoMockData';
 // Re-export supabase so other files can import it from here if needed, 
 // but primarily so this file can use it.
 export { supabase };
 
 
 // Types
+const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
+
 export interface Employee {
     id?: string;
     email: string;
@@ -456,6 +459,7 @@ export async function upsertSupabaseVehicle(vehicleData: {
     afterPhotos?: string[];
     videoUrls?: string[];
 }) {
+    if (isDemoActive()) return { id: vehicleData.id || `demo_v_${Date.now()}`, ...vehicleData };
     try {
         const payload: any = {
             make: vehicleData.make,
@@ -511,6 +515,7 @@ export async function upsertSupabaseVehicle(vehicleData: {
  * Automatically handles multiple vehicle creation/update.
  */
 export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { type?: string }) => {
+    if (isDemoActive()) return { ...customer, id: customer.id || `demo_c_${Date.now()}` };
     // 1. Prepare payload for CUSTOMERS table
     const safeEmail = customer.email?.trim() || undefined;
     const safePhone = customer.phone?.trim() || undefined;
@@ -608,6 +613,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
  * This is a highly robust deletion that cleans up database rows AND physical storage files.
  */
 export const deleteSupabaseCustomer = async (id: string) => {
+    if (isDemoActive()) return { success: true, crmCount: 1, authCount: 1 };
     try {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(id)) {
@@ -732,6 +738,7 @@ export const getTeamMessages = async (): Promise<TeamMessage[]> => {
 };
 
 export const sendTeamMessage = async (content: string, senderEmail: string, senderName: string, recipientEmail?: string | null) => {
+    if (isDemoActive()) return { id: `demo_m_${Date.now()}`, content, sender_email: senderEmail, sender_name: senderName, created_at: new Date().toISOString() };
     try {
         const { data, error } = await supabase
             .from('team_messages')
@@ -846,6 +853,7 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
     customer?: Partial<Customer> & { type?: string },
     vehicle?: any
 }) => {
+    if (isDemoActive()) return { ...p, id: p.id || `demo_est_${Date.now()}` };
     // 1. Upsert Customer/Vehicle if provided
     let customerId = p.customerId;
     let vehicleId = p.vehicleId;
@@ -915,8 +923,14 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
 };
 
 export const deleteSupabaseEstimate = async (id: string) => {
-    const { error } = await supabase.from('estimates').delete().eq('id', id);
-    if (error) throw error;
+    if (isDemoActive()) return;
+    try {
+        const { error } = await supabase.from('estimates').delete().eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseEstimate error:', err);
+        throw err;
+    }
 };
 
 export const deleteTeamMessage = async (id: string) => {
@@ -1050,6 +1064,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
 };
 
 export const upsertSupabaseInvoice = async (invoice: any) => {
+    if (isDemoActive()) return { ...invoice, id: invoice.id || `demo_inv_${Date.now()}` };
     // Map Frontend Invoice object to DB columns
     const payload = {
         invoice_number: invoice.invoiceNumber,
@@ -1082,6 +1097,7 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
 };
 
 export const deleteSupabaseInvoice = async (id: string) => {
+    if (isDemoActive()) return;
     const { error } = await supabase.from('invoices').delete().eq('id', id);
     if (error) throw error;
 };
@@ -1277,6 +1293,12 @@ export interface LibraryItem {
  * Get all learning library items from Supabase
  */
 export async function getLibraryItems(category?: string): Promise<LibraryItem[]> {
+    const isDemoMode = localStorage.getItem("demo_mode_active") === "true";
+    if (isDemoMode) {
+        let items = [...MOCK_GALLERY];
+        if (category) items = items.filter(i => i.category === category);
+        return items as LibraryItem[];
+    }
     try {
         let query = supabase
             .from('learning_library_items')
@@ -1369,6 +1391,7 @@ export async function getComments(postId: string): Promise<LibraryComment[]> {
 }
 
 export async function addComment(comment: Omit<LibraryComment, 'id' | 'created_at'>): Promise<LibraryComment | null> {
+    if (isDemoActive()) return { id: `demo_cmt_${Date.now()}`, created_at: new Date().toISOString(), ...comment } as any;
     try {
         const { data, error } = await supabase
             .from('learning_library_comments')
@@ -1489,6 +1512,10 @@ export async function deleteLibraryCategory(targetCategory: string): Promise<{ s
  * Create or update a learning library item
  */
 export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: boolean; data?: LibraryItem; error?: any }> {
+    const isDemoMode = localStorage.getItem("demo_mode_active") === "true";
+    if (isDemoMode) {
+        return { success: true, data: item };
+    }
     try {
         const payload: any = {
             id: item.id || crypto.randomUUID(),
@@ -1535,6 +1562,7 @@ export async function upsertLibraryItem(item: LibraryItem): Promise<{ success: b
  * Delete a learning library item
  */
 export async function deleteLibraryItem(id: string): Promise<boolean> {
+    if (isDemoActive()) return true;
     try {
         const { error } = await supabase
             .from('learning_library_items')
@@ -1767,6 +1795,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 };
 
 export const upsertSupabaseBooking = async (booking: any) => {
+    if (isDemoActive()) return { ...booking, id: booking.id || `demo_b_${Date.now()}` };
     try {
         // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
         const payload: any = {
@@ -1810,6 +1839,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
 };
 
 export const deleteSupabaseBooking = async (id: string) => {
+    if (isDemoActive()) return;
     try {
         const { error } = await supabase.from('bookings').delete().eq('id', id);
         if (error) throw error;
@@ -1861,6 +1891,7 @@ export const getSupabaseMileageLogs = async (): Promise<MileageLog[]> => {
 };
 
 export const upsertSupabaseMileageLog = async (log: Partial<MileageLog>) => {
+    if (isDemoActive()) return { ...log, id: log.id || `demo_ml_${Date.now()}` };
     try {
         const { data, error } = await supabase
             .from('mileage_log')
@@ -1877,6 +1908,7 @@ export const upsertSupabaseMileageLog = async (log: Partial<MileageLog>) => {
 };
 
 export const deleteSupabaseMileageLog = async (id: string) => {
+    if (isDemoActive()) return;
     try {
         const { error } = await supabase
             .from('mileage_log')
@@ -1945,6 +1977,7 @@ export const getSupabaseTaxExpenses = async (year?: number): Promise<TaxExpense[
 };
 
 export const upsertSupabaseTaxExpense = async (expense: Partial<TaxExpense>) => {
+    if (isDemoActive()) return { ...expense, id: expense.id || `demo_tx_${Date.now()}` };
     try {
         const { data, error } = await supabase
             .from('tax_expenses')
@@ -1961,6 +1994,7 @@ export const upsertSupabaseTaxExpense = async (expense: Partial<TaxExpense>) => 
 };
 
 export const deleteSupabaseTaxExpense = async (id: string) => {
+    if (isDemoActive()) return;
     try {
         const { error } = await supabase
             .from('tax_expenses')
@@ -1988,6 +2022,7 @@ export const getSupabaseTaxReports = async (year?: number): Promise<TaxReportArc
 };
 
 export const saveSupabaseTaxReport = async (report: Partial<TaxReportArchive>) => {
+    if (isDemoActive()) return { ...report, id: `demo_rep_${Date.now()}` };
     try {
         const { data, error } = await supabase.from('tax_reports').insert(report).select().single();
         if (error) throw error;
@@ -1999,6 +2034,7 @@ export const saveSupabaseTaxReport = async (report: Partial<TaxReportArchive>) =
 };
 
 export const deleteSupabaseTaxReport = async (id: string) => {
+    if (isDemoActive()) return;
     try {
         const { error } = await supabase.from('tax_reports').delete().eq('id', id);
         if (error) throw error;

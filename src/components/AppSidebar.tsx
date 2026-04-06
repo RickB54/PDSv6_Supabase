@@ -52,7 +52,7 @@ export type MenuItem = {
 
 export function AppSidebar({ user: userProp }: { user?: any }) {
 
-  const { open, openMobile, setOpenMobile, setOpen } = useSidebar();
+  const { open, openMobile, setOpenMobile, setOpen, isMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(userProp || getCurrentUser());
@@ -412,7 +412,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           </div>
           
           <div className="flex items-center gap-1">
-            {open && (
+            {(open || !isMobile) && (
               <>
                 <Button 
                   variant="ghost" 

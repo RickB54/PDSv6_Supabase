@@ -1,5 +1,6 @@
 // Inventory data layer - handles Supabase operations for inventory
 import { supabase } from './supabase';
+const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
 import { upsertExpense } from './db';
 
 import { DilutionRatio } from '@/types/chemicals';
@@ -98,6 +99,7 @@ export async function getChemicals(): Promise<Chemical[]> {
 }
 
 export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean = false, skipLibrarySync: boolean = false): Promise<void> {
+    if (isDemoActive()) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
@@ -148,6 +150,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
 }
 
 export async function deleteChemical(id: string): Promise<void> {
+    if (isDemoActive()) return;
     const { error } = await supabase
         .from('chemicals')
         .delete()
@@ -157,6 +160,7 @@ export async function deleteChemical(id: string): Promise<void> {
 }
 
 export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; linked: number }> {
+    if (isDemoActive()) return { deleted: 0, linked: 0 };
     const { data: inventory, error: invErr } = await supabase.from('chemicals').select('*');
     const { data: library, error: libErr } = await supabase.from('chemical_library').select('*');
     
@@ -328,6 +332,7 @@ export async function getMaterials(): Promise<Material[]> {
 }
 
 export async function saveMaterial(material: Partial<Material>, isNew: boolean = false): Promise<void> {
+    if (isDemoActive()) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
@@ -364,6 +369,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
 }
 
 export async function deleteMaterial(id: string): Promise<void> {
+    if (isDemoActive()) return;
     const { error } = await supabase
         .from('materials')
         .delete()
@@ -401,6 +407,7 @@ export async function getTools(): Promise<Tool[]> {
 }
 
 export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Promise<void> {
+    if (isDemoActive()) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
@@ -435,6 +442,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
 }
 
 export async function deleteTool(id: string): Promise<void> {
+    if (isDemoActive()) return;
     const { error } = await supabase
         .from('tools')
         .delete()
@@ -476,6 +484,7 @@ export async function getUsageHistory(): Promise<UsageHistory[]> {
 }
 
 export async function saveUsageHistory(usage: Partial<UsageHistory>): Promise<void> {
+    if (isDemoActive()) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
@@ -500,6 +509,7 @@ export async function saveUsageHistory(usage: Partial<UsageHistory>): Promise<vo
 }
 
 export async function deleteUsageHistory(id: string): Promise<void> {
+    if (isDemoActive()) return;
     const { error } = await supabase
         .from('usage_history')
         .delete()
@@ -533,6 +543,7 @@ export async function getSetupMedia(): Promise<SetupMedia[]> {
 }
 
 export async function saveSetupMedia(media: SetupMedia): Promise<void> {
+    if (isDemoActive()) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
@@ -553,6 +564,7 @@ export async function saveSetupMedia(media: SetupMedia): Promise<void> {
 }
 
 export async function deleteSetupMedia(id: string): Promise<void> {
+    if (isDemoActive()) return;
     const { error } = await supabase
         .from('mobile_setup_media')
         .delete()

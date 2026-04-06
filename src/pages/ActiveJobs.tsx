@@ -5,6 +5,9 @@ import { getSupabaseBookings } from "@/lib/supa-data";
 import { Clock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
+import { MOCK_BOOKINGS } from "@/lib/demoMockData";
+import { useDemoMode } from "@/contexts/DemoContext";
+
 interface Job {
     jobId: string;
     customer: string;
@@ -16,12 +19,25 @@ interface Job {
 
 const ActiveJobs = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
+    const { isDemoMode } = useDemoMode();
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [isDemoMode]);
 
     const loadData = async () => {
+        if (isDemoMode) {
+            const mapped = MOCK_BOOKINGS.map(b => ({
+                jobId: b.id,
+                customer: b.customer,
+                vehicle: `${b.vehicleYear} ${b.vehicleMake} ${b.vehicleModel}`,
+                service: b.title,
+                status: b.status === 'done' ? 'completed' : 'active' as any,
+                finishedAt: b.status === 'done' ? b.date : undefined
+            }));
+            setJobs(mapped.filter(j => j.status === 'active'));
+            return;
+        }
         try {
             const userBookings = await getSupabaseBookings(true);
             const jobsMapped: Job[] = userBookings.map(b => ({

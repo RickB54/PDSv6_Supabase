@@ -60,6 +60,8 @@ import {
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { MOCK_ACCOUNTING } from "@/lib/demoMockData";
 
 const TAX_CATEGORIES = [
     "Supplies",
@@ -107,12 +109,31 @@ const Taxes = () => {
         tags: []
     });
 
+    const { isDemoMode } = useDemoMode();
+
     useEffect(() => {
         loadExpenses();
-    }, [selectedYear]);
+    }, [selectedYear, isDemoMode]);
 
     const loadExpenses = async () => {
         setLoading(true);
+        if (isDemoMode) {
+            const mock = MOCK_ACCOUNTING.transactions
+                .filter(t => t.type === 'expense')
+                .map(t => ({
+                    id: t.id,
+                    date: t.date,
+                    amount: t.amount,
+                    vendor: t.description,
+                    category: t.category,
+                    is_deductible: true,
+                    payment_method: 'Business Card',
+                    notes: 'Demo record'
+                } as TaxExpense));
+            setExpenses(mock);
+            setLoading(false);
+            return;
+        }
         try {
             const data = await getSupabaseTaxExpenses(selectedYear);
             setExpenses(data);

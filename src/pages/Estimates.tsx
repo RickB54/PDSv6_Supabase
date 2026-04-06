@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileText, Printer, Save, Trash2, Plus, Pencil, CheckCircle, XCircle, RotateCcw, Search, Calendar } from "lucide-react";
-import { getSupabaseEstimates, upsertSupabaseEstimate, Customer } from "@/lib/supa-data";
+import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { servicePackages, addOns } from "@/lib/services";
@@ -96,6 +96,15 @@ const Estimates = () => {
         const customer = customers.find(c => c.id === selectedCustomer);
         if (!customer) return;
 
+        if (isDemoMode) {
+            toast({ title: "Simulation Mode", description: "Estimate simulated locally. No real data was created." });
+            setShowCreateForm(false);
+            setEditingEstimateId(null);
+            setSelectedCustomer("");
+            setServices([]);
+            return;
+        }
+
         const estimateData: any = {
             id: editingEstimateId || undefined,
             customerId: selectedCustomer,
@@ -134,6 +143,10 @@ const Estimates = () => {
     };
 
     const handleStatusChange = async (est: Estimate, newStatus: "open" | "accepted" | "declined") => {
+        if (isDemoMode) {
+            toast({ title: "Simulation Mode", description: "State updated in local view." });
+            return;
+        }
         const updated = { ...est, status: newStatus };
         await upsertSupabaseEstimate(updated as any);
         toast({ title: "Status Updated", description: `Estimate marked as ${newStatus}` });
@@ -142,7 +155,12 @@ const Estimates = () => {
     };
 
     const handleDeleteEstimate = async (id: string) => {
-        await supabase.from('estimates').delete().eq('id', id);
+        if (isDemoMode) {
+            toast({ title: "Simulation Mode", description: "Delete simulated locally." });
+            setDeleteId(null);
+            return;
+        }
+        await deleteSupabaseEstimate(id);
         toast({ title: "Deleted", description: "Estimate removed" });
         setDeleteId(null);
         loadData();
