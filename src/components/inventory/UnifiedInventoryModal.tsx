@@ -377,6 +377,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const payload = {
           id,
           name: form.name.trim(),
+          category: form.category || 'General', // FIXED: include category
           warranty: form.warranty || "",
           purchaseDate: form.purchaseDate || "",
           price: numeric(form.price),
@@ -405,6 +406,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const { saveMaterial } = await import("@/lib/inventory-data");
         await saveMaterial(payload, isNew);
       }
+
+      // Invalidate session cache so InventoryControl re-fetches fresh data
+      // (prevents stale localforage from overwriting the new imageUrl on the cards)
+      sessionStorage.removeItem('inventory-loaded');
 
       // INTEGRATION: Track as Tax Expense if enabled
       // Check if this item should be added to tax expenses

@@ -272,6 +272,9 @@ const InventoryControl = () => {
 
   const loadData = async () => {
     setIsRefreshing(true);
+    // Always clear the session cache flag so fresh data is re-fetched on next visit
+    // This prevents stale localforage cache from overwriting newly saved imageUrls
+    sessionStorage.removeItem('inventory-loaded');
     if (isDemoMode) {
       setChemicals((MOCK_INVENTORY as any).chemicals || []);
       setSupplies((MOCK_INVENTORY as any).materials || []);
