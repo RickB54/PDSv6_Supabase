@@ -28,13 +28,16 @@ import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-type Preset = 'business-card' | 'custom' | 'small-sticker' | 'avery-5163';
+type Preset = 'business-card' | 'custom' | 'small-sticker' | 'avery-5163' | '3x10-label';
 
 export default function StickerMaker() {
     const navigate = useNavigate();
     const DEFAULT_IMAGE = "https://kcaqshdgnobuhsqpzdun.supabase.co/storage/v1/object/public/blog-media/1775498961726_business_card_qr.png";
     
-    const [imageUrl, setImageUrl] = useState(DEFAULT_IMAGE);
+    const [imageUrl, setImageUrl] = useState(() => {
+        const saved = localStorage.getItem('sticker_maker_image');
+        return saved || DEFAULT_IMAGE;
+    });
     const [preset, setPreset] = useState<Preset>('business-card');
     
     const [config, setConfig] = useState(() => {
@@ -44,9 +47,9 @@ export default function StickerMaker() {
             labelsPerPage: 10,
             columns: 2,
             rows: 5,
-            margin: 0.4, 
+            margin: 0.3, 
             stickerPadding: 0.02, 
-            gap: 0.1, 
+            gap: 0.08, 
             pageZoom: 0.7,
             stickerWidth: 3.5,
             stickerHeight: 2.0,
@@ -57,13 +60,20 @@ export default function StickerMaker() {
             imageOffsetY: 0,
             sheetOffsetX: 0,
             sheetOffsetY: 0,
-            rowOffsets: [0, 0, 0, 0, 0, 0, 0, 0]
+            rowOffsets: Array(25).fill(0),
+            stickerText: "Scan to Order",
+            textSize: 12,
+            textOffsetY: 0
         };
     });
 
     useEffect(() => {
         localStorage.setItem('sticker_maker_config', JSON.stringify(config));
     }, [config]);
+
+    useEffect(() => {
+        localStorage.setItem('sticker_maker_image', imageUrl);
+    }, [imageUrl]);
 
     const [sheetLabels, setSheetLabels] = useState<Array<string | null>>(Array(10).fill(imageUrl));
     const [loading, setLoading] = useState(false);
@@ -103,6 +113,16 @@ export default function StickerMaker() {
                 rows: 7,
                 stickerWidth: 2.25,
                 stickerHeight: 1.25,
+                gap: 0.05
+            }));
+        } else if (preset === '3x10-label') {
+            setConfig(prev => ({
+                ...prev,
+                labelsPerPage: 30,
+                columns: 3,
+                rows: 10,
+                stickerWidth: 2.625,
+                stickerHeight: 1.0,
                 gap: 0.05
             }));
         }
@@ -290,8 +310,10 @@ export default function StickerMaker() {
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                 <SelectItem value="business-card">Standard Business Card (3.5" x 2")</SelectItem>
+                                <SelectItem value="extreme-density">Extreme Density (80 Labels - 4x20)</SelectItem>
                                 <SelectItem value="avery-5163">Avery 5163 Address Label (2" x 4")</SelectItem>
-                                <SelectItem value="small-sticker">Small Sticker (2.25" x 1.25")</SelectItem>
+                                <SelectItem value="small-sticker">Small Grid (2.25" x 1.25")</SelectItem>
+                                <SelectItem value="3x10-label">Avery 5160 - 3x10 (1" x 2.6")</SelectItem>
                                 <SelectItem value="custom">Full Custom Dimensions</SelectItem>
                             </SelectContent>
                         </Select>
@@ -328,10 +350,37 @@ export default function StickerMaker() {
                     <section className="space-y-6 pt-4 border-t border-white/5">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                             <Settings2 className="h-3 w-3 text-blue-400" />
-                            Sticker Design
+                            Sticker Branding & Text
                         </Label>
                         
                         <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-[9px] text-zinc-500 uppercase">TITLE OVERLAY</Label>
+                                <Input 
+                                    value={config.stickerText} 
+                                    onChange={(e) => setConfig(prev => ({ ...prev, stickerText: e.target.value }))}
+                                    placeholder="e.g. Scan for Bio" 
+                                    className="h-8 bg-black border-white/5 text-[11px] font-bold text-emerald-400"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-[8px] font-bold text-zinc-500">
+                                        <span>FONT SIZE</span>
+                                        <span className="text-blue-400">{config.textSize}px</span>
+                                    </div>
+                                    <Slider value={[config.textSize]} min={4} max={48} onValueChange={([val]) => setConfig(prev => ({ ...prev, textSize: val }))} />
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-[8px] font-bold text-zinc-500">
+                                        <span>TEXT RISE</span>
+                                        <span className="text-blue-400">{config.textOffsetY}px</span>
+                                    </div>
+                                    <Slider value={[config.textOffsetY]} min={-50} max={50} onValueChange={([val]) => setConfig(prev => ({ ...prev, textOffsetY: val }))} />
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <div className="flex justify-between text-[9px] font-bold text-zinc-400">
                                     <span>IMAGE ZOOM</span>
@@ -346,11 +395,11 @@ export default function StickerMaker() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <span className="text-[9px] font-bold text-zinc-500 uppercase">Shift X</span>
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase">IMG X</span>
                                     <Slider value={[config.imageOffsetX]} min={-100} max={100} onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetX: val }))} />
                                 </div>
                                 <div className="space-y-2">
-                                    <span className="text-[9px] font-bold text-zinc-500 uppercase">Shift Y</span>
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase">IMG Y</span>
                                     <Slider value={[config.imageOffsetY]} min={-100} max={100} onValueChange={([val]) => setConfig(prev => ({ ...prev, imageOffsetY: val }))} />
                                 </div>
                             </div>
@@ -470,10 +519,39 @@ export default function StickerMaker() {
                                         width: `${config.stickerWidth}in`, height: `${config.stickerHeight}in`,
                                         backgroundColor: '#000', borderRadius: `${config.borderRadius}px`,
                                         overflow: 'hidden', padding: `${config.stickerPadding}in`, boxSizing: 'border-box',
-                                        marginTop: `${rowOffset}in`, marginBottom: `${-rowOffset}in`
+                                        marginTop: `${rowOffset}in`, marginBottom: `${-rowOffset}in`,
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                        position: 'relative'
                                     }}
                                 >
-                                    <img src={img || imageUrl} alt="" style={{ width: `${config.imageScale}%`, height: '100%', objectFit: 'contain', transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)` }} />
+                                    {config.stickerText && (
+                                        <div 
+                                            style={{ 
+                                                color: 'white', 
+                                                fontSize: `${config.textSize}px`, 
+                                                fontWeight: '900', 
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.1em',
+                                                transform: `translateY(${config.textOffsetY}px)`,
+                                                pointerEvents: 'none',
+                                                zIndex: 10,
+                                                marginBottom: '2px'
+                                            }}
+                                        >
+                                            {config.stickerText}
+                                        </div>
+                                    )}
+                                    <img 
+                                        src={img || imageUrl} 
+                                        alt="" 
+                                        style={{ 
+                                            width: `${config.imageScale}%`, 
+                                            height: config.stickerText ? 'auto' : '100%', 
+                                            maxHeight: config.stickerText ? '60%' : '100%',
+                                            objectFit: 'contain', 
+                                            transform: `translate(${config.imageOffsetX}%, ${config.imageOffsetY}%)` 
+                                        }} 
+                                    />
                                 </div>
                             );
                         })}
