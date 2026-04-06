@@ -1,4 +1,4 @@
-import supabase from './supabase';
+import { supabase, isDemoActive } from './supa-data';
 import { Chemical } from '@/types/chemicals';
 import { saveChemical as saveInventoryChemical, getChemicals as getInventoryChemicals } from './inventory-data';
 
@@ -152,6 +152,7 @@ export async function getChemicalById(id: string): Promise<Chemical | null> {
 }
 
 export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ error: any; data: Chemical | null }> {
+    if (isDemoActive()) return { error: { message: "Simulation active" }, data: null };
     try {
         const isNew = !chemical.id;
         
@@ -246,6 +247,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
 }
 
 export async function updateChemicalPartial(id: string, updates: Partial<Chemical>, skipInventorySync: boolean = false): Promise<{ error: any; data: Chemical | null }> {
+    if (isDemoActive()) return { error: { message: "Simulation active" }, data: null };
     try {
         const payload = {
             ...updates,
@@ -281,6 +283,7 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
 }
 
 export async function deleteChemical(id: string): Promise<boolean> {
+    if (isDemoActive()) return false;
     try {
         const items = await getInventoryChemicals();
         const matching = items.filter(inv => inv.chemicalLibraryId === id);

@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar, HelpCircle } from "lucide-react";
+import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar, HelpCircle, Lock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
 import { isDriveEnabled, uploadJSONToDrive, pickDriveFileAndDownload } from '@/lib/googleDrive';
@@ -38,7 +39,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const user = getCurrentUser();
   const { isFullScreen, toggleFullScreen } = useFullScreen();
-  const { isDemoMode, isAdminPreview, setAdminPreview, visibleSections, setVisibleSections, saveConfig } = useDemoMode();
+  const { isDemoMode, isAdminPreview, setAdminPreview, visibleSections, setVisibleSections, saveConfig, isPublicDemoDisabled, setPublicDemoDisabled, disabledReason, setDisabledReason } = useDemoMode();
 
   // Get all possible section keys for the checklist
   const allAvailableKeys = useMemo(() => {
@@ -789,14 +790,52 @@ const Settings = () => {
                   <CardDescription className="text-zinc-400">Manage public access and Guided Training Mode</CardDescription>
                 </div>
               </div>
-              <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-full border border-zinc-800">
-                <span className="text-xs font-bold text-zinc-400 pl-2 uppercase tracking-widest">Demo / Training Mode</span>
-                <Switch 
-                  id="demo-master-toggle"
-                  checked={isAdminPreview} 
-                  onCheckedChange={setAdminPreview}
-                  className="data-[state=checked]:bg-amber-600"
-                />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-full border border-zinc-800">
+                  <span className="text-[10px] font-black text-zinc-400 pl-3 uppercase tracking-[0.2em]">Live DEMO URL: {isPublicDemoDisabled ? <span className="text-red-500">OFFLINE</span> : <span className="text-emerald-500">LIVE</span>}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-5 w-5 text-zinc-500 hover:text-emerald-500 p-0"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'interactive-training-demo' }))}
+                    title="Help: Public Demo & Security"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </Button>
+                  <Switch 
+                    id="demo-public-kill-switch"
+                    checked={!isPublicDemoDisabled} 
+                    onCheckedChange={(val) => setPublicDemoDisabled(!val)}
+                    className="data-[state=checked]:bg-emerald-600"
+                  />
+                </div>
+                {isPublicDemoDisabled && (
+                  <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-lg border border-red-900/30 animate-in slide-in-from-right-4">
+                    <span className="text-[9px] font-bold text-red-400 pl-3 uppercase tracking-wider whitespace-nowrap">Reason:</span>
+                    <Select value={disabledReason} onValueChange={setDisabledReason}>
+                      <SelectTrigger className="h-8 border-none bg-transparent text-xs font-bold text-zinc-300 w-[200px] focus:ring-0 shadow-none">
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-950 border-zinc-800">
+                        <SelectItem value="Security Investigation">Security Investigation</SelectItem>
+                        <SelectItem value="System Maintenance">System Maintenance</SelectItem>
+                        <SelectItem value="Configuration Updates">Configuration Updates</SelectItem>
+                        <SelectItem value="Suspicious Activity Detected">Suspicious Activity Detected</SelectItem>
+                        <SelectItem value="Offline for Training">Offline for Training</SelectItem>
+                        <SelectItem value="Database Optimization">Database Optimization</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 bg-zinc-900/80 p-2 rounded-full border border-zinc-800">
+                  <span className="text-[10px] font-black text-zinc-400 pl-3 uppercase tracking-[0.2em]">Admin Preview Mode</span>
+                  <Switch 
+                    id="demo-master-toggle"
+                    checked={isAdminPreview} 
+                    onCheckedChange={setAdminPreview}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -809,6 +848,16 @@ const Settings = () => {
                   Enabling sections below only makes them visible in the Sidebar. All demo routes are strictly **READ-ONLY**. 
                   Visitors will see mock data and cannot modify your production database.
                 </p>
+                {!isPublicDemoDisabled && (
+                  <p className="text-emerald-400 font-bold mt-2 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> The /demo URL is currently active and accessible to anyone with the link.
+                  </p>
+                )}
+                {isPublicDemoDisabled && (
+                  <p className="text-red-400 font-bold mt-2 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4" /> The public /demo URL is DISABLED. Only admins using Preview Mode can see the demo environment.
+                  </p>
+                )}
               </div>
             </div>
 

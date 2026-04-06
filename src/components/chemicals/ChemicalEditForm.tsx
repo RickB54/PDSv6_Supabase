@@ -11,7 +11,7 @@ import { Sparkles, Save, Loader2, Upload, Trash2, Plus, Info, X, Beaker, AlertTr
 import { upsertChemical } from "@/lib/chemicals";
 import { generateTemplate, analyzeLabelFromImage } from "@/lib/chemical-ai";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supa-data";
+import { supabase, isDemoActive } from "@/lib/supa-data";
 import { ensureAllStorageBuckets } from "@/lib/storage-utils";
 import { ChemicalGalleryModal } from "./ChemicalGalleryModal";
 import { compressImageForUpload } from "@/lib/image-compression";
@@ -196,6 +196,12 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
         if (!editing?.name) return toast({ title: "Name is required", variant: "destructive" });
         if (!editing?.brand) return toast({ title: "Brand is required", variant: "destructive" });
 
+        if (isDemoActive()) {
+            toast({ title: "Simulation Mode", description: "Global chemical library cannot be modified in demo mode.", variant: "destructive" });
+            onCancel();
+            return;
+        }
+
         // Detect manual modifications if this was AI-generated
         let dataToSave = { ...editing };
         if (editing.ai_generated) {
@@ -252,7 +258,13 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
 
     return (
         <div className="flex flex-col h-full bg-zinc-950 text-white">
-            <div className="flex justify-between items-center pb-4 border-b border-zinc-800 mb-4 shrink-0">
+            {isDemoActive() && (
+                <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center gap-3 text-amber-500 font-bold text-xs uppercase tracking-widest shrink-0">
+                    <AlertTriangle className="w-4 h-4" />
+                    Read-Only Mode: AI Auto-Fill is interactive but changes cannot be saved to the database.
+                </div>
+            )}
+            <div className="flex justify-between items-center pb-4 border-b border-zinc-800 mb-4 shrink-0 px-6 mt-4">
                 <div className="flex items-center gap-2">
                     <span className="text-xl font-bold">{editing?.id ? 'Edit Chemical' : 'New Chemical'}</span>
                 </div>
@@ -287,17 +299,17 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                     </Button>
                     <Button
                         onClick={handleSaveInternal}
-                        disabled={saving}
+                        disabled={saving || isDemoActive()}
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700 font-bold"
+                        className={`${isDemoActive() ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} font-bold shadow-lg`}
                     >
                         {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                        Save
+                        {isDemoActive() ? 'Locked (Demo)' : 'Save'}
                     </Button>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 space-y-8">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-8 px-6">
                 {/* SECTION 1: CORE IDENTITY */}
                 <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-2">Core Identity</h3>

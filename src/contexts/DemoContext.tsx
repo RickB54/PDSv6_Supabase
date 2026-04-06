@@ -7,6 +7,8 @@ import { toast } from "@/components/ui/use-toast";
 interface DemoConfig {
   visibleSections: string[];
   isAdminPreviewEnabled: boolean;
+  publicDemoEnabled?: boolean;
+  disabledReason?: string;
 }
 
 interface DemoContextType {
@@ -20,6 +22,10 @@ interface DemoContextType {
   isLoading: boolean;
   canAccess: (key: string) => boolean;
   mockUser: any;
+  isPublicDemoDisabled: boolean;
+  setPublicDemoDisabled: (val: boolean) => void;
+  disabledReason: string;
+  setDisabledReason: (val: string) => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
@@ -53,6 +59,8 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAdminPreview, setIsAdminPreview] = useState<boolean>(() => {
     return localStorage.getItem("admin_demo_preview") === "true";
   });
+  const [isPublicDemoDisabled, setPublicDemoDisabled] = useState<boolean>(false);
+  const [disabledReason, setDisabledReason] = useState<string>("System Maintenance");
   const [isLoading, setIsLoading] = useState(true);
 
   // 1) Path-based or admin toggle
@@ -74,11 +82,20 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     */
 
-    if (isDemoPath) {
+    if (isDemoPath && !isPublicDemoDisabled) {
       localStorage.setItem("demo_mode_active", "true");
       setStayInDemo(true);
+    } else if (isDemoPath && isPublicDemoDisabled) {
+      // If they land on /demo but it's disabled
+      localStorage.removeItem("demo_mode_active");
+      setStayInDemo(false);
+      toast({ 
+        title: "Demo Temporarily Disabled", 
+        description: `Access to the public simulation has been suspended. Reason: ${disabledReason || 'System Maintenance'}.`, 
+        variant: "destructive" 
+      });
     }
-  }, [isDemoPath, isHome]);
+  }, [isDemoPath, isHome, isPublicDemoDisabled]);
 
   // Global demo mode check
   const isDemoMode = stayInDemo || isDemoPath || isAdminPreview;
@@ -98,6 +115,12 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const meta = await contentService.getServiceMeta("demo_config");
         if (meta && meta.meta) {
           setConfig(meta.meta);
+          if (meta.meta.publicDemoEnabled === false) {
+            setPublicDemoDisabled(true);
+            if (meta.meta.disabledReason) setDisabledReason(meta.meta.disabledReason);
+          } else {
+            setPublicDemoDisabled(false);
+          }
         }
       } catch (e) {
         console.error("Failed to load demo config", e);
@@ -165,7 +188,11 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     saveConfig,
     isLoading,
     canAccess,
-    mockUser
+    mockUser,
+    isPublicDemoDisabled,
+    setPublicDemoDisabled,
+    disabledReason,
+    setDisabledReason
   };
 
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;

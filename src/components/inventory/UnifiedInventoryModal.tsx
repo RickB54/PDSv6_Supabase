@@ -21,18 +21,20 @@ type Mode = 'chemical' | 'supply' | 'equipment' | 'material' | 'tool'; // materi
 interface ChemicalForm {
   id?: string;
   name: string;
-  brand?: string; // NEW: Brand name for chemicals
+  brand?: string;
   bottleSize: string;
-  costPerBottle: string; // numeric string - MANDATORY
-  currentStock: string; // numeric string
-  threshold: string; // numeric string - MANDATORY
-  unitOfMeasure: string; // e.g., "oz", "mL"
-  consumptionRatePerJob: string; // numeric string - consumption per job
+  costPerBottle: string;
+  currentStock: string;
+  threshold: string;
+  unitOfMeasure: string;
+  consumptionRatePerJob: string;
   imageUrl?: string;
   chemicalLibraryId?: string;
   isTaxDeductible?: boolean;
   notes?: string;
   dilutionRatios: DilutionRatio[];
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 // Renamed: Material → Supply
@@ -49,6 +51,8 @@ interface SupplyForm {
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
   isTaxDeductible?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 // Renamed: Tool → Equipment
@@ -68,6 +72,8 @@ interface EquipmentForm {
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
   isTaxDeductible?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 type Props = {
@@ -114,6 +120,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     chemicalLibraryId: "",
     isTaxDeductible: true,
     dilutionRatios: [],
+    updatedAt: "",
+    createdAt: "",
   });
 
   const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
@@ -176,6 +184,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         imageUrl: (initial as any).imageUrl || f.imageUrl, // Preserve if already set
         chemicalLibraryId: (initial as any).chemicalLibraryId || "",
         dilutionRatios: (initial as any).dilutionRatios || [],
+        updatedAt: (initial as any).updated_at || (initial as any).updatedAt || "",
+        createdAt: (initial as any).createdAt || (initial as any).created_at || "",
       }));
     } else {
       // Check for session-saved "Draft" (recovery from crash)
@@ -489,6 +499,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               (mode === 'equipment' || mode === 'tool') ? (form.id ? 'Edit Equipment' : 'Add Equipment') :
                 (form.id ? 'Edit Supply' : 'Add Supply')}
           </DialogTitle>
+          {(form.updatedAt || form.createdAt) && (
+            <div className="absolute top-6 right-10 text-[10px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded border border-zinc-700/50">
+              {form.updatedAt ? `Last Updated: ${new Date(form.updatedAt).toLocaleString()}` : `Created: ${new Date(form.createdAt!).toLocaleString()}`}
+            </div>
+          )}
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Image Upload - Compact at top */}

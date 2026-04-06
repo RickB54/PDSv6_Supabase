@@ -297,7 +297,14 @@ const MobileSetup = () => {
                             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{tool.notes || 'No Notes'}</span>
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-indigo-400 transition-colors" />
+                        <div className="flex flex-col items-end gap-1">
+                          {(tool as any).updatedAt && (
+                            <span className="text-[8px] font-black uppercase text-zinc-600/60 leading-none">
+                              {new Date((tool as any).updatedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-indigo-400 transition-colors" />
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -336,7 +343,14 @@ const MobileSetup = () => {
                             <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">{chem.currentStock} in stock</span>
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-emerald-400 transition-colors" />
+                        <div className="flex flex-col items-end gap-1">
+                          {(chem as any).updatedAt && (
+                            <span className="text-[8px] font-black uppercase text-zinc-600/60 leading-none">
+                              {new Date((chem as any).updatedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-emerald-400 transition-colors" />
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -369,7 +383,14 @@ const MobileSetup = () => {
                           <h4 className="text-sm font-bold text-white truncate">{mat.name}</h4>
                           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{mat.category}</span>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-amber-400 transition-colors" />
+                        <div className="flex flex-col items-end gap-1">
+                          {(mat as any).updatedAt && (
+                            <span className="text-[8px] font-black uppercase text-zinc-600/60 leading-none">
+                              {new Date((mat as any).updatedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-amber-400 transition-colors" />
+                        </div>
                       </div>
                     </Card>
                   ))}

@@ -94,6 +94,7 @@ export async function getChemicals(): Promise<Chemical[]> {
         imageUrl: item.image_url,
         chemicalLibraryId: item.chemical_library_id,
         createdAt: item.created_at,
+        updatedAt: item.updated_at,
         dilutionRatios: item.dilution_ratios || []
     }));
 }
@@ -327,6 +328,7 @@ export async function getMaterials(): Promise<Material[]> {
         notes: item.notes,
         lowThreshold: item.low_threshold,
         createdAt: item.created_at,
+        updatedAt: item.updated_at,
         imageUrl: item.image_url
     }));
 }
@@ -402,7 +404,8 @@ export async function getTools(): Promise<Tool[]> {
         lifeExpectancy: item.life_expectancy || '',
         notes: item.notes || '',
         imageUrl: item.image_url,
-        createdAt: item.created_at
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
     }));
 }
 
