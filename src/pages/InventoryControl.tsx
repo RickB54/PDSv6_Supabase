@@ -181,8 +181,8 @@ const InventoryControl = () => {
     // SESSION RECOVERY: Check if we were in the middle of an edit when the app reloaded
     // (Common on mobile after OS kills browser to free memory for the Camera app)
     const checkRecovery = () => {
-      const pendingActive = sessionStorage.getItem('pending_inventory_form_active');
-      const pendingForm = sessionStorage.getItem('pending_inventory_form');
+      const pendingActive = localStorage.getItem('pending_inventory_form_active');
+      const pendingForm = localStorage.getItem('pending_inventory_form');
       if (pendingActive && pendingForm) {
         try {
           const parsed = JSON.parse(pendingForm);
@@ -194,7 +194,7 @@ const InventoryControl = () => {
         } catch (e) { console.error("Recovery failed", e); }
       }
       // Always clear the active flag so we don't loop
-      sessionStorage.removeItem('pending_inventory_form_active');
+      localStorage.removeItem('pending_inventory_form_active');
     };
 
     checkRecovery();

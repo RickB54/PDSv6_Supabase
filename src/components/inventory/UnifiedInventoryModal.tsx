@@ -190,7 +190,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       }));
     } else {
       // Check for session-saved "Draft" (recovery from crash)
-      const saved = sessionStorage.getItem('pending_inventory_form');
+      const saved = localStorage.getItem('pending_inventory_form');
       if (saved && open) {
         try {
           const parsed = JSON.parse(saved);
@@ -200,7 +200,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             setCustomUnit(parsed.customUnit);
             // Clear immediately to avoid unwanted loops, 
             // but we'll re-save if it stays open
-            sessionStorage.removeItem('pending_inventory_form');
+            localStorage.removeItem('pending_inventory_form');
             return;
           }
         } catch (e) { console.error("Restore failed", e); }
@@ -239,7 +239,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   // after the user takes a picture (common mobile OOM crash)
   useEffect(() => {
     if (open) {
-      sessionStorage.setItem('pending_inventory_form', JSON.stringify({
+      localStorage.setItem('pending_inventory_form', JSON.stringify({
         form,
         mode,
         customSubtype,
@@ -516,7 +516,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   // Pre-save state just before triggering camera
-                  sessionStorage.setItem('pending_inventory_form_active', 'true');
+                  localStorage.setItem('pending_inventory_form_active', 'true');
                   photoCameraRef.current?.click(); 
                 }}
               >

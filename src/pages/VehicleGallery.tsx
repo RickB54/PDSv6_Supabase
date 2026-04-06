@@ -82,6 +82,28 @@ export default function VehicleGallery() {
 
     useEffect(() => {
         loadData();
+
+        // SESSION RECOVERY: Check if we were uploading when the app reloaded
+        const checkRecovery = () => {
+            const pendingActive = localStorage.getItem('gallery_upload_active');
+            const pendingData = localStorage.getItem('gallery_upload_data');
+            if (pendingActive && pendingData) {
+                try {
+                    const parsed = JSON.parse(pendingData);
+                    setSelectedCustomerId(parsed.selectedCustomerId);
+                    setTargetVehicle(parsed.targetVehicle);
+                    setNewMediaTitle(parsed.newMediaTitle);
+                    setNewMediaDescription(parsed.newMediaDescription);
+                    setNewMediaType(parsed.newMediaType);
+                    setIsAddMediaOpen(true);
+                    toast({ title: "Session Recovered", description: "Returning you to your media upload." });
+                } catch (e) {
+                    console.error("Recovery failed", e);
+                }
+            }
+            localStorage.removeItem('gallery_upload_active');
+        };
+        checkRecovery();
     }, []);
 
     const loadData = async () => {
@@ -204,6 +226,19 @@ export default function VehicleGallery() {
             toast({ title: "Failed to Add Vehicle", description: err.message, variant: "destructive" });
         }
     };
+
+    // SESSION RECOVERY: Persist state for gallery uploads
+    useEffect(() => {
+        if (isAddMediaOpen) {
+            localStorage.setItem('gallery_upload_data', JSON.stringify({
+                selectedCustomerId,
+                targetVehicle,
+                newMediaTitle,
+                newMediaDescription,
+                newMediaType
+            }));
+        }
+    }, [isAddMediaOpen, selectedCustomerId, targetVehicle, newMediaTitle, newMediaDescription, newMediaType]);
 
     const handleAddMedia = async () => {
         if (!targetVehicle && newMediaType !== 'gallery') return;
@@ -730,7 +765,10 @@ export default function VehicleGallery() {
                                                     type="file"
                                                     accept="image/*"
                                                     capture="environment"
-                                                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                                    onChange={(e) => {
+                                                        setSelectedFile(e.target.files?.[0] || null);
+                                                        localStorage.setItem('gallery_upload_active', 'true');
+                                                    }}
                                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                                 />
                                                 <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col gap-2 border-dashed border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 transition-all group">
