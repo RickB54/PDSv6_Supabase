@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-type Preset = 'business-card' | 'custom' | 'small-sticker';
+type Preset = 'business-card' | 'custom' | 'small-sticker' | 'avery-5163';
 
 export default function StickerMaker() {
     const navigate = useNavigate();
@@ -74,6 +74,16 @@ export default function StickerMaker() {
                 columns: 2,
                 rows: 5,
                 stickerWidth: 3.5,
+                stickerHeight: 2.0,
+                gap: 0.1
+            }));
+        } else if (preset === 'avery-5163') {
+            setConfig(prev => ({
+                ...prev,
+                labelsPerPage: 10,
+                columns: 2,
+                rows: 5,
+                stickerWidth: 4.0,
                 stickerHeight: 2.0,
                 gap: 0.1
             }));
@@ -206,6 +216,7 @@ export default function StickerMaker() {
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                 <SelectItem value="business-card">Standard Business Card (3.5" x 2")</SelectItem>
+                                <SelectItem value="avery-5163">Avery 5163 Address Label (2" x 4")</SelectItem>
                                 <SelectItem value="small-sticker">Small Sticker (2.25" x 1.25")</SelectItem>
                                 <SelectItem value="custom">Full Custom Dimensions</SelectItem>
                             </SelectContent>
