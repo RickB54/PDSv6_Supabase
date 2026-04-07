@@ -289,14 +289,18 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     if (e.target.files?.[0]) {
       setIsUploading(true);
       try {
-        toast.info("Processing image...");
-        const file = e.target.files[0];
+        toast.info("Optimizing and uploading image...");
+        const rawFile = e.target.files[0];
 
-        // Use the centralized upload utility which includes mobile-optimized compression
-        const publicUrl = await uploadFile('blog-media', file);
+        // Explicitly compress before even sending to the upload utility 
+        // to provide double-protection against OOM on high-end rear cameras
+        const { compressImageForUpload } = await import('@/lib/image-compression');
+        const compressed = await compressImageForUpload(rawFile);
+
+        const publicUrl = await uploadFile('blog-media', compressed);
 
         setForm(prev => ({ ...prev, imageUrl: publicUrl }));
-        toast.success("Image uploaded to cloud");
+        toast.success("Image secured to cloud");
       } catch (err: any) {
         console.error(err);
         toast.error("Upload failed: " + (err.message || "Unknown error"));
@@ -540,31 +544,49 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               )}
               <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
               <input ref={photoCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
-              <button
-                type="button"
-                disabled={isUploading}
-                className={`absolute -bottom-1 -right-1 rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg transition-colors ${isUploading ? 'bg-zinc-700 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-500'}`}
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  // Pre-save state just before triggering camera
-                  // This ensures the current form values (name, etc) are locked in before the app might refresh
-                  localStorage.setItem('pending_inventory_form', JSON.stringify({
-                    form,
-                    mode,
-                    customCategory,
-                    customSubtype,
-                    customUnit
-                  }));
-                  localStorage.setItem('pending_inventory_form_active', 'true');
-                  photoCameraRef.current?.click(); 
-                }}
-              >
-                {isUploading ? (
-                  <RefreshCw className="h-3 w-3 text-white animate-spin" />
-                ) : (
-                  <Camera className="h-3 w-3 text-white" />
-                )}
-              </button>
+              
+              <div className="absolute -bottom-1 -right-1 flex gap-1">
+                {/* GALLERY BUTTON */}
+                <button
+                  type="button"
+                  disabled={isUploading}
+                  title="Upload from library"
+                  className={`rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg transition-colors ${isUploading ? 'bg-zinc-700 cursor-not-allowed opacity-50' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'}`}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    photoRef.current?.click(); 
+                  }}
+                >
+                  <Upload className="h-3 w-3" />
+                </button>
+
+                {/* CAMERA BUTTON */}
+                <button
+                  type="button"
+                  disabled={isUploading}
+                  title="Take new photo"
+                  className={`rounded-full p-1.5 border-2 border-zinc-900 cursor-pointer shadow-lg transition-colors ${isUploading ? 'bg-zinc-700 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    // Pre-save state just before triggering camera
+                    localStorage.setItem('pending_inventory_form', JSON.stringify({
+                      form,
+                      mode,
+                      customCategory,
+                      customSubtype,
+                      customUnit
+                    }));
+                    localStorage.setItem('pending_inventory_form_active', 'true');
+                    photoCameraRef.current?.click(); 
+                  }}
+                >
+                  {isUploading ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Camera className="h-3 w-3" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

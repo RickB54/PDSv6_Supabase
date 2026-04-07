@@ -15,6 +15,7 @@ import { DETAILING_TOOLS } from "@/data/detailingTools";
 import { DETAILING_MATERIALS } from "@/data/detailingMaterials";
 import { searchAI, SearchResult } from "@/lib/inventory-ai";
 import { Sparkles, Search, FileText } from "lucide-react";
+import { compressImageForUpload } from "@/lib/image-compression";
 
 interface InventoryImportModalProps {
     open: boolean;
@@ -89,8 +90,11 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             if (saved) {
                 try {
                     const rows = JSON.parse(saved);
-                    return rows.map((r: any) => ({ ...emptyRow(), ...r, imageFile: null, imageUrl: null }));
-                } catch (e) { console.error("Restore failed", e); }
+                    // Restoring EXACTLY what was saved, allowing imageUrl to persist
+                    return rows.map((r: any) => ({ ...emptyRow(), ...r, imageFile: null }));
+                } catch (e) {
+                    console.error("Restore failed", e);
+                }
             }
         }
         return [emptyRow()];
@@ -111,6 +115,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
     }, [manualRows, step]);
 
     const cameraInputRef = useRef<HTMLInputElement>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
     const [activeRowIdx, setActiveRowIdx] = useState<number | null>(null);
 
     const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,20 +123,27 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         if (!file || activeRowIdx === null) return;
         
         setIsProcessingImage(true);
-        const url = URL.createObjectURL(file);
+        // Using the central high-performance compressor that handles huge files on mobile
+        const compressed = await compressImageForUpload(file);
+        const url = URL.createObjectURL(compressed);
         
         const newRows = [...manualRows];
-        newRows[activeRowIdx] = { ...newRows[activeRowIdx], imageFile: file, imageUrl: url };
+        newRows[activeRowIdx] = { ...newRows[activeRowIdx], imageFile: compressed, imageUrl: url };
         setManualRows(newRows);
         
         setIsProcessingImage(false);
         setActiveRowIdx(null);
-        toast.info("Photo prepared for upload.");
+        toast.success("Photo optimized and prepared.");
     };
 
     const triggerCamera = (idx: number) => {
         setActiveRowIdx(idx);
         cameraInputRef.current?.click();
+    };
+
+    const triggerGallery = (idx: number) => {
+        setActiveRowIdx(idx);
+        galleryInputRef.current?.click();
     };
 
     const addManualRow = () => {
@@ -921,6 +933,7 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                                 <ScrollArea className="flex-1 px-1">
                                     <div className="space-y-4 pb-12">
                                         <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} className="hidden" onChange={handlePhotoCapture} />
+                                        <input type="file" accept="image/*" ref={galleryInputRef} className="hidden" onChange={handlePhotoCapture} />
                                         {manualRows.map((row, idx) => (
                                             <div key={idx} className="group relative bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 shadow-inner">
                                                 <div className="grid grid-cols-12 gap-3 items-start">
@@ -994,18 +1007,28 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
                                                     </div>
                                                     <div className="col-span-12 md:col-span-4 flex items-center gap-3 h-full pt-1">
-                                                        <div
-                                                            onClick={() => triggerCamera(idx)}
-                                                            className="flex-1 aspect-video rounded-xl border-2 border-dashed border-zinc-800 bg-black flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-indigo-500/50 transition-all"
-                                                        >
-                                                            {row.imageUrl ? (
-                                                                <img src={row.imageUrl} alt="Stock" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="flex flex-col items-center gap-1">
-                                                                    {isProcessingImage && activeRowIdx === idx ? <Loader2 className="w-6 h-6 animate-spin text-indigo-400" /> : <Camera className="w-8 h-8 text-zinc-700 group-hover:text-indigo-400 transition-colors" />}
-                                                                    <span className="text-[7px] font-black text-zinc-800 uppercase group-hover:text-zinc-600">Snap Photo</span>
-                                                                </div>
-                                                            )}
+                                                        <div className="flex-1 h-full flex flex-col gap-1">
+                                                            <div
+                                                                onClick={() => triggerCamera(idx)}
+                                                                className="flex-1 min-h-[60px] aspect-video rounded-xl border-2 border-dashed border-zinc-800 bg-black flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-indigo-500/50 transition-all"
+                                                            >
+                                                                {row.imageUrl ? (
+                                                                    <img src={row.imageUrl} alt="Stock" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="flex flex-col items-center gap-1">
+                                                                        {isProcessingImage && activeRowIdx === idx ? <Loader2 className="w-6 h-6 animate-spin text-indigo-400" /> : <Camera className="w-8 h-8 text-zinc-700 group-hover:text-indigo-400 transition-colors" />}
+                                                                        <span className="text-[7px] font-black text-zinc-800 uppercase group-hover:text-zinc-600">Snap Photo</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <Button 
+                                                                onClick={(e) => { e.stopPropagation(); triggerGallery(idx); }}
+                                                                variant="outline" 
+                                                                size="sm" 
+                                                                className="h-7 text-[8px] border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:text-white uppercase font-black"
+                                                            >
+                                                                <Upload className="w-3 h-3 mr-1" /> From Library
+                                                            </Button>
                                                         </div>
                                                         <Button variant="ghost" size="icon" onClick={() => removeManualRow(idx)} className="h-12 w-12 text-zinc-800 hover:text-red-500 hover:bg-red-500/10 shrink-0">
                                                             <Trash2 className="w-6 h-6" />
