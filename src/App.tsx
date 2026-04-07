@@ -6,7 +6,8 @@ import JobHistory from "./pages/JobHistory";
 import PaymentsAndCart from "./pages/PaymentsAndCart";
 import MyInvoices from "./pages/MyInvoices";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner, toast as sonnerToast } from "@/components/ui/sonner";
+import { useToast } from "@/hooks/use-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -322,6 +323,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
 };
 
 const App = () => {
+  const { toast } = useToast();
   const [user, setUser] = useState(getCurrentUser());
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -415,8 +417,22 @@ const App = () => {
       setHelpOpen(true);
     };
 
+    const onDemoBlocked = (e: any) => {
+      const action = e.detail?.action || 'this action';
+      toast({
+        title: "Simulation Security Guard",
+        description: `Persistent ${action} is disabled in Training Mode. Your session data remains local and will not affect live business records.`,
+        variant: "destructive"
+      });
+      // Also show a sonner for extra visibility
+      sonnerToast.error("Write Operation Blocked", {
+        description: `Demo Mode ensures production data stays secure.`
+      });
+    };
+
     window.addEventListener('open-call-assistant', onOpenCallAssistant);
     window.addEventListener('open-help', onOpenHelp);
+    window.addEventListener('demo-blocked-action', onDemoBlocked as EventListener);
 
     return () => {
       mounted = false;
@@ -425,6 +441,7 @@ const App = () => {
       window.removeEventListener('storage', updateUser);
       window.removeEventListener('open-call-assistant', onOpenCallAssistant);
       window.removeEventListener('open-help', onOpenHelp);
+      window.removeEventListener('demo-blocked-action', onDemoBlocked as EventListener);
     };
   }, []);
 

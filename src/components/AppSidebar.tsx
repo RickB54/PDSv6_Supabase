@@ -489,7 +489,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
         <SidebarMenu>
           {(isCustomer || (isAdmin && isViewingAsCustomer)) && (
             <>
-              {CUSTOMER_ITEMS.map((item) => {
+              {(CUSTOMER_ITEMS || []).map((item) => {
                 const isActive = location.pathname === item.url;
                 const className = isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full';
                 return (
@@ -508,7 +508,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
           {(isAdmin || isEmployee) && !isViewingAsCustomer && (
             <>
-              {TOP_ITEMS.map((item: any) => {
+              {(TOP_ITEMS || []).map((item: any) => {
                 if (item.role === 'admin' && !isAdmin && !isDemoMode) return null;
                 const targetUrl = getUrl(item.url);
                 const isActive = location.pathname === targetUrl;
@@ -548,7 +548,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 );
               })}
 
-              {MENU_GROUPS.map((group) => {
+              {(MENU_GROUPS || []).map((group) => {
                 const isOpen = openGroups[group.title];
                 const groupBadgeCount = group.items.reduce((acc: number, item: any) => acc + (item.badge || 0), 0);
                 
@@ -589,7 +589,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub className="border-l border-zinc-800/50 ml-4 pl-2 mb-2">
-                          {group.items.map((item: any) => {
+                          {(group.items || []).map((item: any) => {
                             const targetUrl = getUrl(item.url);
                             const isActive = location.pathname === targetUrl;
                             const isHiddenItem = isHidden(item.key || '');

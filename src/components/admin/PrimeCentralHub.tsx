@@ -219,7 +219,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
         return activity
             .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
             .slice(0, 5)
-            .map(item => ({
+            .map((item: any) => ({
                 ...item,
                 time: formatDistanceToNow(item.timestamp, { addSuffix: true })
             }));
@@ -670,7 +670,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                     </div>
                                 </div>
                                 <div className="pl-5 border-l border-zinc-800 space-y-4">
-                                    {scopedBookings.filter(b => b.status !== 'done' && b.status !== 'blocked').slice(0, 3).map((b, i) => (
+                                    {(scopedBookings || []).filter(b => b.status !== 'done' && b.status !== 'blocked').slice(0, 3).map((b, i) => (
                                         <div key={i} className="flex items-center gap-3">
                                             <span className="text-xs font-mono text-zinc-500">{b.date ? format(parseISO(b.date), 'p') : 'N/A'}</span>
                                             <div className="h-2 w-2 rounded-full bg-blue-500/50" />
@@ -687,7 +687,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             <div className="space-y-4">
                                 <h4 className="text-white font-medium">Workload distribution</h4>
                                 <div className="h-24 flex items-end gap-2 px-2">
-                                    {weeklyDistribution.map((count, i) => {
+                                    {(weeklyDistribution || []).map((count, i) => {
                                         const h = Math.min(100, (count / 5) * 100); // Scale 5 jobs as 100%
                                         return (
                                             <div key={i} className="flex-1 bg-blue-500/20 rounded-t-sm hover:bg-blue-500/40 transition-colors relative group" style={{ height: `${Math.max(10, h)}%` }}>
@@ -725,8 +725,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
                     <Card className="divide-y divide-zinc-800 bg-zinc-900/40 border-zinc-800 overflow-hidden h-full">
-                        {recentActivity.length > 0 ? (
-                            recentActivity.map((recent, i) => (
+                            {(recentActivity || []).length > 0 ? (
+                                recentActivity.map((recent: any, i: number) => (
                                 <div key={i} className="p-3 hover:bg-zinc-800/40 transition-colors flex items-center justify-between cursor-pointer group">
                                     <div className="flex flex-col">
                                         <span className="text-xs text-zinc-500 font-medium">{recent.type}</span>
@@ -791,7 +791,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         </div>
                         <AccordionContent className="pt-4">
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                {pinnedShortcuts.length > 0 ? (
+                                {pinnedShortcuts && pinnedShortcuts.length > 0 ? (
                                     pinnedShortcuts.map((pin) => {
                                         // Handle content-type shortcuts (from Learning Library)
                                         if (pin.type === 'content') {
@@ -894,7 +894,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Available Modules</h3>
                             <ScrollArea className="h-[250px] pr-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {AVAILABLE_SHORTCUTS.map((s) => (
+                                    {(AVAILABLE_SHORTCUTS || []).map((s) => (
                                         <div key={s.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-zinc-900 transition-colors border border-transparent hover:border-zinc-800 group">
                                             <Checkbox
                                                 id={s.id}
@@ -943,7 +943,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                         <SelectContent className="bg-zinc-950 border-zinc-800 text-white max-h-[300px]">
                                             <SelectGroup>
                                                 <SelectLabel className="text-zinc-500 text-[10px] uppercase">Pages & Links</SelectLabel>
-                                                {AVAILABLE_SHORTCUTS.filter(s => s.type === 'link').map(s => (
+                                                {(AVAILABLE_SHORTCUTS || []).filter(s => s.type === 'link').map(s => (
                                                     <SelectItem key={s.id} value={s.target} className="text-xs">{s.label}</SelectItem>
                                                 ))}
                                             </SelectGroup>
@@ -1029,7 +1029,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         <ScrollArea className="h-[300px] border border-zinc-800 rounded-lg p-2">
                             {notesStore.notes.length > 0 ? (
                                 <div className="space-y-2">
-                                    {notesStore.notes.filter(n =>
+                                    {(notesStore.notes || []).filter(n =>
                                         n.title.toLowerCase().includes(notesStore.searchQuery.toLowerCase()) ||
                                         n.content.toLowerCase().includes(notesStore.searchQuery.toLowerCase())
                                     ).map(note => (

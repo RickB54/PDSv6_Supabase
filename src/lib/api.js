@@ -29,7 +29,22 @@ async function fetchWithRetry(url, options = {}, retries = 1) {
   }
 }
 
+const isDemo = () => {
+  try { return localStorage.getItem('demo_mode_active') === 'true'; } catch { return false; }
+};
+const blockDemo = (action) => {
+  if (isDemo()) {
+    window.dispatchEvent(new CustomEvent('demo-blocked-action', { detail: { action } }));
+    return true;
+  }
+  return false;
+};
+
 const api = async (endpoint, options = {}) => {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET' && blockDemo('website settings update')) {
+     return { ok: false, error: 'demo_mode_blocked' };
+  }
   // =====================
   // Users administration
   // =====================

@@ -1,5 +1,15 @@
-
 import { supabase } from './supabase';
+
+const isDemo = () => {
+  try { return localStorage.getItem('demo_mode_active') === 'true'; } catch { return false; }
+};
+const blockDemo = (action: string) => {
+  if (isDemo()) {
+    window.dispatchEvent(new CustomEvent('demo-blocked-action', { detail: { action } }));
+    return true;
+  }
+  return false;
+};
 
 /**
  * Service to manage Website Content via Supabase
@@ -59,11 +69,13 @@ export const contentService = {
         return data || [];
     },
     upsertVehicleType: async (vt: SupaVehicleType) => {
+        if (blockDemo('vehicle type update')) return null;
         const { data, error } = await supabase.from('content_vehicle_types').upsert(vt).select().single();
         if (error) throw error;
         return data;
     },
     deleteVehicleType: async (id: string) => {
+        if (blockDemo('vehicle type deletion')) return;
         const { error } = await supabase.from('content_vehicle_types').delete().eq('id', id);
         if (error) throw error;
     },
@@ -75,6 +87,7 @@ export const contentService = {
         return data || [];
     },
     upsertFaq: async (faq: SupaFaq) => {
+        if (blockDemo('FAQ update')) return null;
         // If no ID, insert; if ID, update
         if (!faq.id) {
             const { id, ...rest } = faq; // remove undefined id
@@ -87,6 +100,7 @@ export const contentService = {
         return data;
     },
     deleteFaq: async (id: string) => {
+        if (blockDemo('FAQ deletion')) return;
         const { error } = await supabase.from('content_faqs').delete().eq('id', id);
         if (error) throw error;
     },
@@ -98,6 +112,7 @@ export const contentService = {
         return data || [];
     },
     upsertTestimonial: async (t: SupaTestimonial) => {
+        if (blockDemo('testimonial update')) return null;
         if (!t.id) {
             const { id, ...rest } = t;
             const { data, error } = await supabase.from('content_testimonials').insert(rest).select().single();
@@ -109,6 +124,7 @@ export const contentService = {
         return data;
     },
     deleteTestimonial: async (id: string) => {
+        if (blockDemo('testimonial deletion')) return;
         const { error } = await supabase.from('content_testimonials').delete().eq('id', id);
         if (error) throw error;
     },
@@ -120,6 +136,7 @@ export const contentService = {
         return data || [];
     },
     upsertAboutSection: async (s: SupaAboutSection) => {
+        if (blockDemo('about section update')) return null;
         if (!s.id) {
             const { id, ...rest } = s;
             const { data, error } = await supabase.from('content_about').insert(rest).select().single();
@@ -142,6 +159,7 @@ export const contentService = {
         return data;
     },
     upsertContact: async (c: SupaContact) => {
+        if (blockDemo('contact info update')) return null;
         const payload = { ...c, id: 1 };
         const { data, error } = await supabase.from('content_contact').upsert(payload).select().single();
         if (error) throw error;
@@ -154,6 +172,7 @@ export const contentService = {
         return data;
     },
     upsertServiceMeta: async (m: SupaServiceMeta) => {
+        if (blockDemo('service settings update')) return null;
         const { data, error } = await supabase.from('content_services_meta').upsert(m).select().single();
         if (error) throw error;
         return data;

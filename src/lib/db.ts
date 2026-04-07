@@ -3,6 +3,16 @@ import { pushAdminAlert } from "@/lib/adminAlerts";
 
 // Centralized local DB using IndexedDB via localforage
 localforage.config({ name: "prime-detail-db" });
+const isDemo = () => {
+  try { return localStorage.getItem('demo_mode_active') === 'true'; } catch { return false; }
+};
+const blockDemo = (action: string) => {
+  if (isDemo()) {
+    window.dispatchEvent(new CustomEvent('demo-blocked-action', { detail: { action } }));
+    return true;
+  }
+  return false;
+};
 
 const KEYS = {
   customers: "customers",
@@ -38,6 +48,7 @@ export async function getCustomers<T extends GenericWithId>(): Promise<T[]> {
 }
 
 export async function upsertCustomer<T extends Partial<GenericWithId>>(cust: T): Promise<GenericWithId & T> {
+  if (blockDemo('customer update')) return cust as any;
   const list = await getArray<any>(KEYS.customers);
   const now = new Date().toISOString();
   let saved: any;
@@ -66,6 +77,7 @@ export async function upsertCustomer<T extends Partial<GenericWithId>>(cust: T):
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
+  if (blockDemo('customer deletion')) return;
   // 1. Get customer details for name matching
   const list = await getArray<any>(KEYS.customers);
   const customerToDelete = list.find((c: any) => c.id === id);
@@ -157,6 +169,7 @@ export async function getEstimates<T extends GenericWithId>(): Promise<T[]> {
 }
 
 export async function upsertEstimate<T extends Partial<GenericWithId>>(estimate: T): Promise<GenericWithId & T> {
+  if (blockDemo('estimate update')) return estimate as any;
   const list = await getArray<any>(KEYS.estimates);
   let saved: any;
   if (estimate.id) {
@@ -196,6 +209,7 @@ export async function getInvoices<T extends GenericWithId>(): Promise<T[]> {
 }
 
 export async function upsertInvoice<T extends Partial<GenericWithId>>(inv: T): Promise<GenericWithId & T> {
+  if (blockDemo('invoice update')) return inv as any;
   const list = await getArray<any>(KEYS.invoices);
   let saved: any;
   if (inv.id) {
@@ -239,6 +253,7 @@ export async function getExpenses<T extends GenericWithId>(): Promise<T[]> {
 }
 
 export async function upsertExpense<T extends Partial<GenericWithId>>(exp: T): Promise<GenericWithId & T> {
+  if (blockDemo('expense update')) return exp as any;
   const list = await getArray<any>(KEYS.expenses);
   let saved: any;
   if (exp.id) {

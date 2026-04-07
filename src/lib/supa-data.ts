@@ -10,6 +10,14 @@ export { supabase };
 // Types
 export const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
 
+const blockDemo = (action: string) => {
+  if (isDemoActive()) {
+    window.dispatchEvent(new CustomEvent('demo-blocked-action', { detail: { action } }));
+    return true;
+  }
+  return false;
+};
+
 export interface Employee {
     id?: string;
     email: string;
@@ -472,7 +480,7 @@ export async function upsertSupabaseVehicle(vehicleData: {
     afterPhotos?: string[];
     videoUrls?: string[];
 }) {
-    if (isDemoActive()) return { id: vehicleData.id || `demo_v_${Date.now()}`, ...vehicleData };
+    if (blockDemo('vehicle update')) return { id: vehicleData.id || `demo_v_${Date.now()}`, ...vehicleData };
     try {
         const payload: any = {
             make: vehicleData.make,
@@ -528,7 +536,7 @@ export async function upsertSupabaseVehicle(vehicleData: {
  * Automatically handles multiple vehicle creation/update.
  */
 export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { type?: string }) => {
-    if (isDemoActive()) return { ...customer, id: customer.id || `demo_c_${Date.now()}` };
+    if (blockDemo('customer update')) return { ...customer, id: customer.id || `demo_c_${Date.now()}` };
     // 1. Prepare payload for CUSTOMERS table
     const safeEmail = customer.email?.trim() || undefined;
     const safePhone = customer.phone?.trim() || undefined;
@@ -626,7 +634,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
  * This is a highly robust deletion that cleans up database rows AND physical storage files.
  */
 export const deleteSupabaseCustomer = async (id: string) => {
-    if (isDemoActive()) return { success: true, crmCount: 1, authCount: 1 };
+    if (blockDemo('customer deletion')) return { success: true, crmCount: 1, authCount: 1 };
     try {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(id)) {
@@ -751,7 +759,7 @@ export const getTeamMessages = async (): Promise<TeamMessage[]> => {
 };
 
 export const sendTeamMessage = async (content: string, senderEmail: string, senderName: string, recipientEmail?: string | null) => {
-    if (isDemoActive()) return { id: `demo_m_${Date.now()}`, content, sender_email: senderEmail, sender_name: senderName, created_at: new Date().toISOString() };
+    if (blockDemo('team message')) return { id: `demo_m_${Date.now()}`, content, sender_email: senderEmail, sender_name: senderName, created_at: new Date().toISOString() };
     try {
         const { data, error } = await supabase
             .from('team_messages')
