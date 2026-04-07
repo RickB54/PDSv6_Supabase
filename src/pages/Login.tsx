@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { loginSupabase } from "@/lib/auth";
 import { toast } from "sonner";
 
-import { Eye, EyeOff, ArrowLeft, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldAlert, Rocket } from "lucide-react";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -71,10 +71,20 @@ export default function Login() {
                                 <ShieldAlert className="w-4 h-4" />
                                 Demo Mode Offline
                             </h4>
-                            <p className="text-red-400/80 text-[11px] leading-relaxed">
+                            <p className="text-red-400/80 text-[11px] leading-relaxed mb-3">
                                 Access to the public simulation has been suspended. 
                                 <br />Reason: <span className="text-red-400 font-black uppercase tracking-tight">{disabledReason || 'System Maintenance'}</span>
                             </p>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                type="button"
+                                className="w-full bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-white text-[10px] uppercase font-black tracking-widest gap-2"
+                                onClick={() => navigate('/demo')}
+                            >
+                                <Rocket className="w-3 h-3 text-red-500" />
+                                Retry Connection
+                            </Button>
                         </div>
                     )}
                 </CardHeader>

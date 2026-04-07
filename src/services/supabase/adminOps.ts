@@ -1,6 +1,8 @@
 import supabase from '@/lib/supabase';
 import { logDelete } from '@/lib/audit';
 import { getCurrentUser } from '@/lib/auth';
+import { isDemoActive } from '@/lib/supa-data';
+
 
 function dbg(label: string, payload?: any) {
   try {
@@ -77,6 +79,7 @@ export async function previewDeleteCustomers(days: string) {
 }
 
 export async function deleteCustomersOlderThan(days: string): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   // Delete dependent rows first to avoid FK violations
@@ -121,6 +124,7 @@ export async function deleteCustomersOlderThan(days: string): Promise<void> {
 
 // Delete employees (role=employee) based on cutoff or delete all
 export async function deleteEmployeesOlderThan(days: string): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   dbg('deleteEmployeesOlderThan:start', { cutoff });
@@ -142,6 +146,7 @@ export async function deleteEmployeesOlderThan(days: string): Promise<void> {
 }
 
 export async function deleteInvoicesOlderThan(days: string): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   dbg('deleteInvoicesOlderThan:start', { cutoff });
@@ -155,6 +160,7 @@ export async function deleteInvoicesOlderThan(days: string): Promise<void> {
 }
 
 export async function deleteExpensesOlderThan(days: string): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   dbg('deleteExpensesOlderThan:start', { cutoff });
@@ -173,6 +179,7 @@ export async function deleteExpensesOlderThan(days: string): Promise<void> {
 }
 
 export async function deleteInventoryUsageOlderThan(days: string): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   dbg('deleteInventoryUsageOlderThan:start', { cutoff });
@@ -191,6 +198,7 @@ export async function deleteInventoryUsageOlderThan(days: string): Promise<void>
 }
 
 export async function deleteBookingsOlderThan(days: string): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   const cutoff = toIsoCutoff(days);
   dbg('deleteBookingsOlderThan:start', { cutoff });
@@ -213,6 +221,7 @@ export async function deleteBookingsOlderThan(days: string): Promise<void> {
 }
 
 export async function deleteEverything(): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   // Supabase deletions — ONLY the allowed data
   dbg('deleteEverything:start');
@@ -247,6 +256,7 @@ export async function deleteEverything(): Promise<void> {
 }
 
 export async function deleteEverythingExceptInventory(): Promise<void> {
+  if (isDemoActive()) return;
   await requireAdminOrEmployee();
   dbg('deleteEverythingExceptInventory:start');
   const ops = [
@@ -351,6 +361,7 @@ export async function previewDeleteAllExceptInventory() {
 }
 
 export async function deleteAllTeamMessages(): Promise<number> {
+  if (isDemoActive()) return 0;
   await requireAdminOrEmployee();
   // Delete all messages
   const { count, error } = await supabase.from('team_messages').delete().neq('id', 0);

@@ -389,6 +389,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      if (!ensureNotDemo("user authorization")) return;
       // Upsert to authorized_users
       const { error } = await supabase.from('authorized_users').upsert({
         email: payload.email,
@@ -415,6 +416,7 @@ export default function AdminDashboard() {
       const targetUser = users.find(u => u.id === id);
       if (!targetUser || !targetUser.email) return;
 
+      if (!ensureNotDemo("role update")) return;
       // 1. Update authorized_users (Source of Truth for new logins)
       await supabase.from('authorized_users').upsert({
         email: targetUser.email,

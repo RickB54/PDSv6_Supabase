@@ -65,8 +65,10 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   // 1) Path-based or admin toggle
-  const isDemoPath = location.pathname.startsWith("/demo") || location.pathname === "/demo";
-  const isHome = location.pathname === "/" || location.pathname === "/index.html";
+  // Normalize location for robust detection (handle //demo, /DEMO, etc)
+  const normalizedPath = location.pathname.toLowerCase().replace(/\/+/g, '/');
+  const isDemoPath = normalizedPath.startsWith("/demo");
+  const isHome = normalizedPath === "/" || normalizedPath === "/index.html";
   
   // 2) Persistence flag (so clicking /dashboard doesn't kick you out)
   const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
@@ -115,7 +117,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // If we have a cache, we can mark loading as finished technically, 
           // but we'll still fetch fresh data in background.
           // For now, let's just make it feel faster.
-          setIsLoading(false);
+          // Load cache for UI immediate feel but keep loading true
+          // so fresh data from Supabase takes precedence.
+          // setIsLoading(false);
         }
 
         const meta = await contentService.getServiceMeta("demo_config");
@@ -160,6 +164,8 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const newConfig = { ...config, publicDemoEnabled: !isDisabled, disabledReason };
     setConfig(newConfig);
     await contentService.upsertServiceMeta({ key: "demo_config", meta: newConfig });
+    // Also update cache so we don't have stale data on next load
+    localStorage.setItem("demo_config_cache", JSON.stringify(newConfig));
   };
 
   const updateDisabledReason = async (reason: string) => {

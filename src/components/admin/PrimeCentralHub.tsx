@@ -33,6 +33,7 @@ import { FileText, CheckSquare } from "lucide-react";
 import { format, isToday, isThisWeek, isThisMonth, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Badge } from "@/components/ui/badge";
+import { HelpCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -76,6 +77,7 @@ interface Shortcut {
     thumbnail_url?: string;
     content_type?: 'video' | 'article' | 'pdf' | 'image';
     resource_url?: string;
+    helpTopicId?: string;
 }
 
 interface PrimeCentralHubProps {
@@ -117,9 +119,27 @@ const AVAILABLE_SHORTCUTS: Shortcut[] = [
     { id: 'modal-add-customer', label: 'Quick Add Customer', detail: 'Intake modal', type: 'modal', target: 'add-customer' },
     { id: 'modal-cheat-sheet', label: 'Cheat Sheet', detail: 'Training quick reference', type: 'modal', target: 'cheat-sheet' },
     { id: 'modal-subcontractors', label: 'SubContractors', detail: 'External teams', type: 'modal', target: 'subcontractors' },
-    { id: 'modal-user-admin', label: 'User Admin', detail: 'Roles & Rights', type: 'modal', target: 'user-admin' },
-    { id: 'modal-employee-mgmt', label: 'Employee Mgmt', detail: 'Details & History', type: 'modal', target: 'employee-mgmt' },
-    { id: 'modal-orientation', label: 'Employee Orientation', detail: 'Onboarding flow', type: 'modal', target: 'orientation' },
+    { id: 'modal-user-admin', label: 'User Admin', detail: 'Roles & Rights', type: 'modal', target: 'user-admin', helpTopicId: 'user-mgmt' },
+    { id: 'modal-employee-mgmt', label: 'Employee Mgmt', detail: 'Details & History', type: 'modal', target: 'employee-mgmt', helpTopicId: 'company-employees' },
+    { id: 'orientation', label: 'Employee Orientation', detail: 'Onboarding flow', type: 'modal', target: 'orientation', helpTopicId: 'orientation' },
+    { id: 'bookings', label: 'Bookings Calendar', detail: 'Manage appointments', type: 'link', target: '/bookings', helpTopicId: 'bookings' },
+    { id: 'accounting', label: 'Accounting', detail: 'Financial overview', type: 'link', target: '/accounting', helpTopicId: 'accounting' },
+    { id: 'inventory', label: 'Inventory Control', detail: 'Stock management', type: 'link', target: '/inventory-control', helpTopicId: 'inventory-control' },
+    { id: 'package-pricing', label: 'Package Pricing', detail: 'Update services', type: 'link', target: '/package-pricing', helpTopicId: 'package-pricing' },
+    { id: 'reports', label: 'Reports', detail: 'Business analytics', type: 'link', target: '/reports', helpTopicId: 'reports-dashboard' },
+    { id: 'training', label: 'Training Center', detail: 'Prime Training Manual', type: 'link', target: '/training-manual', helpTopicId: 'training-center' },
+    { id: 'payroll', label: 'Payroll', detail: 'Employee earnings', type: 'link', target: '/payroll', helpTopicId: 'payroll' },
+    { id: 'user-mgmt', label: 'Users & Roles', detail: 'Manage app access', type: 'link', target: '/user-management', helpTopicId: 'user-mgmt' },
+    { id: 'search-customer', label: 'Customer Profiles', detail: 'CRM database', type: 'link', target: '/search-customer', helpTopicId: 'search-customer' },
+    { id: 'prospects', label: 'Prospects', detail: 'Leads & Enquiries', type: 'link', target: '/prospects', helpTopicId: 'prospects' },
+    { id: 'estimates', label: 'Estimates', detail: 'Quotes & Proposals', type: 'link', target: '/estimates', helpTopicId: 'estimates' },
+    { id: 'invoicing', label: 'Invoicing', detail: 'Billing & Payments', type: 'link', target: '/invoicing', helpTopicId: 'invoicing' },
+    { id: 'availability', label: 'Availability Manager', detail: 'Staff blockouts', type: 'link', target: '/availability-manager', helpTopicId: 'availability-manager' },
+    { id: 'mileage', label: 'Mileage Tracking', detail: 'Vehicle logs', type: 'link', target: '/mileage', helpTopicId: 'mileage' },
+    { id: 'budget', label: 'Company Budget', detail: 'Expense planning', type: 'link', target: '/company-budget', helpTopicId: 'company-budget' },
+    { id: 'taxes', label: 'Tax Center', detail: 'Reporting & Filings', type: 'link', target: '/taxes', helpTopicId: 'taxes' },
+    { id: 'coupons', label: 'Discount Coupons', detail: 'Promo code management', type: 'link', target: '/discount-coupons', helpTopicId: 'discount-coupons' },
+    { id: 'settings', label: 'App Settings', detail: 'Global configuration', type: 'link', target: '/settings', helpTopicId: 'application-settings' },
 ];
 
 const DEFAULT_PINNED = ['reports', 'training', 'package-pricing', 'gallery'];
@@ -813,13 +833,37 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                         return pin.type === 'link' ? (
                                             <Link key={pin.id} to={pin.target}>
                                                 <Card className="p-4 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group hover:bg-zinc-800/20">
+                                                <div className="flex items-center justify-between gap-1">
                                                     <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
-                                                    <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
+                                                    {(pin as any).helpTopicId && (
+                                                        <HelpCircle 
+                                                            className="w-3 h-3 text-zinc-600 hover:text-emerald-400 transition-colors cursor-help" 
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: (pin as any).helpTopicId, role: 'admin' } }));
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
                                                 </Card>
                                             </Link>
                                         ) : (
                                             <Card key={pin.id} onClick={() => onQuickAction?.(`modal:${pin.target}`)} className="p-4 bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer h-full group hover:bg-zinc-800/20">
-                                                <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <div className="text-sm font-semibold text-zinc-200 group-hover:text-white mb-1">{pin.label}</div>
+                                                    {(pin as any).helpTopicId && (
+                                                        <HelpCircle 
+                                                            className="w-3 h-3 text-zinc-600 hover:text-emerald-400 transition-colors cursor-help" 
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: (pin as any).helpTopicId, role: 'admin' } }));
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
                                                 <div className="text-[11px] text-zinc-500 line-clamp-1 italic">{pin.detail}</div>
                                             </Card>
                                         );

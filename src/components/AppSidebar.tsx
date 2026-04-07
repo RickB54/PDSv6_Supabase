@@ -518,8 +518,30 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
                       <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
-                        <item.icon className={`h-4 w-4 ${open ? 'mr-2' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className={`h-4 w-4 shrink-0 ${open ? 'mr-0' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
+                        {open && (
+                          <div className="flex items-center justify-between flex-1 min-w-0">
+                            <span className="truncate">{item.title}</span>
+                            {item.helpTopicId && (
+                              <div 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.dispatchEvent(new CustomEvent('open-help', { 
+                                    detail: { 
+                                      topicId: item.helpTopicId,
+                                      role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                    } 
+                                  }));
+                                }}
+                                className="p-1 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all cursor-help"
+                                title={`Help for ${item.title}`}
+                              >
+                                <HelpCircle className="w-3.5 h-3.5" />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -584,11 +606,32 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                     )} 
                                     onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
                                   >
-                                    {item.icon && <item.icon className={cn("h-3.5 w-3.5", isActive ? "text-blue-500" : "text-zinc-500")} />}
-                                    <span>{item.title}</span>
-                                    {isActive && <div className="ml-auto w-1 h-1 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]" />}
+                                    <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
+                                      {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : "text-zinc-500")} />}
+                                      <span className="truncate">{item.title}</span>
+                                      {item.helpTopicId && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.dispatchEvent(new CustomEvent('open-help', { 
+                                              detail: { 
+                                                topicId: item.helpTopicId,
+                                                role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                              } 
+                                            }));
+                                          }}
+                                          className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5"
+                                          title={`Help for ${item.title}`}
+                                        >
+                                          <HelpCircle className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                    {isActive && !item.helpTopicId && <div className="ml-auto w-1 h-1 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]" />}
                                     {item.badge !== undefined && item.badge > 0 && (
-                                      <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white font-black">
+                                      <span className="ml-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white font-black">
                                         {item.badge}
                                       </span>
                                     )}

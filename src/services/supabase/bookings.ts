@@ -1,4 +1,5 @@
 import supabase from '@/lib/supabase';
+import { isDemoActive } from '@/lib/supa-data';
 
 // Helper to sanitize undefined checks
 const clean = (s?: string) => s || null;
@@ -22,6 +23,7 @@ export interface BookingInput {
 }
 
 export async function create(input: BookingInput) {
+  if (isDemoActive()) return { ...input, id: `demo_book_${Date.now()}` };
   try {
     // 1. Upsert Customer (Match on Email)
     // 1. Upsert Customer (Match on Email if exists, otherwise create new)
@@ -105,6 +107,7 @@ export async function getAll() {
 }
 
 export async function update(id: string | number, patch: Partial<BookingInput>) {
+  if (isDemoActive()) return { id, ...patch };
   // Simplistic mapping for now
   const dbPatch: any = {};
   if (patch.status) dbPatch.status = patch.status;
@@ -116,6 +119,7 @@ export async function update(id: string | number, patch: Partial<BookingInput>) 
 }
 
 export async function remove(id: string | number) {
+  if (isDemoActive()) return true;
   const { error } = await supabase.from('bookings').delete().eq('id', id);
   if (error) throw error;
   return true;

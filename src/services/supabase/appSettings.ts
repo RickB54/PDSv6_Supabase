@@ -1,4 +1,5 @@
 import supabase from '@/lib/supabase';
+import { isDemoActive } from '@/lib/supa-data';
 
 export async function getAppSetting<T>(key: string): Promise<T | null> {
     try {
@@ -21,6 +22,7 @@ export async function getAppSetting<T>(key: string): Promise<T | null> {
 }
 
 export async function saveAppSetting(key: string, value: any): Promise<boolean> {
+    if (isDemoActive()) return true;
     try {
         const { error } = await supabase
             .from('app_settings')

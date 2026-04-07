@@ -12,7 +12,7 @@ export default function SectionLanding() {
     const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
     const isAdmin = user?.role === 'admin' || isDemoMode;
-    const isEmployee = user?.role === 'employee';
+    const isEmployee = user?.role === 'employee' || isAdmin;
 
     // We don't have access to the dynamic counts here easily without context or prop drilling, 
     // but for the landing page static links are usually fine. 

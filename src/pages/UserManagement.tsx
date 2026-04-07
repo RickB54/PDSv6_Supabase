@@ -207,6 +207,7 @@ export default function UserManagement() {
     const password = empNewPassword || `Temp${Math.random().toString(36).slice(2)}!`;
 
     try {
+      if (isDemoMode) return; // Prevent auth creation
       // Step 1: Create auth user
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: empNewEmail.trim().toLowerCase(),
@@ -263,6 +264,7 @@ export default function UserManagement() {
       return;
     }
     try {
+      if (isDemoMode) return;
       const { error } = await supabase
         .from("customers")
         .insert({
@@ -291,6 +293,7 @@ export default function UserManagement() {
       return;
     }
     try {
+      if (isDemoMode) return; 
       const { data, error } = await supabase.functions.invoke("create-admin", {
         body: { name: adminNewName, email: adminNewEmail, password: adminNewPassword },
       });
@@ -312,6 +315,7 @@ export default function UserManagement() {
       return;
     }
     if (!empEditId) return;
+    if (isDemoMode) return;
     try {
       const { error } = await supabase
         .from("app_users")

@@ -114,14 +114,18 @@ function ConditionalGlobalChat() {
 }
 
 const isAppRoute = (path: string) => {
+  // Normalize path for robust matching (handle double slashes and case)
+  const normalizedPath = path.toLowerCase().replace(/\/+/g, '/');
+  
   const websitePrefixes = [
     '/', '/about', '/contact', '/faq', '/services', '/book', '/availability', 
     '/blog', '/checkout', '/thank-you', '/login', '/signup', 
     '/forgot-password', '/update-password', '/portal', '/f150-setup', '/contact-support'
   ];
-  if (websitePrefixes.includes(path)) return false;
-  if (path.startsWith('/blog/')) return false;
-  if (path.startsWith('/demo')) return true;
+  
+  if (websitePrefixes.includes(normalizedPath)) return false;
+  if (normalizedPath.startsWith('/blog/')) return false;
+  if (normalizedPath.startsWith('/demo')) return true;
   return true;
 };
 

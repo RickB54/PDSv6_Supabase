@@ -1,4 +1,5 @@
 import supabase from '@/lib/supabase';
+import { isDemoActive } from '@/lib/supa-data';
 
 export interface ContactInput {
   name: string;
@@ -8,6 +9,7 @@ export interface ContactInput {
 }
 
 export async function create(input: ContactInput) {
+  if (isDemoActive()) return { ...input, id: `demo_msg_${Date.now()}` };
   const { data, error } = await supabase.from('contact_messages').insert({
     ...input,
   }).select('*').single();
@@ -28,6 +30,7 @@ export async function update(id: string | number, patch: Partial<ContactInput>) 
 }
 
 export async function remove(id: string | number) {
+  if (isDemoActive()) return true;
   const { error } = await supabase.from('contact_messages').delete().eq('id', id);
   if (error) throw error;
   return true;

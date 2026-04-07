@@ -53,7 +53,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
   // Handle prop changes (initial mount or forced update from parent)
   useEffect(() => {
-    if (open && initialTopicId) {
+    if (open) {
       setCurrentTopicId(initialTopicId);
       setAccordionValue("");
     }
