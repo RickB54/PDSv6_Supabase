@@ -187,13 +187,26 @@ const InventoryControl = () => {
         try {
           const parsed = JSON.parse(pendingForm);
           setModalMode(parsed.mode);
+          
+          // Re-open modal
           setModalOpen(true);
-          // Don't set editing here, UnifiedInventoryModal will restore the form itself
-          console.log("Recovered inventory modal after reload");
+          
+          // If we were editing an existing item, try to find it in the current lists
+          // so editing state is properly restored
+          if (parsed.form && parsed.form.id) {
+            const allItems = [...(chemicals || []), ...(supplies || []), ...(equipment || [])];
+            const found = allItems.find(item => item.id === parsed.form.id);
+            if (found) {
+              setEditing(found);
+            }
+          }
+          
+          console.log("Recovered inventory modal after mobile camera reload");
           toast({ title: "Session Recovered", description: "Returning you to your inventory update." });
-        } catch (e) { console.error("Recovery failed", e); }
+        } catch (e) {
+          console.error("Recovery failed", e);
+        }
       }
-      // Always clear the active flag so we don't loop
       localStorage.removeItem('pending_inventory_form_active');
     };
 

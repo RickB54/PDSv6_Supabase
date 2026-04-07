@@ -161,11 +161,28 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   };
 
   useEffect(() => {
+    // CHECK RECOVERY FIRST - Always prioritize unsaved draft if modal is open
+    const saved = localStorage.getItem('pending_inventory_form');
+    if (saved && open) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Match by mode or specific item ID if editing
+        if (parsed.mode === mode && (!parsed.form.id || (initial && parsed.form.id === initial.id))) {
+          console.log("Recovered unsaved draft state");
+          setForm(parsed.form);
+          setCustomSubtype(parsed.customSubtype);
+          setCustomUnit(parsed.customUnit);
+          localStorage.removeItem('pending_inventory_form');
+          return;
+        }
+      } catch (e) {
+        console.error("Restore failed", e);
+      }
+    }
+
     if (initial) {
       const initialSubtype = (initial as any).subtype || "";
       const initialUnit = (initial as any).unitOfMeasure || "";
-
-      // Check if values are custom (not in predefined lists)
       const initialCat = (initial as any).category || "";
       const isCustomCat = initialCat && 
         (mode === 'equipment' || mode === 'tool' ? 
@@ -180,7 +197,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         ...f,
         id: initial.id || f.id,
         name: initial.name || "",
-        brand: (initial as any).brand || "", // NEW: Load brand
+        brand: (initial as any).brand || "",
         bottleSize: (initial as any).bottleSize || "",
         costPerBottle: initial?.costPerBottle ? String(initial.costPerBottle) : ((initial as any).costPerBottle || ""),
         currentStock: initial?.currentStock ? String(initial.currentStock) : ((initial as any).currentStock || f.currentStock),
@@ -195,30 +212,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         price: (initial as any).price ? String((initial as any).price) : "",
         lifeExpectancy: (initial as any).lifeExpectancy || "",
         unitOfMeasure: initialUnit,
-        imageUrl: (initial as any).imageUrl || f.imageUrl, // Preserve if already set
+        imageUrl: (initial as any).imageUrl || f.imageUrl,
         chemicalLibraryId: (initial as any).chemicalLibraryId || "",
         dilutionRatios: (initial as any).dilutionRatios || [],
         updatedAt: (initial as any).updated_at || (initial as any).updatedAt || "",
         createdAt: (initial as any).createdAt || (initial as any).created_at || "",
       }));
     } else {
-      // Check for session-saved "Draft" (recovery from crash)
-      const saved = localStorage.getItem('pending_inventory_form');
-      if (saved && open) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.mode === mode) {
-            setForm(parsed.form);
-            setCustomSubtype(parsed.customSubtype);
-            setCustomUnit(parsed.customUnit);
-            // Clear immediately to avoid unwanted loops, 
-            // but we'll re-save if it stays open
-            localStorage.removeItem('pending_inventory_form');
-            return;
-          }
-        } catch (e) { console.error("Restore failed", e); }
-      }
-
       setCustomCategory(false);
       setCustomSubtype(false);
       setCustomUnit(false);
@@ -530,6 +530,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   // Pre-save state just before triggering camera
+                  // This ensures the current form values (name, etc) are locked in before the app might refresh
+                  localStorage.setItem('pending_inventory_form', JSON.stringify({
+                    form,
+                    mode,
+                    customCategory,
+                    customSubtype,
+                    customUnit
+                  }));
                   localStorage.setItem('pending_inventory_form_active', 'true');
                   photoCameraRef.current?.click(); 
                 }}
