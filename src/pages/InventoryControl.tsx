@@ -104,8 +104,8 @@ const InventoryControl = () => {
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
   const [chemicalSort, setChemicalSort] = useState<string>("brand");
-  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock">("name");
-  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock">("name");
+  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost">("name");
+  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
   const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">(window.innerWidth < 768 ? "portrait" : "landscape");
@@ -409,13 +409,9 @@ const InventoryControl = () => {
       });
     }
     if (chemicalSort === "no_cost") {
-      return [...baseFiltered].sort((a, b) => {
-        const aFree = !a.costPerBottle || a.costPerBottle === 0;
-        const bFree = !b.costPerBottle || b.costPerBottle === 0;
-        if (aFree && !bFree) return -1;
-        if (!aFree && bFree) return 1;
-        return a.name.localeCompare(b.name);
-      });
+      return [...baseFiltered]
+        .filter(a => !a.costPerBottle || a.costPerBottle === 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
     }
     return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
   };
