@@ -103,9 +103,9 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost">("brand");
-  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost">("name");
-  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost">("name");
+  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost" | "updated_at">("brand");
+  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost" | "updated_at">("name");
+  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
   const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">(window.innerWidth < 768 ? "portrait" : "landscape");
@@ -426,6 +426,13 @@ const InventoryControl = () => {
         .filter(a => !a.costPerBottle || a.costPerBottle === 0)
         .sort((a, b) => a.name.localeCompare(b.name));
     }
+    if (chemicalSort === "updated_at") {
+      return [...baseFiltered].sort((a, b) => {
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+    }
     return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
   };
 
@@ -445,6 +452,11 @@ const InventoryControl = () => {
         const bLow = typeof b.lowThreshold === 'number' && b.quantity < (b.lowThreshold || 0);
         if (aLow && !bLow) return -1;
         if (!aLow && bLow) return 1;
+      }
+      if (supplySort === "updated_at") {
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
       }
       if (supplySort === "category") {
         if (a.category !== b.category) return a.category.localeCompare(b.category);
@@ -469,6 +481,11 @@ const InventoryControl = () => {
       if (equipmentSort === "purchaseDate") {
         const dateA = a.purchaseDate ? new Date(a.purchaseDate).getTime() : 0;
         const dateB = b.purchaseDate ? new Date(b.purchaseDate).getTime() : 0;
+        return dateB - dateA;
+      }
+      if (equipmentSort === "updated_at") {
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       }
       return a.name.localeCompare(b.name);
@@ -1631,6 +1648,7 @@ const InventoryControl = () => {
                   <option value="alphabetical">A-Z List</option>
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
+                  <option value="updated_at">Last Updated</option>
                   {allAvailableBrands.length > 0 && (
                     <optgroup label="Jump to Brand">
                       {allAvailableBrands.map(brand => (
@@ -1774,6 +1792,7 @@ const InventoryControl = () => {
                   <option value="category">Category</option>
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
+                  <option value="updated_at">Last Updated</option>
                 </select>
               </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || (m as any).price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
@@ -1948,6 +1967,7 @@ const InventoryControl = () => {
                   <option value="purchaseDate">Purchase Date</option>
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
+                  <option value="updated_at">Last Updated</option>
                 </select>
               </div>
               <div className="hidden sm:block">

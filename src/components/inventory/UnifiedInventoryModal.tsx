@@ -105,7 +105,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     costPerBottle: "",
     currentStock: "1",
     threshold: "1",
-    category: "Rag",
+    category: "Other",
     subtype: "",
     quantity: "0",
     costPerItem: "",
@@ -145,7 +145,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   // Dropdown options
   const categoryOptions = {
-    supply: ["Rag", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Other", "Custom"],
+    supply: ["Other", "Rag", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
   };
 

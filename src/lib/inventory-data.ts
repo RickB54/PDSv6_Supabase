@@ -41,6 +41,7 @@ export interface Chemical {
     imageUrl?: string;
     chemicalLibraryId?: string;
     createdAt?: string;
+    updatedAt?: string;
     dilutionRatios?: DilutionRatio[];
 }
 
@@ -54,6 +55,7 @@ export interface Material {
     notes?: string;
     lowThreshold?: number;
     createdAt: string;
+    updatedAt?: string;
     imageUrl?: string;
 }
 
@@ -66,8 +68,10 @@ export interface Tool {
     lifeExpectancy: string;
     notes: string;
     price: number;
+    quantity?: number;
     imageUrl?: string;
     createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface SetupMedia {
@@ -479,6 +483,7 @@ export async function getTools(): Promise<Tool[]> {
         warranty: item.warranty || '',
         purchaseDate: item.purchase_date || '',
         price: item.price || 0,
+        quantity: item.quantity || 1,
         lifeExpectancy: item.life_expectancy || '',
         notes: item.notes || '',
         imageUrl: item.image_url,
@@ -500,6 +505,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         warranty: tool.warranty,
         purchase_date: tool.purchaseDate && tool.purchaseDate.trim() ? tool.purchaseDate : null,
         price: tool.price,
+        quantity: tool.quantity || 1,
         life_expectancy: tool.lifeExpectancy,
         notes: tool.notes,
         image_url: tool.imageUrl,
