@@ -1326,7 +1326,12 @@ const InventoryControl = () => {
       </TableCell>
       <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
       <TableCell className={`font-medium ${!c.costPerBottle || c.costPerBottle === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-        {!c.costPerBottle || c.costPerBottle === 0 ? '⚠ $0.00' : `$${(c.costPerBottle).toFixed(2)}`}
+        <div className="flex flex-col">
+          <span>{!c.costPerBottle || c.costPerBottle === 0 ? '⚠ $0.00' : `$${(c.costPerBottle).toFixed(2)}`}</span>
+          {c.costPerBottle > 0 && c.currentStock > 0 && (
+            <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(c.costPerBottle * c.currentStock).toFixed(2)}</span>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
@@ -1387,7 +1392,10 @@ const InventoryControl = () => {
             {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
           </div>
-          <div className="text-sm text-zinc-300">{c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)}</div>
+          <div className="text-sm text-zinc-300">
+            {c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)} 
+            <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)})</span>
+          </div>
           {(() => {
             const ratios = getMasterRatios(c);
             if (ratios.length === 0) return null;
@@ -1777,7 +1785,12 @@ const InventoryControl = () => {
                         </TableCell>
                         <TableCell className="text-zinc-300">{m.category}</TableCell>
                         <TableCell className={`font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}
+                          <div className="flex flex-col">
+                            <span>{!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}</span>
+                            {m.costPerItem > 0 && m.quantity > 0 && (
+                              <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(m.costPerItem * m.quantity).toFixed(2)}</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
@@ -1811,7 +1824,7 @@ const InventoryControl = () => {
                           {m.name}
                         </div>
                         <div className={`text-sm font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)}`}
+                          {m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)} (Total: $${(m.costPerItem * m.quantity).toFixed(2)})`}
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
@@ -1939,7 +1952,12 @@ const InventoryControl = () => {
                         </TableCell>
                         <TableCell className="text-zinc-300">{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
                         <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}
+                          <div className="flex flex-col">
+                            <span>{!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}</span>
+                            {t.price > 0 && t.quantity > 1 && (
+                              <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(t.price * (t.quantity || 1)).toFixed(2)}</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell><span className="text-xs text-zinc-300 truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
                         <TableCell className="text-right">
@@ -1968,7 +1986,7 @@ const InventoryControl = () => {
                           {t.name}
                         </div>
                         <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
+                          {!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
                         </div>
                       </div>
                     </div>

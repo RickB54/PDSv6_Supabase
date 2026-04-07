@@ -365,15 +365,18 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         return;
       }
 
-      // Get the cost value for tax tracking/payload use
-      const cost = mode === 'chemical' ? numeric(form.costPerBottle) :
+      // Calculate total cost for tax tracking/payload use
+      const unitCost = mode === 'chemical' ? numeric(form.costPerBottle) :
         (mode === 'equipment' || mode === 'tool') ? numeric(form.price || form.cost) :
           numeric(form.costPerItem);
+      
+      const qty = mode === 'chemical' ? numeric(form.currentStock) : numeric(form.quantity);
+      const totalCost = unitCost * qty;
 
       const isNew = !form.id; // Track if this is a new purchase
       const id = form.id || crypto.randomUUID();
 
-      console.log(`[UnifiedInventoryModal] Saving ${mode}:`, { id, isNew, name: form.name, quantity: form.quantity, cost: cost });
+      console.log(`[UnifiedInventoryModal] Saving ${mode}:`, { id, isNew, name: form.name, quantity: qty, unitCost, totalCost });
 
       if (mode === 'chemical') {
         const payload = {
@@ -447,7 +450,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           if (!existingRecord) {
             await upsertSupabaseTaxExpense({
               date: form.purchaseDate || new Date().toISOString().split('T')[0],
-              amount: cost,
+              amount: totalCost,
               vendor: "Inventory Purchase",
               category: (mode === 'equipment' || mode === 'tool') ? "Equipment" : "Supplies",
               notes: `Purchased ${form.name}`,
@@ -816,6 +819,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       onChange={(e) => setForm({ ...form, costPerBottle: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     />
+                    <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
+                      <span>Total Value:</span>
+                      <span className="text-emerald-400 font-black">
+                        ${(numeric(form.costPerBottle) * numeric(form.currentStock)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
@@ -891,6 +900,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       onChange={(e) => setForm({ ...form, price: e.target.value, cost: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     />
+                    <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
+                      <span>Total Worth:</span>
+                      <span className="text-emerald-400 font-black">
+                        ${(numeric(form.price) * numeric(form.quantity)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
@@ -966,6 +981,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       onChange={(e) => setForm({ ...form, costPerItem: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     />
+                    <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
+                      <span>Total Cost:</span>
+                      <span className="text-emerald-400 font-black">
+                        ${(numeric(form.costPerItem) * numeric(form.quantity)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
