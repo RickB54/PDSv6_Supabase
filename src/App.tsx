@@ -224,7 +224,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
         <AppSidebar key={effectiveUser.id} user={effectiveUser} />
       </div>
-      <div className={`flex-1 overflow-x-hidden ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
+      <div className={`flex-1 ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
           <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

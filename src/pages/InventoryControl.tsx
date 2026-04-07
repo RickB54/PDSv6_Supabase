@@ -1598,7 +1598,7 @@ const InventoryControl = () => {
         {/* Chemicals Section (Yellow) */}
         <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[104px] z-10 border-b border-yellow-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
+            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[80px] z-10 border-b border-yellow-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
             onClick={() => toggleSection('chemicals')}
           >
             <div className="flex items-center gap-3">
@@ -1694,7 +1694,7 @@ const InventoryControl = () => {
                 </div>
               </div>
               <div className="space-y-8">
-                {chemicalSort === "brand" || (chemicalSort !== "alphabetical" && chemicalSort !== "low_stock") ? (
+                {(chemicalSort === "brand" || (!["alphabetical", "low_stock", "no_cost", "updated_at"].includes(chemicalSort) && !allAvailableBrands.includes(chemicalSort))) ? (
                   sortedBrands.map(brand => (
                     <div key={brand} className="space-y-2">
                       <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-yellow-500">
@@ -1745,7 +1745,7 @@ const InventoryControl = () => {
         {/* Supplies Section (Blue) - Renamed from Materials */}
         <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[104px] z-10 border-b border-blue-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
+            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[80px] z-10 border-b border-blue-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
             onClick={() => toggleSection('materials')}
           >
             <div className="flex items-center gap-3">
@@ -1919,7 +1919,7 @@ const InventoryControl = () => {
         {/* Equipment Section (Purple) - Renamed from Tools */}
         <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[104px] z-10 border-b border-purple-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
+            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[80px] z-10 border-b border-purple-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
             onClick={() => toggleSection('tools')}
           >
             <div className="flex items-center gap-3">
