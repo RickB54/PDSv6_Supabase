@@ -103,7 +103,7 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<string>("brand");
+  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost">("brand");
   const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost">("name");
   const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -386,12 +386,12 @@ const InventoryControl = () => {
       (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase())))
     );
 
-    // If a specific brand is selected, filter by it
-    if (chemicalSort !== "brand" && chemicalSort !== "alphabetical" && chemicalSort !== "low_stock") {
+    // If a specific brand is selected, filter by it (exclude special sort modes)
+    if (!["brand", "alphabetical", "low_stock", "no_cost"].includes(chemicalSort)) {
       baseFiltered = baseFiltered.filter(c => (c.brand || "Other / No Brand") === chemicalSort);
     }
 
-    if (chemicalSort === "brand" || (chemicalSort !== "alphabetical" && chemicalSort !== "low_stock")) {
+    if (chemicalSort === "brand" || (!["alphabetical", "low_stock", "no_cost"].includes(chemicalSort))) {
       return [...baseFiltered].sort((a, b) => {
         const brandA = (a.brand || "Z - No Brand").toLowerCase();
         const brandB = (b.brand || "Z - No Brand").toLowerCase();
@@ -417,19 +417,16 @@ const InventoryControl = () => {
   };
 
   const getSortedSupplies = () => {
-    const filtered = (supplies || []).filter(s =>
+    let filtered = (supplies || []).filter(s =>
       s && (s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
       (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase())))
     );
     
+    if (supplySort === "no_cost") {
+      filtered = filtered.filter(s => !s.costPerItem || s.costPerItem === 0);
+    }
+    
     return [...filtered].sort((a, b) => {
-      if (supplySort === "no_cost") {
-        const aFree = !a.costPerItem || a.costPerItem === 0;
-        const bFree = !b.costPerItem || b.costPerItem === 0;
-        if (aFree && !bFree) return -1;
-        if (!aFree && bFree) return 1;
-        return a.name.localeCompare(b.name);
-      }
       if (supplySort === "low_stock") {
         const aLow = typeof a.lowThreshold === 'number' && a.quantity < (a.lowThreshold || 0);
         const bLow = typeof b.lowThreshold === 'number' && b.quantity < (b.lowThreshold || 0);
@@ -444,18 +441,15 @@ const InventoryControl = () => {
   };
 
   const getSortedEquipment = () => {
-    const filtered = (equipment || []).filter(e =>
+    let filtered = (equipment || []).filter(e =>
       e && e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
     );
 
+    if (equipmentSort === "no_cost") {
+      filtered = filtered.filter(e => !e.price || e.price === 0);
+    }
+
     return [...filtered].sort((a, b) => {
-      if (equipmentSort === "no_cost") {
-        const aFree = !a.price || a.price === 0;
-        const bFree = !b.price || b.price === 0;
-        if (aFree && !bFree) return -1;
-        if (!aFree && bFree) return 1;
-        return a.name.localeCompare(b.name);
-      }
       if (equipmentSort === "low_stock") {
         return a.name.localeCompare(b.name);
       }

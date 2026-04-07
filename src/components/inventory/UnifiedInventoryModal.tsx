@@ -341,15 +341,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         onOpenChange(false);
         return;
       }
-
-      // Validate cost field (MANDATORY)
+      // Get the cost value for tax tracking/payload use
       const cost = mode === 'chemical' ? numeric(form.costPerBottle) :
         (mode === 'equipment' || mode === 'tool') ? numeric(form.price) :
           numeric(form.costPerItem);
-      if (cost <= 0) {
-        toast.error("Cost is required and must be greater than 0");
-        return;
-      }
 
       const isNew = !form.id; // Track if this is a new purchase
       const id = form.id || crypto.randomUUID();
@@ -749,14 +744,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Cost per Bottle *</Label>
+                    <Label className="text-xs text-zinc-400">Cost per Bottle</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={form.costPerBottle}
                       onChange={(e) => setForm({ ...form, costPerBottle: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      required
                     />
                   </div>
                   <div>
@@ -825,14 +819,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Price / Cost *</Label>
+                    <Label className="text-xs text-zinc-400">Price / Cost</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={form.price}
                       onChange={(e) => setForm({ ...form, price: e.target.value, cost: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      required
                     />
                   </div>
                   <div>
@@ -901,14 +894,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Cost per Item *</Label>
+                    <Label className="text-xs text-zinc-400">Cost per Item</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={form.costPerItem}
                       onChange={(e) => setForm({ ...form, costPerItem: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      required
                     />
                   </div>
                   <div>
