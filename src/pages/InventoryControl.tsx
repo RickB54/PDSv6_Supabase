@@ -2122,12 +2122,16 @@ const InventoryControl = () => {
           setModalOpen(open);
           if (!open) {
             // Clean up session draft when closed normally
-            sessionStorage.removeItem('pending_inventory_form');
-            sessionStorage.removeItem('pending_inventory_form_active');
+            localStorage.removeItem('pending_inventory_form');
+            localStorage.removeItem('pending_inventory_form_active');
+            setEditing(null); // Clear editing state so next open is fresh
           }
         }}
         initial={editing || null}
-        onSaved={async () => { await loadData(); }}
+        onSaved={async () => { 
+          sessionStorage.removeItem('inventory-loaded');
+          await loadData(); 
+        }}
       />
 
       <ChemicalDetail
@@ -2303,11 +2307,12 @@ const InventoryControl = () => {
       </AlertDialog>
       <InventoryImportModal
         open={inventoryImportOpen}
-        onOpenChange={(open) => {
-          setInventoryImportOpen(open);
-          if (!open) loadData();
-        }}
+        onOpenChange={setInventoryImportOpen}
         defaultTab={activeImportTab}
+        onSaved={async () => {
+          sessionStorage.removeItem('inventory-loaded');
+          await loadData();
+        }}
       />
       <InventoryCleanupModal
         open={inventoryCleanupOpen}

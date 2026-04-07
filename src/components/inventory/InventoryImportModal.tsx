@@ -280,21 +280,29 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         setIsImporting(false);
         setIsUploadingPhotos(false);
 
+        // Filter out successfully imported items from the manualRows
+        // We'll keep the ones that appeared in failedItems
+        const stillInList = manualRowsRef.current.filter(row => {
+            const name = row.productName || row.name || "";
+            return failedItems.some(f => f.startsWith(name));
+        });
+
         if (importedCount > 0) {
-            toast.success(`Successfully imported ${importedCount} of ${validRows.length} items.`);
-        }
-        if (failedItems.length > 0) {
-            toast.error(`Failed to save: ${failedItems.join(", ")}. Check connection.`);
+            toast.success(`Successfully imported ${importedCount} items.`);
+            setManualRows(stillInList.length > 0 ? stillInList : [emptyRow()]);
+            
+            // If everything is done or successfully removed, clean storage
+            if (stillInList.length === 0) {
+                localStorage.removeItem('ultra_v6_manual_rows');
+                localStorage.removeItem('inventory_import_modal_open');
+                onOpenChange(false);
+                setStep("upload");
+            }
         }
 
-        if (importedCount === validRows.length) {
-            // All saved — clean up and close
-            localStorage.removeItem('ultra_v6_manual_rows');
-            onOpenChange(false);
-            setManualRows([emptyRow()]);
-            setStep("upload");
+        if (failedItems.length > 0) {
+            toast.error(`Some items failed to save. They remain in the list for review.`);
         }
-        // If some failed, keep the modal open so user can retry
     };
 
     const addAiItem = (result: SearchResult) => {

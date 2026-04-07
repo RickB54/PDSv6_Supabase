@@ -461,6 +461,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       }
 
       onOpenChange(false);
+      
+      // EXPLICITLY clear recovery drafts on success to prevent 'ghosting'
+      localStorage.removeItem('pending_inventory_form');
+      localStorage.removeItem('pending_inventory_form_active');
+      recoveredRef.current = false;
+
       await onSaved?.();
 
       // Auto-open Card if we just linked one
