@@ -281,15 +281,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   }, [isDemoMode, tick]);
 
   // Group State Persistence
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem('sidebar_groups');
-      if (saved) return JSON.parse(saved);
-    } catch { }
-    return isDemoMode 
-      ? { 'Customer Intake': true, 'Operations': true, 'Finance & Sales': true, 'Reports': true, 'Chemicals': true, 'Inventory & Assets': true, 'Prime Learning Center': true, 'Staff Management': true, 'Marketing & Retention': true, 'Settings': true }
-      : { 'Customer Intake': true, 'Operations': true }; // Default for demo look
-  });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
 
   const toggleGroup = (title: string, isOpen: boolean) => {
     const next = { ...openGroups, [title]: isOpen };
