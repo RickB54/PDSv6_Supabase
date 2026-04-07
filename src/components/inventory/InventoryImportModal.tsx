@@ -123,17 +123,38 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         if (!file || activeRowIdx === null) return;
         
         setIsProcessingImage(true);
-        // Using the central high-performance compressor that handles huge files on mobile
-        const compressed = await compressImageForUpload(file);
-        const url = URL.createObjectURL(compressed);
-        
-        const newRows = [...manualRows];
-        newRows[activeRowIdx] = { ...newRows[activeRowIdx], imageFile: compressed, imageUrl: url };
-        setManualRows(newRows);
-        
-        setIsProcessingImage(false);
-        setActiveRowIdx(null);
-        toast.success("Photo optimized and prepared.");
+        try {
+            // Using the central high-performance compressor
+            const compressed = await compressImageForUpload(file);
+            
+            // CLOUD-FIRST STRATEGY: Upload IMMEDIATELY to avoid memory issues with Blobs/Base64
+            const publicUrl = await uploadInventoryImage(compressed);
+            
+            if (publicUrl) {
+                const newRows = [...manualRows];
+                newRows[activeRowIdx] = { 
+                    ...newRows[activeRowIdx], 
+                    imageUrl: publicUrl,
+                    imageFile: null // No longer need the file in memory since it's on the cloud
+                };
+                setManualRows(newRows);
+                toast.success("Photo secured to cloud.");
+            }
+        } catch (err) {
+            console.error("Instant upload failed", err);
+            toast.error("Cloud stabilization failed. Trying local only.");
+            // Fallback to local URL if upload fails (less stable but works)
+            const url = URL.createObjectURL(file);
+            const newRows = [...manualRows];
+            newRows[activeRowIdx] = { ...newRows[activeRowIdx], imageFile: file, imageUrl: url };
+            setManualRows(newRows);
+        } finally {
+            setIsProcessingImage(false);
+            setActiveRowIdx(null);
+            // Clear input so same file can be selected again
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
+            if (galleryInputRef.current) galleryInputRef.current.value = '';
+        }
     };
 
     const triggerCamera = (idx: number) => {
@@ -196,16 +217,15 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
             // Each item is wrapped in its OWN try/catch
             // A failure on item 1 NEVER prevents items 2, 3, etc. from saving
             try {
-                let finalImageUrl = "";
+                let finalImageUrl = row.imageUrl || "";
 
-                // Upload photo if captured
-                if (row.imageFile) {
+                // Upload photo ONLY if it hasn't been uploaded yet (is a local file)
+                if (row.imageFile && !finalImageUrl.startsWith('http')) {
                     try {
                         const uploadedUrl = await uploadInventoryImage(row.imageFile);
                         if (uploadedUrl) finalImageUrl = uploadedUrl;
                     } catch (uploadErr) {
                         console.error("Photo upload failed", uploadErr);
-                        // Continue saving the item without the photo
                     }
                 }
 
