@@ -145,7 +145,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   // Dropdown options
   const categoryOptions = {
-    supply: ["Other", "Towel/Rag", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
+    supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
   };
 

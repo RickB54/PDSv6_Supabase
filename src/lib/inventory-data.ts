@@ -479,7 +479,7 @@ export async function getTools(): Promise<Tool[]> {
     return (data || []).map(item => ({
         id: item.id,
         name: item.name,
-        category: item.category || 'General',
+        category: item.category || 'Other',
         warranty: item.warranty || '',
         purchaseDate: item.purchase_date || '',
         price: item.price || 0,
@@ -517,11 +517,14 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         .upsert(dbData);
 
     if (error) {
-        // If category column doesn't exist in DB yet, retry without it
-        if (error.message?.includes('category') || error.code === '42703') {
-            console.warn('category column not in tools table, retrying without it');
-            const { category: _cat, ...dbDataWithoutCat } = dbData;
-            const { error: retryErr } = await supabase.from('tools').upsert(dbDataWithoutCat);
+        // Handle missing columns gracefully (schema might not be updated yet)
+        if (error.message?.includes('quantity') || error.message?.includes('category') || error.code === '42703') {
+            console.warn('Handling missing columns in tools table, retrying...', error.message);
+            const sanitizedData = { ...dbData };
+            if (error.message?.includes('quantity')) delete sanitizedData.quantity;
+            if (error.message?.includes('category')) delete sanitizedData.category;
+            
+            const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
             if (retryErr) throw retryErr;
         } else {
             throw error;
