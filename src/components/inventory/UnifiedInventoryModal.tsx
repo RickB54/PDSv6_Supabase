@@ -135,6 +135,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const photoRef = useRef<HTMLInputElement>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
+  const recoveredRef = useRef(false);
   const [isUploading, setIsUploading] = useState(false);
 
   // Track if user selected "Custom" for dropdowns
@@ -161,19 +162,28 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   };
 
   useEffect(() => {
+    // If we've already recovered in this mount session, ignore prop changes that might overwrite our data
+    if (recoveredRef.current) return;
+
     // CHECK RECOVERY FIRST - Always prioritize unsaved draft if modal is open
     const saved = localStorage.getItem('pending_inventory_form');
     if (saved && open) {
       try {
         const parsed = JSON.parse(saved);
-        // Match by mode or specific item ID if editing
-        if (parsed.mode === mode && (!parsed.form.id || (initial && parsed.form.id === initial.id))) {
-          console.log("Recovered unsaved draft state");
-          setForm(parsed.form);
-          setCustomSubtype(parsed.customSubtype);
-          setCustomUnit(parsed.customUnit);
-          localStorage.removeItem('pending_inventory_form');
-          return;
+        // Only recover if the mode matches
+        if (parsed.mode === mode) {
+          // If we have an initial item, only recover if it's the same item
+          if (initial && parsed.form.id && parsed.form.id !== initial.id) {
+            // ID mismatch, don't recover
+          } else {
+            console.log("Recovered unsaved draft state. Locking until save/close.");
+            setForm(parsed.form);
+            setCustomSubtype(parsed.customSubtype);
+            setCustomUnit(parsed.customUnit);
+            setCustomCategory(parsed.customCategory);
+            recoveredRef.current = true;
+            return;
+          }
         }
       } catch (e) {
         console.error("Restore failed", e);
@@ -247,6 +257,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       });
     }
   }, [initial, open, mode]);
+
+  // Clean up lock when modal closes
+  useEffect(() => {
+    if (!open) {
+      recoveredRef.current = false;
+    }
+  }, [open]);
 
   // SESSION RECOVERY: Persist form state to SESSION STORAGE on every change
   // This allows the app to RE-OPEN the modal automatically if the browser reloads
