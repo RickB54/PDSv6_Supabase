@@ -20,10 +20,11 @@ import { compressImageForUpload } from "@/lib/image-compression";
 interface InventoryImportModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    defaultTab?: "chemicals" | "supplies" | "equipment" | "tools" | "materials"; // Legacy names supported
+    onSaved?: () => void;
+    defaultTab?: "chemicals" | "supplies" | "equipment" | "tools" | "materials"; 
 }
 
-export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemicals" }: InventoryImportModalProps) {
+export function InventoryImportModal({ open, onOpenChange, onSaved, defaultTab = "chemicals" }: InventoryImportModalProps) {
     // Normalize legacy tab names
     const normalizeTab = (tab: string): "chemicals" | "supplies" | "equipment" => {
         if (tab === 'materials') return 'supplies';
@@ -210,22 +211,21 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
 
         setIsImporting(true);
         setIsUploadingPhotos(true);
-        let importedCount = 0;
         const failedItems: string[] = [];
+        let importedCount = 0;
 
-        for (const row of validRows) {
-            // Each item is wrapped in its OWN try/catch
-            // A failure on item 1 NEVER prevents items 2, 3, etc. from saving
+        // Parallel Save for maximum speed and reliability
+        const savePromises = validRows.map(async (row) => {
             try {
                 let finalImageUrl = row.imageUrl || "";
 
-                // Upload photo ONLY if it hasn't been uploaded yet (is a local file)
+                // Upload photo ONLY if it hasn't been uploaded yet
                 if (row.imageFile && !finalImageUrl.startsWith('http')) {
                     try {
                         const uploadedUrl = await uploadInventoryImage(row.imageFile);
                         if (uploadedUrl) finalImageUrl = uploadedUrl;
                     } catch (uploadErr) {
-                        console.error("Photo upload failed", uploadErr);
+                        console.error("Photo upload failed for row", row.name || row.productName, uploadErr);
                     }
                 }
 
@@ -267,15 +267,17 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
                         imageUrl: finalImageUrl
                     }, true);
                 }
-
+                
                 importedCount++;
-
             } catch (itemError: any) {
-                const errMsg = itemError?.message || String(itemError) || "Unknown error";
-                console.error("Failed to save item:", row.name || row.productName, errMsg, itemError);
-                failedItems.push(`${row.name || row.productName || "(unnamed)"} [${errMsg}]`);
+                const name = row.name || row.productName || "(unnamed)";
+                const errMsg = itemError?.message || String(itemError);
+                console.error(`Failed to save ${name}:`, itemError);
+                failedItems.push(`${name} (${errMsg})`);
             }
-        }
+        });
+
+        await Promise.all(savePromises);
 
         setIsImporting(false);
         setIsUploadingPhotos(false);

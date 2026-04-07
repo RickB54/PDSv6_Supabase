@@ -19,10 +19,12 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const toc = useMemo(() => makeToc(role), [role]);
-  const [index, setIndex] = useState(0);
-  const [accordionValue, setAccordionValue] = useState<string>(""); // Default closed
+  
+  // Use ID instead of index for robustness
+  const [currentTopicId, setCurrentTopicId] = useState<string | undefined>(initialTopicId);
+  const [accordionValue, setAccordionValue] = useState<string>(""); 
 
-  // Handle direct navigation to topic via event (more robust than just prop)
+  // Handle direct navigation to topic via event
   useEffect(() => {
     const handleOpenHelp = (e: any) => {
       let topicId: string | undefined = undefined;
@@ -33,11 +35,14 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
       }
 
       if (topicId) {
-        const topicIndex = toc.findIndex(t => t.id === topicId);
-        if (topicIndex !== -1) {
-          setIndex(topicIndex);
-          setAccordionValue(""); // Ensure menu is closed to show content
-          setQuery(''); // Clear search to ensure topic is visible in filtered list
+        const found = toc.find(t => t.id === topicId);
+        if (found) {
+          setCurrentTopicId(topicId);
+          setAccordionValue(""); 
+          setQuery(''); 
+          // Reset scroll of content area
+          const contentArea = document.getElementById('help-content-scroll');
+          if (contentArea) contentArea.scrollTop = 0;
         }
       }
     };
@@ -46,16 +51,13 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
     return () => window.removeEventListener('open-help', handleOpenHelp);
   }, [toc]);
 
-  // Handle direct navigation to topic via prop (initial mount)
+  // Handle prop changes (initial mount or forced update from parent)
   useEffect(() => {
     if (open && initialTopicId) {
-      const topicIndex = toc.findIndex(t => t.id === initialTopicId);
-      if (topicIndex !== -1) {
-        setIndex(topicIndex);
-        setAccordionValue("");
-      }
+      setCurrentTopicId(initialTopicId);
+      setAccordionValue("");
     }
-  }, [open, initialTopicId, toc]);
+  }, [open, initialTopicId]);
 
   const filteredToc = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -63,19 +65,31 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
     return toc.filter(t => (t.title + ' ' + t.summary + ' ' + t.content.join(' ')).toLowerCase().includes(q));
   }, [query, toc]);
 
-  useEffect(() => {
-    if (index >= filteredToc.length) setIndex(0);
-  }, [filteredToc, index]);
+  // Derive active topic from ID
+  const topic: HelpTopic | undefined = useMemo(() => {
+    return toc.find(t => t.id === currentTopicId) || filteredToc[0];
+  }, [currentTopicId, toc, filteredToc]);
 
-  const topic: HelpTopic | undefined = filteredToc[index];
+  const currentIndex = useMemo(() => {
+    if (!topic) return 0;
+    return filteredToc.findIndex(t => t.id === topic.id);
+  }, [topic, filteredToc]);
 
-  const goPrev = () => setIndex(i => Math.max(0, i - 1));
-  const goNext = () => setIndex(i => Math.min(filteredToc.length - 1, i + 1));
+  const goPrev = () => {
+    const prev = filteredToc[Math.max(0, currentIndex - 1)];
+    if (prev) setCurrentTopicId(prev.id);
+  };
+  
+  const goNext = () => {
+    const next = filteredToc[Math.min(filteredToc.length - 1, currentIndex + 1)];
+    if (next) setCurrentTopicId(next.id);
+  };
 
-  const handleTopicClick = (i: number) => {
-    setIndex(i);
-    // Auto-close accordion after selection
+  const handleTopicClick = (tId: string) => {
+    setCurrentTopicId(tId);
     setAccordionValue("");
+    const contentArea = document.getElementById('help-content-scroll');
+    if (contentArea) contentArea.scrollTop = 0;
   };
 
   // Determine Groups for List
@@ -141,12 +155,12 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleTopicClick(filteredToc.indexOf(t));
+                                  handleTopicClick(t.id);
                                 }}
-                                className={`text-left text-sm px-3 py-2 rounded-md transition-colors flex items-center justify-between group ${filteredToc.indexOf(t) === index ? 'bg-emerald-900/30 text-emerald-100 border border-emerald-500/20' : 'hover:bg-slate-800 text-slate-300 hover:text-white'}`}
+                                className={`text-left text-sm px-3 py-2 rounded-md transition-colors flex items-center justify-between group ${t.id === currentTopicId ? 'bg-emerald-900/30 text-emerald-100 border border-emerald-500/20' : 'hover:bg-slate-800 text-slate-300 hover:text-white'}`}
                               >
                                 {t.title}
-                                {filteredToc.indexOf(t) === index && <ChevronRight className="w-3 h-3 text-emerald-500" />}
+                                {t.id === currentTopicId && <ChevronRight className="w-3 h-3 text-emerald-500" />}
                               </button>
                             ))}
                           </div>
@@ -187,17 +201,17 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                   </div>
                 </div>
                 <div className="flex items-center gap-1 bg-slate-900/80 rounded-lg p-1 border border-slate-800 shrink-0 self-start">
-                  <Button variant="ghost" size="icon" onClick={goPrev} disabled={index === 0} className="h-9 w-9 text-slate-400 hover:text-emerald-400 hover:bg-slate-800" title="Previous Topic">
+                  <Button variant="ghost" size="icon" onClick={goPrev} disabled={currentIndex === 0} className="h-9 w-9 text-slate-400 hover:text-emerald-400 hover:bg-slate-800" title="Previous Topic">
                     <span className="text-xl">←</span>
                   </Button>
                   <div className="w-[1px] h-5 bg-slate-700 mx-1" />
-                  <Button variant="ghost" size="icon" onClick={goNext} disabled={index === filteredToc.length - 1} className="h-9 w-9 text-slate-400 hover:text-sky-400 hover:bg-slate-800" title="Next Topic">
+                  <Button variant="ghost" size="icon" onClick={goNext} disabled={currentIndex === filteredToc.length - 1} className="h-9 w-9 text-slate-400 hover:text-sky-400 hover:bg-slate-800" title="Next Topic">
                     <span className="text-xl">→</span>
                   </Button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-4 space-y-5 custom-scrollbar text-lg leading-relaxed text-slate-300 pb-8">
+              <div id="help-content-scroll" className="flex-1 overflow-y-auto pr-4 space-y-5 custom-scrollbar text-lg leading-relaxed text-slate-300 pb-8">
                 {topic.content.map((p, i) => (
                   <p key={i} className="">{p}</p>
                 ))}

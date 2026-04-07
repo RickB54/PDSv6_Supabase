@@ -358,17 +358,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       }
 
       if (isDemoMode) {
-        toast.error("Training Mode: Changes to the permanent inventory are disabled.");
+        toast.warning("Training Session: Persistent database writes are disabled.", {
+          description: "Your changes were simulated locally but not saved to the permanent inventory."
+        });
         onOpenChange(false);
         return;
       }
+
       // Get the cost value for tax tracking/payload use
       const cost = mode === 'chemical' ? numeric(form.costPerBottle) :
-        (mode === 'equipment' || mode === 'tool') ? numeric(form.price) :
+        (mode === 'equipment' || mode === 'tool') ? numeric(form.price || form.cost) :
           numeric(form.costPerItem);
 
       const isNew = !form.id; // Track if this is a new purchase
       const id = form.id || crypto.randomUUID();
+
+      console.log(`[UnifiedInventoryModal] Saving ${mode}:`, { id, isNew, name: form.name, quantity: form.quantity, cost: cost });
 
       if (mode === 'chemical') {
         const payload = {
@@ -419,8 +424,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           imageUrl: form.imageUrl,
         };
 
+        console.log('[UnifiedInventoryModal] Supplies/Material Payload:', payload);
+
         const { saveMaterial } = await import("@/lib/inventory-data");
-        await saveMaterial(payload, isNew);
+        const result = await saveMaterial(payload, isNew);
+        console.log('[UnifiedInventoryModal] saveMaterial database response:', result);
       }
 
       // Invalidate session cache so InventoryControl re-fetches fresh data
@@ -467,7 +475,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       localStorage.removeItem('pending_inventory_form_active');
       recoveredRef.current = false;
 
-      await onSaved?.();
+      if (onSaved) {
+        console.log('[UnifiedInventoryModal] Notifying parent to refresh data...');
+        await onSaved();
+      }
 
       // Auto-open Card if we just linked one
       if (mode === 'chemical' && form.chemicalLibraryId) {

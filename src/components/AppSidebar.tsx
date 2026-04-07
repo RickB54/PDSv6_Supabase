@@ -543,7 +543,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={group.title} className="text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full">
+                        <SidebarMenuButton 
+                          tooltip={group.title} 
+                          className="text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full"
+                          onClick={() => {
+                            const sectionId = group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            navigate(`/section/${sectionId}`);
+                          }}
+                        >
                           <group.icon className="h-4 w-4 mr-2" />
                           {open && (
                             <>

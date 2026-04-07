@@ -327,6 +327,22 @@ const App = () => {
 
   useEffect(() => {
     let mounted = true;
+    
+    // ENVIRONMENTAL AUDIT (Separation of Demo vs Real)
+    const isDemoActive = localStorage.getItem("demo_mode_active") === "true";
+    const modeStyle = isDemoActive 
+      ? 'background: #b45309; color: #fff; font-weight: bold; padding: 4px 8px; border-radius: 4px;' 
+      : 'background: #065f46; color: #fff; font-weight: bold; padding: 4px 8px; border-radius: 4px;';
+    
+    console.log(`%c PRIME SYSTEM STATUS %c ${isDemoActive ? 'TRAINING MODE ACTIVE' : 'PRODUCTION MODE ACTIVE'} `, 
+      'background: #1e293b; color: #cbd5e1; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;',
+      modeStyle
+    );
+
+    if (isDemoActive) {
+      console.warn("[App] Training Mode is currently active. Persistent database writes across the inventory and CRM are disabled to protect production data integrity.");
+    }
+    
     console.log("[App] Mounting...");
     
     try {

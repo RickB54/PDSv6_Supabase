@@ -334,15 +334,23 @@ export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; l
 // ============================================
 
 export async function getMaterials(): Promise<Material[]> {
+    if (isDemoActive()) {
+        const { MOCK_INVENTORY } = await import('./demoMockData');
+        return (MOCK_INVENTORY as any).materials || [];
+    }
+
+    console.log('[InventoryData] getMaterials: Fetching from Supabase...');
     const { data, error } = await supabase
         .from('materials')
         .select('*')
         .order('name');
 
     if (error) {
-        console.error('Error loading materials:', error);
+        console.error('[InventoryData] getMaterials: Supabase Error!', error);
         return [];
     }
+
+    console.log(`[InventoryData] getMaterials: Successfully loaded ${data?.length || 0} materials`);
 
     return (data || []).map(item => ({
         id: item.id,
@@ -359,13 +367,22 @@ export async function getMaterials(): Promise<Material[]> {
     }));
 }
 
-export async function saveMaterial(material: Partial<Material>, isNew: boolean = false): Promise<void> {
-    if (isDemoActive()) return;
+export async function saveMaterial(material: Partial<Material>, isNew: boolean = false): Promise<Material | undefined> {
+    if (isDemoActive()) {
+        console.warn('[InventoryData] saveMaterial: BLOCKED - Training Session');
+        return;
+    }
+    
+    console.log(`[InventoryData] saveMaterial: Preparing to save ${isNew ? 'NEW' : 'EXISTING'} material:`, material);
+
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) throw new Error('Not authenticated');
+    if (!session?.user) {
+        console.error('[InventoryData] saveMaterial: No active session found!');
+        throw new Error('Not authenticated');
+    }
 
     const dbData: any = {
-        id: material.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
+        id: material.id || crypto.randomUUID(), 
         user_id: session.user.id,
         name: material.name,
         category: material.category,
@@ -378,22 +395,51 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase
-        .from('materials')
-        .upsert(dbData);
+    console.log('[InventoryData] saveMaterial: Updating database...', dbData);
 
-    if (error) throw error;
+    const { data: upsertData, error } = await supabase
+        .from('materials')
+        .upsert(dbData)
+        .select();
+
+    if (error) {
+        console.error('[InventoryData] saveMaterial: Supabase Error!', error);
+        throw error;
+    }
+    
+    const savedItem = upsertData?.[0];
+    console.log('[InventoryData] saveMaterial: Persistence Successful!', savedItem);
+
+    // Sync LocalForage Cache
+    try {
+        const list = (await import('localforage')).default;
+        const current = (await list.getItem<Material[]>('materials')) || [];
+        const next = [...current];
+        const index = next.findIndex(m => m.id === (savedItem?.id || dbData.id));
+        if (index >= 0) {
+            next[index] = savedItem || (dbData as any);
+        } else {
+            next.push(savedItem || (dbData as any));
+        }
+        await list.setItem('materials', next);
+        console.log('[InventoryData] Local cache synced for material:', dbData.id);
+    } catch (cacheErr) {
+        console.warn('[InventoryData] Local cache sync failed:', cacheErr);
+    }
 
     // Record as expense in budget if this is a new purchase
     if (isNew && material.costPerItem && material.quantity) {
         const totalCost = material.costPerItem * material.quantity;
         await upsertExpense({
+            date: new Date().toISOString().split('T')[0],
             amount: totalCost,
             category: 'Supplies',
-            description: `Purchased ${material.name} (${material.quantity} items @ $${material.costPerItem})`,
-            createdAt: new Date().toISOString()
+            description: `Stock Purchase: ${material.name} (Qty: ${material.quantity})`,
+            type: 'expense'
         } as any);
     }
+
+    return savedItem;
 }
 
 export async function deleteMaterial(id: string): Promise<void> {
@@ -411,6 +457,11 @@ export async function deleteMaterial(id: string): Promise<void> {
 // ============================================
 
 export async function getTools(): Promise<Tool[]> {
+    if (isDemoActive()) {
+        const { MOCK_INVENTORY } = await import('./demoMockData');
+        return (MOCK_INVENTORY as any).tools || (MOCK_INVENTORY as any).equipment || [];
+    }
+
     const { data, error } = await supabase
         .from('tools')
         .select('*')
