@@ -239,7 +239,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         costPerBottle: "",
         currentStock: "0",
         threshold: "1",
-        category: "Rag",
+        category: "Other",
         subtype: "",
         quantity: "0",
         costPerItem: "",
