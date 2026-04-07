@@ -408,6 +408,15 @@ const InventoryControl = () => {
         return a.name.localeCompare(b.name);
       });
     }
+    if (chemicalSort === "no_cost") {
+      return [...baseFiltered].sort((a, b) => {
+        const aFree = !a.costPerBottle || a.costPerBottle === 0;
+        const bFree = !b.costPerBottle || b.costPerBottle === 0;
+        if (aFree && !bFree) return -1;
+        if (!aFree && bFree) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
     return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
   };
 
@@ -418,6 +427,13 @@ const InventoryControl = () => {
     );
     
     return [...filtered].sort((a, b) => {
+      if (supplySort === "no_cost") {
+        const aFree = !a.costPerItem || a.costPerItem === 0;
+        const bFree = !b.costPerItem || b.costPerItem === 0;
+        if (aFree && !bFree) return -1;
+        if (!aFree && bFree) return 1;
+        return a.name.localeCompare(b.name);
+      }
       if (supplySort === "low_stock") {
         const aLow = typeof a.lowThreshold === 'number' && a.quantity < (a.lowThreshold || 0);
         const bLow = typeof b.lowThreshold === 'number' && b.quantity < (b.lowThreshold || 0);
@@ -437,8 +453,14 @@ const InventoryControl = () => {
     );
 
     return [...filtered].sort((a, b) => {
+      if (equipmentSort === "no_cost") {
+        const aFree = !a.price || a.price === 0;
+        const bFree = !b.price || b.price === 0;
+        if (aFree && !bFree) return -1;
+        if (!aFree && bFree) return 1;
+        return a.name.localeCompare(b.name);
+      }
       if (equipmentSort === "low_stock") {
-        // Equipment doesn't typically have threshold in DB, but we'll sort by 'life expectancy' or just alphabet as fallback
         return a.name.localeCompare(b.name);
       }
       if (equipmentSort === "purchaseDate") {
@@ -1300,7 +1322,9 @@ const InventoryControl = () => {
         </div>
       </TableCell>
       <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
-      <TableCell className="text-zinc-300">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
+      <TableCell className={`font-medium ${!c.costPerBottle || c.costPerBottle === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+        {!c.costPerBottle || c.costPerBottle === 0 ? '⚠ $0.00' : `$${(c.costPerBottle).toFixed(2)}`}
+      </TableCell>
       <TableCell>
         <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
           {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
@@ -1549,6 +1573,7 @@ const InventoryControl = () => {
                   <option value="brand">By Brand (All)</option>
                   <option value="alphabetical">A-Z List</option>
                   <option value="low_stock">Low Threshold</option>
+                  <option value="no_cost">⚠ Missing Cost</option>
                   {allAvailableBrands.length > 0 && (
                     <optgroup label="Jump to Brand">
                       {allAvailableBrands.map(brand => (
@@ -1691,6 +1716,7 @@ const InventoryControl = () => {
                   <option value="name">A-Z Name</option>
                   <option value="category">Category</option>
                   <option value="low_stock">Low Threshold</option>
+                  <option value="no_cost">⚠ Missing Cost</option>
                 </select>
               </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || (m as any).price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
@@ -1855,6 +1881,7 @@ const InventoryControl = () => {
                   <option value="name">A-Z Name</option>
                   <option value="purchaseDate">Purchase Date</option>
                   <option value="low_stock">Low Threshold</option>
+                  <option value="no_cost">⚠ Missing Cost</option>
                 </select>
               </div>
               <div className="hidden sm:block">
