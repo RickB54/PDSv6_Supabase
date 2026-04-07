@@ -106,10 +106,10 @@ export function InventoryImportModal({ open, onOpenChange, defaultTab = "chemica
         manualRowsRef.current = manualRows;
     }, [manualRows]);
 
-    // Persistent storage for manual entry rows
     useEffect(() => {
         if (step === "manual_entry") {
-            const serializable = manualRows.map(r => ({ ...r, imageFile: null, imageUrl: null }));
+            // Keep imageUrl (cloud URLs) so sessions survive reloads
+            const serializable = manualRows.map(r => ({ ...r, imageFile: null }));
             localStorage.setItem('ultra_v6_manual_rows', JSON.stringify(serializable));
         }
     }, [manualRows, step]);
