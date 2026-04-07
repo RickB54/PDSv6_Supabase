@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -630,6 +630,48 @@ const InventoryControl = () => {
         description: "An error occurred while generating the PDF. Please try again.", 
         variant: "destructive" 
       });
+    }
+  };
+
+  /**
+   * Clones an existing inventory item into a new record
+   */
+  const handleDuplicate = async (item: any, mode: 'chemical' | 'material' | 'tool') => {
+    if (isDemoMode) {
+      toast({ 
+        title: "Training Mode", 
+        description: "Duplication is disabled during simulation session.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    try {
+      const copy = { ...item, id: undefined, name: `${item.name} (Copy)` };
+      delete copy.id;
+      delete copy.updatedAt;
+      delete copy.createdAt;
+      delete copy.updated_at;
+      delete copy.created_at;
+
+      toast({ title: "Duplicating...", description: `Creating a copy of ${item.name}` });
+
+      if (mode === 'chemical') {
+        const { saveChemical } = await import("@/lib/inventory-data");
+        await saveChemical(copy, true);
+      } else if (mode === 'tool') {
+        const { saveTool } = await import("@/lib/inventory-data");
+        await saveTool(copy, true);
+      } else {
+        const { saveMaterial } = await import("@/lib/inventory-data");
+        await saveMaterial(copy, true);
+      }
+
+      await loadData();
+      toast({ title: "Items Cloned", description: "A copy has been added to your inventory." });
+    } catch (error: any) {
+      console.error("Duplicate error:", error);
+      toast({ title: "Duplication Failed", description: error.message || "Failed to clone item", variant: "destructive" });
     }
   };
 
@@ -1373,8 +1415,9 @@ const InventoryControl = () => {
               <UnlinkIcon className="h-4 w-4 mr-1" /> Link
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </TableCell>
     </TableRow>
@@ -1441,10 +1484,13 @@ const InventoryControl = () => {
           )}
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2" title="Edit Item">
             <Pencil className="h-4 w-4 mr-2" /> Edit
           </Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 text-red-500 px-2">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 px-2 text-amber-500 hover:text-amber-400" title="Duplicate">
+            <Copy className="h-4 w-4 mr-2" /> Copy
+          </Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 text-red-500 px-2" title="Delete">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -1799,8 +1845,9 @@ const InventoryControl = () => {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1832,10 +1879,13 @@ const InventoryControl = () => {
                       </span>
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-blue-500/10">
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8">
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8" title="Edit Item">
                         <Pencil className="h-4 w-4 mr-2" /> Edit
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 text-red-500">
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 text-blue-400 hover:text-blue-300" title="Duplicate">
+                        <Copy className="h-4 w-4 mr-2" /> Copy
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 text-red-500" title="Delete">
                         <Trash2 className="h-4 w-4 mr-2" /> Delete
                       </Button>
                     </div>
@@ -1961,8 +2011,9 @@ const InventoryControl = () => {
                         </TableCell>
                         <TableCell><span className="text-xs text-zinc-300 truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 w-8 p-0 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1992,10 +2043,13 @@ const InventoryControl = () => {
                     </div>
                     {t.notes && <div className="text-xs text-zinc-300">{t.notes}</div>}
                     <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8">
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8" title="Edit Item">
                         <Pencil className="h-4 w-4 mr-2" /> Edit
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 text-red-500">
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 text-purple-400 hover:text-purple-300" title="Duplicate">
+                        <Copy className="h-4 w-4 mr-2" /> Copy
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 text-red-500" title="Delete">
                         <Trash2 className="h-4 w-4 mr-2" /> Delete
                       </Button>
                     </div>
