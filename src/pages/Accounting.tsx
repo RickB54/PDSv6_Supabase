@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getInvoices, getExpenses, upsertExpense, Expense } from "@/lib/db";
+import { getInvoices, getExpenses, upsertExpense } from "@/lib/db";
 import { getReceivables, upsertReceivable, Receivable } from "@/lib/receivables";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
@@ -211,10 +211,15 @@ const Accounting = () => {
     });
 
     const breakdown: Record<string, number> = {};
+    const inventoryCategories = ['Supplies', 'Materials', 'Chemicals', 'Tools', 'Equipment'];
+    
     (expensesData as Expense[]).forEach(exp => {
-      totalExp += exp.amount;
       const cat = exp.category || 'Uncategorized';
-      breakdown[cat] = (breakdown[cat] || 0) + exp.amount;
+      // Only add to Operating Expenses if it's NOT an inventory category
+      if (!inventoryCategories.includes(cat)) {
+        totalExp += exp.amount;
+        breakdown[cat] = (breakdown[cat] || 0) + exp.amount;
+      }
     });
 
     setDailyRevenue(daily);
@@ -817,7 +822,7 @@ const Accounting = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Total Investment (Inventory + Expenses) */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Investment + Expenses</Label>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Business Investment</Label>
                 <p className="text-3xl font-bold text-red-500">
                   ${(inventoryTotals.total + totalSpent).toFixed(2)}
                 </p>
@@ -827,21 +832,24 @@ const Accounting = () => {
                     <span className="font-medium">${inventoryTotals.total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center group relative cursor-help">
-                    <span>Operating Expenses:</span>
+                    <span>Non-Inventory Expenses:</span>
                     <span className="font-medium">${totalSpent.toFixed(2)}</span>
                     
                     {/* Source Breakdown Tooltip */}
                     <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50">
-                      <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-2xl min-w-[200px]">
-                        <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-2">Source Breakdown (LIVE DATA)</p>
+                      <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-2xl min-w-[240px]">
+                        <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-2">Category Breakdown (LIVE DATA)</p>
                         <div className="space-y-1">
-                          {Object.entries(expenseBreakdown).length === 0 && <p className="text-slate-500">No expenses found</p>}
+                          {Object.entries(expenseBreakdown).length === 0 && <p className="text-slate-400 text-[11px]">No non-inventory expenses found.</p>}
                           {Object.entries(expenseBreakdown).map(([cat, amt]) => (
                             <div key={cat} className="flex justify-between text-[11px] gap-4">
                               <span className="text-slate-400">{cat}:</span>
                               <span className="text-white font-mono">${amt.toFixed(2)}</span>
                             </div>
                           ))}
+                          <div className="pt-2 mt-2 border-t border-slate-700 text-[9px] text-slate-500 italic leading-tight">
+                            Note: Supplies, Materials, and Chemicals are handled under "Inventory" to avoid double-counting.
+                          </div>
                         </div>
                       </div>
                     </div>
