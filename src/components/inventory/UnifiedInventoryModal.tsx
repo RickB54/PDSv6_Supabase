@@ -107,7 +107,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     threshold: "1",
     category: "Other",
     subtype: "",
-    quantity: "0",
+    quantity: "1",
     costPerItem: "",
     notes: "",
     warranty: "",
@@ -237,11 +237,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         name: "",
         bottleSize: "",
         costPerBottle: "",
-        currentStock: "0",
+        currentStock: "1",
         threshold: "1",
         category: "Other",
         subtype: "",
-        quantity: "0",
+        quantity: "1",
         costPerItem: "",
         notes: "",
         warranty: "",
@@ -814,8 +814,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     <Label className="text-xs text-zinc-400">Cost per Bottle</Label>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={form.costPerBottle}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       onChange={(e) => setForm({ ...form, costPerBottle: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     />
@@ -895,8 +896,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     <Label className="text-xs text-zinc-400">Price / Cost</Label>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={form.price}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       onChange={(e) => setForm({ ...form, price: e.target.value, cost: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     />
@@ -976,8 +978,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     <Label className="text-xs text-zinc-400">Cost per Item</Label>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={form.costPerItem}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       onChange={(e) => setForm({ ...form, costPerItem: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                     />
