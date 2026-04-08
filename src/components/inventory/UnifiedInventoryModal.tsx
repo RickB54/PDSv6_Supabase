@@ -181,17 +181,28 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     if (saved && open) {
       try {
         const parsed = JSON.parse(saved);
-        // Only recover if the mode matches
         if (parsed.mode === mode) {
-          // If we have an initial item, only recover if it's the same item
-          if (initial && parsed.form.id && parsed.form.id !== initial.id) {
-            // ID mismatch, don't recover
-          } else {
-            console.log("Recovered unsaved draft state. Locking until save/close.");
+          // If we have an initial item, only recover if the IDs match exactly
+          // This prevents an empty "Add New" draft from overwriting existing data when editing
+          if (initial && initial.id) {
+            if (parsed.form.id === initial.id) {
+              console.log("Recovered unsaved draft state for item: " + initial.id);
+              setForm(parsed.form);
+              setCustomSubtype(parsed.customSubtype || false);
+              setCustomUnit(parsed.customUnit || false);
+              setCustomCategory(parsed.customCategory || false);
+              setCustomPurchased(parsed.customPurchased || false);
+              recoveredRef.current = true;
+              return;
+            }
+          } else if (!initial && !parsed.form.id) {
+            // Both are new items, safe to recover
+            console.log("Recovered unsaved draft state for new item");
             setForm(parsed.form);
-            setCustomSubtype(parsed.customSubtype);
-            setCustomUnit(parsed.customUnit);
-            setCustomCategory(parsed.customCategory);
+            setCustomSubtype(parsed.customSubtype || false);
+            setCustomUnit(parsed.customUnit || false);
+            setCustomCategory(parsed.customCategory || false);
+            setCustomPurchased(parsed.customPurchased || false);
             recoveredRef.current = true;
             return;
           }
@@ -242,6 +253,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         wherePurchased: initialPurchased,
         updatedAt: (initial as any).updated_at || (initial as any).updatedAt || "",
         createdAt: (initial as any).createdAt || (initial as any).created_at || "",
+        isTaxDeductible: true, // Default to true as per user request
+        // Safety: Ensure all properties from initial are preserved even if not explicitly mapped
+        ...((initial as any).purchase_date ? { purchaseDate: (initial as any).purchase_date } : {}),
+        ...((initial as any).where_purchased ? { wherePurchased: (initial as any).where_purchased } : {}),
       }));
     } else {
       setCustomCategory(false);
@@ -271,6 +286,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         chemicalLibraryId: "",
         dilutionRatios: [],
         wherePurchased: "",
+        isTaxDeductible: true, // Default to checked for new items
       });
     }
   }, [initial, open, modeProp]); // Use modeProp for initial load stabilization

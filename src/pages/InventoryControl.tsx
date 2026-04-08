@@ -620,15 +620,19 @@ const InventoryControl = () => {
         ['Bottle Size', item.bottleSize],
         ['Current Stock', `${item.currentStock} bottles`],
         ['Cost/Bottle', `$${(item.costPerBottle || 0).toFixed(2)}`],
+        ['Purchased From', item.wherePurchased || '-'],
         ['Total Value', `$${((item.costPerBottle || 0) * (item.currentStock || 0)).toFixed(2)}`]
       ] : category === 'supplies' ? [
         ['Name', item.name],
         ['Category', item.category],
         ['Quantity', `${item.quantity} units`],
         ['Cost/Item', `$${(item.costPerItem || 0).toFixed(2)}`],
+        ['Purchased From', item.wherePurchased || '-'],
       ] : [
         ['Name', item.name],
         ['Price', `$${(item.price || 0).toFixed(2)}`],
+        ['Quantity', `${item.quantity || 1}`],
+        ['Purchased From', item.wherePurchased || '-'],
         ['Notes', item.notes || '-']
       ];
 
@@ -871,6 +875,7 @@ const InventoryControl = () => {
               <div class="field"><div class="field-label">Cost Per Bottle</div><div class="field-value">$${(c.costPerBottle || 0).toFixed(2)}</div></div>
               <div class="field"><div class="field-label">Current Stock</div><div class="field-value" style="${c.currentStock < c.threshold ? 'color: #ef4444; font-weight: bold;' : ''}">${c.currentStock} bottles</div></div>
               <div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${c.threshold} bottles</div></div>
+              <div class="field"><div class="field-label">Purchased From</div><div class="field-value">${c.wherePurchased || '-'}</div></div>
               <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</div></div>
               
               ${(() => {
@@ -936,6 +941,7 @@ const InventoryControl = () => {
               <div class="field"><div class="field-label">Cost Per Item</div><div class="field-value">$${(m.costPerItem || 0).toFixed(2)}</div></div>
               <div class="field"><div class="field-label">Quantity</div><div class="field-value" style="${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'color: #ef4444; font-weight: bold;' : ''}">${m.quantity} units</div></div>
               ${typeof m.lowThreshold === 'number' ? `<div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${m.lowThreshold} units</div></div>` : ''}
+              <div class="field"><div class="field-label">Purchased From</div><div class="field-value">${m.wherePurchased || '-'}</div></div>
               <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${((m.costPerItem || 0) * (m.quantity || 0)).toFixed(2)}</div></div>
               ${m.notes ? `<div class="field"><div class="field-label">Notes</div><div class="field-value">${m.notes}</div></div>` : ''}
             </div>
@@ -957,6 +963,8 @@ const InventoryControl = () => {
               <div class="item-header">${t.name}</div>
               <div class="field"><div class="field-label">Name</div><div class="field-value">${t.name}</div></div>
               <div class="field"><div class="field-label">Price</div><div class="field-value">$${(t.price || 0).toFixed(2)}</div></div>
+              <div class="field"><div class="field-label">Quantity</div><div class="field-value">${t.quantity || 1}</div></div>
+              <div class="field"><div class="field-label">Purchased From</div><div class="field-value">${t.wherePurchased || '-'}</div></div>
               ${t.purchaseDate ? `<div class="field"><div class="field-label">Purchase Date</div><div class="field-value">${new Date(t.purchaseDate).toLocaleDateString()}</div></div>` : ''}
               ${t.warranty ? `<div class="field"><div class="field-label">Warranty</div><div class="field-value">${t.warranty}</div></div>` : ''}
               ${t.lifeExpectancy ? `<div class="field"><div class="field-label">Life Expectancy</div><div class="field-value">${t.lifeExpectancy}</div></div>` : ''}

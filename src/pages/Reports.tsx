@@ -397,7 +397,7 @@ const Reports = () => {
     y += 15;
 
     // 3. Break-Even Analysis
-    const totalInvestment = totalAssets + totalExp; // Assets + Expenses
+    const totalInvestment = totalAssets; // Focus on Asset investment for Break-Even
     const remainingBreakEven = totalInvestment - totalInc;
     const recoveryPct = totalInvestment > 0 ? (totalInc / totalInvestment) * 100 : 0;
 
@@ -407,9 +407,9 @@ const Reports = () => {
     doc.setTextColor(0, 0, 0);
     y += 10;
     doc.setFontSize(10);
-    doc.text("Tracks ROI (Inventory Assets + Expenses vs Revenue)", 20, y);
+    doc.text("Tracks ROI (Inventory Asset Investment vs Revenue)", 20, y);
     y += 6;
-    doc.text(`Total Investment (Assets + Exp): $${totalInvestment.toFixed(2)}`, 20, y);
+    doc.text(`Total Investment (Assets): $${totalInvestment.toFixed(2)}`, 20, y);
     doc.text(`Total Service Revenue: $${totalInc.toFixed(2)}`, 100, y);
     y += 6;
     doc.setFont(undefined, 'bold');
@@ -1163,9 +1163,9 @@ const Reports = () => {
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
-                  <p className="text-xs text-zinc-500 uppercase">Total Investment (Assets + Exp)</p>
-                  <p className="text-xl font-bold text-red-300 mt-1">
-                    ${((totalInventoryValue + totalMaterialsValue + totalToolsValue) + expenses.reduce((s, e) => s + (e.amount || 0), 0)).toFixed(2)}
+                  <p className="text-xs text-zinc-500 uppercase">Total Investment (Assets)</p>
+                  <p className="text-xl font-bold text-emerald-300 mt-1">
+                    ${(totalInventoryValue + totalMaterialsValue + totalToolsValue).toFixed(2)}
                   </p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
@@ -1178,7 +1178,7 @@ const Reports = () => {
                   <p className="text-xs text-zinc-400 uppercase">Remaining to Break Even</p>
                   <p className="text-xl font-bold text-orange-400 mt-1">
                     {(() => {
-                      const invest = (totalInventoryValue + totalMaterialsValue + totalToolsValue) + expenses.reduce((s, e) => s + (e.amount || 0), 0);
+                      const invest = (totalInventoryValue + totalMaterialsValue + totalToolsValue);
                       const rev = income.reduce((s, i) => s + (i.amount || 0), 0);
                       const rem = invest - rev;
                       return rem > 0 ? `$${rem.toFixed(2)}` : 'PROFITABLE';
