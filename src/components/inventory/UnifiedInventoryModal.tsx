@@ -427,6 +427,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           warranty: form.warranty || "",
           purchaseDate: form.purchaseDate || "",
           price: numeric(form.price),
+          quantity: Math.round(numeric(form.quantity)),
+          threshold: Math.round(numeric(form.threshold)),
           lifeExpectancy: form.lifeExpectancy || "",
           notes: form.notes || "",
           imageUrl: form.imageUrl,
@@ -1077,6 +1079,49 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     </div>
                   </div>
                   <div>
+                    <Label className="text-xs text-zinc-400">Where Purchased</Label>
+                    {!customPurchased ? (
+                      <select
+                        value={purchasedOptions.includes(form.wherePurchased) ? form.wherePurchased : (form.wherePurchased ? "Custom" : "")}
+                        onChange={(e) => {
+                          if (e.target.value === "Custom") {
+                            setCustomPurchased(true);
+                            setForm({ ...form, wherePurchased: "" });
+                          } else {
+                            setForm({ ...form, wherePurchased: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select location...</option>
+                        {purchasedOptions.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.wherePurchased}
+                          onChange={(e) => setForm({ ...form, wherePurchased: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter custom location..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCustomPurchased(false);
+                            setForm({ ...form, wherePurchased: "" });
+                          }}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
                     {!customUnit ? (
                       <select
@@ -1338,8 +1383,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               <Label className="text-xs text-zinc-400">Notes</Label>
               <Textarea
                 value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="bg-zinc-900 border-zinc-700 text-white min-h-[100px] text-sm resize-y"
+                onChange={(e) => {
+                  setForm({ ...form, notes: e.target.value });
+                  // Auto-expand logic: Grow to fit but cap at 5 lines (approx 140px)
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = `${target.scrollHeight}px`;
+                }}
+                className="bg-zinc-900 border-zinc-700 text-white min-h-[60px] max-h-[140px] text-sm resize-none overflow-y-auto"
                 placeholder="Any additional information..."
               />
             </div>

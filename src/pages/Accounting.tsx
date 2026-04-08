@@ -970,6 +970,26 @@ const Accounting = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Non-Inventory Breakdown */}
+                      {Object.keys(expenseBreakdown).length > 0 && (
+                        <div className="pt-3 border-t border-border/50">
+                          <Label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 block">Operating Expense Breakdown</Label>
+                          <div className="space-y-1.5">
+                            {Object.entries(expenseBreakdown)
+                              .sort(([, a], [, b]) => b - a)
+                              .map(([cat, amt]) => (
+                                <div key={cat} className="flex justify-between items-center text-xs">
+                                  <span className="text-muted-foreground flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: categoryColors[cat] || '#888' }} />
+                                    {cat}
+                                  </span>
+                                  <span className="font-medium text-foreground">${amt.toFixed(2)}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
                     </>
                   );
                 })()}

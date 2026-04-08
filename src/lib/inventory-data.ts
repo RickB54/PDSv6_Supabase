@@ -44,6 +44,7 @@ export interface Chemical {
     updatedAt?: string;
     dilutionRatios?: DilutionRatio[];
     wherePurchased?: string;
+    notes?: string;
 }
 
 export interface Material {
@@ -129,7 +130,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         dilutionRatios: item.dilution_ratios || [],
-        wherePurchased: item.where_purchased
+        wherePurchased: item.where_purchased,
+        notes: item.notes
     }));
 }
 
@@ -151,6 +153,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         chemical_library_id: chemical.chemicalLibraryId,
         dilution_ratios: chemical.dilutionRatios || [],
         where_purchased: chemical.wherePurchased || null,
+        notes: chemical.notes || null,
         updated_at: new Date().toISOString()
     };
 
@@ -169,8 +172,23 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
             delete sanitized.brand;
             const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
             if (retryErr) throw retryErr;
-            // Return the data we attempted to save so the UI stays in sync
-            return dbData as any;
+            
+            // Return correctly mapped object to keep UI consistent
+            return {
+                id: dbData.id,
+                name: dbData.name,
+                brand: dbData.brand,
+                category: dbData.category,
+                formula: dbData.formula,
+                bottleSize: dbData.bottle_size,
+                currentStock: dbData.current_stock,
+                threshold: dbData.threshold,
+                costPerBottle: dbData.cost_per_bottle,
+                wherePurchased: dbData.where_purchased,
+                notes: dbData.notes,
+                imageUrl: dbData.image_url,
+                updatedAt: dbData.updated_at
+            } as any;
         } else {
             throw error;
         }
@@ -438,16 +456,42 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
             delete sanitized.where_purchased;
             const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
             if (retryErr) throw retryErr;
-            // Return the input data so UI is updated locally even if column is missing in DB
-            return dbData as any;
+            
+            // Return mapped object
+            return {
+                id: dbData.id,
+                name: dbData.name,
+                category: dbData.category,
+                quantity: dbData.quantity,
+                costPerItem: dbData.cost_per_item,
+                lowThreshold: dbData.low_threshold,
+                wherePurchased: dbData.where_purchased,
+                notes: dbData.notes,
+                imageUrl: dbData.image_url,
+                updatedAt: dbData.updated_at
+            } as any;
         } else {
             console.error('[InventoryData] saveMaterial: Supabase Error!', error);
             throw error;
         }
     }
     
-    const savedItem = (upsertData as any)?.[0] || dbData;
-    console.log('[InventoryData] saveMaterial: Persistence Successful!', savedItem);
+    // Normal success path - fetch again to ensure we have generated fields like updatedAt
+    const { data: savedItem, error: fetchErr } = await supabase.from('materials').select('*').eq('id', dbData.id).single();
+    if (fetchErr || !savedItem) return { ...material, updatedAt: new Date().toISOString() } as Material;
+
+    return {
+        id: savedItem.id,
+        name: savedItem.name,
+        category: savedItem.category,
+        quantity: savedItem.quantity,
+        costPerItem: savedItem.cost_per_item,
+        lowThreshold: savedItem.low_threshold,
+        wherePurchased: savedItem.where_purchased,
+        notes: savedItem.notes,
+        imageUrl: savedItem.image_url,
+        updatedAt: savedItem.updated_at
+    } as Material;
 
     // Sync LocalForage Cache
     try {
@@ -519,6 +563,7 @@ export async function getTools(): Promise<Tool[]> {
         purchaseDate: item.purchase_date || '',
         price: item.price || 0,
         quantity: item.quantity || 1,
+        lowThreshold: item.low_threshold || 1,
         lifeExpectancy: item.life_expectancy || '',
         notes: item.notes || '',
         imageUrl: item.image_url,
@@ -542,6 +587,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         purchase_date: tool.purchaseDate && tool.purchaseDate.trim() ? tool.purchaseDate : null,
         price: tool.price,
         quantity: tool.quantity || 1,
+        low_threshold: (tool as any).threshold || 1,
         life_expectancy: tool.lifeExpectancy,
         notes: tool.notes,
         image_url: tool.imageUrl,
@@ -561,11 +607,25 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
             console.warn('Handling schema mismatch in tools table, retrying with sanitized payload...', error.message);
             const sanitizedData = { ...dbData };
             delete sanitizedData.quantity;
-            delete sanitizedData.category;
+            delete sanitizedData.low_threshold;
+            delete sanitizedData.category; // Original tools schema doesn't have category
             delete sanitizedData.where_purchased;
             const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
             if (retryErr) throw retryErr;
-            return dbData as any;
+            
+            // Return mapped object
+            return {
+                id: dbData.id,
+                name: dbData.name,
+                category: dbData.category,
+                quantity: dbData.quantity,
+                price: dbData.price,
+                purchaseDate: dbData.purchase_date,
+                wherePurchased: dbData.where_purchased,
+                notes: dbData.notes,
+                imageUrl: dbData.image_url,
+                updatedAt: dbData.updated_at
+            } as any;
         } else {
             throw error;
         }

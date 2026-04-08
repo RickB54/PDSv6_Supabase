@@ -356,7 +356,7 @@ const Reports = () => {
     // 1. Inventory Assets (Calculated from live data)
     const chemVal = chemicals.reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
     const matVal = materials.reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
-    const toolVal = tools.reduce((s, t) => s + ((t.price || 0) * 1), 0);
+    const toolVal = tools.reduce((s, t) => s + ((t.price || 0) * (t.quantity || 1)), 0);
     const totalAssets = chemVal + matVal + toolVal;
 
     doc.setFontSize(14);
@@ -700,7 +700,7 @@ const Reports = () => {
   const lowStockTools = tools.filter(t => (t.quantity || 0) < (t.threshold || 0));
   const totalInventoryValue = chemicals.reduce((sum, c) => sum + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
   const totalMaterialsValue = materials.reduce((sum, m) => sum + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
-  const totalToolsValue = tools.reduce((sum, t) => sum + ((t.price || 0) * 1), 0);
+  const totalToolsValue = tools.reduce((sum, t) => sum + ((t.price || 0) * (t.quantity || 1)), 0);
   const chemicalsSorted = [...chemicals].sort((a, b) => {
     const alow = a.currentStock < a.threshold; const blow = b.currentStock < b.threshold;
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');

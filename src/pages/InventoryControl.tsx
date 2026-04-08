@@ -103,9 +103,9 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost" | "updated_at">("brand");
-  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost" | "updated_at">("name");
-  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at">("name");
+  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">("brand");
+  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">("name");
+  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
   const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">(window.innerWidth < 768 ? "portrait" : "landscape");
@@ -393,6 +393,18 @@ const InventoryControl = () => {
     return a.localeCompare(b);
   });
 
+  const allSupplyVendors = Array.from(new Set(supplies.map(s => s.wherePurchased || "Other / Unknown"))).sort((a, b) => {
+    if (a === "Other / Unknown") return 1;
+    if (b === "Other / Unknown") return -1;
+    return a.localeCompare(b);
+  });
+
+  const allEquipmentVendors = Array.from(new Set(equipment.map(e => e.wherePurchased || "Other / Unknown"))).sort((a, b) => {
+    if (a === "Other / Unknown") return 1;
+    if (b === "Other / Unknown") return -1;
+    return a.localeCompare(b);
+  });
+
   const getSortedChemicals = () => {
     let baseFiltered = (chemicals || []).filter(c =>
       c && (c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
@@ -433,6 +445,13 @@ const InventoryControl = () => {
         return dateB - dateA;
       });
     }
+    if (chemicalSort === "where_purchased") {
+      return [...baseFiltered].sort((a, b) => {
+        const valA = (a.wherePurchased || "Z").toLowerCase();
+        const valB = (b.wherePurchased || "Z").toLowerCase();
+        return valA.localeCompare(valB);
+      });
+    }
     return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
   };
 
@@ -441,6 +460,11 @@ const InventoryControl = () => {
       s && (s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
       (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase())))
     );
+    
+    // Vendor filtering (Jump to Vendor)
+    if (!["name", "category", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(supplySort)) {
+      filtered = filtered.filter(s => (s.wherePurchased || "Other / Unknown") === supplySort);
+    }
     
     if (supplySort === "no_cost") {
       filtered = filtered.filter(s => !s.costPerItem || s.costPerItem === 0);
@@ -461,6 +485,11 @@ const InventoryControl = () => {
       if (supplySort === "category") {
         if (a.category !== b.category) return a.category.localeCompare(b.category);
       }
+      if (supplySort === "where_purchased") {
+        const valA = (a.wherePurchased || "Z").toLowerCase();
+        const valB = (b.wherePurchased || "Z").toLowerCase();
+        if (valA !== valB) return valA.localeCompare(valB);
+      }
       return a.name.localeCompare(b.name);
     });
   };
@@ -469,6 +498,11 @@ const InventoryControl = () => {
     let filtered = (equipment || []).filter(e =>
       e && e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
     );
+
+    // Vendor filtering (Jump to Vendor)
+    if (!["name", "purchaseDate", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(equipmentSort)) {
+      filtered = filtered.filter(e => (e.wherePurchased || "Other / Unknown") === equipmentSort);
+    }
 
     if (equipmentSort === "no_cost") {
       filtered = filtered.filter(e => !e.price || e.price === 0);
@@ -487,6 +521,11 @@ const InventoryControl = () => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
+      }
+      if (equipmentSort === "where_purchased") {
+        const valA = (a.wherePurchased || "Z").toLowerCase();
+        const valB = (b.wherePurchased || "Z").toLowerCase();
+        if (valA !== valB) return valA.localeCompare(valB);
       }
       return a.name.localeCompare(b.name);
     });
@@ -541,11 +580,11 @@ const InventoryControl = () => {
     yPos = 55;
 
     // Summary Box
-    const totalValue = category === 'chemicals' ?
+      const totalValue = category === 'chemicals' ?
       (items as any[]).reduce((a, c: any) => a + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0) :
       category === 'supplies' ?
         (items as any[]).reduce((a, m: any) => a + (((m as any).costPerItem || m.price || 0) * (m.quantity || 0)), 0) :
-        (items as any[]).reduce((a, t: any) => a + (t.price || t.cost || 0), 0);
+        (items as any[]).reduce((a, t: any) => a + ((t.price || t.cost || 0) * (t.quantity || 1)), 0);
 
     autoTable(pdf, {
       startY: yPos,
@@ -1344,7 +1383,7 @@ const InventoryControl = () => {
   const totalValue =
     chemicals.reduce((acc, c) => acc + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0) +
     materials.reduce((acc, m) => acc + ((m.costPerItem || 0) * (m.quantity || 0)), 0) +
-    tools.reduce((acc, t) => acc + (t.price || 0), 0);
+    tools.reduce((acc, t) => acc + ((t.price || 0) * (t.quantity || 1)), 0);
 
   // Helper to get formatted fraction/qty string
   const getUsageAmount = (item: any) => {
@@ -1397,6 +1436,9 @@ const InventoryControl = () => {
           {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
           {c.currentStock} remaining
         </span>
+      </TableCell>
+      <TableCell className="py-1">
+        <span className="text-[11px] text-zinc-400 font-bold italic">{c.wherePurchased || '-'}</span>
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
@@ -1724,6 +1766,7 @@ const InventoryControl = () => {
                             <TableHead>Size</TableHead>
                             <TableHead>Cost/Unit</TableHead>
                             <TableHead>Stock Level</TableHead>
+                            <TableHead>Purchased From</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1794,6 +1837,14 @@ const InventoryControl = () => {
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
                   <option value="updated_at">Last Updated</option>
+                  <option value="where_purchased">Where Purchased</option>
+                  {allSupplyVendors.length > 0 && (
+                    <optgroup label="Jump to Vendor">
+                      {allSupplyVendors.map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || (m as any).price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
@@ -1835,6 +1886,7 @@ const InventoryControl = () => {
                       <TableHead>Category</TableHead>
                       <TableHead>Cost/Item</TableHead>
                       <TableHead>Quantity</TableHead>
+                      <TableHead>Source</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1867,6 +1919,9 @@ const InventoryControl = () => {
                             {m.quantity} units
                           </span>
                         </TableCell>
+                        <TableCell className="py-1">
+                          <span className="text-[11px] text-zinc-400 font-bold italic">{m.wherePurchased || '-'}</span>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
@@ -1874,6 +1929,17 @@ const InventoryControl = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {filteredSupplies.length === 0 && materials.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-zinc-500 bg-zinc-950/20">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search className="h-8 w-8 opacity-20" />
+                            <p>No matches for "{supplySearch}" in supplies.</p>
+                            <Button variant="link" onClick={() => setSupplySearch("")} className="text-blue-400 p-0 h-auto">Clear search</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                     {materials.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No materials tracked.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
@@ -1881,7 +1947,7 @@ const InventoryControl = () => {
 
               {/* Mobile Card View (Supplies) */}
               <div className="md:hidden space-y-3 mt-4">
-                {materials.map(m => (
+                {filteredSupplies.map(m => (
                   <div
                     key={m.id}
                     className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors"
@@ -1915,6 +1981,12 @@ const InventoryControl = () => {
                     </div>
                   </div>
                 ))}
+                {filteredSupplies.length === 0 && materials.length > 0 && (
+                  <div className="text-center py-10 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
+                    <p>No matches for "{supplySearch}"</p>
+                    <Button variant="link" onClick={() => setSupplySearch("")} className="text-blue-400">Clear</Button>
+                  </div>
+                )}
                 {materials.length === 0 && <div className="text-center py-6 text-muted-foreground">No materials tracked.</div>}
               </div>
             </div>
@@ -1973,10 +2045,18 @@ const InventoryControl = () => {
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
                   <option value="updated_at">Last Updated</option>
+                  <option value="where_purchased">Where Purchased</option>
+                  {allEquipmentVendors.length > 0 && (
+                    <optgroup label="Jump to Vendor">
+                      {allEquipmentVendors.map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div className="hidden sm:block">
-                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + ((t as any).price || (t as any).cost || 0), 0).toFixed(0)}</span></span>
+                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + (((t as any).price || (t as any).cost || 0) * (t.quantity || 1)), 0).toFixed(0)}</span></span>
               </div>
               {expandedSections.tools ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
@@ -2010,7 +2090,7 @@ const InventoryControl = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Purchase Date</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Notes</TableHead>
+                      <TableHead>Source / Vendor</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2037,7 +2117,9 @@ const InventoryControl = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell><span className="text-xs text-zinc-300 block py-1">{t.notes}</span></TableCell>
+                        <TableCell className="py-1">
+                          <span className="text-[11px] text-zinc-400 font-bold italic">{t.wherePurchased || '-'}</span>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
@@ -2045,6 +2127,13 @@ const InventoryControl = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {filteredEquipment.length === 0 && tools.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-zinc-500">
+                           No matches for "{equipmentSearch}"
+                        </TableCell>
+                      </TableRow>
+                    )}
                     {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No tools tracked.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
@@ -2067,10 +2156,9 @@ const InventoryControl = () => {
                         <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           {!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
                         </div>
-                        {t.wherePurchased && <div className="text-[10px] text-zinc-400 italic">Purchased at: {t.wherePurchased}</div>}
+                        {t.wherePurchased && <div className="text-sm text-purple-400 font-bold italic">Purchased at: {t.wherePurchased}</div>}
                       </div>
                     </div>
-                    {t.notes && <div className="text-xs text-zinc-300">{t.notes}</div>}
                     <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
                       <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8" title="Edit Item">
                         <Pencil className="h-4 w-4 mr-2" /> Edit
