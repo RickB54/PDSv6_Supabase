@@ -158,7 +158,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
   };
   
-  const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Custom"];
+  const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com", "Custom"];
 
   const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
 
