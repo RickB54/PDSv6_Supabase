@@ -499,9 +499,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       // (prevents stale localforage from overwriting the new imageUrl on the cards)
       sessionStorage.removeItem('inventory-loaded');
 
-      // INTEGRATION: Track as Tax Expense if enabled
-      // Check if this item should be added to tax expenses
-      if (form.isTaxDeductible) {
+      // INTEGRATION: AUTO-Track as Tax Expense (Always enabled as requested)
+      if (true) {
         try {
           // Check if a tax expense record already exists for this asset
           const existingExpenses = await getSupabaseTaxExpenses();
@@ -1185,26 +1184,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             </div>
           </div>
 
-          {/* Tax Integration Section */}
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
-              <Save className="h-4 w-4 text-emerald-400" />
-              Tax Tracking
-            </h3>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isTaxDeductible"
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-emerald-500"
-                checked={form.isTaxDeductible}
-                onChange={(e) => setForm({ ...form, isTaxDeductible: e.target.checked })}
-              />
-              <Label htmlFor="isTaxDeductible" className="text-sm text-zinc-300 cursor-pointer">
-                Track as Tax Deductible Expense
-                {form.id ? "" : " (Will create record in Taxes)"}
-              </Label>
-            </div>
-          </div>
+
 
           {/* Dilution Ratios Section */}
           {mode === 'chemical' && (

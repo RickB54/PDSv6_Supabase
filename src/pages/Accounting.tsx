@@ -139,7 +139,6 @@ const Accounting = () => {
   });
 
   const { isDemoMode } = useDemoMode();
-  const [taxInventoryExpenses, setTaxInventoryExpenses] = useState<any[]>([]);
   const [expenseBreakdown, setExpenseBreakdown] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -150,7 +149,6 @@ const Accounting = () => {
       loadCustomCategories();
       getSupabaseCustomers().then(setCustomers); // Load customers
       getInventoryTotals().then(setInventoryTotals); // Load inventory
-      loadTaxInventory(); // Load tax-deductible inventory
     }
   }, [dateFilter, isDemoMode]);
 
@@ -185,12 +183,7 @@ const Accounting = () => {
     setExpenseBreakdown({ "Demo Operating": MOCK_ACCOUNTING.expenses });
   };
 
-  const loadTaxInventory = async () => {
-    const taxExpenses = await getSupabaseTaxExpenses();
-    // Show all deductible expenses to match the Profit/Loss summary
-    const inventoryTaxExpenses = taxExpenses.filter(te => te.is_deductible);
-    setTaxInventoryExpenses(inventoryTaxExpenses);
-  };
+
 
   const loadCustomCategories = async () => {
     const cats = await localforage.getItem<string[]>("customCategories") || [];
@@ -252,11 +245,8 @@ const Accounting = () => {
     
     (expensesData as Expense[]).forEach(exp => {
       const cat = exp.category || 'Uncategorized';
-      // Only add to Operating Expenses if it's NOT an inventory category
-      if (!inventoryCategories.includes(cat)) {
-        totalExp += exp.amount;
-        breakdown[cat] = (breakdown[cat] || 0) + exp.amount;
-      }
+      totalExp += exp.amount;
+      breakdown[cat] = (breakdown[cat] || 0) + exp.amount;
     });
 
     setDailyRevenue(daily);
@@ -332,7 +322,10 @@ const Accounting = () => {
     const revenueIncome = incomeList.filter(rcv => within(rcv.date || rcv.createdAt)).reduce((sum, r) => sum + (r.amount || 0), 0);
     const revenue = revenueInvoices + revenueIncome;
     const exp = expenseList.filter(ex => within(ex.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
-    return revenue - exp;
+    
+    // User Logic: Portfolio Value = (Cash Revenue + Inventory Value) - Cash Outflow
+    // This allows the summary to reflect a $0 balance when spending is backed by assets.
+    return (revenue + (inventoryTotals?.total || 0)) - exp;
   };
 
   const handleAddExpense = async () => {
@@ -700,25 +693,26 @@ const Accounting = () => {
           </div>
 
           {/* Profit/Loss Summary - Moved to Top */}
-          <Card className={`p-6 border-border ${profit > 0 ? 'bg-green-600' : profit < 0 ? 'bg-red-600' : 'bg-blue-600'}`}>
-            <div className="flex justify-between items-start mb-2">
-              <h2 className="text-2xl font-bold text-white">Profit/Loss Summary</h2>
+          <Card className={`p-6 border-none text-white ${profit >= 0 ? "bg-emerald-600 shadow-xl shadow-emerald-900/20" : "bg-red-600 shadow-xl shadow-red-900/20"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold opacity-90">Net Business Valuation</h2>
               <button 
-                onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-profit-loss' })); }}
-                className="p-1 rounded-full hover:bg-white/20 text-white/70 hover:text-white transition-all"
+                className="opacity-70 hover:opacity-100 transition-alpha"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-summary' }))}
                 title="How is this calculated?"
               >
                 <HelpCircle className="h-5 w-5" />
               </button>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-white">
+              <span className="text-4xl font-bold">
                 ${Math.abs(profit).toFixed(2)}
               </span>
-              <span className="text-white/80">
-                {profit > 0 ? 'Profit' : profit < 0 ? 'Loss' : 'Break-Even'}
+              <span className="opacity-80 font-medium uppercase tracking-wider text-xs">
+                {profit > 0 ? 'Surplus' : profit < 0 ? 'Deficit' : 'Balanced'}
               </span>
             </div>
+            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue + Inventory Assets) - Operating Expenses</p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-border">
@@ -795,62 +789,7 @@ const Accounting = () => {
           </Card>
 
 
-          {/* Tax-Deductible Inventory Section */}
-          {taxInventoryExpenses.length > 0 && (
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="tax-inventory" className="border rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center w-full pr-4 gap-4">
-                    <div className="text-left">
-                      <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <DollarSign className="h-6 w-6 text-purple-500" />
-                        Tax-Deductible Inventory
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-tax-deductions' })); }}
-                          className="p-1 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/40 text-muted-foreground hover:text-purple-500 transition-all focus:outline-none"
-                          title="Why do some items not show up here?"
-                        >
-                          <HelpCircle className="h-4 w-4" />
-                        </button>
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Inventory items marked for tax deduction
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-left md:text-right">
-                        <Label className="text-xs text-muted-foreground">Total Amount</Label>
-                        <p className="text-xl font-bold text-purple-600">
-                          ${taxInventoryExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="text-left md:text-right">
-                        <Label className="text-xs text-muted-foreground">Items</Label>
-                        <p className="text-xl font-bold text-purple-600">
-                          {taxInventoryExpenses.length}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
-                    {taxInventoryExpenses.map((exp, idx) => (
-                      <div key={`tax-inv-${idx}`} className="flex justify-between items-center p-3 bg-background/50 rounded border border-purple-200/30 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{exp.notes || exp.vendor || 'Inventory Item'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {exp.category} • {new Date(exp.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-purple-600 ml-2">${exp.amount.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          )}
+
 
           {/* Break-Even Analysis */}
           <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
