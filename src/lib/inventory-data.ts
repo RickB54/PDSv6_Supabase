@@ -159,15 +159,18 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         .upsert(dbData);
     
     if (error) {
-        if (error.code === '42703') {
+        const msg = (error.message || '').toLowerCase();
+        const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand');
+        
+        if (isColumnError) {
             console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
             const sanitized = { ...dbData };
-            // Strip newly added columns that might be missing in older schemas
             delete sanitized.where_purchased;
             delete sanitized.brand;
-            
             const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
             if (retryErr) throw retryErr;
+            // Return the data we attempted to save so the UI stays in sync
+            return dbData as any;
         } else {
             throw error;
         }
@@ -426,21 +429,24 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         .upsert(dbData);
 
     if (error) {
-        if (error.code === '42703') {
+        const msg = (error.message || '').toLowerCase();
+        const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased');
+        
+        if (isColumnError) {
             console.warn('Handling schema mismatch in materials table, retrying with sanitized payload...', error.message);
             const sanitized = { ...dbData };
             delete sanitized.where_purchased;
-            
             const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
             if (retryErr) throw retryErr;
-            return;
+            // Return the input data so UI is updated locally even if column is missing in DB
+            return dbData as any;
         } else {
             console.error('[InventoryData] saveMaterial: Supabase Error!', error);
             throw error;
         }
     }
     
-    const savedItem = upsertData?.[0];
+    const savedItem = (upsertData as any)?.[0] || dbData;
     console.log('[InventoryData] saveMaterial: Persistence Successful!', savedItem);
 
     // Sync LocalForage Cache
@@ -548,17 +554,18 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         .upsert(dbData);
 
     if (error) {
-        // Handle missing columns gracefully (schema might not be updated yet)
-        if (error.code === '42703') {
+        const msg = (error.message || '').toLowerCase();
+        const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased');
+        
+        if (isColumnError) {
             console.warn('Handling schema mismatch in tools table, retrying with sanitized payload...', error.message);
             const sanitizedData = { ...dbData };
-            // Aggressively strip all potentially missing columns
             delete sanitizedData.quantity;
             delete sanitizedData.category;
             delete sanitizedData.where_purchased;
-            
             const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
             if (retryErr) throw retryErr;
+            return dbData as any;
         } else {
             throw error;
         }
