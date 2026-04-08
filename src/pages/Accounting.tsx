@@ -323,9 +323,8 @@ const Accounting = () => {
     const revenue = revenueInvoices + revenueIncome;
     const exp = expenseList.filter(ex => within(ex.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
     
-    // User Logic: Portfolio Value = (Cash Revenue + Inventory Value) - Cash Outflow
-    // This allows the summary to reflect a $0 balance when spending is backed by assets.
-    return (revenue + (inventoryTotals?.total || 0)) - exp;
+    // Simple Cache Flow: Revenue - Expenses
+    return revenue - exp;
   };
 
   const handleAddExpense = async () => {
@@ -695,7 +694,7 @@ const Accounting = () => {
           {/* Profit/Loss Summary - Moved to Top */}
           <Card className={`p-6 border-none text-white ${profit >= 0 ? "bg-emerald-600 shadow-xl shadow-emerald-900/20" : "bg-red-600 shadow-xl shadow-red-900/20"}`}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold opacity-90">Net Business Valuation</h2>
+              <h2 className="text-xl font-bold opacity-90">Profit/Loss Summary</h2>
               <button 
                 className="opacity-70 hover:opacity-100 transition-alpha"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-summary' }))}
@@ -709,10 +708,10 @@ const Accounting = () => {
                 ${Math.abs(profit).toFixed(2)}
               </span>
               <span className="opacity-80 font-medium uppercase tracking-wider text-xs">
-                {profit > 0 ? 'Surplus' : profit < 0 ? 'Deficit' : 'Balanced'}
+                {profit > 0 ? 'Profit' : profit < 0 ? 'Loss' : 'Break-Even'}
               </span>
             </div>
-            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue + Inventory Assets) - Operating Expenses</p>
+            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue) - (Total Expenses)</p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-border">
@@ -814,7 +813,7 @@ const Accounting = () => {
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Business Investment</Label>
                 <p className="text-3xl font-bold text-red-500">
-                  ${(inventoryTotals.total + totalSpent).toFixed(2)}
+                  ${inventoryTotals.total.toFixed(2)}
                 </p>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex justify-between">
@@ -847,7 +846,7 @@ const Accounting = () => {
                   </p>
                   <div className="pt-1 border-t border-muted-foreground/20 flex justify-between font-semibold">
                     <span>Total Investment:</span>
-                    <span>${(inventoryTotals.total + totalSpent).toFixed(2)}</span>
+                    <span>${inventoryTotals.total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -877,7 +876,7 @@ const Accounting = () => {
               <div className="space-y-2">
                 {(() => {
                   const currentTotalRevenue = totalRevenue; // Use global total for break-even
-                  const totalInvestment = inventoryTotals.total + totalSpent;
+                  const totalInvestment = inventoryTotals.total; // Simplest view: Recover the inventory cost
                   const remaining = totalInvestment - currentTotalRevenue;
                   const percentRecovered = totalInvestment > 0
                     ? (currentTotalRevenue / totalInvestment) * 100
