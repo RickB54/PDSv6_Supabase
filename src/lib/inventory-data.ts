@@ -43,6 +43,7 @@ export interface Chemical {
     createdAt?: string;
     updatedAt?: string;
     dilutionRatios?: DilutionRatio[];
+    wherePurchased?: string;
 }
 
 export interface Material {
@@ -57,6 +58,7 @@ export interface Material {
     createdAt: string;
     updatedAt?: string;
     imageUrl?: string;
+    wherePurchased?: string;
 }
 
 export interface Tool {
@@ -72,6 +74,7 @@ export interface Tool {
     imageUrl?: string;
     createdAt?: string;
     updatedAt?: string;
+    wherePurchased?: string;
 }
 
 export interface SetupMedia {

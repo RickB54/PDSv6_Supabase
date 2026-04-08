@@ -2029,7 +2029,7 @@ const InventoryControl = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell><span className="text-xs text-zinc-300 truncate max-w-[200px] inline-block">{t.notes}</span></TableCell>
+                        <TableCell><span className="text-xs text-zinc-300 block py-1">{t.notes}</span></TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
@@ -2133,7 +2133,7 @@ const InventoryControl = () => {
                     </TableCell>
                     <TableCell className="text-zinc-300 max-w-[200px]">
                       <div>{item.serviceName}</div>
-                      {item.notes && <div className="text-xs text-zinc-500 truncate" title={item.notes}>{item.notes}</div>}
+                      {item.notes && <div className="text-xs text-zinc-500 py-1" title={item.notes}>{item.notes}</div>}
                     </TableCell>
                   </TableRow>
                 ))}

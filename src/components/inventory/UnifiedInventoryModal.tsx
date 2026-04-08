@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -34,6 +35,7 @@ interface ChemicalForm {
   isTaxDeductible?: boolean;
   notes?: string;
   dilutionRatios: DilutionRatio[];
+  wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
 }
@@ -52,6 +54,7 @@ interface SupplyForm {
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
   isTaxDeductible?: boolean;
+  wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
 }
@@ -73,6 +76,7 @@ interface EquipmentForm {
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
   isTaxDeductible?: boolean;
+  wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
 }
@@ -94,8 +98,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     if (m === 'tool') return 'equipment';
     return m;
   };
+  
+  const [mode, setMode] = useState<Mode>(normalizeMode(modeProp));
 
-  const mode = normalizeMode(modeProp);
+  useEffect(() => {
+    setMode(normalizeMode(modeProp));
+  }, [modeProp, open]);
 
   const [form, setForm] = useState<ChemicalForm & SupplyForm & EquipmentForm>({
     id: undefined,
@@ -121,6 +129,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     chemicalLibraryId: "",
     isTaxDeductible: true,
     dilutionRatios: [],
+    wherePurchased: "",
     updatedAt: "",
     createdAt: "",
   });
@@ -142,12 +151,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [customCategory, setCustomCategory] = useState(false);
   const [customSubtype, setCustomSubtype] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
+  const [customPurchased, setCustomPurchased] = useState(false);
 
-  // Dropdown options
   const categoryOptions = {
     supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
   };
+  
+  const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Custom"];
 
   const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
 
@@ -202,6 +213,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       setCustomCategory(isCustomCat);
       setCustomSubtype(initialSubtype && !sizeOptions.includes(initialSubtype));
       setCustomUnit(initialUnit && !getUnitOptions().includes(initialUnit));
+      
+      const initialPurchased = (initial as any).wherePurchased || "";
+      setCustomPurchased(initialPurchased && !purchasedOptions.includes(initialPurchased));
 
       setForm((f) => ({
         ...f,
@@ -225,6 +239,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         imageUrl: (initial as any).imageUrl || f.imageUrl,
         chemicalLibraryId: (initial as any).chemicalLibraryId || "",
         dilutionRatios: (initial as any).dilutionRatios || [],
+        wherePurchased: initialPurchased,
         updatedAt: (initial as any).updated_at || (initial as any).updatedAt || "",
         createdAt: (initial as any).createdAt || (initial as any).created_at || "",
       }));
@@ -232,6 +247,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       setCustomCategory(false);
       setCustomSubtype(false);
       setCustomUnit(false);
+      setCustomPurchased(false);
       setForm({
         id: undefined,
         name: "",
@@ -254,9 +270,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         imageUrl: "",
         chemicalLibraryId: "",
         dilutionRatios: [],
+        wherePurchased: "",
       });
     }
-  }, [initial, open, mode]);
+  }, [initial, open, modeProp]); // Use modeProp for initial load stabilization
 
   // Clean up lock when modal closes
   useEffect(() => {
@@ -376,7 +393,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       const isNew = !form.id; // Track if this is a new purchase
       const id = form.id || crypto.randomUUID();
 
-      console.log(`[UnifiedInventoryModal] Saving ${mode}:`, { id, isNew, name: form.name, quantity: qty, unitCost, totalCost });
+      // MIGRATION LOGIC: Check if we are changing types
+      const originalMode = initial ? normalizeMode(modeProp) : mode;
+      const isModeChanging = !!initial && mode !== originalMode;
+
+      console.log(`[UnifiedInventoryModal] Saving ${mode}:`, { id, isNew, name: form.name, isModeChanging, from: originalMode });
 
       if (mode === 'chemical') {
         const payload = {
@@ -391,6 +412,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           chemicalLibraryId: form.chemicalLibraryId || undefined,
           notes: form.notes || undefined,
           dilutionRatios: form.dilutionRatios,
+          wherePurchased: form.wherePurchased?.trim() || undefined,
         };
 
         // Import inventory-data at top of file
@@ -408,6 +430,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           lifeExpectancy: form.lifeExpectancy || "",
           notes: form.notes || "",
           imageUrl: form.imageUrl,
+          wherePurchased: form.wherePurchased?.trim() || undefined,
         };
 
         const { saveTool } = await import("@/lib/inventory-data");
@@ -425,6 +448,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           lowThreshold: Math.round(numeric(form.threshold)),
           createdAt: new Date().toISOString(),
           imageUrl: form.imageUrl,
+          wherePurchased: form.wherePurchased?.trim() || undefined,
         };
 
         console.log('[UnifiedInventoryModal] Supplies/Material Payload:', payload);
@@ -432,6 +456,25 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const { saveMaterial } = await import("@/lib/inventory-data");
         const result = await saveMaterial(payload, isNew);
         console.log('[UnifiedInventoryModal] saveMaterial database response:', result);
+      }
+
+      // If mode changed, delete the record from the old table
+      if (isModeChanging) {
+        try {
+          if (originalMode === 'chemical') {
+            const { deleteChemical } = await import("@/lib/inventory-data");
+            await deleteChemical(id);
+          } else if (originalMode === 'equipment' || originalMode === 'tool') {
+            const { deleteTool } = await import("@/lib/inventory-data");
+            await deleteTool(id);
+          } else {
+            const { deleteMaterial } = await import("@/lib/inventory-data");
+            await deleteMaterial(id);
+          }
+          console.log(`[Migration] Successfully removed item from ${originalMode}`);
+        } catch (migrationErr) {
+          console.error("Migration deletion failed:", migrationErr);
+        }
       }
 
       // Invalidate session cache so InventoryControl re-fetches fresh data
@@ -735,6 +778,51 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+              {(mode === 'supply' || mode === 'material' || mode === 'equipment' || mode === 'tool') && (
+                <div>
+                  <Label className="text-xs text-zinc-400">Where Purchased</Label>
+                  {!customPurchased ? (
+                    <select
+                      value={purchasedOptions.includes(form.wherePurchased || "") ? form.wherePurchased : (form.wherePurchased ? "Custom" : "")}
+                      onChange={(e) => {
+                        if (e.target.value === "Custom") {
+                          setCustomPurchased(true);
+                          setForm({ ...form, wherePurchased: "" });
+                        } else {
+                          setForm({ ...form, wherePurchased: e.target.value });
+                        }
+                      }}
+                      className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="">Select source...</option>
+                      {purchasedOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.wherePurchased}
+                        onChange={(e) => setForm({ ...form, wherePurchased: e.target.value })}
+                        className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                        placeholder="Enter store name..."
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCustomPurchased(false);
+                          setForm({ ...form, wherePurchased: "" });
+                        }}
+                        className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
               {(mode === 'equipment' || mode === 'tool') && (
@@ -1251,14 +1339,55 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             <h3 className="text-sm font-semibold text-zinc-300 mb-3">Additional Notes</h3>
             <div>
               <Label className="text-xs text-zinc-400">Notes</Label>
-              <Input
+              <Textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                className="bg-zinc-900 border-zinc-700 text-white min-h-[100px] text-sm resize-y"
                 placeholder="Any additional information..."
               />
             </div>
           </div>
+
+          {/* Conversion Section - For Supply/Equipment switching */}
+          {form.id && (mode === 'supply' || mode === 'equipment' || mode === 'tool') && (
+            <div className="bg-amber-900/10 border border-amber-900/30 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-amber-500 mb-3 flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" /> Change Inventory Category
+              </h3>
+              <p className="text-xs text-zinc-400 mb-3">
+                Moved this item by mistake? You can switch it between Supplies and Equipment. 
+                Data will be migrated when you click Save.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === 'supply' ? 'default' : 'outline'}
+                  onClick={() => {
+                    setMode('supply');
+                    if (!form.costPerItem && form.price) setForm(f => ({ ...f, costPerItem: f.price }));
+                    toast.info("Converted preview to Supply. Remember to Save.");
+                  }}
+                  className={mode === 'supply' ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'border-zinc-700 text-zinc-400'}
+                >
+                  Move to Supplies
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === 'equipment' ? 'default' : 'outline'}
+                  onClick={() => {
+                    setMode('equipment');
+                    if (!form.price && form.costPerItem) setForm(f => ({ ...f, price: f.costPerItem }));
+                    toast.info("Converted preview to Equipment. Remember to Save.");
+                  }}
+                  className={mode === 'equipment' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'border-zinc-700 text-zinc-400'}
+                >
+                  Move to Equipment
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter className="p-6 pt-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-between gap-2 mt-auto">
           <div className="flex gap-2">
