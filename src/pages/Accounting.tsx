@@ -869,29 +869,30 @@ const Accounting = () => {
                     <span>Inventory:</span>
                     <span className="font-medium">${inventoryTotals.total.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center group relative cursor-help">
+                  <div className="flex justify-between items-center">
                     <span>Non-Inventory Expenses:</span>
                     <span className="font-medium">${totalSpent.toFixed(2)}</span>
-                    
-                    {/* Source Breakdown Tooltip */}
-                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50">
-                      <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-2xl min-w-[240px]">
-                        <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-2">Category Breakdown (LIVE DATA)</p>
-                        <div className="space-y-1">
-                          {Object.entries(expenseBreakdown).length === 0 && <p className="text-slate-400 text-[11px]">No non-inventory expenses found.</p>}
-                          {Object.entries(expenseBreakdown).map(([cat, amt]) => (
-                            <div key={cat} className="flex justify-between text-[11px] gap-4">
-                              <span className="text-slate-400">{cat}:</span>
-                              <span className="text-white font-mono">${amt.toFixed(2)}</span>
-                            </div>
-                          ))}
-                          <div className="pt-2 mt-2 border-t border-slate-700 text-[9px] text-slate-500 italic leading-tight">
-                            Note: Supplies, Materials, and Chemicals are handled under "Inventory" to avoid double-counting.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
+
+                  {/* Persistent Breakdown List (Replaces hidden tooltip) */}
+                  {Object.entries(expenseBreakdown).length > 0 && (
+                    <div className="pl-3 space-y-0.5 border-l border-slate-700/50 my-1">
+                      {Object.entries(expenseBreakdown).map(([cat, amt]) => (
+                        <div key={cat} className="flex justify-between text-[10px] opacity-80">
+                          <span className="text-slate-400 capitalize">{cat}:</span>
+                          <span className="font-mono text-zinc-300">${amt.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {Object.entries(expenseBreakdown).length === 0 && totalSpent === 0 && (
+                    <p className="text-[10px] text-slate-500 italic pl-3">No non-inventory expenses recorded.</p>
+                  )}
+
+                  <p className="text-[9px] text-slate-500 italic pl-3 mt-1 leading-tight">
+                    * Inventory (Pools, Tools, etc.) are tracked above to avoid double-counting.
+                  </p>
                   <div className="pt-1 border-t border-muted-foreground/20 flex justify-between font-semibold">
                     <span>Total Investment:</span>
                     <span>${(inventoryTotals.total + totalSpent).toFixed(2)}</span>
