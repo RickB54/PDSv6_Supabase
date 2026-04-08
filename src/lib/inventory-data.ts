@@ -128,7 +128,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         chemicalLibraryId: item.chemical_library_id,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        dilutionRatios: item.dilution_ratios || []
+        dilutionRatios: item.dilution_ratios || [],
+        wherePurchased: item.where_purchased
     }));
 }
 
@@ -149,6 +150,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         image_url: chemical.imageUrl,
         chemical_library_id: chemical.chemicalLibraryId,
         dilution_ratios: chemical.dilutionRatios || [],
+        where_purchased: chemical.wherePurchased || null,
         updated_at: new Date().toISOString()
     };
 
@@ -370,7 +372,8 @@ export async function getMaterials(): Promise<Material[]> {
         lowThreshold: item.low_threshold,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        imageUrl: item.image_url
+        imageUrl: item.image_url,
+        wherePurchased: item.where_purchased
     }));
 }
 
@@ -399,6 +402,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         notes: material.notes,
         low_threshold: material.lowThreshold,
         image_url: material.imageUrl,
+        where_purchased: material.wherePurchased || null,
         updated_at: new Date().toISOString()
     };
 
@@ -491,7 +495,8 @@ export async function getTools(): Promise<Tool[]> {
         notes: item.notes || '',
         imageUrl: item.image_url,
         createdAt: item.created_at,
-        updatedAt: item.updated_at
+        updatedAt: item.updated_at,
+        wherePurchased: item.where_purchased
     }));
 }
 
@@ -512,6 +517,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         life_expectancy: tool.lifeExpectancy,
         notes: tool.notes,
         image_url: tool.imageUrl,
+        where_purchased: tool.wherePurchased || null,
         updated_at: new Date().toISOString()
     };
 
