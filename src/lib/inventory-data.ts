@@ -407,7 +407,7 @@ export async function getMaterials(): Promise<Material[]> {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         imageUrl: item.image_url,
-        wherePurchased: item.where_purchased
+        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon"
     }));
 }
 
@@ -569,7 +569,7 @@ export async function getTools(): Promise<Tool[]> {
         imageUrl: item.image_url,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        wherePurchased: item.where_purchased
+        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon"
     }));
 }
 
