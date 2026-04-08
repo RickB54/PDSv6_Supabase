@@ -124,22 +124,36 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                <Input
                  placeholder="Search all documentation..."
                  value={query}
-                 onChange={(e) => {
-                   setQuery(e.target.value);
-                   setAccordionValue("toc"); // Keep menu open while searching
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setAccordionValue("toc"); // Keep menu open while searching
+                }}
+                className="pl-10 h-10 bg-slate-900/50 border-slate-700 text-white focus-visible:ring-emerald-500 rounded-full"
+              />
+              {query && (
+                <button 
+                 onClick={() => {
+                   setQuery('');
+                   // Set to first topic when clearing search
+                   if (toc.length > 0) setCurrentTopicId(toc[0].id);
                  }}
-                 className="pl-10 h-10 bg-slate-900/50 border-slate-700 text-white focus-visible:ring-emerald-500 rounded-full"
-               />
-               {query && (
-                 <button 
-                  onClick={() => setQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs font-bold"
-                 >
-                   Clear
-                 </button>
-               )}
-            </div>
-          </div>
+                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs font-bold"
+                >
+                  Clear
+                </button>
+              )}
+           </div>
+         </div>
+
+         {/* Auto-switch to first result during search */}
+         {useEffect(() => {
+           if (query.trim() && filteredToc.length > 0) {
+             const isCurrentInResults = filteredToc.some(t => t.id === currentTopicId);
+             if (!isCurrentInResults) {
+               setCurrentTopicId(filteredToc[0].id);
+             }
+           }
+         }, [filteredToc, query, currentTopicId]) as any}
 
           <div className="flex flex-col gap-3">
             {/* Navigation Selector */}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText } from "lucide-react";
+import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText, HelpCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -744,7 +744,16 @@ const Reports = () => {
                 <FileBarChart className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Reports Center</h2>
+                <h2 className="text-2xl font-bold text-white flex items-center">
+                  Reports Center
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'reports-global-summary' }))}
+                    className="ml-2 p-1 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-emerald-400 transition-all"
+                    title="What is Global Summary?"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                  </button>
+                </h2>
                 <p className="text-zinc-400 text-sm">Analyze business performance</p>
               </div>
             </div>
@@ -761,6 +770,13 @@ const Reports = () => {
                 </SelectContent>
               </Select>
               <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="reports-range" />
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'reports-temporal-scan' }))}
+                className="p-2 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-blue-400 transition-all"
+                title="About Temporal Scans"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </Card>
@@ -1105,7 +1121,16 @@ const Reports = () => {
 
 
               {/* Inventory Assets Summary */}
-              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase">Inventory Assets</h4>
+              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase flex items-center">
+                Inventory Assets
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'reports-logic-grouping' }))}
+                  className="ml-2 p-1 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-purple-400 transition-all"
+                  title="What is Logic Grouping?"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Chemicals</p>
@@ -1126,7 +1151,16 @@ const Reports = () => {
               </div>
 
               {/* Break-Even Analysis */}
-              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase">Break-Even Analysis</h4>
+              <h4 className="text-md font-bold text-zinc-300 mb-3 uppercase flex items-center">
+                Break-Even Analysis
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'break-even-analysis' }))}
+                  className="ml-2 p-1 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-orange-400 transition-all"
+                  title="How to read this chart?"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Investment (Assets + Exp)</p>
