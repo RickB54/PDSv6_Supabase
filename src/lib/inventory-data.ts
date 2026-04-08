@@ -423,8 +423,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
 
     const { data: upsertData, error } = await supabase
         .from('materials')
-        .upsert(dbData)
-        .select();
+        .upsert(dbData);
 
     if (error) {
         if (error.code === '42703') {
@@ -432,10 +431,9 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
             const sanitized = { ...dbData };
             delete sanitized.where_purchased;
             
-            const { data: retryData, error: retryErr } = await supabase.from('materials').upsert(sanitized).select();
+            const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
             if (retryErr) throw retryErr;
-            const savedItem = retryData?.[0];
-            return savedItem;
+            return;
         } else {
             console.error('[InventoryData] saveMaterial: Supabase Error!', error);
             throw error;

@@ -889,13 +889,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Low Threshold *</Label>
+                    <Label className="text-xs text-zinc-400">Low Threshold</Label>
                     <Input
                       type="number"
                       value={form.threshold}
                       onChange={(e) => setForm({ ...form, threshold: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      required
                     />
                   </div>
                   <div>
@@ -971,13 +970,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Low Threshold *</Label>
+                    <Label className="text-xs text-zinc-400">Low Threshold</Label>
                     <Input
                       type="number"
                       value={form.threshold}
                       onChange={(e) => setForm({ ...form, threshold: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      required
                     />
                   </div>
                   <div>
@@ -1053,13 +1051,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Low Threshold *</Label>
+                    <Label className="text-xs text-zinc-400">Low Threshold</Label>
                     <Input
                       type="number"
                       value={form.threshold}
                       onChange={(e) => setForm({ ...form, threshold: e.target.value })}
                       className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      required
                     />
                   </div>
                   <div>
