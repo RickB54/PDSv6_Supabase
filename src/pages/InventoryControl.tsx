@@ -1456,6 +1456,7 @@ const InventoryControl = () => {
             {c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)} 
             <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)})</span>
           </div>
+          {c.wherePurchased && <div className="text-[10px] text-zinc-400 mt-1 italic">Purchased at: {c.wherePurchased}</div>}
           {(() => {
             const ratios = getMasterRatios(c);
             if (ratios.length === 0) return null;
@@ -1848,7 +1849,10 @@ const InventoryControl = () => {
                           {m.imageUrl && <img src={m.imageUrl} alt={m.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
                           {m.name}
                         </TableCell>
-                        <TableCell className="text-zinc-300">{m.category}</TableCell>
+                        <TableCell className="text-zinc-300">
+                          {m.category}
+                          {m.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {m.wherePurchased}</div>}
+                        </TableCell>
                         <TableCell className={`font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           <div className="flex flex-col">
                             <span>{!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}</span>
@@ -1892,6 +1896,7 @@ const InventoryControl = () => {
                         <div className={`text-sm font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           {m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)} (Total: $${(m.costPerItem * m.quantity).toFixed(2)})`}
                         </div>
+                        {m.wherePurchased && <div className="text-[10px] text-zinc-400 italic">Purchased at: {m.wherePurchased}</div>}
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
                         {m.quantity} units
@@ -2020,7 +2025,10 @@ const InventoryControl = () => {
                           {t.imageUrl && <img src={t.imageUrl} alt={t.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
                           {t.name}
                         </TableCell>
-                        <TableCell className="text-zinc-300">{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell className="text-zinc-300">
+                          {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
+                          {t.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {t.wherePurchased}</div>}
+                        </TableCell>
                         <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           <div className="flex flex-col">
                             <span>{!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}</span>
@@ -2059,6 +2067,7 @@ const InventoryControl = () => {
                         <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           {!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
                         </div>
+                        {t.wherePurchased && <div className="text-[10px] text-zinc-400 italic">Purchased at: {t.wherePurchased}</div>}
                       </div>
                     </div>
                     {t.notes && <div className="text-xs text-zinc-300">{t.notes}</div>}

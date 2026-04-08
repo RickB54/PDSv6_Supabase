@@ -157,8 +157,18 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     const { error } = await supabase
         .from('chemicals')
         .upsert(dbData);
-
-    if (error) throw error;
+    
+    if (error) {
+        if (error.code === '42703' && error.message?.includes('where_purchased')) {
+            console.warn('Handling missing where_purchased column in chemicals table, retrying...', error.message);
+            const sanitized = { ...dbData };
+            delete sanitized.where_purchased;
+            const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
+            if (retryErr) throw retryErr;
+        } else {
+            throw error;
+        }
+    }
 
     // 2. UNIVERSAL SYNC: Update Chemical Library if linked
     if (!skipLibrarySync && chemical.chemicalLibraryId && chemical.dilutionRatios) {
@@ -414,8 +424,18 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         .select();
 
     if (error) {
-        console.error('[InventoryData] saveMaterial: Supabase Error!', error);
-        throw error;
+        if (error.code === '42703' && error.message?.includes('where_purchased')) {
+            console.warn('Handling missing where_purchased column in materials table, retrying...', error.message);
+            const sanitized = { ...dbData };
+            delete sanitized.where_purchased;
+            const { data: retryData, error: retryErr } = await supabase.from('materials').upsert(sanitized).select();
+            if (retryErr) throw retryErr;
+            const savedItem = retryData?.[0];
+            return savedItem;
+        } else {
+            console.error('[InventoryData] saveMaterial: Supabase Error!', error);
+            throw error;
+        }
     }
     
     const savedItem = upsertData?.[0];
@@ -527,11 +547,12 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
 
     if (error) {
         // Handle missing columns gracefully (schema might not be updated yet)
-        if (error.message?.includes('quantity') || error.message?.includes('category') || error.code === '42703') {
+        if (error.message?.includes('where_purchased') || error.message?.includes('quantity') || error.message?.includes('category') || error.code === '42703') {
             console.warn('Handling missing columns in tools table, retrying...', error.message);
             const sanitizedData = { ...dbData };
             if (error.message?.includes('quantity')) delete sanitizedData.quantity;
             if (error.message?.includes('category')) delete sanitizedData.category;
+            if (error.message?.includes('where_purchased')) delete sanitizedData.where_purchased;
             
             const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
             if (retryErr) throw retryErr;
