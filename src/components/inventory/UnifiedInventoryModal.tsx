@@ -158,7 +158,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
   };
   
-  const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Custom"];
+  const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Custom"];
 
   const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
 
@@ -780,7 +780,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   </div>
                 </div>
               )}
-              {(mode === 'supply' || mode === 'material' || mode === 'equipment' || mode === 'tool') && (
+              {(mode === 'supply' || mode === 'material' || mode === 'equipment' || mode === 'tool' || mode === 'chemical') && (
                 <div>
                   <Label className="text-xs text-zinc-400">Where Purchased</Label>
                   {!customPurchased ? (
