@@ -2092,6 +2092,54 @@ export const deleteSupabaseTaxReport = async (id: string) => {
     }
 };
 
+// ------------------------------------------------------------------
+// Income (Receivables) Sync
+// ------------------------------------------------------------------
+
+export const getSupabaseIncome = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('manual_income')
+            .select('*')
+            .order('date', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('getSupabaseIncome error:', err);
+        return [];
+    }
+};
+
+export const upsertSupabaseIncome = async (income: any) => {
+    if (isDemoActive()) return { ...income, id: income.id || `demo_inc_${Date.now()}` };
+    try {
+        const { data, error } = await supabase
+            .from('manual_income')
+            .upsert(income)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('upsertSupabaseIncome error:', err);
+        throw err;
+    }
+};
+
+export const deleteSupabaseIncome = async (id: string) => {
+    if (isDemoActive()) return;
+    try {
+        const { error } = await supabase
+            .from('manual_income')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteSupabaseIncome error:', err);
+        throw err;
+    }
+};
+
 
 
 

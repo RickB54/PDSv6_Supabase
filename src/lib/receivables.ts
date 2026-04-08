@@ -1,5 +1,5 @@
 import localforage from "localforage";
-import { pushAdminAlert } from "@/lib/adminAlerts";
+import { supabase } from "./supabase";
 
 localforage.config({ name: "prime-detail-db" });
 
@@ -11,58 +11,63 @@ export type Receivable = {
   category?: string;
   description?: string;
   date: string; // ISO date
-  customerId?: string;
   customerName?: string;
   paymentMethod?: string; // cash, card, etc
   createdAt?: string;
   updatedAt?: string;
 };
 
-const genId = () =>
-(typeof crypto !== "undefined" && "randomUUID" in crypto
-  ? (crypto as any).randomUUID()
-  : `rcv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
-
-async function getList(): Promise<Receivable[]> {
-  return (await localforage.getItem<Receivable[]>(KEY)) || [];
-}
-
-async function setList(list: Receivable[]) {
-  await localforage.setItem(KEY, list);
-}
-
 export async function getReceivables(): Promise<Receivable[]> {
-  return getList();
+  try {
+    const { data, error } = await supabase
+      .from("manual_income")
+      .select("*")
+      .order("date", { ascending: false });
+    if (error) throw error;
+    return (data || []).map((r) => ({
+      ...r,
+      customerName: r.customer_name,
+      paymentMethod: r.payment_method,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at
+    }));
+  } catch (err) {
+    console.error("getReceivables error:", err);
+    return (await localforage.getItem<Receivable[]>(KEY)) || [];
+  }
 }
 
 export async function upsertReceivable(rec: Receivable): Promise<Receivable> {
-  const list = await getList();
-  const now = new Date().toISOString();
-  let saved: Receivable;
-
-  if (rec.id) {
-    const idx = list.findIndex((r) => r.id === rec.id);
-    if (idx >= 0) {
-      saved = { ...list[idx], ...rec, updatedAt: now };
-      list[idx] = saved;
-    } else {
-      saved = { ...rec, id: rec.id, createdAt: now, updatedAt: now };
-      list.push(saved);
-    }
-  } else {
-    saved = { ...rec, id: genId(), createdAt: now, updatedAt: now };
-    list.push(saved);
-  }
-
-  await setList(list);
   try {
-    pushAdminAlert('accounting_update', 'Income recorded', 'system', { recordType: 'Accounting', id: saved.id });
-  } catch { }
-  return saved;
+    const payload = {
+      ...rec,
+      customer_name: rec.customerName,
+      payment_method: rec.paymentMethod
+    };
+    delete (payload as any).customerName;
+    delete (payload as any).paymentMethod;
+
+    const { data, error } = await supabase
+      .from("manual_income")
+      .upsert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    const list = (await localforage.getItem<Receivable[]>(KEY)) || [];
+    const saved = rec.id ? { ...list.find(r => r.id === rec.id), ...rec } : { id: `rcv-${Date.now()}`, ...rec };
+    list.push(saved);
+    await localforage.setItem(KEY, list);
+    return saved as any;
+  }
 }
 
 export async function deleteReceivable(id: string): Promise<void> {
-  const list = await getList();
-  const next = list.filter((r) => r.id !== id);
-  await setList(next);
+  try {
+    await supabase.from("manual_income").delete().eq("id", id);
+  } catch {
+    const list = (await localforage.getItem<Receivable[]>(KEY)) || [];
+    await localforage.setItem(KEY, list.filter((r) => r.id !== id));
+  }
 }

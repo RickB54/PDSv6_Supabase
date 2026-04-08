@@ -1,5 +1,6 @@
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
+import { supabase } from './supabase';
 
 // Centralized local DB using IndexedDB via localforage
 localforage.config({ name: "prime-detail-db" });
@@ -203,81 +204,108 @@ export async function deleteEstimate(id: string): Promise<void> {
   await setArray(KEYS.estimates, filtered);
 }
 
-// Invoices (placeholders for future pages to use)
 export async function getInvoices<T extends GenericWithId>(): Promise<T[]> {
-  return getArray<T>(KEYS.invoices);
+  try {
+    const { data, error } = await supabase.from('invoices').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(i => ({
+      ...i,
+      invoiceNumber: i.invoice_number,
+      paymentStatus: i.status,
+      paidAmount: i.paid_amount,
+      createdAt: i.created_at
+    })) as T[];
+  } catch (err) {
+    console.error('getInvoices supabase error:', err);
+    return getArray<T>(KEYS.invoices); // Fallback to local
+  }
 }
 
 export async function upsertInvoice<T extends Partial<GenericWithId>>(inv: T): Promise<GenericWithId & T> {
   if (blockDemo('invoice update')) return inv as any;
-  const list = await getArray<any>(KEYS.invoices);
-  let saved: any;
-  if (inv.id) {
-    const idx = list.findIndex((c: any) => c.id === inv.id);
-    if (idx >= 0) {
-      list[idx] = { ...list[idx], ...inv };
-      saved = list[idx];
-    } else {
-      saved = { id: String(inv.id), ...inv };
-      list.push(saved);
-    }
-  } else {
-    saved = { id: genId(), ...inv };
-    list.push(saved);
-  }
-  await setArray(KEYS.invoices, list);
   try {
-    const isNew = !inv.id;
-    if (isNew) {
-      pushAdminAlert('invoice_created', `Invoice created: #${String((saved as any).invoiceNumber || '')}`, 'system', { id: saved.id, recordType: 'Invoice', amount: (saved as any).total });
-    }
-    const status = String((saved as any).paymentStatus || 'unpaid');
-    if (status !== 'paid') {
-      pushAdminAlert('invoice_unpaid', `Invoice unpaid: #${String((saved as any).invoiceNumber || '')}`, 'system', { id: saved.id, recordType: 'Invoice', amountDue: ((saved as any).total || 0) - ((saved as any).paidAmount || 0) });
-    }
-    // Accounting updates reflect financial changes
-    pushAdminAlert('accounting_update', 'Accounting updated: invoices or expenses changed', 'system', { recordType: 'Accounting' });
-  } catch { }
-  return saved;
+    const payload = {
+      ...inv,
+      invoice_number: (inv as any).invoiceNumber,
+      status: (inv as any).paymentStatus,
+      paid_amount: (inv as any).paidAmount
+    };
+    // Remove local keys before saving to Supabase
+    delete (payload as any).invoiceNumber;
+    delete (payload as any).paymentStatus;
+    delete (payload as any).paidAmount;
+
+    const { data, error } = await supabase.from('invoices').upsert(payload).select().single();
+    if (error) throw error;
+    return data as any;
+  } catch (err) {
+    console.error('upsertInvoice supabase error:', err);
+    // Local fallback logic
+    const list = await getArray<any>(KEYS.invoices);
+    const saved = inv.id ? { ...list.find((c: any) => c.id === inv.id), ...inv } : { id: genId(), ...inv };
+    list.push(saved);
+    await setArray(KEYS.invoices, list);
+    return saved as any;
+  }
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-  const list = await getArray<any>(KEYS.invoices);
-  const next = list.filter((i: any) => i.id !== id);
-  await setArray(KEYS.invoices, next);
+  try {
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) throw error;
+  } catch {
+    const list = await getArray<any>(KEYS.invoices);
+    await setArray(KEYS.invoices, list.filter((i: any) => i.id !== id));
+  }
 }
 
-// Expenses (for Accounting page)
+// Expenses (for Accounting page) - Sync via tax_expenses table
 export async function getExpenses<T extends GenericWithId>(): Promise<T[]> {
-  return getArray<T>(KEYS.expenses);
+  try {
+    const { data, error } = await supabase.from('tax_expenses').select('*').order('date', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(e => ({
+      ...e,
+      description: e.vendor || e.notes || 'Expense',
+      createdAt: e.date || e.created_at
+    })) as T[];
+  } catch {
+    return getArray<T>(KEYS.expenses);
+  }
 }
 
 export async function upsertExpense<T extends Partial<GenericWithId>>(exp: T): Promise<GenericWithId & T> {
   if (blockDemo('expense update')) return exp as any;
-  const list = await getArray<any>(KEYS.expenses);
-  let saved: any;
-  if (exp.id) {
-    const idx = list.findIndex((c: any) => c.id === exp.id);
-    if (idx >= 0) {
-      list[idx] = { ...list[idx], ...exp };
-      saved = list[idx];
-    } else {
-      saved = { id: String(exp.id), ...exp };
-      list.push(saved);
-    }
-  } else {
-    saved = { id: genId(), ...exp };
+  try {
+    const payload = {
+      ...exp,
+      vendor: (exp as any).description,
+      date: (exp as any).createdAt ? new Date((exp as any).createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      is_deductible: true
+    };
+    // Cleanup local fields
+    delete (payload as any).description;
+    delete (payload as any).createdAt;
+
+    const { data, error } = await supabase.from('tax_expenses').upsert(payload).select().single();
+    if (error) throw error;
+    return data as any;
+  } catch {
+    const list = await getArray<any>(KEYS.expenses);
+    const saved = exp.id ? { ...list.find(e => e.id === exp.id), ...exp } : { id: genId(), ...exp };
     list.push(saved);
+    await setArray(KEYS.expenses, list);
+    return saved as any;
   }
-  await setArray(KEYS.expenses, list);
-  try { pushAdminAlert('accounting_update', 'Accounting updated: expense recorded', 'system', { recordType: 'Accounting', id: saved.id }); } catch { }
-  return saved;
 }
 
 export async function deleteExpense(id: string): Promise<void> {
-  const list = await getArray<any>(KEYS.expenses);
-  const next = list.filter((e: any) => e.id !== id);
-  await setArray(KEYS.expenses, next);
+  try {
+    await supabase.from('tax_expenses').delete().eq('id', id);
+  } catch {
+    const list = await getArray<any>(KEYS.expenses);
+    await setArray(KEYS.expenses, list.filter((e: any) => e.id !== id));
+  }
 }
 
 // Sub-Contractors

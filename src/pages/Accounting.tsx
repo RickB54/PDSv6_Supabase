@@ -10,7 +10,9 @@ import {
   Download, Upload, RefreshCw, TrendingUp, Search,
   Printer, TrendingDown, DollarSign, Package, HelpCircle
 } from "lucide-react";
-import { getSupabaseCustomers, getSupabaseTaxExpenses } from "@/lib/supa-data"; // NEW IMPORT
+import { getInvoices, getExpenses, upsertExpense, deleteExpense } from "@/lib/db";
+import { getReceivables, upsertReceivable, deleteReceivable, Receivable } from "@/lib/receivables";
+import { getSupabaseCustomers, getSupabaseTaxExpenses } from "@/lib/supa-data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,8 +45,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getInvoices, getExpenses, upsertExpense } from "@/lib/db";
-import { getReceivables, upsertReceivable, Receivable } from "@/lib/receivables";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
@@ -187,10 +187,8 @@ const Accounting = () => {
 
   const loadTaxInventory = async () => {
     const taxExpenses = await getSupabaseTaxExpenses();
-    // Filter only inventory items (Equipment and Supplies categories)
-    const inventoryTaxExpenses = taxExpenses.filter(te =>
-      te.category && ['Equipment', 'Supplies'].includes(te.category) && te.is_deductible
-    );
+    // Show all deductible expenses to match the Profit/Loss summary
+    const inventoryTaxExpenses = taxExpenses.filter(te => te.is_deductible);
     setTaxInventoryExpenses(inventoryTaxExpenses);
   };
 
@@ -203,6 +201,7 @@ const Accounting = () => {
     const invoices = await getInvoices();
     const expensesData = await getExpenses();
     const incomes = await getReceivables();
+
     setExpenseList(expensesData as Expense[]);
     setInvoiceList(invoices as Invoice[]);
     setIncomeList(incomes as Receivable[]);
@@ -273,11 +272,9 @@ const Accounting = () => {
     if (!id) return;
     try {
       if (type === 'income') {
-        const { deleteReceivable } = await import('@/lib/receivables');
         await deleteReceivable(id);
         toast({ title: 'Income Deleted' });
       } else {
-        const { deleteExpense } = await import('@/lib/db');
         await deleteExpense(id);
         toast({ title: 'Expense Deleted' });
       }
@@ -704,7 +701,16 @@ const Accounting = () => {
 
           {/* Profit/Loss Summary - Moved to Top */}
           <Card className={`p-6 border-border ${profit > 0 ? 'bg-green-600' : profit < 0 ? 'bg-red-600' : 'bg-blue-600'}`}>
-            <h2 className="text-2xl font-bold text-white mb-2">Profit/Loss Summary</h2>
+            <div className="flex justify-between items-start mb-2">
+              <h2 className="text-2xl font-bold text-white">Profit/Loss Summary</h2>
+              <button 
+                onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-profit-loss' })); }}
+                className="p-1 rounded-full hover:bg-white/20 text-white/70 hover:text-white transition-all"
+                title="How is this calculated?"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            </div>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-bold text-white">
                 ${Math.abs(profit).toFixed(2)}
@@ -799,6 +805,13 @@ const Accounting = () => {
                       <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                         <DollarSign className="h-6 w-6 text-purple-500" />
                         Tax-Deductible Inventory
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-tax-deductions' })); }}
+                          className="p-1 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/40 text-muted-foreground hover:text-purple-500 transition-all focus:outline-none"
+                          title="Why do some items not show up here?"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
                       </h2>
                       <p className="text-sm text-muted-foreground mt-1">
                         Inventory items marked for tax deduction
