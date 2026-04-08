@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import {
   Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
   Download, Upload, RefreshCw, TrendingUp, Search,
-  Printer, TrendingDown, DollarSign, Package // Added Package icon
+  Printer, TrendingDown, DollarSign, Package, HelpCircle
 } from "lucide-react";
-import { getSupabaseCustomers } from "@/lib/supa-data"; // NEW IMPORT
+import { getSupabaseCustomers, getSupabaseTaxExpenses } from "@/lib/supa-data"; // NEW IMPORT
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getInvoices, getExpenses, upsertExpense } from "@/lib/db";
+import { getInvoices, getExpenses, upsertExpense, Expense } from "@/lib/db";
 import { getReceivables, upsertReceivable, Receivable } from "@/lib/receivables";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
@@ -51,8 +51,6 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import localforage from "localforage";
 import { getCategoryColors } from "@/lib/categoryColors";
 import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
-import { useDemoMode } from "@/contexts/DemoContext";
-import { MOCK_ACCOUNTING, MOCK_INVENTORY } from "@/lib/demoMockData";
 
 interface Invoice {
   id?: string;
@@ -99,6 +97,7 @@ const Accounting = () => {
   const [dailyRevenue, setDailyRevenue] = useState(0);
   const [weeklyRevenue, setWeeklyRevenue] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
   const [showDeleteExpense, setShowDeleteExpense] = useState(false);
   const [showDeleteNotes, setShowDeleteNotes] = useState(false);
 
@@ -137,49 +136,16 @@ const Accounting = () => {
     itemCount: { chemicals: 0, materials: 0, tools: 0, total: 0 }
   });
 
-  const { isDemoMode } = useDemoMode();
   const [taxInventoryExpenses, setTaxInventoryExpenses] = useState<any[]>([]);
+  const [expenseBreakdown, setExpenseBreakdown] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (isDemoMode) {
-      loadMockData();
-    } else {
-      loadData();
-      loadCustomCategories();
-      getSupabaseCustomers().then(setCustomers); // Load customers
-      getInventoryTotals().then(setInventoryTotals); // Load inventory
-      loadTaxInventory(); // Load tax-deductible inventory
-    }
-  }, [dateFilter, isDemoMode]);
-
-  const loadMockData = () => {
-    setDailyRevenue(MOCK_ACCOUNTING.income / 30);
-    setWeeklyRevenue(MOCK_ACCOUNTING.income / 4);
-    setMonthlyRevenue(MOCK_ACCOUNTING.income);
-    setTotalSpent(MOCK_ACCOUNTING.expenses);
-    setInventoryTotals({
-      chemicals: 2500.00,
-      materials: 1200.00,
-      tools: 5000.00,
-      total: 8700.00,
-      itemCount: { chemicals: 25, materials: 50, tools: 15, total: 90 }
-    });
-    setExpenseList(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'expense').map(t => ({
-      id: t.id,
-      amount: t.amount,
-      description: t.description,
-      category: t.category,
-      createdAt: t.date
-    })));
-    setIncomeList(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'income').map(t => ({
-      id: t.id,
-      amount: t.amount,
-      description: t.description,
-      category: t.category,
-      date: t.date,
-      type: 'income'
-    } as any)));
-  };
+    loadData();
+    loadCustomCategories();
+    getSupabaseCustomers().then(setCustomers); // Load customers
+    getInventoryTotals().then(setInventoryTotals); // Load inventory
+    loadTaxInventory(); // Load tax-deductible inventory
+  }, [dateFilter]);
 
   const loadTaxInventory = async () => {
     const taxExpenses = await getSupabaseTaxExpenses();
@@ -220,7 +186,7 @@ const Accounting = () => {
     const today = now.toDateString();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    let daily = 0, weekly = 0, monthly = 0, totalExp = 0;
+    let daily = 0, weekly = 0, monthly = 0, totalRev = 0, totalExp = 0;
 
     (invoices as Invoice[]).forEach(inv => {
       const invDate = new Date(inv.createdAt);
@@ -229,6 +195,7 @@ const Accounting = () => {
       if (invDate.getMonth() === now.getMonth() && invDate.getFullYear() === now.getFullYear()) {
         monthly += inv.total;
       }
+      totalRev += inv.total;
     });
 
     // Include manual income (receivables)
@@ -240,16 +207,22 @@ const Accounting = () => {
       if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
         monthly += amt;
       }
+      totalRev += amt;
     });
 
+    const breakdown: Record<string, number> = {};
     (expensesData as Expense[]).forEach(exp => {
       totalExp += exp.amount;
+      const cat = exp.category || 'Uncategorized';
+      breakdown[cat] = (breakdown[cat] || 0) + exp.amount;
     });
 
     setDailyRevenue(daily);
     setWeeklyRevenue(weekly);
     setMonthlyRevenue(monthly);
+    setTotalRevenue(totalRev);
     setTotalSpent(totalExp);
+    setExpenseBreakdown(breakdown);
   };
 
   const handleConfirmDeleteItem = async () => {
@@ -575,7 +548,7 @@ const Accounting = () => {
       },
       didParseCell: (data) => {
         if (data.section === 'body' && data.row.index === 3) {
-          data.cell.styles.fillColor = [34, 197, 94, 0.1];
+          data.cell.styles.fillColor = [240, 253, 244]; // emerald-50 replacement
           data.cell.styles.fontStyle = 'bold';
         }
       }
@@ -828,6 +801,14 @@ const Accounting = () => {
             <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-blue-500" />
               Break-Even Analysis
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-blue-400 hover:text-blue-600 p-0"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'break-even-analysis' }))}
+              >
+                <HelpCircle className="h-4 w-4" />
+              </Button>
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
               Track your total investment (inventory + expenses) vs service revenue to see when you'll break even
@@ -845,22 +826,37 @@ const Accounting = () => {
                     <span>Inventory:</span>
                     <span className="font-medium">${inventoryTotals.total.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center group relative cursor-help">
                     <span>Operating Expenses:</span>
                     <span className="font-medium">${totalSpent.toFixed(2)}</span>
+                    
+                    {/* Source Breakdown Tooltip */}
+                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50">
+                      <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-2xl min-w-[200px]">
+                        <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-2">Source Breakdown (LIVE DATA)</p>
+                        <div className="space-y-1">
+                          {Object.entries(expenseBreakdown).length === 0 && <p className="text-slate-500">No expenses found</p>}
+                          {Object.entries(expenseBreakdown).map(([cat, amt]) => (
+                            <div key={cat} className="flex justify-between text-[11px] gap-4">
+                              <span className="text-slate-400">{cat}:</span>
+                              <span className="text-white font-mono">${amt.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className="pt-1 border-t border-muted-foreground/20 flex justify-between font-semibold">
-                    <span>Total Costs:</span>
+                    <span>Total Investment:</span>
                     <span>${(inventoryTotals.total + totalSpent).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Total Service Revenue */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Service Revenue</Label>
                 <p className="text-3xl font-bold text-green-500">
-                  ${(dailyRevenue + weeklyRevenue + monthlyRevenue).toFixed(2)}
+                  ${totalRevenue.toFixed(2)}
                 </p>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex justify-between">
@@ -881,11 +877,11 @@ const Accounting = () => {
               {/* Break-Even Status */}
               <div className="space-y-2">
                 {(() => {
-                  const totalRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue;
+                  const currentTotalRevenue = totalRevenue; // Use global total for break-even
                   const totalInvestment = inventoryTotals.total + totalSpent;
-                  const remaining = totalInvestment - totalRevenue;
+                  const remaining = totalInvestment - currentTotalRevenue;
                   const percentRecovered = totalInvestment > 0
-                    ? (totalRevenue / totalInvestment) * 100
+                    ? (currentTotalRevenue / totalInvestment) * 100
                     : 0;
                   const isBreakEven = remaining <= 0;
 

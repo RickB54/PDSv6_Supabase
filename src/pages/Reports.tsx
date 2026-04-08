@@ -255,7 +255,8 @@ const Reports = () => {
     tools.forEach(tool => {
       if (y > 270) { doc.addPage(); y = 20; }
       doc.setFontSize(10);
-      const cost = tool.cost || 0;
+      // Tools use 'price' field in the database/interface
+      const cost = tool.price || tool.cost || 0;
       const qty = tool.quantity || 1;
       const total = cost * qty;
       toolsTotal += total;
@@ -268,6 +269,7 @@ const Reports = () => {
     doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
     doc.text(`Tools Subtotal: $${toolsTotal.toFixed(2)}`, 120, y + 2);
+    doc.setFont(undefined, 'normal');
     y += 10;
     grandTotal += toolsTotal;
 
@@ -652,7 +654,7 @@ const Reports = () => {
         ['Net Taxable Profit', `$${taxReport.netIncome.toLocaleString()}`],
       ],
       theme: 'striped',
-      headStyles: { fillStyle: 'emerald' as any }
+      headStyles: { fillColor: [16, 185, 129] } // emerald-500 equivalent
     });
 
     y = (doc as any).lastAutoTable.finalY + 15;

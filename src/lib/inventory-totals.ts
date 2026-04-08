@@ -32,10 +32,10 @@ export async function getInventoryTotals(): Promise<InventoryTotals> {
             0
         );
 
-        const toolsTotal = tools.reduce(
-            (sum, item) => sum + (item.price || 0),
-            0
-        );
+    const toolsTotal = tools.reduce(
+        (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
+        0
+    );
 
         return {
             chemicals: chemicalsTotal,
