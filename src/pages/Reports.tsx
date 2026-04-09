@@ -169,115 +169,175 @@ const Reports = () => {
 
   const generateInventoryReport = (download = false) => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Inventory Report", 105, 20, { align: "center" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Title
+    doc.setFontSize(26);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Inventory Status Hub", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+    doc.setTextColor(100);
+    doc.text(`Strategic Asset Report | Generated: ${new Date().toLocaleString()}`, 14, 27);
 
-    let y = 40;
-    let grandTotal = 0;
+    // 1. Valuation Graphic Summary (THE POP!)
+    const chemVal = chemicals.reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
+    const matVal = materials.reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
+    const tlsTotal = tools.reduce((s, t) => s + ((t.price || 0) * (t.quantity || 1)), 0);
+    const gTotal = chemVal + matVal + tlsTotal;
 
-    // Chemicals
-    doc.setFontSize(14);
-    doc.setTextColor(220, 38, 38);
-    doc.text("Chemical Inventory", 20, y);
-    doc.setTextColor(0, 0, 0);
-    y += 8;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 35, pageWidth - 28, 50, 2, 2, 'FD');
 
-    let chemicalsTotal = 0;
-    chemicals.forEach(chem => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(10);
+    doc.setFontSize(12);
+    doc.setTextColor(71, 85, 105);
+    doc.text("PORTFOLIO VALUATION DISTRIBUTION", 20, 45);
+
+    // Dynamic Bar Chart
+    const maxVal = Math.max(chemVal, matVal, tlsTotal, 1);
+    const chartX = 20;
+    const chartY = 70;
+    const barSpacing = 40;
+
+    // Chemicals Bar
+    doc.setFillColor(30, 64, 175); // Blue
+    const h1 = (chemVal / maxVal) * 20;
+    doc.rect(chartX, chartY - h1, 25, h1, 'F');
+    doc.setFontSize(8);
+    doc.text(`Chem: $${chemVal.toFixed(0)}`, chartX, chartY + 5);
+
+    // Materials Bar
+    doc.setFillColor(153, 27, 27); // Red
+    const h2 = (matVal / maxVal) * 20;
+    doc.rect(chartX + barSpacing, chartY - h2, 25, h2, 'F');
+    doc.text(`Mat: $${matVal.toFixed(0)}`, chartX + barSpacing, chartY + 5);
+
+    // Tools Bar
+    doc.setFillColor(21, 128, 61); // Green
+    const h3 = (tlsTotal / maxVal) * 20;
+    doc.rect(chartX + barSpacing * 2, chartY - h3, 25, h3, 'F');
+    doc.text(`Tools: $${tlsTotal.toFixed(0)}`, chartX + barSpacing * 2, chartY + 5);
+
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`$${gTotal.toFixed(2)}`, pageWidth - 80, 55, { align: 'right' });
+    doc.setFontSize(10);
+    doc.text("TOTAL INVENTORY ASSETS", pageWidth - 80, 62, { align: 'right' });
+
+    let y = 95;
+
+    // 2. Chemicals
+    doc.setFontSize(16);
+    doc.setTextColor(30, 64, 175); // Blue
+    doc.text("Chemical Inventory", 14, y);
+    y += 5;
+
+    const chemRows = chemicals.map(chem => {
       const cost = chem.costPerBottle || 0;
       const stock = chem.currentStock || 0;
       const total = cost * stock;
-      chemicalsTotal += total;
-
-      const lowStock = stock < chem.threshold;
-      const text = `${chem.name} (${chem.bottleSize})`;
-      const details = `Stock: ${stock} | Cost: $${cost.toFixed(2)} | Value: $${total.toFixed(2)}`;
-
-      doc.text(text, 20, y);
-      doc.text(details, 120, y);
-      if (lowStock) {
-        doc.setTextColor(220, 38, 38);
-        doc.text("(LOW STOCK)", 180, y);
-        doc.setTextColor(0, 0, 0);
-      }
-      y += 6;
+      const isLow = stock < (chem.threshold || 0);
+      
+      return [
+        `${chem.name} (${chem.bottleSize || 'N/A'})`,
+        stock.toString(),
+        `$${cost.toFixed(2)}`,
+        `$${total.toFixed(2)}`,
+        isLow ? 'LOW STOCK' : 'OK'
+      ];
     });
 
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text(`Chemicals Subtotal: $${chemicalsTotal.toFixed(2)}`, 120, y + 2);
-    doc.setFont(undefined, 'normal');
-    y += 10;
-    grandTotal += chemicalsTotal;
+    autoTable(doc, {
+      startY: y,
+      head: [['Item Name', 'Stock', 'Unit Cost', 'Total Value', 'Status']],
+      body: chemRows,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 64, 175] },
+      columnStyles: {
+        3: { halign: 'right', fontStyle: 'bold' },
+        4: { halign: 'center' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 4 && data.cell.raw === 'LOW STOCK') {
+          data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
 
-    // Materials
-    if (y > 250) { doc.addPage(); y = 20; }
-    doc.setFontSize(14);
-    doc.setTextColor(220, 38, 38);
-    doc.text("Materials Inventory", 20, y);
-    doc.setTextColor(0, 0, 0);
-    y += 8;
+    // 3. Materials (Next Page)
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setTextColor(153, 27, 27); // Red-ish
+    doc.text("Materials Inventory", 14, y);
+    y += 5;
 
-    let materialsTotal = 0;
-    materials.forEach(mat => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(10);
+    const matRows = materials.map(mat => {
       const cost = mat.costPerItem || 0;
       const qty = mat.quantity || 0;
       const total = cost * qty;
-      materialsTotal += total;
-
-      doc.text(`${mat.name}`, 20, y);
-      doc.text(`Qty: ${qty} | Cost: $${cost.toFixed(2)} | Value: $${total.toFixed(2)}`, 120, y);
-      y += 6;
+      const isLow = qty < (mat.threshold || 0);
+      
+      return [
+        mat.name,
+        qty.toString(),
+        `$${cost.toFixed(2)}`,
+        `$${total.toFixed(2)}`,
+        isLow ? 'LOW STOCK' : 'OK'
+      ];
     });
 
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text(`Materials Subtotal: $${materialsTotal.toFixed(2)}`, 120, y + 2);
-    doc.setFont(undefined, 'normal');
-    y += 10;
-    grandTotal += materialsTotal;
+    autoTable(doc, {
+      startY: y,
+      head: [['Material Name', 'Qty', 'Unit Cost', 'Total Value', 'Status']],
+      body: matRows,
+      theme: 'striped',
+      headStyles: { fillColor: [153, 27, 27] },
+      columnStyles: {
+        3: { halign: 'right', fontStyle: 'bold' },
+        4: { halign: 'center' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 4 && data.cell.raw === 'LOW STOCK') {
+          data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
 
-    // Tools
-    if (y > 250) { doc.addPage(); y = 20; }
-    doc.setFontSize(14);
-    doc.setTextColor(220, 38, 38);
-    doc.text("Tools Inventory", 20, y);
-    doc.setTextColor(0, 0, 0);
-    y += 8;
+    // 4. Tools (Next Page)
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setTextColor(21, 128, 61); // Green
+    doc.text("Tools & Equipment", 14, y);
+    y += 5;
 
-    let toolsTotal = 0;
-    tools.forEach(tool => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(10);
-      // Tools use 'price' field in the database/interface
-      const cost = tool.price || tool.cost || 0;
+    const toolRows = tools.map(tool => {
+      const cost = tool.price || 0;
       const qty = tool.quantity || 1;
       const total = cost * qty;
-      toolsTotal += total;
-
-      doc.text(`${tool.name}`, 20, y);
-      doc.text(`Qty: ${qty} | Cost: $${cost.toFixed(2)} | Value: $${total.toFixed(2)}`, 120, y);
-      y += 6;
+      return [
+        tool.name,
+        qty.toString(),
+        `$${cost.toFixed(2)}`,
+        `$${total.toFixed(2)}`,
+        (tool.condition || 'Good').toUpperCase()
+      ];
     });
 
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text(`Tools Subtotal: $${toolsTotal.toFixed(2)}`, 120, y + 2);
-    doc.setFont(undefined, 'normal');
-    y += 10;
-    grandTotal += toolsTotal;
-
-    // Grand Total
-    y += 5;
-    if (y > 270) { doc.addPage(); y = 20; }
-    doc.setFontSize(14);
-    doc.text(`GRAND TOTAL: $${grandTotal.toFixed(2)}`, 120, y);
+    autoTable(doc, {
+      startY: y,
+      head: [['Tool/Asset Name', 'Qty', 'Asset Value', 'Total Value', 'Condition']],
+      body: toolRows,
+      theme: 'striped',
+      headStyles: { fillColor: [21, 128, 61] },
+      columnStyles: {
+        3: { halign: 'right', fontStyle: 'bold' },
+        4: { halign: 'center' }
+      }
+    });
 
     if (download) doc.save(`InventoryReport_${new Date().toISOString().split('T')[0]}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
@@ -346,12 +406,17 @@ const Reports = () => {
 
   const generateAccountingReport = (download = false) => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Accounting & Financial Report", 105, 20, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    let y = 40;
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Accounting & Financial Report", 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 14, 26);
+
+    let y = 35;
 
     // 1. Inventory Assets (Calculated from live data)
     const chemVal = chemicals.reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
@@ -360,22 +425,33 @@ const Reports = () => {
     const totalAssets = chemVal + matVal + toolVal;
 
     doc.setFontSize(14);
-    doc.setTextColor(34, 197, 94); // Green
-    doc.text("Inventory Assets", 20, y);
+    doc.setTextColor(22, 101, 52); // Dark Green
+    doc.text("Inventory Assets", 14, y);
     doc.setTextColor(0, 0, 0);
-    y += 10;
-    doc.setFontSize(10);
-    doc.text(`Chemicals Value: $${chemVal.toFixed(2)}`, 20, y);
-    doc.text(`Materials Value: $${matVal.toFixed(2)}`, 80, y);
-    doc.text(`Tools Value: $${toolVal.toFixed(2)}`, 140, y);
-    y += 6;
-    doc.setFont(undefined, 'bold');
-    doc.text(`Total Inventory Investment: $${totalAssets.toFixed(2)}`, 20, y);
-    doc.setFont(undefined, 'normal');
-    y += 15;
+    y += 8;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Category', 'Valuation', 'Status']],
+      body: [
+        ['Chemicals', `$${chemVal.toFixed(2)}`, 'On-Shelve'],
+        ['Materials', `$${matVal.toFixed(2)}`, 'Stocked'],
+        ['Tools/Gear', `$${toolVal.toFixed(2)}`, 'Assets'],
+        ['TOTAL INVESTMENT', `$${totalAssets.toFixed(2)}`, 'Balanced']
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [22, 101, 52] },
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.index === 3) {
+          data.cell.styles.fillColor = [240, 253, 244];
+        }
+      }
+    });
 
     // 2. Financial Summary
-    // Filter data based on current UI filter
+    // @ts-ignore
+    y = doc.lastAutoTable.finalY + 15;
     const activeIncome = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length);
     const activeExpenses = expenses.filter(e => filterByDate([e]).length);
 
@@ -384,75 +460,89 @@ const Reports = () => {
     const netProfit = totalInc - totalExp;
 
     doc.setFontSize(14);
-    doc.text("Financial Summary", 20, y);
-    y += 10;
-    doc.setFontSize(10);
-    doc.text(`Total Income: $${totalInc.toFixed(2)}`, 20, y);
-    doc.text(`Total Operating Expenses: $${totalExp.toFixed(2)}`, 80, y);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(netProfit >= 0 ? 34 : 220, netProfit >= 0 ? 197 : 38, netProfit >= 0 ? 94 : 38);
-    doc.text(`Net Profit: $${netProfit.toFixed(2)}`, 140, y);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont(undefined, 'normal');
-    y += 15;
+    doc.setTextColor(30, 64, 175); // Blue
+    doc.text("Financial Summary", 14, y);
+    y += 8;
 
-    // 3. Break-Even Analysis
-    const totalInvestment = totalAssets; // Focus on Asset investment for Break-Even
-    const remainingBreakEven = totalInvestment - totalInc;
-    const recoveryPct = totalInvestment > 0 ? (totalInc / totalInvestment) * 100 : 0;
-
-    doc.setFontSize(14);
-    doc.setTextColor(99, 102, 241); // Indigo
-    doc.text("Break-Even Analysis", 20, y);
-    doc.setTextColor(0, 0, 0);
-    y += 10;
-    doc.setFontSize(10);
-    doc.text("Tracks ROI (Inventory Asset Investment vs Revenue)", 20, y);
-    y += 6;
-    doc.text(`Total Investment (Assets): $${totalInvestment.toFixed(2)}`, 20, y);
-    doc.text(`Total Service Revenue: $${totalInc.toFixed(2)}`, 100, y);
-    y += 6;
-    doc.setFont(undefined, 'bold');
-    if (remainingBreakEven > 0) {
-      doc.setTextColor(234, 88, 12); // Orange
-      doc.text(`Remaining to Break Even: $${remainingBreakEven.toFixed(2)}`, 20, y);
-    } else {
-      doc.setTextColor(34, 197, 94); // Green
-      doc.text(`PROFITABLE (Break-Even Achieved!)`, 20, y);
-    }
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Recovery: ${recoveryPct.toFixed(1)}%`, 140, y);
-    doc.setFont(undefined, 'normal');
-    y += 15;
-
-    // 4. Ledger Details
-    doc.setFontSize(14);
-    doc.text("Ledger Details", 20, y);
-    y += 10;
-
-    // Income
-    doc.setFontSize(11);
-    doc.text("Income", 20, y);
-    y += 6;
-    activeIncome.forEach(i => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(9);
-      doc.text(`+ $${(i.amount || 0).toFixed(2)} | ${(i.date || '').slice(0, 10)} | ${i.category} | ${i.description || '-'}`, 25, y);
-      y += 5;
+    autoTable(doc, {
+      startY: y,
+      head: [['Metric', 'Amount']],
+      body: [
+        ['Total Income', `$${totalInc.toFixed(2)}`],
+        ['Total Operating Expenses', `$${totalExp.toFixed(2)}`],
+        ['Net Profit/Loss', `$${netProfit.toFixed(2)}`]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 64, 175] },
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.index === 2) {
+          data.cell.styles.textColor = netProfit >= 0 ? [22, 163, 74] : [220, 38, 38];
+          data.cell.styles.fillColor = netProfit >= 0 ? [240, 253, 244] : [254, 242, 242];
+        }
+      }
     });
 
-    y += 5;
-    if (y > 270) { doc.addPage(); y = 20; }
+    // 3. Ledger Details (Breakdown on NEW PAGE)
+    doc.addPage();
+    y = 20;
+    doc.setFontSize(16);
+    doc.setTextColor(0);
+    doc.text("Transaction Ledger Details", 14, y);
+    y += 10;
 
-    // Expenses
-    doc.setFontSize(11);
-    doc.text("Expenses", 20, y);
-    y += 6;
-    activeExpenses.forEach(e => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(9);
-      doc.text(`- $${(e.amount || 0).toFixed(2)} | ${(e.createdAt || '').slice(0, 10)} | ${e.category} | ${e.description || '-'}`, 25, y);
-      y += 5;
+    // Income Table
+    doc.setFontSize(12);
+    doc.setTextColor(22, 101, 52);
+    doc.text("Income (Credits)", 14, y);
+    y += 5;
+
+    const incomeRows = activeIncome.map(i => [
+      (i.date || i.createdAt || '').slice(0, 10),
+      i.category || 'General',
+      i.description || '-',
+      `$${(i.amount || 0).toFixed(2)}`
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Date', 'Category', 'Description', 'Amount']],
+      body: incomeRows,
+      theme: 'striped',
+      headStyles: { fillColor: [22, 101, 52] },
+      columnStyles: { 
+        2: { cellWidth: 'auto' }, // Allow description to wrap
+        3: { halign: 'right', fontStyle: 'bold' } 
+      }
+    });
+
+    // Expenses Table
+    // @ts-ignore
+    y = doc.lastAutoTable.finalY + 15;
+    if (y > 250) { doc.addPage(); y = 20; }
+    
+    doc.setFontSize(12);
+    doc.setTextColor(153, 27, 27);
+    doc.text("Expenses (Debits)", 14, y);
+    y += 5;
+
+    const expenseRows = activeExpenses.map(e => [
+      (e.createdAt || '').slice(0, 10),
+      e.category || 'General',
+      e.description || '-',
+      `$${(e.amount || 0).toFixed(2)}`
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Date', 'Category', 'Description', 'Amount']],
+      body: expenseRows,
+      theme: 'striped',
+      headStyles: { fillColor: [153, 27, 27] },
+      columnStyles: { 
+        2: { cellWidth: 'auto' }, // Allow description to wrap
+        3: { halign: 'right', fontStyle: 'bold' } 
+      }
     });
 
     if (download) doc.save(`AccountingReport_${new Date().toISOString().split('T')[0]}.pdf`);

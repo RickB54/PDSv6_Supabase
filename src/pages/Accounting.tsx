@@ -414,37 +414,16 @@ const Accounting = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Helper to convert hex/color string to rgb
-    const getRgb = (color: string) => {
-      // Create a temporary element to compute color
-      const el = document.createElement('div');
-      el.style.color = color;
-      document.body.appendChild(el);
-      const computed = window.getComputedStyle(el).color;
-      document.body.removeChild(el);
-      const match = computed.match(/\d+/g);
-      return match ? { r: Number(match[0]), g: Number(match[1]), b: Number(match[2]) } : { r: 0, g: 0, b: 0 };
-    };
-
-    // Title
-    doc.setFontSize(22);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Accounting Report", 14, 20);
+    // 1. Title & Header
+    doc.setFontSize(24);
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.text("Accounting & Ledger Report", 14, 20);
+    
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()} | Filter: ${dateFilter.toUpperCase()}`, 14, 26);
+    doc.text(`Prime Auto Detail Ledger Management`, 14, 31);
 
-    // Financial Summary Box
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(14, 35, pageWidth - 28, 55, 3, 3, 'FD');
-
-    const profitVal = calculateProfit();
-    const netColor = profitVal >= 0 ? [22, 163, 74] : [220, 38, 38];
-    const totalRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue; // This logic in original code assumes non-overlapping which is display-only, let's use actual calculated totals for report consistency
-
-    // Recalculate totals for report to be precise based on current view
-    // Compute totals using the same filter logic as calculateProfit for consistency
     const now = new Date();
     const startQuick = dateFilter === 'daily' ? new Date(now.setHours(0, 0, 0, 0))
       : dateFilter === 'weekly' ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -459,55 +438,56 @@ const Accounting = () => {
       return true;
     };
 
-    const revenueInvoices = invoiceList.filter(inv => within(inv.createdAt)).reduce((sum, i) => sum + (i.total || 0), 0);
-    const revenueIncome = incomeList.filter(rcv => within(rcv.date || rcv.createdAt)).reduce((sum, r) => sum + (r.amount || 0), 0);
-    const totalRev = revenueInvoices + revenueIncome;
-    const totalExp = expenseList.filter(ex => within(ex.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
-    const netProfit = totalRev - totalExp;
+    // 2. Financial Position Summary (Top Box)
+    const netProfit = calculateProfit();
+    const netColor = netProfit >= 0 ? [22, 101, 52] : [153, 27, 27];
+    
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.roundedRect(14, 38, pageWidth - 28, 60, 2, 2, 'FD');
 
-    // Summary Statistics
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text("Total Revenue", 30, 50);
-    doc.setFontSize(16);
-    doc.setTextColor(22, 163, 74);
-    doc.text(`$${totalRev.toFixed(2)}`, 30, 60);
+    // Visual Bar Chart (Simplified)
+    const totalRev = dailyRevenue + weeklyRevenue + monthlyRevenue;
+    const maxVal = Math.max(totalRev, totalSpent, 100);
+    const barWidth = 60;
+    const barBaseX = pageWidth - 80;
+    
+    // Revenue Bar
+    doc.setFillColor(34, 197, 94); // emerald-500
+    const revH = (totalRev / maxVal) * 30;
+    doc.rect(barBaseX, 85 - revH, 15, revH, 'F');
+    doc.setFontSize(8);
+    doc.text("Rev", barBaseX, 90);
+    
+    // Expenses Bar
+    doc.setFillColor(239, 68, 68); // red-500
+    const expH = (totalSpent / maxVal) * 30;
+    doc.rect(barBaseX + 20, 85 - expH, 15, expH, 'F');
+    doc.text("Exp", barBaseX + 20, 90);
 
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text("Total Expenses", 85, 50);
-    doc.setFontSize(16);
-    doc.setTextColor(220, 38, 38);
-    doc.text(`$${totalExp.toFixed(2)}`, 85, 60);
+    doc.setFontSize(11);
+    doc.setTextColor(71, 85, 105); // slate-600
+    doc.text("CURRENT FINANCIAL POSITION", 20, 48);
 
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text("Net Profit", 140, 50);
-    doc.setFontSize(16);
+    doc.setFontSize(20);
     doc.setTextColor(netColor[0], netColor[1], netColor[2]);
-    doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 140, 60);
+    doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 20, 62);
+    
     doc.setFontSize(10);
-    doc.text(netProfit >= 0 ? "Profit" : "Loss", 140, 66);
+    doc.text(netProfit >= 0 ? "SURPLUS (Revenue + Assets > Costs)" : "DEFICIT (Operating Loss)", 20, 68);
 
-    // Revenue Tracking Details
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Revenue Tracking (Current Period)", 30, 80);
-    doc.setFontSize(10);
-    doc.setTextColor(40);
-    doc.text(`Daily: $${dailyRevenue.toFixed(2)}  |  Weekly: $${weeklyRevenue.toFixed(2)}  |  Monthly: $${monthlyRevenue.toFixed(2)}`, 30, 86);
+    doc.text(`Operational Revenue: $${totalRev.toFixed(2)}`, 20, 78);
+    doc.text(`Asset Investment: $${inventoryTotals.total.toFixed(2)}`, 20, 84);
 
-    let yPos = 100;
+    let yPos = 110;
 
-    // Transaction Ledger - Income
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Transaction Ledger", 14, yPos);
-    yPos += 8;
-    doc.setFontSize(12);
-    doc.setTextColor(22, 163, 74);
-    doc.text("Income (Credits)", 14, yPos);
-    yPos += 6;
+    // 3. Transaction Ledger - Income
+    doc.setFontSize(16);
+    doc.setTextColor(22, 101, 52); // Green
+    doc.text("Transaction Ledger: Income", 14, yPos);
+    yPos += 5;
 
     const incomeRows = incomeList.filter(i => within(i.date || i.createdAt || '')).map(i => [
       (i.date || i.createdAt || '').slice(0, 10),
@@ -521,19 +501,20 @@ const Accounting = () => {
       head: [['Date', 'Category', 'Description', 'Amount']],
       body: incomeRows,
       theme: 'striped',
-      headStyles: { fillColor: [22, 163, 74] },
-      columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
+      headStyles: { fillColor: [22, 101, 52] },
+      columnStyles: { 
+        2: { cellWidth: 'auto' }, // Wrap notes
+        3: { halign: 'right', fontStyle: 'bold' } 
+      }
     });
 
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY + 15;
-
-    // Transaction Ledger - Expenses
-    if (yPos > 250) { doc.addPage(); yPos = 20; }
-    doc.setFontSize(12);
-    doc.setTextColor(220, 38, 38);
-    doc.text("Expenses (Debits)", 14, yPos);
-    yPos += 6;
+    // 4. Transaction Ledger - Expenses (NEW PAGE)
+    doc.addPage();
+    yPos = 20;
+    doc.setFontSize(16);
+    doc.setTextColor(153, 27, 27); // Red
+    doc.text("Transaction Ledger: Expenses", 14, yPos);
+    yPos += 5;
 
     const expenseRows = expenseList.filter(e => within(e.createdAt)).map(e => [
       (e.createdAt || '').slice(0, 10),
@@ -547,107 +528,106 @@ const Accounting = () => {
       head: [['Date', 'Category', 'Description', 'Amount']],
       body: expenseRows,
       theme: 'striped',
-      headStyles: { fillColor: [220, 38, 38] },
-      columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
+      headStyles: { fillColor: [153, 27, 27] },
+      columnStyles: { 
+        2: { cellWidth: 'auto' }, // Wrap notes
+        3: { halign: 'right', fontStyle: 'bold' } 
+      }
     });
 
-    // Inventory Assets Section
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY + 20;
-    if (yPos > 250) { doc.addPage(); yPos = 20; }
-
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Inventory Assets", 14, yPos);
+    // 5. Inventory Analysis (NEW PAGE)
+    doc.addPage();
+    yPos = 20;
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Business Asset Valuation", 14, yPos);
     yPos += 8;
 
     const inventoryRows = [
-      ['Chemicals', `$${inventoryTotals.chemicals.toFixed(2)}`, `${inventoryTotals.itemCount.chemicals} items`],
-      ['Materials', `$${inventoryTotals.materials.toFixed(2)}`, `${inventoryTotals.itemCount.materials} items`],
-      ['Tools', `$${inventoryTotals.tools.toFixed(2)}`, `${inventoryTotals.itemCount.tools} items`],
-      ['TOTAL ASSETS', `$${inventoryTotals.total.toFixed(2)}`, `${inventoryTotals.itemCount.total} items`]
+      ['Chemical Supplies', `$${inventoryTotals.chemicals.toFixed(2)}`, `${inventoryTotals.itemCount.chemicals} items`],
+      ['Materials & Stock', `$${inventoryTotals.materials.toFixed(2)}`, `${inventoryTotals.itemCount.materials} items`],
+      ['Tools & Equipment', `$${inventoryTotals.tools.toFixed(2)}`, `${inventoryTotals.itemCount.tools} items`],
+      ['COMBINED ASSET VALUE', `$${inventoryTotals.total.toFixed(2)}`, `${inventoryTotals.itemCount.total} items`]
     ];
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Category', 'Value', 'Count']],
+      head: [['Asset Group', 'Valuation', 'Count']],
       body: inventoryRows,
       theme: 'grid',
-      headStyles: { fillColor: [34, 197, 94] },
+      headStyles: { fillColor: [71, 85, 105] },
       columnStyles: {
         1: { halign: 'right', fontStyle: 'bold' },
         2: { halign: 'right' }
       },
       didParseCell: (data) => {
         if (data.section === 'body' && data.row.index === 3) {
-          data.cell.styles.fillColor = [240, 253, 244]; // emerald-50 replacement
+          data.cell.styles.fillColor = [241, 245, 249];
           data.cell.styles.fontStyle = 'bold';
         }
       }
     });
-    // Break-Even Analysis Section
+
+    // 6. Break-Even Analysis (Visual Gauge)
     // @ts-ignore
-    yPos = doc.lastAutoTable.finalY + 20;
-    if (yPos > 250) { doc.addPage(); yPos = 20; }
-
+    yPos = doc.lastAutoTable.finalY + 15;
     doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Break-Even Analysis", 14, yPos);
-    yPos += 8;
+    doc.setTextColor(30, 64, 175);
+    doc.text("Recovery Progress Index", 14, yPos);
+    yPos += 5;
 
-    const breakEvenRevenue = dailyRevenue + weeklyRevenue + monthlyRevenue;
-    // Include all expenses (inventory + operating costs)
-    const totalInvestment = inventoryTotals.total + totalExp;
-    const remaining = totalInvestment - breakEvenRevenue;
-    const percentRecovered = totalInvestment > 0
-      ? (breakEvenRevenue / totalInvestment) * 100
-      : 0;
+    const totalInvoiced = (dailyRevenue + weeklyRevenue + monthlyRevenue);
+    const recoveryPct = Math.min((totalInvoiced / (inventoryTotals.total || 1)) * 100, 100);
+    
+    // Draw Progress Bar
+    doc.setDrawColor(200);
+    doc.rect(14, yPos, pageWidth - 28, 10);
+    doc.setFillColor(59, 130, 246); // Blue-500
+    doc.rect(14, yPos, (pageWidth - 28) * (recoveryPct / 100), 10, 'F');
+    
+    doc.setFontSize(10);
+    doc.setTextColor(255);
+    doc.text(`${recoveryPct.toFixed(1)}% RECOVERED`, pageWidth / 2, yPos + 7, { align: 'center' });
+    yPos += 18;
+
+    const remaining = inventoryTotals.total - totalInvoiced;
     const isBreakEven = remaining <= 0;
 
     const breakEvenRows = [
-      ['Total Inventory Investment', `$${inventoryTotals.total.toFixed(2)}`],
-      ['Total Operating Expenses', `$${totalExp.toFixed(2)}`],
-      ['Combined Investment + Expenses', `$${totalInvestment.toFixed(2)}`],
-      ['Total Service Revenue', `$${breakEvenRevenue.toFixed(2)}`],
-      [isBreakEven ? 'Profit Beyond Costs' : 'Remaining to Break Even', `$${Math.abs(remaining).toFixed(2)}`],
-      ['Recovery Progress', `${Math.min(percentRecovered, 100).toFixed(1)}%`],
-      ['Status', isBreakEven ? '✓ Break-even achieved!' : '→ Working toward break-even']
+      ['Total Inventory Debt', `$${inventoryTotals.total.toFixed(2)}`],
+      ['Total Service Revenue', `$${totalInvoiced.toFixed(2)}`],
+      [isBreakEven ? 'Profit Beyond Debt' : 'Amount Remaining', `$${Math.abs(remaining).toFixed(2)}`]
     ];
 
     autoTable(doc, {
       startY: yPos,
       head: [['Metric', 'Value']],
       body: breakEvenRows,
-      theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
-      columnStyles: {
-        1: { halign: 'right', fontStyle: 'bold' }
-      },
+      theme: 'plain',
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
       didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === 4) {
-          data.cell.styles.textColor = isBreakEven ? [22, 163, 74] : [249, 115, 22];
+        if (data.section === 'body' && data.row.index === 2) {
+          data.cell.styles.textColor = isBreakEven ? [22, 163, 74] : [234, 88, 12];
           data.cell.styles.fontStyle = 'bold';
         }
       }
     });
 
-    // Notes Section
+    // 7. Notes (Final Section)
     if (notes) {
       // @ts-ignore
-      yPos = doc.lastAutoTable.finalY + 20;
-      if (yPos > 250) { doc.addPage(); yPos = 20; }
-
-      doc.setFillColor(254, 252, 232); // yellow-50
-      doc.setDrawColor(253, 224, 71); // yellow-300
-      doc.roundedRect(14, yPos, pageWidth - 28, 30, 3, 3, 'FD');
+      yPos = doc.lastAutoTable.finalY + 15;
+      if (yPos > 240) { doc.addPage(); yPos = 20; }
 
       doc.setFontSize(12);
-      doc.setTextColor(40);
-      doc.text("Notes", 20, yPos + 10);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Strategic Notes", 14, yPos);
+      yPos += 5;
+
       doc.setFontSize(10);
-      doc.setTextColor(80);
-      const splitNotes = doc.splitTextToSize(notes, pageWidth - 40);
-      doc.text(splitNotes, 20, yPos + 18);
+      doc.setTextColor(100);
+      const splitNotes = doc.splitTextToSize(notes, pageWidth - 28);
+      doc.text(splitNotes, 14, yPos);
     }
 
     if (action === 'save') {
