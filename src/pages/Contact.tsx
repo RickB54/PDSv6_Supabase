@@ -289,7 +289,7 @@ const Contact = () => {
           <img
             src={logo}
             alt="Prime Auto Detail"
-            className="mx-auto mb-4 cursor-pointer h-48 md:h-60 w-auto"
+            className="mx-auto mb-4 cursor-pointer h-48 w-48 md:h-60 md:w-60 aspect-square object-contain"
             onClick={() => setShowAbout(true)}
           />
           <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4 uppercase tracking-tight">Contact Us</h1>

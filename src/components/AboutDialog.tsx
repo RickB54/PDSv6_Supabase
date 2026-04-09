@@ -26,7 +26,7 @@ export default function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
 
           <DialogHeader className="relative z-10 flex flex-col items-center gap-3 mb-6">
             <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800/50 backdrop-blur-sm shadow-xl">
-              <img src={logo} alt="Prime Auto Detail" className="h-20 w-auto" />
+              <img src={logo} alt="Prime Auto Detail" className="h-20 w-20 aspect-square object-contain" />
             </div>
             <DialogTitle className="text-2xl font-bold text-white tracking-tight">About Prime Auto Detail</DialogTitle>
           </DialogHeader>

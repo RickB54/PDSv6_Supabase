@@ -420,7 +420,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       <div className={cn("flex flex-col border-b border-white/5", isDemoMode ? "pt-0" : "pt-0")}>
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
           <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
-            <img src={logo} alt="Prime Auto Detail" className="h-9 w-auto min-w-[36px]" />
+            <img src={logo} alt="Prime Auto Detail" className="h-9 w-9 aspect-square object-contain" />
             {(open || openMobile) && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
                 <h2 className="font-extrabold text-white text-[13px] tracking-tight whitespace-nowrap uppercase">Prime Auto</h2>

@@ -53,7 +53,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
             )}
 
             <button onClick={() => navigate("/")} className="flex items-center gap-2 sm:gap-3 transition-opacity hover:opacity-80 min-w-fit">
-              <img src={logo} alt="Prime Auto Detail" className="h-7 sm:h-10 w-auto" />
+              <img src={logo} alt="Prime Auto Detail" className="h-7 w-7 sm:h-10 sm:w-10 aspect-square object-contain" />
             </button>
 
             {title && (
