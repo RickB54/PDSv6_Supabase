@@ -51,16 +51,25 @@ export const HeroSection = () => {
         }
       `}</style>
 
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 z-0 transition-transform duration-1000 ease-out group-hover:scale-110"
-        style={{
-          backgroundImage: `url(${heroCar})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'brightness(0.4) contrast(1.05)'
-        }}
-      />
+      {/* Background Graphic System */}
+      <div className="absolute inset-0 z-0 overflow-hidden bg-[#0a0a0b]">
+        {/* Dynamic Gradient Layer - Ensures it's never a 'black void' */}
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-blue-900/10 opacity-60 z-10" />
+        
+        {/* Main Hero Image */}
+        <div
+          className="absolute inset-0 z-0 transition-all duration-[2000ms] ease-out group-hover:scale-110 opacity-90"
+          style={{
+            backgroundImage: `url(${heroCar})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 40%',
+            filter: 'brightness(0.6) contrast(1.1) saturate(0.8)'
+          }}
+        />
+
+        {/* Cinematic Vignette */}
+        <div className="absolute inset-0 z-20 bg-gradient-to-t from-black via-transparent to-black/40" />
+      </div>
 
       {/* Main Content Area */}
       <div className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 text-center">

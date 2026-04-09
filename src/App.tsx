@@ -188,6 +188,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
 
   const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
+  const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/availability', '/blog', '/thank-you', '/checkout', '/portal', '/f150-setup', '/contact-support'];
+  const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/');
+
   const publicRoutes = (
     <>
       <Route path="/" element={<Index />} />
@@ -199,19 +202,40 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <Route path="/services" element={<CustomerPortal />} />
       <Route path="/blog" element={<PrimeBlog />} />
       <Route path="/thank-you" element={<ThankYou />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/portal" element={<Portal />} />
+      <Route path="/f150-setup" element={<MobileSetup />} />
+      <Route path="/contact-support" element={<ContactSupport />} />
     </>
   );
 
-  if (!effectiveUser) {
+  // 1. PUBLIC LAYOUT: Clear, untrashed view for all visitors (and admins viewing the site)
+  if (isPublicPage) {
     return (
-      <div className="min-h-screen w-full bg-white">
+      <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white">
         <Routes>
           {publicRoutes}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/update-password" element={<UpdatePassword />} />
-          <Route path="/portal" element={<Portal />} />
+          <Route path="*" element={<DefaultRedirect user={user} />} />
+        </Routes>
+        <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
+      </div>
+    );
+  }
+
+  // 2. UNAUTHENTICATED AUTH PAGES
+  if (!effectiveUser) {
+    return (
+      <div className="min-h-screen w-full bg-white text-zinc-900">
+        <Routes>
+          {publicRoutes}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
@@ -219,6 +243,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
     );
   }
 
+  // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   return (
     <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
