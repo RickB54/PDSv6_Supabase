@@ -210,19 +210,29 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   );
 
   // 1. PUBLIC LAYOUT: Clear, untrashed view for all visitors (and admins viewing the site)
+  // We Wrap in SidebarProvider so admins can still use the sidebar toggle in the Navbar
   if (isPublicPage) {
     return (
-      <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white">
-        <Routes>
-          {publicRoutes}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/update-password" element={<UpdatePassword />} />
-          <Route path="*" element={<DefaultRedirect user={user} />} />
-        </Routes>
-        <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
-      </div>
+      <SidebarProvider defaultOpen={false}>
+        <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white flex border-none">
+          {effectiveUser && (effectiveUser.role === 'admin' || effectiveUser.role === 'employee') && (
+            <div className="dark-theme">
+              <AppSidebar key={effectiveUser.id} user={effectiveUser} />
+            </div>
+          )}
+          <div className="flex-1 flex flex-col min-w-0">
+            <Routes>
+              {publicRoutes}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/update-password" element={<UpdatePassword />} />
+              <Route path="*" element={<DefaultRedirect user={user} />} />
+            </Routes>
+            <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
+          </div>
+        </div>
+      </SidebarProvider>
     );
   }
 
