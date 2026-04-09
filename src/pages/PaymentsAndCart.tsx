@@ -126,6 +126,45 @@ const PaymentsAndCart = () => {
                             </div>
                         </div>
 
+                        {/* Direct Payment Option (Request from USER) */}
+                        <div className="mt-8 pt-6 border-t">
+                            <h3 className="text-lg font-semibold text-foreground mb-4">Make a Direct Payment</h3>
+                            <div className="max-w-md p-4 bg-primary/5 rounded-lg border border-primary/20">
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Need to make a deposit or partial payment? Enter an amount below to proceed to our secure Stripe checkout.
+                                </p>
+                                <div className="flex gap-3">
+                                    <div className="relative flex-1">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-primary">$</span>
+                                        <input 
+                                            type="number" 
+                                            id="customAmount"
+                                            placeholder="0.00"
+                                            className="w-full pl-7 pr-3 py-2 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary outline-none"
+                                        />
+                                    </div>
+                                    <Button 
+                                        className="bg-primary text-primary-foreground font-bold"
+                                        onClick={() => {
+                                            const amount = (document.getElementById('customAmount') as HTMLInputElement).value;
+                                            if (amount && parseFloat(amount) > 0) {
+                                                window.location.href = `/checkout?amount=${amount}`;
+                                            } else {
+                                                toast({
+                                                    title: "Invalid Amount",
+                                                    description: "Please enter an amount greater than $0.00",
+                                                    variant: "destructive"
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        <CreditCard className="h-4 w-4 mr-2" />
+                                        Proceed to Pay
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Payment History */}
                         <div className="mt-8 border-t pt-6">
                             <h3 className="text-lg font-semibold text-foreground mb-2">Payment History</h3>
