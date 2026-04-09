@@ -213,8 +213,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       const deltaY = Math.abs(touchEndY - touchStartY);
 
       if (
-        touchStartX >= 20 && touchStartX <= 80 && 
-        deltaX > 60 && 
+        touchStartX <= 120 && // Increased threshold for curved screens/cases
+        deltaX > 40 && 
         deltaY < 50 && 
         !openMobile // Only if currently closed
       ) {
