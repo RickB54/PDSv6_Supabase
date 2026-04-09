@@ -421,7 +421,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
           <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
             <img src={logo} alt="Prime Auto Detail" className="h-9 w-auto min-w-[36px]" />
-            {open && (
+            {(open || openMobile) && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
                 <h2 className="font-extrabold text-white text-[13px] tracking-tight whitespace-nowrap uppercase">Prime Auto</h2>
                 <p className="text-[9px] text-zinc-500 uppercase font-black tracking-tighter">Detailing Systems</p>
@@ -430,7 +430,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           </div>
           
           <div className="flex items-center gap-1">
-            {open && (
+            {(open || openMobile) && (
               <>
                 <Button 
                   variant="ghost" 
@@ -490,7 +490,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                     <SidebarMenuButton asChild tooltip={item.title} className="bg-transparent hover:bg-transparent">
                       <Link to={item.url} className={className} onClick={(e) => handleNavClick(e, item.url, item.helpTopicId)}>
                         {item.icon && <item.icon className="h-4 w-4" />}
-                        {open && <span>{item.title}</span>}
+                        {(open || openMobile) && <span>{item.title}</span>}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -512,7 +512,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                     <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
                       <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 shrink-0 ${open ? 'mr-0' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
-                        {open && (
+                        {(open || openMobile) && (
                           <div className="flex items-center justify-between flex-1 min-w-0">
                             <span className="truncate">{item.title}</span>
                             {item.helpTopicId && (
@@ -567,7 +567,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                           }}
                         >
                           <group.icon className="h-4 w-4 mr-2" />
-                          {open && (
+                          {(open || openMobile) && (
                             <>
                               <span>{group.title}</span>
                               {!isOpen && groupBadgeCount > 0 && (
