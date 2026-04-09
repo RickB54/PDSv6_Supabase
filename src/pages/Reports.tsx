@@ -220,9 +220,10 @@ const Reports = () => {
 
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59);
-    doc.text(`$${gTotal.toFixed(2)}`, pageWidth - 80, 55, { align: 'right' });
+    doc.text(`$${gTotal.toFixed(2)}`, pageWidth - 20, 55, { align: 'right' });
     doc.setFontSize(10);
-    doc.text("TOTAL INVENTORY ASSETS", pageWidth - 80, 62, { align: 'right' });
+    doc.setTextColor(100);
+    doc.text("TOTAL VALUATION", pageWidth - 20, 62, { align: 'right' });
 
     let y = 95;
 
