@@ -131,8 +131,8 @@ export function GlobalRightSidebar() {
 
             // Right-to-Left swipe (deltaX > 0)
             if (
-                touchStartX > window.innerWidth - 80 && // Only if starting from right edge
-                deltaX > 60 && 
+                touchStartX > window.innerWidth - 120 && // Increased threshold for curved screens/cases
+                deltaX > 40 && 
                 deltaY < 50 && 
                 !openMobile
             ) {
@@ -140,7 +140,7 @@ export function GlobalRightSidebar() {
             }
             
             // Left-to-Right swipe to close
-            if (deltaX < -60 && deltaY < 50 && openMobile) {
+            if (deltaX < -40 && deltaY < 50 && openMobile) {
                 setOpenMobile(false);
             }
         };
