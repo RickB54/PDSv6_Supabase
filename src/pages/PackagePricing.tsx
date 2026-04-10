@@ -35,6 +35,7 @@ import {
   saveCustomAddOn,
   deleteCustomAddOn,
   postFullSync,
+  buildFullSyncPayload,
   getCustomServices,
   addCustomService,
   updateCustomService,
@@ -1071,11 +1072,9 @@ export default function PackagePricing() {
   };
 
   useEffect(() => {
-    loadPricing();
     // Auto-sync local state to backend/API memory on mount to ensure fresh consistency
     const timer = setTimeout(async () => {
-      const payload = await buildFullSyncPayload();
-      await postFullSync(payload);
+      await postFullSync();
       // Also trigger a background save to Supabase to ensure cloud integrity
       saveToBackend(currentPrices);
     }, 2000);
@@ -1492,7 +1491,7 @@ export default function PackagePricing() {
         if (type === 'package') {
           const pkg = [...builtInPackages, ...getCustomPackages()].find(p => p.id === id);
           if (pkg) {
-            const pricing = pkg.pricing || {};
+            const pricing = (pkg.pricing || {}) as any;
             await supaPkgs.upsert([{
               id,
               name: pkg.name,
@@ -1508,7 +1507,7 @@ export default function PackagePricing() {
         } else {
           const addon = [...builtInAddOns, ...getCustomAddOns()].find(a => a.id === id);
           if (addon) {
-            const pricing = addon.pricing || {};
+            const pricing = (addon.pricing || {}) as any;
             await supaAddOns.upsert([{
               id,
               name: addon.name,
