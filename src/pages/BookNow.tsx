@@ -291,7 +291,7 @@ const BookNow = () => {
           const newAddOnMeta: Record<string, any> = {};
           addons.forEach((a: any) => {
             newAddOnMeta[a.id] = {
-              visible: a.is_active !== false,
+              visible: a.is_active === true,
               deleted: false
             };
             newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);

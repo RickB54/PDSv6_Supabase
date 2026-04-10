@@ -195,7 +195,7 @@ const CustomerPortal = () => {
           newAddOnMeta[id] = {
             ...(newAddOnMeta[id] || {}),
             id,
-            visible: a.is_active !== false,
+            visible: a.is_active === true, // STRICT: Must be explicitly true
             deleted: false
           };
           if (a.compact_price != null) newSavedPrices[`addon:${id}:compact`] = String(a.compact_price);
