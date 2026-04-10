@@ -1071,6 +1071,18 @@ export default function PackagePricing() {
   };
 
   useEffect(() => {
+    loadPricing();
+    // Auto-sync local state to backend/API memory on mount to ensure fresh consistency
+    const timer = setTimeout(async () => {
+      const payload = await buildFullSyncPayload();
+      await postFullSync(payload);
+      // Also trigger a background save to Supabase to ensure cloud integrity
+      saveToBackend(currentPrices);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       // 1. Seed defaults first (prevent empty UI)
       const seededDefault = seedFromDefinitions();
