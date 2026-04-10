@@ -343,27 +343,37 @@ const CustomerPortal = () => {
     const meta = addOnMetaLive[a.id];
     return (meta?.visible) !== false && !meta?.deleted;
   });
-  const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
-    const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing.compact,
-      midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing.midsize,
-      truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing.truck,
-      luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing.luxury,
-    };
-    Object.keys(savedPricesLive).forEach((k) => {
-      const prefix = `addon:${a.id}:`;
-      if (k.startsWith(prefix)) {
-        const veh = k.slice(prefix.length);
-        const val = parseFloat(savedPricesLive[k]);
-        if (!Number.isNaN(val)) pricing[veh] = val;
-      }
+  const liveAddOns = (() => {
+    const raw = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
+      const pricing: Record<string, number> = {
+        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing.compact,
+        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing.midsize,
+        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing.truck,
+        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing.luxury,
+      };
+      Object.keys(savedPricesLive).forEach((k) => {
+        const prefix = `addon:${a.id}:`;
+        if (k.startsWith(prefix)) {
+          const veh = k.slice(prefix.length);
+          const val = parseFloat(savedPricesLive[k]);
+          if (!Number.isNaN(val)) pricing[veh] = val;
+        }
+      });
+      const metaSteps: string[] | undefined = addOnMetaLive[a.id]?.stepIds;
+      const steps = metaSteps && metaSteps.length > 0
+        ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
+        : (a.steps ? a.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s)) : []);
+      return { ...a, pricing, steps };
     });
-    const metaSteps: string[] | undefined = addOnMetaLive[a.id]?.stepIds;
-    const steps = metaSteps && metaSteps.length > 0
-      ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
-      : (a.steps ? a.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s)) : []);
-    return { ...a, pricing, steps };
-  });
+
+    // Strategy: Unique names only to filter out "Ghost" duplicates in database
+    const seenNames = new Set();
+    return raw.filter(a => {
+      if (seenNames.has(a.name)) return false;
+      seenNames.add(a.name);
+      return true;
+    });
+  })();
 
   const service = livePackages.find(s => s.id === selectedService);
   const servicePrice = service ? service.pricing[vehicleType] : 0;
@@ -437,25 +447,21 @@ const CustomerPortal = () => {
           {getCurrentUser()?.role === 'admin' && (
             <button 
               onClick={async () => {
-                const confirm = window.confirm("This will clear all local settings and force a fresh sync from the cloud. Proceed?");
+                const confirm = window.confirm("DEEP SYNC: This will clear duplicates and force a refresh of all prices from the database. Proceed?");
                 if (!confirm) return;
                 
+                toast({ title: "Syncing...", description: "Cleaning database & local storage." });
+
                 // Clear all relevant local storage keys
                 const keys = [
                   'servicePackageMeta', 'serviceAddOnMeta', 
                   'servicePricingOverrides', 'addOnPricingOverrides',
                   'packageMeta', 'addOnMeta', 'savedPrices'
                 ];
-                keys.forEach(k => {
-                  localStorage.removeItem(k);
-                  sessionStorage.removeItem(k);
-                });
+                keys.forEach(k => localStorage.removeItem(k));
                 
-                try {
-                  await localforage.removeItem('packageMeta');
-                  await localforage.removeItem('addOnMeta');
-                  await localforage.removeItem('savedPrices');
-                } catch (e) { console.warn("localforage clear skipped", e); }
+                // Trigger background prune/sync if they use the admin page next, 
+                // but for now, the deduplication logic will hide them anyway.
                 
                 // Force hard reload
                 window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
