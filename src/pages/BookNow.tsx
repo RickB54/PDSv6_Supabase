@@ -254,7 +254,8 @@ const BookNow = () => {
             setCustomPackagesLive(data.customPackages || []);
             setCustomAddOnsLive(data.customAddOns || []);
             setLastSyncTs(Date.now());
-            return;
+            // We no longer return early, allowing Supabase to sync properly
+            // setLastSyncTs(Date.now());
           }
         }
       }
@@ -267,9 +268,10 @@ const BookNow = () => {
       setCustomPackagesLive(snapshot.customPackages || []);
       setCustomAddOnsLive(snapshot.customAddOns || []);
       setLastSyncTs(Date.now());
-    } catch {
-      // Fallback: If local fetch fails, try Supabase directly
-      if (isSupabaseEnabled()) {
+    } catch { }
+
+    // Priority 2: Cloud / Supabase (Source of Truth)
+    if (isSupabaseEnabled()) {
         try {
           const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
 
@@ -345,7 +347,6 @@ const BookNow = () => {
         } catch (e) {
           console.error("Supabase fallback fetch failed", e);
         }
-      }
     }
   };
 

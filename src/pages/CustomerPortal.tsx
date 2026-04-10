@@ -137,15 +137,11 @@ const CustomerPortal = () => {
         const ct = res.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
           const data = await res.json();
-          // Only return if we actually got some data, otherwise fall back to Supabase/Snapshot
           if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
-            setSavedPricesLive(data.savedPrices || {});
-            setPackageMetaLive(data.packageMeta || {});
-            setAddOnMetaLive(data.addOnMeta || {});
-            setCustomPackagesLive(data.customPackages || []);
-            setCustomAddOnsLive(data.customAddOns || []);
-            setLastSyncTs(Date.now());
-            return;
+            setSavedPricesLive(prev => ({ ...(data.savedPrices || {}), ...prev }));
+            setPackageMetaLive(prev => ({ ...(data.packageMeta || {}), ...prev }));
+            setAddOnMetaLive(prev => ({ ...(data.addOnMeta || {}), ...prev }));
+            // We don't return here anymore! We let Supabase override this if available.
           }
         }
       }
