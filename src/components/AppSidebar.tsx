@@ -509,8 +509,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
                 return (
                   <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
-                      <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-800 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
+                      <Link to={targetUrl} style={{ color: isActive ? '#1e3a8a' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#1e3a8a] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 shrink-0 ${open ? 'mr-0' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {(open || openMobile) && (
                           <div className="flex items-center justify-between flex-1 min-w-0">
@@ -593,9 +593,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                 <SidebarMenuSubButton asChild isActive={isActive}>
                                   <Link 
                                     to={targetUrl} 
+                                    style={{ color: isActive ? '#1e3a8a' : undefined }}
                                     className={cn(
                                       "flex items-center gap-2 py-2 h-auto text-[11px]",
-                                      isActive ? "!text-blue-800 font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
+                                      isActive ? "!text-[#1e3a8a] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
                                     )} 
                                     onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
                                   >
