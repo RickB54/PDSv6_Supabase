@@ -138,10 +138,11 @@ const CustomerPortal = () => {
         if (ct.includes('application/json')) {
           const data = await res.json();
           if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
-            setSavedPricesLive(prev => ({ ...(data.savedPrices || {}), ...prev }));
-            setPackageMetaLive(prev => ({ ...(data.packageMeta || {}), ...prev }));
-            setAddOnMetaLive(prev => ({ ...(data.addOnMeta || {}), ...prev }));
-            // We don't return here anymore! We let Supabase override this if available.
+            setSavedPricesLive(data.savedPrices || {});
+            setPackageMetaLive(data.packageMeta || {});
+            setAddOnMetaLive(data.addOnMeta || {});
+            setCustomPackagesLive(data.customPackages || []);
+            setCustomAddOnsLive(data.customAddOns || []);
           }
         }
       }
@@ -342,10 +343,10 @@ const CustomerPortal = () => {
   const liveAddOns = (() => {
     const raw = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
       const pricing: Record<string, number> = {
-        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing.compact,
-        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing.midsize,
-        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing.truck,
-        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing.luxury,
+        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || (a.pricing?.compact ?? 0),
+        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || (a.pricing?.midsize ?? 0),
+        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || (a.pricing?.truck ?? 0),
+        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || (a.pricing?.luxury ?? 0),
       };
       Object.keys(savedPricesLive).forEach((k) => {
         const prefix = `addon:${a.id}:`;

@@ -246,7 +246,6 @@ const BookNow = () => {
         const ct = res.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
           const data = await res.json();
-          // Only return if we actually got some data, otherwise fall back to Supabase/Snapshot
           if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
             setSavedPricesLive(data.savedPrices || {});
             setPackageMetaLive(data.packageMeta || {});
@@ -254,8 +253,6 @@ const BookNow = () => {
             setCustomPackagesLive(data.customPackages || []);
             setCustomAddOnsLive(data.customAddOns || []);
             setLastSyncTs(Date.now());
-            // We no longer return early, allowing Supabase to sync properly
-            // setLastSyncTs(Date.now());
           }
         }
       }
@@ -459,10 +456,10 @@ const BookNow = () => {
   const liveAddOns = (() => {
     const raw = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
       const pricing: Record<string, number> = {
-        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing?.compact || 0,
-        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing?.midsize || 0,
-        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing?.truck || 0,
-        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing?.luxury || 0,
+        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || (a.pricing?.compact ?? 0),
+        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || (a.pricing?.midsize ?? 0),
+        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || (a.pricing?.truck ?? 0),
+        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || (a.pricing?.luxury ?? 0),
       };
       Object.keys(savedPricesLive).forEach((k) => {
         const prefix = `addon:${a.id}:`;
