@@ -308,8 +308,14 @@ const CustomerPortal = () => {
       return { ...p, pricing };
     });
 
-  const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false);
-  const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false);
+  const visibleBuiltAddOns = builtInAddOns.filter(a => {
+    const meta = addOnMetaLive[a.id];
+    return (meta?.visible) !== false && !meta?.deleted;
+  });
+  const visibleCustomAddOns = customAddOnsLive.filter((a: any) => {
+    const meta = addOnMetaLive[a.id];
+    return (meta?.visible) !== false && !meta?.deleted;
+  });
   const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
     const pricing: Record<string, number> = {
       compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing.compact,

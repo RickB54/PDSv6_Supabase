@@ -1478,9 +1478,36 @@ export default function PackagePricing() {
     if (isSupabaseEnabled()) {
       try {
         if (type === 'package') {
-          await supaPkgs.update(id, { is_active: visible });
+          const pkg = [...builtInPackages, ...getCustomPackages()].find(p => p.id === id);
+          if (pkg) {
+            const pricing = pkg.pricing || {};
+            await supaPkgs.upsert([{
+              id,
+              name: pkg.name,
+              description: (pkg as any).description || "",
+              compact_price: pricing.compact || 0,
+              midsize_price: pricing.midsize || 0,
+              truck_price: pricing.truck || 0,
+              luxury_price: pricing.luxury || 0,
+              is_active: visible,
+              image_url: getPackageMeta(id)?.imageDataUrl || ""
+            }]);
+          }
         } else {
-          await supaAddOns.update(id, { is_active: visible });
+          const addon = [...builtInAddOns, ...getCustomAddOns()].find(a => a.id === id);
+          if (addon) {
+            const pricing = addon.pricing || {};
+            await supaAddOns.upsert([{
+              id,
+              name: addon.name,
+              description: (addon as any).description || "",
+              compact_price: pricing.compact || 0,
+              midsize_price: pricing.midsize || 0,
+              truck_price: pricing.truck || 0,
+              luxury_price: pricing.luxury || 0,
+              is_active: visible
+            }]);
+          }
         }
       } catch (err) {
         console.error("Failed to sync visibility to Supabase", err);

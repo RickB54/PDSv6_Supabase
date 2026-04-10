@@ -235,7 +235,13 @@ const BookNow = () => {
 
   const fetchLive = async () => {
     try {
-      const res = await fetch(`/api/packages/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
+      const res = await fetch(`/api/packages/live?v=${Date.now()}`, { 
+        headers: { 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } 
+      });
       if (res.ok) {
         const ct = res.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
@@ -438,8 +444,14 @@ const BookNow = () => {
     p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')
   );
 
-  const visibleBuiltAddOns = builtInAddOns.filter(a => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
-  const visibleCustomAddOns = customAddOnsLive.filter((a: any) => (addOnMetaLive[a.id]?.visible) !== false && !addOnMetaLive[a.id]?.deleted);
+  const visibleBuiltAddOns = builtInAddOns.filter(a => {
+    const meta = addOnMetaLive[a.id];
+    return (meta?.visible) !== false && !meta?.deleted;
+  });
+  const visibleCustomAddOns = customAddOnsLive.filter((a: any) => {
+    const meta = addOnMetaLive[a.id];
+    return (meta?.visible) !== false && !meta?.deleted;
+  });
   const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
     const pricing: Record<string, number> = {
       compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing?.compact || 0,

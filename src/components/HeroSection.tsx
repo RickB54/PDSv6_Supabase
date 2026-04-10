@@ -58,7 +58,7 @@ export const HeroSection = () => {
         
         {/* Main Hero Image */}
         <div
-          className="absolute inset-0 z-0 transition-transform duration-[6000ms] ease-in-out group-hover:scale-110 opacity-90"
+          className="absolute inset-0 z-0 transition-transform duration-[10000ms] ease-out group-hover:scale-110 opacity-90 will-change-transform"
           style={{
             backgroundImage: `url(${heroCar})`,
             backgroundSize: 'cover',
