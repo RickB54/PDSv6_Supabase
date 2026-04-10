@@ -541,7 +541,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 );
               })}
 
-                const isGroupActive = group.items.some((item: any) => location.pathname === getUrl(item.url));
+              {(MENU_GROUPS || []).map((group) => {
+                const isOpen = openGroups[group.title];
+                const groupBadgeCount = (group.items || []).reduce((acc: number, item: any) => acc + (item.badge || 0), 0);
+                const isGroupActive = (group.items || []).some((item: any) => location.pathname === getUrl(item.url));
                 
                 return (
                   <Collapsible
