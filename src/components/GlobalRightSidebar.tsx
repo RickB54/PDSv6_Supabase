@@ -125,13 +125,14 @@ export function GlobalRightSidebar() {
         const handleTouchMove = (e: TouchEvent) => {
             const currentX = e.touches[0].clientX;
             const currentY = e.touches[0].clientY;
-            
-            // For right sidebar swipe (Right-to-Left)
-            const dX_rtl = touchStartX - currentX;
+            const dX = Math.abs(currentX - touchStartX);
             const dY = Math.abs(currentY - touchStartY);
 
-            if (touchStartX > window.innerWidth - 120 && dX_rtl > 10 && dY < 30) {
-                if (e.cancelable) e.preventDefault();
+            // AGGRESSIVE: Block browser if swiping from the RIGHT edge
+            if (touchStartX > window.innerWidth - 120) {
+                if (dX > dY && dX > 5) {
+                    if (e.cancelable) e.preventDefault();
+                }
             }
         };
 
@@ -145,15 +146,17 @@ export function GlobalRightSidebar() {
             // Right-to-Left swipe (deltaX > 0)
             if (
                 touchStartX > window.innerWidth - 120 && 
-                deltaX > 40 && 
-                deltaY < 50 && 
-                !openMobile
+                deltaX > 50 && 
+                deltaY < 80 
             ) {
-                setOpenMobile(true);
+                if (!openMobile) {
+                    setOpenMobile(true);
+                    try { window.navigator.vibrate(10); } catch {}
+                }
             }
             
             // Left-to-Right swipe to close
-            if (deltaX < -40 && deltaY < 50 && openMobile) {
+            if (deltaX < -50 && deltaY < 80 && openMobile) {
                 setOpenMobile(false);
             }
         };

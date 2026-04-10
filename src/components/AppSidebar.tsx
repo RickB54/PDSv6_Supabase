@@ -209,12 +209,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     const handleTouchMove = (e: TouchEvent) => {
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
-      const dX = currentX - touchStartX;
+      const dX = Math.abs(currentX - touchStartX);
       const dY = Math.abs(currentY - touchStartY);
 
-      // If we started in the left edge zone and are swiping right, prevent browser back/forward
-      if (touchStartX <= 120 && dX > 10 && dY < 30) {
-        if (e.cancelable) e.preventDefault();
+      // AGGRESSIVE: If the touch started in the edge zone, we block horizontal browser movement
+      if (touchStartX <= 120) {
+        if (dX > dY && dX > 5) { // If swiping horizontally from the edge
+          if (e.cancelable) e.preventDefault();
+        }
       }
     };
 
@@ -226,11 +228,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
       if (
         touchStartX <= 120 && 
-        deltaX > 40 && 
-        deltaY < 50 && 
-        !openMobile 
+        deltaX > 50 && // Slightly higher threshold to ensure it's intentional
+        deltaY < 80 
       ) {
-        setOpenMobile(true);
+        if (!openMobile) {
+          setOpenMobile(true);
+          // Vibrational feedback if supported
+          try { window.navigator.vibrate(10); } catch {}
+        }
       }
     };
 
