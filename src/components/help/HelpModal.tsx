@@ -112,37 +112,37 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[950px] h-[90vh] bg-[#0c1220] border-slate-800 text-white shadow-2xl flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 py-5 border-b border-slate-800/60 shrink-0 bg-[#0f1629]">
-          <div className="flex items-center justify-between mb-2">
-            <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-400 text-2xl font-bold tracking-tight">
+        <DialogHeader className="px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-800/60 shrink-0 bg-[#0f1629]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 sm:mb-2">
+            <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-400 text-lg sm:text-2xl font-bold tracking-tight">
               Prime Auto Detail — Help Guide
             </DialogTitle>
             
             {/* Global Search - Always Visible and prominent */}
-            <div className="w-72 relative">
-               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="w-full sm:w-72 relative">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                <Input
                  placeholder="Search all documentation..."
                  value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setAccordionValue("toc"); // Keep menu open while searching
-                }}
-                className="pl-10 h-10 bg-slate-900/50 border-slate-700 text-white focus-visible:ring-emerald-500 rounded-full"
-              />
-              {query && (
-                <button 
-                 onClick={() => {
-                   setQuery('');
-                   // Set to first topic when clearing search
-                   if (toc.length > 0) setCurrentTopicId(toc[0].id);
+                 onChange={(e) => {
+                   setQuery(e.target.value);
+                   setAccordionValue("toc"); // Keep menu open while searching
                  }}
-                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs font-bold"
-                >
-                  Clear
-                </button>
-              )}
-           </div>
+                 className="pl-9 h-9 bg-slate-900/50 border-slate-700 text-white focus-visible:ring-emerald-500 rounded-full text-sm"
+               />
+               {query && (
+                 <button 
+                  onClick={() => {
+                    setQuery('');
+                    // Set to first topic when clearing search
+                    if (toc.length > 0) setCurrentTopicId(toc[0].id);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-[10px] font-bold"
+                 >
+                   Clear
+                 </button>
+               )}
+            </div>
          </div>
 
          {/* Auto-switch to first result during search */}
@@ -206,14 +206,14 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
         </DialogHeader>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden p-8 bg-[#0f1629]/50 relative flex flex-col">
+        <div className="flex-1 overflow-hidden p-4 sm:p-8 bg-[#0f1629]/50 relative flex flex-col">
           <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl -z-10" />
 
           {topic ? (
-            <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-2">
-              <div className="flex items-start justify-between mb-8 pb-6 border-b border-slate-800/60 shrink-0">
-                <div className="space-y-4">
-                  <h2 className="text-4xl font-extrabold text-white tracking-tight leading-none">{topic.title}</h2>
+            <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-0 sm:pt-2">
+              <div className="flex flex-col sm:flex-row items-start justify-between mb-4 sm:mb-8 pb-4 sm:pb-6 border-b border-slate-800/60 shrink-0 gap-4">
+                <div className="space-y-3 sm:space-y-4 w-full">
+                  <h2 className="text-xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">{topic.title}</h2>
                   <div className="flex items-center gap-3">
                     {topic.route && (<div className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-3 py-1.5 rounded-full border border-cyan-800/50 uppercase tracking-[0.1em]">Section: {topic.route.replace('/', '') || 'Home'}</div>)}
                     {topic.route && (
@@ -233,18 +233,18 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                 </div>
                 
                 {/* Navigation Arrows */}
-                <div className="flex items-center gap-2 bg-slate-900/60 rounded-full p-1.5 border border-slate-800 shrink-0 self-start">
-                  <Button variant="ghost" size="icon" onClick={goPrev} disabled={currentIndex <= 0} className="h-10 w-10 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-full transition-all" title="Previous Topic">
-                    <span className="text-2xl leading-none">←</span>
+                <div className="flex items-center gap-2 bg-slate-900/60 rounded-full p-1 sm:p-1.5 border border-slate-800 shrink-0 self-start">
+                  <Button variant="ghost" size="icon" onClick={goPrev} disabled={currentIndex <= 0} className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-full transition-all" title="Previous Topic">
+                    <span className="text-xl sm:text-2xl leading-none">←</span>
                   </Button>
-                  <div className="w-[1px] h-6 bg-slate-700/50 mx-1" />
-                  <Button variant="ghost" size="icon" onClick={goNext} disabled={currentIndex === filteredToc.length - 1} className="h-10 w-10 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-full transition-all" title="Next Topic">
-                    <span className="text-2xl leading-none">→</span>
+                  <div className="w-[1px] h-4 sm:h-6 bg-slate-700/50 mx-1" />
+                  <Button variant="ghost" size="icon" onClick={goNext} disabled={currentIndex === filteredToc.length - 1} className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-full transition-all" title="Next Topic">
+                    <span className="text-xl sm:text-2xl leading-none">→</span>
                   </Button>
                 </div>
               </div>
 
-              <div id="help-content-scroll" className="flex-1 overflow-y-auto pr-6 space-y-6 custom-scrollbar text-xl leading-relaxed text-slate-300 pb-12">
+              <div id="help-content-scroll" className="flex-1 overflow-y-auto pr-2 sm:pr-6 space-y-4 sm:space-y-6 custom-scrollbar text-lg sm:text-xl leading-relaxed text-slate-300 pb-12">
                 {topic.content.map((p, i) => (
                   <p key={i} className={p.startsWith('**') ? 'text-white font-bold' : ''}>
                     {p.split(/(\*\*.*?\*\*)/g).map((chunk, j) => 
