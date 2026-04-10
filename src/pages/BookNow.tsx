@@ -246,13 +246,16 @@ const BookNow = () => {
         const ct = res.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
           const data = await res.json();
-          setSavedPricesLive(data.savedPrices || {});
-          setPackageMetaLive(data.packageMeta || {});
-          setAddOnMetaLive(data.addOnMeta || {});
-          setCustomPackagesLive(data.customPackages || []);
-          setCustomAddOnsLive(data.customAddOns || []);
-          setLastSyncTs(Date.now());
-          return;
+          // Only return if we actually got some data, otherwise fall back to Supabase/Snapshot
+          if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
+            setSavedPricesLive(data.savedPrices || {});
+            setPackageMetaLive(data.packageMeta || {});
+            setAddOnMetaLive(data.addOnMeta || {});
+            setCustomPackagesLive(data.customPackages || []);
+            setCustomAddOnsLive(data.customAddOns || []);
+            setLastSyncTs(Date.now());
+            return;
+          }
         }
       }
     } catch { }

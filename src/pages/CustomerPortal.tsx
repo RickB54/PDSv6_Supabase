@@ -124,7 +124,34 @@ const CustomerPortal = () => {
   const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
   const fetchLive = async () => {
-    // Priority 1: Cloud / Supabase (The Real Source of Truth)
+    // Priority 1: Persistent Local API Memory (Fastest, reflects immediate Admin edits)
+    try {
+      const res = await fetch(`/api/packages/live?v=${Date.now()}`, { 
+        headers: { 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } 
+      });
+      if (res.ok) {
+        const ct = res.headers.get('Content-Type') || '';
+        if (ct.includes('application/json')) {
+          const data = await res.json();
+          // Only return if we actually got some data, otherwise fall back to Supabase/Snapshot
+          if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
+            setSavedPricesLive(data.savedPrices || {});
+            setPackageMetaLive(data.packageMeta || {});
+            setAddOnMetaLive(data.addOnMeta || {});
+            setCustomPackagesLive(data.customPackages || []);
+            setCustomAddOnsLive(data.customAddOns || []);
+            setLastSyncTs(Date.now());
+            return;
+          }
+        }
+      }
+    } catch { }
+
+    // Priority 2: Cloud / Supabase (The Permanent Source of Truth)
     if (isSupabaseEnabled()) {
       try {
         const [pkgs, addons] = await Promise.all([

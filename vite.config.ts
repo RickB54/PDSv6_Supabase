@@ -27,23 +27,44 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       mode === "development" && componentTagger(),
-      // Lightweight mock API for dev server to satisfy live endpoints on port 6066
+      // Persistence for mock API state to survive restarts
       {
         name: "mock-live-api",
         configureServer(server: ViteDevServer) {
-          let packagesLive: any = { savedPrices: {}, packageMeta: {}, addOnMeta: {}, customPackages: [], customAddOns: [], version: 0 };
-          let vehicleTypesLive: any[] = [
-            { id: 'compact', name: 'Compact/Sedan', description: 'Small cars and sedans', hasPricing: true },
-            { id: 'midsize', name: 'Mid-Size/SUV', description: 'Mid-size cars and SUVs', hasPricing: true },
-            { id: 'truck', name: 'Truck/Van/Large SUV', description: 'Trucks, vans, large SUVs', hasPricing: true },
-            { id: 'luxury', name: 'Luxury/High-End', description: 'Luxury and premium vehicles', hasPricing: true },
-          ];
-          let contactLive: any = {
-            hours: 'Appointments daily 8 AM–6 PM',
-            phone: '(555) 123-4567',
-            address: 'Methuen, MA',
-            email: 'Rick.PrimeAutoDetail@gmail.com',
+          const fs = require('fs');
+          const path = require('path');
+          const dataPath = path.resolve(process.cwd(), 'packagesLive.json');
+          
+          let state = {
+            packagesLive: { savedPrices: {}, packageMeta: {}, addOnMeta: {}, customPackages: [], customAddOns: [], version: 0 },
+            vehicleTypesLive: [
+              { id: 'compact', name: 'Compact/Sedan', description: 'Small cars and sedans', hasPricing: true },
+              { id: 'midsize', name: 'Mid-Size/SUV', description: 'Mid-size cars and SUVs', hasPricing: true },
+              { id: 'truck', name: 'Truck/Van/Large SUV', description: 'Trucks, vans, large SUVs', hasPricing: true },
+              { id: 'luxury', name: 'Luxury/High-End', description: 'Luxury and premium vehicles', hasPricing: true },
+            ],
+            contactLive: {
+              hours: 'Appointments daily 8 AM–6 PM',
+              phone: '(555) 123-4567',
+              address: 'Methuen, MA',
+              email: 'Rick.PrimeAutoDetail@gmail.com',
+            }
           };
+
+          // Load from disk if exists
+          try {
+            if (fs.existsSync(dataPath)) {
+              const saved = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+              state = { ...state, ...saved };
+              console.log('✅ Mock API state restored from packagesLive.json');
+            }
+          } catch (e) { console.error('Failed to load mock API state', e); }
+
+          function saveState() {
+            try {
+              fs.writeFileSync(dataPath, JSON.stringify(state, null, 2));
+            } catch (e) { console.error('Failed to save mock API state', e); }
+          }
 
           function sendJson(res: any, obj: any) {
             res.statusCode = 200;
@@ -63,7 +84,7 @@ export default defineConfig(({ mode }) => {
               req.on('end', () => {
                 try {
                   const payload = JSON.parse(body || '{}');
-                  packagesLive = {
+                  state.packagesLive = {
                     savedPrices: payload.savedPrices || {},
                     packageMeta: payload.packageMeta || {},
                     addOnMeta: payload.addOnMeta || {},
@@ -71,7 +92,8 @@ export default defineConfig(({ mode }) => {
                     customAddOns: Array.isArray(payload.customAddOns) ? payload.customAddOns : [],
                     version: Date.now(),
                   };
-                  return sendJson(res, { ok: true, version: packagesLive.version });
+                  saveState();
+                  return sendJson(res, { ok: true, version: state.packagesLive.version });
                 } catch (e) {
                   res.statusCode = 400; return sendJson(res, { ok: false, error: 'invalid_payload' });
                 }
@@ -79,7 +101,7 @@ export default defineConfig(({ mode }) => {
               return;
             }
             if (url.startsWith('/api/packages/live') && method === 'GET') {
-              return sendJson(res, packagesLive);
+              return sendJson(res, state.packagesLive);
             }
             // Vehicle types live endpoints
             if (url === '/api/vehicle-types/live' && method === 'POST') {
@@ -88,8 +110,9 @@ export default defineConfig(({ mode }) => {
               req.on('end', () => {
                 try {
                   const payload = JSON.parse(body || '[]');
-                  vehicleTypesLive = Array.isArray(payload) ? payload : vehicleTypesLive;
-                  return sendJson(res, { ok: true, count: vehicleTypesLive.length });
+                  state.vehicleTypesLive = Array.isArray(payload) ? payload : state.vehicleTypesLive;
+                  saveState();
+                  return sendJson(res, { ok: true, count: state.vehicleTypesLive.length });
                 } catch (e) {
                   res.statusCode = 400; return sendJson(res, { ok: false, error: 'invalid_payload' });
                 }
@@ -97,7 +120,7 @@ export default defineConfig(({ mode }) => {
               return;
             }
             if (url.startsWith('/api/vehicle-types/live') && method === 'GET') {
-              return sendJson(res, vehicleTypesLive);
+              return sendJson(res, state.vehicleTypesLive);
             }
             // Contact live endpoints
             if (url === '/api/contact/live' && method === 'POST') {
@@ -106,12 +129,13 @@ export default defineConfig(({ mode }) => {
               req.on('end', () => {
                 try {
                   const payload = JSON.parse(body || '{}');
-                  contactLive = {
-                    hours: String(payload.hours ?? contactLive.hours),
-                    phone: String(payload.phone ?? contactLive.phone),
-                    address: String(payload.address ?? contactLive.address),
-                    email: String(payload.email ?? contactLive.email),
+                  state.contactLive = {
+                    hours: String(payload.hours ?? state.contactLive.hours),
+                    phone: String(payload.phone ?? state.contactLive.phone),
+                    address: String(payload.address ?? state.contactLive.address),
+                    email: String(payload.email ?? state.contactLive.email),
                   };
+                  saveState();
                   return sendJson(res, { ok: true });
                 } catch (e) {
                   res.statusCode = 400; return sendJson(res, { ok: false, error: 'invalid_payload' });
@@ -120,7 +144,7 @@ export default defineConfig(({ mode }) => {
               return;
             }
             if (url.startsWith('/api/contact/live') && method === 'GET') {
-              return sendJson(res, contactLive);
+              return sendJson(res, state.contactLive);
             }
             return notFound(res);
           });

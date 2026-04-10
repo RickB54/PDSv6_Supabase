@@ -510,7 +510,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
-                      <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-blue-500 bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                      <Link to={targetUrl} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-semibold !text-[#0047AB] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 shrink-0 ${open ? 'mr-0' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {(open || openMobile) && (
                           <div className="flex items-center justify-between flex-1 min-w-0">
