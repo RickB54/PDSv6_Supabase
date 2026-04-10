@@ -510,7 +510,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
-                      <Link to={targetUrl} style={{ color: isActive ? '#1e3a8a' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#1e3a8a] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                      <Link to={targetUrl} style={{ color: isActive ? '#2563eb' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
                         <item.icon className={`h-4 w-4 shrink-0 ${open ? 'mr-0' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
                         {(open || openMobile) && (
                           <div className="flex items-center justify-between flex-1 min-w-0">
@@ -541,9 +541,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 );
               })}
 
-              {(MENU_GROUPS || []).map((group) => {
-                const isOpen = openGroups[group.title];
-                const groupBadgeCount = group.items.reduce((acc: number, item: any) => acc + (item.badge || 0), 0);
+                const isGroupActive = group.items.some((item: any) => location.pathname === getUrl(item.url));
                 
                 return (
                   <Collapsible
@@ -560,13 +558,17 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton 
                           tooltip={group.title} 
-                          className="text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full"
+                          style={{ color: isGroupActive ? '#2563eb' : undefined }}
+                          className={cn(
+                            "hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full",
+                            isGroupActive ? "text-[#2563eb] font-black" : "text-zinc-400"
+                          )}
                           onClick={() => {
                             const sectionId = group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                             navigate(`/section/${sectionId}`);
                           }}
                         >
-                          <group.icon className="h-4 w-4 mr-2" />
+                          <group.icon className={cn("h-4 w-4 mr-2", isGroupActive ? "text-[#2563eb]" : "")} />
                           {(open || openMobile) && (
                             <>
                               <span>{group.title}</span>
@@ -593,10 +595,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                                 <SidebarMenuSubButton asChild isActive={isActive}>
                                   <Link 
                                     to={targetUrl} 
-                                    style={{ color: isActive ? '#1e3a8a' : undefined }}
+                                    style={{ color: isActive ? '#2563eb' : undefined }}
                                     className={cn(
                                       "flex items-center gap-2 py-2 h-auto text-[11px]",
-                                      isActive ? "!text-[#1e3a8a] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
+                                      isActive ? "!text-[#2563eb] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
                                     )} 
                                     onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
                                   >
