@@ -455,27 +455,37 @@ const BookNow = () => {
     const meta = addOnMetaLive[a.id];
     return (meta?.visible) !== false && !meta?.deleted;
   });
-  const liveAddOns = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
-    const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing?.compact || 0,
-      midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing?.midsize || 0,
-      truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing?.truck || 0,
-      luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing?.luxury || 0,
-    };
-    Object.keys(savedPricesLive).forEach((k) => {
-      const prefix = `addon:${a.id}:`;
-      if (k.startsWith(prefix)) {
-        const veh = k.slice(prefix.length);
-        const val = parseFloat(savedPricesLive[k]);
-        if (!Number.isNaN(val)) pricing[veh] = val;
-      }
+  const liveAddOns = (() => {
+    const raw = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
+      const pricing: Record<string, number> = {
+        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || a.pricing?.compact || 0,
+        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || a.pricing?.midsize || 0,
+        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || a.pricing?.truck || 0,
+        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || a.pricing?.luxury || 0,
+      };
+      Object.keys(savedPricesLive).forEach((k) => {
+        const prefix = `addon:${a.id}:`;
+        if (k.startsWith(prefix)) {
+          const veh = k.slice(prefix.length);
+          const val = parseFloat(savedPricesLive[k]);
+          if (!Number.isNaN(val)) pricing[veh] = val;
+        }
+      });
+      const metaSteps: string[] | undefined = addOnMetaLive[a.id]?.stepIds;
+      const steps = metaSteps && metaSteps.length > 0
+        ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
+        : (a.steps ? a.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s)) : []);
+      return { ...a, pricing, steps };
     });
-    const metaSteps: string[] | undefined = addOnMetaLive[a.id]?.stepIds;
-    const steps = metaSteps && metaSteps.length > 0
-      ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
-      : (a.steps ? a.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s)) : []);
-    return { ...a, pricing, steps };
-  });
+
+    // Final safety filter: unique names only to stop "Ghost" duplicates
+    const seenNames = new Set();
+    return raw.filter(a => {
+      if (seenNames.has(a.name)) return false;
+      seenNames.add(a.name);
+      return true;
+    });
+  })();
 
   // Compute total (service + add-ons)
   const selectedService = filteredPackages.find(s => s.id === formData.package);

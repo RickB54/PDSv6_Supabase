@@ -293,13 +293,32 @@ export default function PackagePricing() {
           is_active: getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted,
         }));
 
+        // --- DEACTIVATE GHOST DATA (Items in DB but not in our current managed list) ---
+        try {
+          const [dbPkgs, dbAddons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+          
+          const currentPkgIds = pkgRows.map(r => r.id);
+          const currentAddonIds = addRows.map(r => r.id);
+
+          const ghostPkgs = dbPkgs.filter((p: any) => !currentPkgIds.includes(p.id) && p.is_active !== false);
+          const ghostAddons = dbAddons.filter((a: any) => !currentAddonIds.includes(a.id) && a.is_active !== false);
+
+          for (const ghost of ghostPkgs) {
+            await supaPkgs.update(ghost.id, { is_active: false });
+          }
+          for (const ghost of ghostAddons) {
+            await supaAddOns.update(ghost.id, { is_active: false });
+          }
+        } catch (e) { console.error("Ghost pruning failed", e); }
+
         try { 
-          // Upsert packages individually to ensure we don't fail the whole batch if one ID is problematic
+          // Upsert current packages
           for (const row of pkgRows) {
             await supaPkgs.upsert([row]);
           }
         } catch (e) { console.error("Pkg upsert failure", e); }
         try { 
+          // Upsert current add-ons
           for (const row of addRows) {
             await supaAddOns.upsert([row]);
           }
