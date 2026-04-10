@@ -480,9 +480,16 @@ const BookNow = () => {
 
     // Final safety filter: unique names only to stop "Ghost" duplicates
     const seenNames = new Set();
+    const builtInIds = builtInAddOns.map(b => b.id);
+    const customIds = customAddOnsLive.map(c => c.id);
+
     return raw.filter(a => {
-      if (seenNames.has(a.name)) return false;
-      seenNames.add(a.name);
+      // Safety: Only show if it's a built-in OR a recognized custom add-on from our managed state
+      if (!builtInIds.includes(a.id) && !customIds.includes(a.id)) return false;
+
+      const n = (a.name || "").trim().toLowerCase();
+      if (seenNames.has(n)) return false;
+      seenNames.add(n);
       return true;
     });
   })();

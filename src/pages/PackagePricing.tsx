@@ -42,6 +42,8 @@ import {
   deleteCustomService,
   postServicesFullSync,
 } from "@/lib/servicesMeta";
+import supabase from "@/lib/supabase";
+import * as supaPkgs from "@/services/supabase/packages";
 import packageBasic from "@/assets/package-basic.jpg";
 import packageExpress from "@/assets/package-express.jpg";
 import packageExterior from "@/assets/package-exterior.jpg";
@@ -293,23 +295,33 @@ export default function PackagePricing() {
           is_active: getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted,
         }));
 
-        // --- DEACTIVATE GHOST DATA (Items in DB but not in our current managed list) ---
+        // --- NUCLEAR GHOST PURGE: Force-deactivate everything in Supabase not in our current managed list ---
         try {
-          const [dbPkgs, dbAddons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
+          const allManagedIds = [...currentPkgIds, ...currentAddonIds];
+          const { data: allSupItems } = await supabase.from('add_ons').select('id, name').eq('is_active', true);
+          const ghosts = (allSupItems || []).filter(item => !currentAddonIds.includes(item.id));
           
-          const currentPkgIds = pkgRows.map(r => r.id);
-          const currentAddonIds = addRows.map(r => r.id);
-
-          const ghostPkgs = dbPkgs.filter((p: any) => !currentPkgIds.includes(p.id) && p.is_active !== false);
-          const ghostAddons = dbAddons.filter((a: any) => !currentAddonIds.includes(a.id) && a.is_active !== false);
-
-          for (const ghost of ghostPkgs) {
-            await supaPkgs.update(ghost.id, { is_active: false });
+          if (ghosts.length > 0) {
+            console.log(`[Sync] Pruning ${ghosts.length} ghost add-ons:`, ghosts.map(g => g.name));
+            for (const ghost of ghosts) {
+              await supaAddOns.update(ghost.id, { is_active: false });
+            }
+            toast({
+              title: "Cloud Sanitized",
+              description: `Deactivated ${ghosts.length} stale add-ons found in Supabase.`,
+            });
           }
-          for (const ghost of ghostAddons) {
-            await supaAddOns.update(ghost.id, { is_active: false });
+
+          const { data: allSupPkgs } = await supabase.from('packages').select('id, name').eq('is_active', true);
+          const pkgGhosts = (allSupPkgs || []).filter(item => !currentPkgIds.includes(item.id));
+          if (pkgGhosts.length > 0) {
+            for (const ghost of pkgGhosts) {
+              await supaPkgs.update(ghost.id, { is_active: false });
+            }
           }
-        } catch (e) { console.error("Ghost pruning failed", e); }
+        } catch (e) { 
+          console.error("Nuclear prune failed", e); 
+        }
 
         try { 
           // Upsert current packages
