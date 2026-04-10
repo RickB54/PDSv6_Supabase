@@ -122,6 +122,19 @@ export function GlobalRightSidebar() {
             touchStartY = e.touches[0].clientY;
         };
 
+        const handleTouchMove = (e: TouchEvent) => {
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            
+            // For right sidebar swipe (Right-to-Left)
+            const dX_rtl = touchStartX - currentX;
+            const dY = Math.abs(currentY - touchStartY);
+
+            if (touchStartX > window.innerWidth - 120 && dX_rtl > 10 && dY < 30) {
+                if (e.cancelable) e.preventDefault();
+            }
+        };
+
         const handleTouchEnd = (e: TouchEvent) => {
             const touchEndX = e.changedTouches[0].clientX;
             const touchEndY = e.changedTouches[0].clientY;
@@ -131,7 +144,7 @@ export function GlobalRightSidebar() {
 
             // Right-to-Left swipe (deltaX > 0)
             if (
-                touchStartX > window.innerWidth - 120 && // Increased threshold for curved screens/cases
+                touchStartX > window.innerWidth - 120 && 
                 deltaX > 40 && 
                 deltaY < 50 && 
                 !openMobile
@@ -145,11 +158,13 @@ export function GlobalRightSidebar() {
             }
         };
 
-        window.addEventListener('touchstart', handleTouchStart);
-        window.addEventListener('touchend', handleTouchEnd);
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
         return () => {
             window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchmove', handleTouchMove);
             window.removeEventListener('touchend', handleTouchEnd);
         };
     }, [isMobile, openMobile]);

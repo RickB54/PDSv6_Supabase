@@ -206,6 +206,18 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       touchStartY = e.touches[0].clientY;
     };
 
+    const handleTouchMove = (e: TouchEvent) => {
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const dX = currentX - touchStartX;
+      const dY = Math.abs(currentY - touchStartY);
+
+      // If we started in the left edge zone and are swiping right, prevent browser back/forward
+      if (touchStartX <= 120 && dX > 10 && dY < 30) {
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+
     const handleTouchEnd = (e: TouchEvent) => {
       const touchEndX = e.changedTouches[0].clientX;
       const touchEndY = e.changedTouches[0].clientY;
@@ -213,20 +225,22 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       const deltaY = Math.abs(touchEndY - touchStartY);
 
       if (
-        touchStartX <= 120 && // Increased threshold for curved screens/cases
+        touchStartX <= 120 && 
         deltaX > 40 && 
         deltaY < 50 && 
-        !openMobile // Only if currently closed
+        !openMobile 
       ) {
         setOpenMobile(true);
       }
     };
 
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [openMobile, setOpenMobile]);
