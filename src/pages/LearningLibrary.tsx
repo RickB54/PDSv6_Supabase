@@ -35,6 +35,7 @@ export default function LearningLibrary() {
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<{ step: string; message: string }>({ step: 'idle', message: '' });
+    const [placeholderCategories, setPlaceholderCategories] = useState<string[]>([]);
 
     // Video player state
     const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -55,9 +56,12 @@ export default function LearningLibrary() {
     const [newCategoryName, setNewCategoryName] = useState<string>("");
 
     const categories = useMemo(() => {
-        const unique = Array.from(new Set(items.map(i => i.category || 'General')));
+        const unique = Array.from(new Set([
+            ...items.map(i => i.category || 'General'),
+            ...placeholderCategories
+        ]));
         return ["All", ...unique.sort()];
-    }, [items]);
+    }, [items, placeholderCategories]);
 
     const filteredItems = useMemo(() => {
         if (activeCategory === "All") return items;
@@ -346,10 +350,17 @@ export default function LearningLibrary() {
     const handleCategoryAction = async () => {
         if (categoryModalType === 'create') {
             if (!newCategoryName.trim()) return;
-            // Creation is implicit when adding an item with a new category, 
-            // but we can just set the form data category here if we were in the Add modal.
-            // For a standalone "Create", we just need to refresh or add to list.
-            toast({ title: "Category Placeholder Created", description: "Add a resource to this category to make it permanent." });
+            
+            // Check if it already exists in items or placeholders
+            if (categories.includes(newCategoryName)) {
+                toast({ title: "Category Exists", description: "This category name is already in use." });
+                setActiveCategory(newCategoryName);
+                setIsCategoryModalOpen(false);
+                return;
+            }
+
+            setPlaceholderCategories(prev => [...prev, newCategoryName]);
+            toast({ title: "Category Created", description: "You can now add resources to this category." });
             setActiveCategory(newCategoryName);
         } else if (categoryModalType === 'rename') {
             if (!newCategoryName.trim()) return;
