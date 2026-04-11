@@ -641,7 +641,13 @@ export default function LearningLibrary() {
                                     onValueChange={(val) => {
                                         if (val === 'new') {
                                             const newCat = prompt("Enter new category name:");
-                                            if (newCat) setFormData({ ...formData, category: newCat });
+                                            if (newCat && newCat.trim()) {
+                                                const trimmed = newCat.trim();
+                                                if (!placeholderCategories.includes(trimmed)) {
+                                                    setPlaceholderCategories(prev => [...prev, trimmed]);
+                                                }
+                                                setFormData({ ...formData, category: trimmed });
+                                            }
                                         } else {
                                             setFormData({ ...formData, category: val });
                                         }
