@@ -451,15 +451,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           <div className="flex items-center gap-1">
             {(open || openMobile) && (
               <>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: isAdmin ? 'admin' : 'employee' } }))}
-                  className="h-8 w-8 text-zinc-400 hover:text-emerald-400 transition-colors" 
-                  title="Open Help Guide"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
                 <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-zinc-500 hover:text-white transition-colors" title="Toggle Groups">
                   {isAnyOpen ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
                 </Button>
