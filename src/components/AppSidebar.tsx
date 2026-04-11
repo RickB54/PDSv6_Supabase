@@ -465,7 +465,25 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                 </Button>
               </>
             )}
-            <SidebarTrigger className="h-8 w-8 text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all relative z-[100]" />
+            <div className="flex items-center">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { 
+                  detail: { 
+                    topicId: location.pathname === '/chemicals' ? 'chemical-cards' : 
+                             location.pathname === '/chemical-training' ? 'chemical-decision-system' : 
+                             location.pathname === '/inventory-control' ? 'inventory-control' : undefined,
+                    role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
+                  } 
+                }))}
+                className="h-8 w-8 text-zinc-500 hover:text-emerald-400 mr-2 transition-colors relative z-[100]" 
+                title="Contextual Help Guide"
+              >
+                <HelpCircle className="h-4 w-4" />
+              </Button>
+              <SidebarTrigger className="h-8 w-8 text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all relative z-[100]" />
+            </div>
           </div>
         </div>
       </div>

@@ -195,12 +195,13 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     }
 
     // 2. UNIVERSAL SYNC: Update Chemical Library if linked
-    if (!skipLibrarySync && chemical.chemicalLibraryId && chemical.dilutionRatios) {
+    if (!skipLibrarySync && chemical.chemicalLibraryId && (chemical.dilutionRatios || chemical.imageUrl)) {
         try {
             const { updateChemicalPartial } = await import('./chemicals');
             await updateChemicalPartial(chemical.chemicalLibraryId, {
                 dilution_ratios: chemical.dilutionRatios,
-                brand: chemical.brand 
+                brand: chemical.brand,
+                primary_image_url: chemical.imageUrl
             }, true); // Important: skipInventorySync
         } catch (syncErr) {
             console.error("Failed to sync inventory update back to library:", syncErr);

@@ -123,6 +123,7 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
                         description: `Inventory Item (No library card found)`,
                         used_for: [],
                         dilution_ratios: [],
+                        primary_image_url: inv.image_url,
                         is_inventory_only: true // Flag to help UI know it's not a full library card
                     } as any);
                 }
@@ -205,6 +206,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
                             costPerBottle: 0,
                             threshold: 1,
                             currentStock: 1,
+                            imageUrl: data.primary_image_url,
                             chemicalLibraryId: data.id,
                             dilutionRatios: data.dilution_ratios || []
                         }, true, true); // isNew=true, skipLibrarySync=true
@@ -231,6 +233,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
                         await saveInventoryChemical({
                             ...item,
                             chemicalLibraryId: data.id,
+                            imageUrl: item.imageUrl || data.primary_image_url,
                             dilutionRatios: data.dilution_ratios || []
                         }, false, true); // skipLibrarySync
                     }

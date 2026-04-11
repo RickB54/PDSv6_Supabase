@@ -41,6 +41,8 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { JobPrepChecklist } from "@/components/chemicals/JobPrepChecklist";
+import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
+import { Zap } from "lucide-react";
 
 export default function ChemicalTraining() {
     const navigate = useNavigate();
@@ -56,6 +58,7 @@ export default function ChemicalTraining() {
     
     // AI Assistant State
     const [aiOpen, setAiOpen] = useState(false);
+    const [showRicksTips, setShowRicksTips] = useState(false);
     const [aiQuery, setAiQuery] = useState("");
     const [aiResponse, setAiResponse] = useState<{answer: string; sources: string[]; recommendations: any[]} | null>(null);
     const [aiLoading, setAiLoading] = useState(false);
@@ -293,6 +296,13 @@ ${targetChem.surface_compatibility?.avoid?.length ? `**Avoid:** ${targetChem.sur
                             className="flex-1 md:flex-none h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-600 hover:text-white text-blue-400 font-black italic tracking-tighter"
                         >
                             <Download className="w-4 h-4 mr-2" /> SAVE PDF CHART
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowRicksTips(true)}
+                            className="flex-1 md:flex-none h-10 bg-purple-600/10 border-purple-500/30 text-purple-400 hover:bg-purple-600 hover:text-white font-black italic tracking-tighter shadow-lg shadow-purple-900/20"
+                        >
+                            <Zap className="w-4 h-4 mr-2" /> RICK'S TIPS
                         </Button>
                         <Button
                             variant="outline"
@@ -1022,6 +1032,10 @@ ${targetChem.surface_compatibility?.avoid?.length ? `**Avoid:** ${targetChem.sur
                     </div>
                 </DialogContent>
             </Dialog>
+            <RicksTipsModal 
+                open={showRicksTips} 
+                onOpenChange={setShowRicksTips} 
+            />
         </div>
     );
 }
