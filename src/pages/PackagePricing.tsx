@@ -84,10 +84,9 @@ import { autoTable } from "jspdf-autotable";
 import api from "@/lib/api";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { isSupabaseEnabled } from "@/lib/auth";
-import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { compressImageForUpload } from "@/lib/image-compression";
-import { supabase, isDemoActive } from "@/lib/supa-data";
+import { isDemoActive } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 
 type Pricing = { compact: number; midsize: number; truck: number; luxury: number };

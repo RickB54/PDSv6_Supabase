@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, ViteDevServer } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
+import path from "node:path";
+import fs from "node:fs";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
@@ -31,8 +32,6 @@ export default defineConfig(({ mode }) => {
       {
         name: "mock-live-api",
         configureServer(server: ViteDevServer) {
-          const fs = require('fs');
-          const path = require('path');
           const dataPath = path.resolve(process.cwd(), 'packagesLive.json');
           
           let state = {

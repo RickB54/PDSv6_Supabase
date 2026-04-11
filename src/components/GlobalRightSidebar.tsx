@@ -128,8 +128,8 @@ export function GlobalRightSidebar() {
             const dX = Math.abs(currentX - touchStartX);
             const dY = Math.abs(currentY - touchStartY);
 
-            // AGGRESSIVE: Block browser if swiping from the RIGHT edge
-            if (touchStartX > window.innerWidth - 120) {
+            // RELAXED: Only intercept if starting from the VERY edge AND no dialog is open
+            if (touchStartX > window.innerWidth - 40 && !document.querySelector('[role="dialog"]')) {
                 if (dX > dY && dX > 5) {
                     if (e.cancelable) e.preventDefault();
                 }
@@ -145,8 +145,9 @@ export function GlobalRightSidebar() {
 
             // Right-to-Left swipe (deltaX > 0)
             if (
-                touchStartX > window.innerWidth - 120 && 
-                deltaX > 50 && 
+                touchStartX > window.innerWidth - 40 && 
+                !document.querySelector('[role="dialog"]') &&
+                deltaX > 60 && 
                 deltaY < 80 
             ) {
                 if (!openMobile) {

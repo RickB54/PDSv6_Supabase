@@ -58,7 +58,9 @@ const transformRatio = (r: string) => {
 
 
 const InventoryControl = () => {
-    const { isDemoMode } = useDemoMode();
+  const { isDemoMode } = useDemoMode();
+  const stickyTop = isDemoMode ? "top-[112px]" : "top-[72px]";
+
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,6 +73,16 @@ const InventoryControl = () => {
   const tools = equipment;
   const setTools = setEquipment;
   const [usageHistory, setUsageHistory] = useState<UsageHistory[]>([]);
+
+  const calculateCategoryTotal = (type: 'chemical' | 'material' | 'tool') => {
+    if (type === 'chemical') {
+      return (chemicals || []).reduce((a, c) => a + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
+    } else if (type === 'material') {
+      return (materials || []).reduce((a, m) => a + (((m as any).costPerItem || (m as any).price || 0) * (m.quantity || 0)), 0);
+    } else {
+      return (tools || []).reduce((a, t) => a + (((t as any).price || (t as any).cost || 0) * (t.quantity || 1)), 0);
+    }
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
@@ -412,7 +424,7 @@ const InventoryControl = () => {
     );
 
     // If a specific brand is selected, filter by it (exclude special sort modes)
-    if (!["brand", "alphabetical", "low_stock", "no_cost"].includes(chemicalSort)) {
+    if (!["brand", "alphabetical", "low_stock", "no_cost", "updated_at"].includes(chemicalSort)) {
       baseFiltered = baseFiltered.filter(c => (c.brand || "Other / No Brand") === chemicalSort);
     }
 
@@ -1649,7 +1661,7 @@ const InventoryControl = () => {
         {/* Chemicals Section (Yellow) */}
         <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[80px] z-10 border-b border-yellow-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
+            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky ${stickyTop} z-10 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
             onClick={() => toggleSection('chemicals')}
           >
             <div className="flex items-center gap-3">
@@ -1687,7 +1699,7 @@ const InventoryControl = () => {
               </Popover>
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{chemicals.length} items</span>
             </div>
-            <div className="flex items-center gap-4 text-sm text-zinc-400">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
               <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
@@ -1709,12 +1721,15 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <span className="mr-2 text-zinc-400 text-sm hidden lg:inline">Items: <span className="text-zinc-200">{chemicals.length}</span></span>
-              <span className="mr-4 hidden sm:inline text-sm">Value: <span className="text-zinc-200">${chemicals.reduce((a, c) => a + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0).toFixed(0)}</span></span>
+              <div className="hidden sm:inline bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">
+                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
+                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('chemical').toFixed(2)}</span>
+              </div>
               {chemicals.some(c => c.currentStock < c.threshold) && (
-                <span className="text-red-400 font-medium flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> {chemicals.filter(c => c.currentStock < c.threshold).length} Low
-                </span>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 animate-pulse">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-tight">Low Stock</span>
+                </div>
               )}
               {expandedSections.chemicals ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
@@ -1797,7 +1812,7 @@ const InventoryControl = () => {
         {/* Supplies Section (Blue) - Renamed from Materials */}
         <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[80px] z-10 border-b border-blue-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
+            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky ${stickyTop} z-10 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
             onClick={() => toggleSection('materials')}
           >
             <div className="flex items-center gap-3">
@@ -1832,7 +1847,7 @@ const InventoryControl = () => {
               </Popover>
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{materials.length} items</span>
             </div>
-            <div className="flex items-center gap-4 text-sm text-zinc-400">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
               <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
@@ -1855,11 +1870,15 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <span className="mr-4 hidden sm:inline">Value: <span className="text-zinc-200">${materials.reduce((a, m) => a + (((m as any).costPerItem || (m as any).price || 0) * (m.quantity || 0)), 0).toFixed(0)}</span></span>
+              <div className="hidden sm:inline bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">
+                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
+                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('material').toFixed(2)}</span>
+              </div>
               {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
-                <span className="text-red-400 font-medium flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> {materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold).length} Low
-                </span>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 animate-pulse">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-tight">Low Stock</span>
+                </div>
               )}
               {expandedSections.materials ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
@@ -2004,7 +2023,7 @@ const InventoryControl = () => {
         {/* Equipment Section (Purple) - Renamed from Tools */}
         <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky top-[80px] z-10 border-b border-purple-500/20 flex items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl"
+            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky ${stickyTop} z-10 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
             onClick={() => toggleSection('tools')}
           >
             <div className="flex items-center gap-3">
@@ -2040,7 +2059,7 @@ const InventoryControl = () => {
               </Popover>
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{tools.length} items</span>
             </div>
-            <div className="flex items-center gap-4 text-sm text-zinc-400">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
               <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
@@ -2063,8 +2082,9 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <div className="hidden sm:block">
-                <span className="mr-4">Value: <span className="text-zinc-200">${tools.reduce((a, t) => a + (((t as any).price || (t as any).cost || 0) * (t.quantity || 1)), 0).toFixed(0)}</span></span>
+              <div className="hidden sm:inline bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">
+                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
+                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('tool').toFixed(2)}</span>
               </div>
               {expandedSections.tools ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>

@@ -1,0 +1,318 @@
+{
+  "packagesLive": {
+    "savedPrices": {
+      "package:basic-exterior:compact": "40",
+      "package:basic-exterior:midsize": "50",
+      "package:basic-exterior:truck": "60",
+      "package:basic-exterior:luxury": "75",
+      "package:express-wax:compact": "60",
+      "package:express-wax:midsize": "75",
+      "package:express-wax:truck": "90",
+      "package:express-wax:luxury": "110",
+      "package:full-detail:compact": "180",
+      "package:full-detail:midsize": "225",
+      "package:full-detail:truck": "270",
+      "package:full-detail:luxury": "320",
+      "package:full-exterior:compact": "120",
+      "package:full-exterior:midsize": "150",
+      "package:full-exterior:truck": "180",
+      "package:full-exterior:luxury": "210",
+      "package:interior-cleaning:compact": "80",
+      "package:interior-cleaning:midsize": "100",
+      "package:interior-cleaning:truck": "120",
+      "package:interior-cleaning:luxury": "150",
+      "package:premium-detail:compact": "280",
+      "package:premium-detail:midsize": "350",
+      "package:premium-detail:truck": "420",
+      "package:premium-detail:luxury": "500",
+      "addon:ceramic-coating:compact": "500",
+      "addon:ceramic-coating:midsize": "500",
+      "addon:ceramic-coating:truck": "550",
+      "addon:ceramic-coating:luxury": "600",
+      "addon:ceramic-trim-coat:compact": "60",
+      "addon:ceramic-trim-coat:midsize": "75",
+      "addon:ceramic-trim-coat:truck": "95",
+      "addon:ceramic-trim-coat:luxury": "125",
+      "addon:clay-bar-decon:compact": "65",
+      "addon:clay-bar-decon:midsize": "80",
+      "addon:clay-bar-decon:truck": "95",
+      "addon:clay-bar-decon:luxury": "120",
+      "addon:deep-interior:compact": "150",
+      "addon:deep-interior:midsize": "175",
+      "addon:deep-interior:truck": "200",
+      "addon:deep-interior:luxury": "225",
+      "addon:eco-package:compact": "120",
+      "addon:eco-package:midsize": "130",
+      "addon:eco-package:truck": "140",
+      "addon:eco-package:luxury": "150",
+      "addon:engine-bay:compact": "70",
+      "addon:engine-bay:midsize": "85",
+      "addon:engine-bay:truck": "100",
+      "addon:engine-bay:luxury": "120",
+      "addon:engine-detail:compact": "110",
+      "addon:engine-detail:midsize": "110",
+      "addon:engine-detail:truck": "110",
+      "addon:engine-detail:luxury": "110",
+      "addon:headlight-restoration:compact": "35",
+      "addon:headlight-restoration:midsize": "40",
+      "addon:headlight-restoration:truck": "50",
+      "addon:headlight-restoration:luxury": "65",
+      "addon:leather-conditioning:compact": "25",
+      "addon:leather-conditioning:midsize": "30",
+      "addon:leather-conditioning:truck": "35",
+      "addon:leather-conditioning:luxury": "45",
+      "addon:paint-touch-up:compact": "75",
+      "addon:paint-touch-up:midsize": "90",
+      "addon:paint-touch-up:truck": "110",
+      "addon:paint-touch-up:luxury": "140",
+      "addon:odor-treatment:compact": "100",
+      "addon:odor-treatment:midsize": "100",
+      "addon:odor-treatment:truck": "100",
+      "addon:odor-treatment:luxury": "100",
+      "addon:odor-eliminator:compact": "15",
+      "addon:odor-eliminator:midsize": "20",
+      "addon:odor-eliminator:truck": "25",
+      "addon:odor-eliminator:luxury": "35",
+      "addon:paint-correction:compact": "300",
+      "addon:paint-correction:midsize": "350",
+      "addon:paint-correction:truck": "400",
+      "addon:paint-correction:luxury": "450",
+      "addon:paint-sealant:compact": "90",
+      "addon:paint-sealant:midsize": "110",
+      "addon:paint-sealant:truck": "130",
+      "addon:paint-sealant:luxury": "160",
+      "addon:pet-hair-removal:compact": "55",
+      "addon:pet-hair-removal:midsize": "70",
+      "addon:pet-hair-removal:truck": "85",
+      "addon:pet-hair-removal:luxury": "100",
+      "addon:pet-hair:compact": "75",
+      "addon:pet-hair:midsize": "85",
+      "addon:pet-hair:truck": "95",
+      "addon:pet-hair:luxury": "105",
+      "addon:scratch-repair:compact": "200",
+      "addon:scratch-repair:midsize": "200",
+      "addon:scratch-repair:truck": "200",
+      "addon:scratch-repair:luxury": "200",
+      "addon:stain-treatment:compact": "80",
+      "addon:stain-treatment:midsize": "90",
+      "addon:stain-treatment:truck": "100",
+      "addon:stain-treatment:luxury": "110",
+      "addon:wheel-rim-detailing:compact": "50",
+      "addon:wheel-rim-detailing:midsize": "60",
+      "addon:wheel-rim-detailing:truck": "75",
+      "addon:wheel-rim-detailing:luxury": "90",
+      "addon:wheel-cleaning:compact": "20",
+      "addon:wheel-cleaning:midsize": "25",
+      "addon:wheel-cleaning:truck": "30",
+      "addon:wheel-cleaning:luxury": "40",
+      "addon:clay-bar:compact": "80",
+      "addon:clay-bar:midsize": "90",
+      "addon:clay-bar:truck": "100",
+      "addon:clay-bar:luxury": "120",
+      "package:prime-elite-exterior:compact": "0",
+      "package:prime-elite-interior:compact": "0",
+      "package:prime-elite-full:compact": "0",
+      "package:prime-essential-exterior:compact": "0"
+    },
+    "packageMeta": {
+      "basic-exterior": {
+        "id": "basic-exterior",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "express-wax": {
+        "id": "express-wax",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "full-detail": {
+        "id": "full-detail",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "full-exterior": {
+        "id": "full-exterior",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "interior-cleaning": {
+        "id": "interior-cleaning",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "premium-detail": {
+        "id": "premium-detail",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "prime-elite-full": {
+        "id": "prime-elite-full",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "prime-elite-interior": {
+        "id": "prime-elite-interior",
+        "visible": false,
+        "deleted": false,
+        "imageDataUrl": ""
+      },
+      "prime-elite-exterior": {
+        "id": "prime-elite-exterior",
+        "visible": false
+      },
+      "prime-essential-exterior": {
+        "id": "prime-essential-exterior",
+        "visible": true
+      }
+    },
+    "addOnMeta": {
+      "ceramic-coating": {
+        "id": "ceramic-coating",
+        "visible": true,
+        "deleted": false
+      },
+      "ceramic-trim-coat": {
+        "id": "ceramic-trim-coat",
+        "visible": true,
+        "deleted": false
+      },
+      "clay-bar-decon": {
+        "id": "clay-bar-decon",
+        "visible": true,
+        "deleted": false
+      },
+      "deep-interior": {
+        "id": "deep-interior",
+        "visible": true,
+        "deleted": false
+      },
+      "eco-package": {
+        "id": "eco-package",
+        "visible": false,
+        "deleted": false
+      },
+      "engine-bay": {
+        "id": "engine-bay",
+        "visible": true,
+        "deleted": false
+      },
+      "engine-detail": {
+        "id": "engine-detail",
+        "visible": true,
+        "deleted": false
+      },
+      "headlight-restoration": {
+        "id": "headlight-restoration",
+        "visible": true,
+        "deleted": false
+      },
+      "leather-conditioning": {
+        "id": "leather-conditioning",
+        "visible": true,
+        "deleted": false
+      },
+      "paint-touch-up": {
+        "id": "paint-touch-up",
+        "visible": true,
+        "deleted": false
+      },
+      "odor-treatment": {
+        "id": "odor-treatment",
+        "visible": false,
+        "deleted": false
+      },
+      "odor-eliminator": {
+        "id": "odor-eliminator",
+        "visible": true,
+        "deleted": false
+      },
+      "paint-correction": {
+        "id": "paint-correction",
+        "visible": false,
+        "deleted": false
+      },
+      "paint-sealant": {
+        "id": "paint-sealant",
+        "visible": true,
+        "deleted": false
+      },
+      "pet-hair-removal": {
+        "id": "pet-hair-removal",
+        "visible": true,
+        "deleted": false
+      },
+      "pet-hair": {
+        "id": "pet-hair",
+        "visible": true,
+        "deleted": false
+      },
+      "scratch-repair": {
+        "id": "scratch-repair",
+        "visible": false,
+        "deleted": false
+      },
+      "stain-treatment": {
+        "id": "stain-treatment",
+        "visible": true,
+        "deleted": false
+      },
+      "wheel-rim-detailing": {
+        "id": "wheel-rim-detailing",
+        "visible": true,
+        "deleted": false
+      },
+      "wheel-cleaning": {
+        "id": "wheel-cleaning",
+        "visible": true,
+        "deleted": false
+      },
+      "clay-bar": {
+        "id": "clay-bar",
+        "visible": true,
+        "deleted": false
+      }
+    },
+    "customPackages": [],
+    "customAddOns": [],
+    "version": 1775922820010
+  },
+  "vehicleTypesLive": [
+    {
+      "id": "compact",
+      "name": "Compact/Sedan",
+      "description": "Small cars and sedans",
+      "hasPricing": true
+    },
+    {
+      "id": "midsize",
+      "name": "Mid-Size/SUV",
+      "description": "Mid-size cars and SUVs",
+      "hasPricing": true
+    },
+    {
+      "id": "truck",
+      "name": "Truck/Van/Large SUV",
+      "description": "Trucks, vans, large SUVs",
+      "hasPricing": true
+    },
+    {
+      "id": "luxury",
+      "name": "Luxury/High-End",
+      "description": "Luxury and premium vehicles",
+      "hasPricing": true
+    }
+  ],
+  "contactLive": {
+    "hours": "Appointments daily 8 AM–6 PM",
+    "phone": "(555) 123-4567",
+    "address": "Methuen, MA",
+    "email": "Rick.PrimeAutoDetail@gmail.com"
+  }
+}
