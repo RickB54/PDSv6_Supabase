@@ -1661,7 +1661,7 @@ const InventoryControl = () => {
         {/* Chemicals Section (Yellow) */}
         <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky ${stickyTop} z-10 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
+            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky !${stickyTop} z-30 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
             onClick={() => toggleSection('chemicals')}
           >
             <div className="flex items-center gap-3">
@@ -1812,7 +1812,7 @@ const InventoryControl = () => {
         {/* Supplies Section (Blue) - Renamed from Materials */}
         <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky ${stickyTop} z-10 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
+            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky !${stickyTop} z-30 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
             onClick={() => toggleSection('materials')}
           >
             <div className="flex items-center gap-3">
@@ -2023,7 +2023,7 @@ const InventoryControl = () => {
         {/* Equipment Section (Purple) - Renamed from Tools */}
         <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky ${stickyTop} z-10 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
+            className={`p-4 bg-zinc-950/95 backdrop-blur-md sticky !${stickyTop} z-30 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3`}
             onClick={() => toggleSection('tools')}
           >
             <div className="flex items-center gap-3">
