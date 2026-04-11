@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowRight, Beaker, CheckCircle2, AlertTriangle, Info, ShieldAlert, ThermometerSun, Droplets, Sparkles, XCircle, Loader2, ShoppingCart, Calculator, ClipboardList, ChevronLeft, HelpCircle, Printer, Download } from "lucide-react";
 import { Chemical } from "@/types/chemicals";
 import { getChemicals } from "@/lib/chemicals";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
     VehicleCondition,
     ContaminationType,
@@ -46,6 +46,7 @@ import { Zap } from "lucide-react";
 
 export default function ChemicalTraining() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState("decision");
     const [chemicals, setChemicals] = useState<Chemical[]>([]);
     const [loading, setLoading] = useState(true);
@@ -79,6 +80,15 @@ export default function ChemicalTraining() {
             if (saved) setAiHistory(JSON.parse(saved));
         })();
     }, []);
+
+    // Handle ?tips=open URL param from sidebar Rick's Tips link
+    useEffect(() => {
+        if (searchParams.get('tips') === 'open') {
+            setShowRicksTips(true);
+            searchParams.delete('tips');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams]);
 
     const saveHistory = (items: any[]) => {
         setAiHistory(items);

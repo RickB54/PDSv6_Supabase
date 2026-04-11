@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCombinedSelectableProducts, deleteChemical } from "@/lib/chemicals";
 import { Chemical, ChemicalCategory } from "@/types/chemicals";
-import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp } from "lucide-react";
+import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/hooks/use-toast";
 import { cleanupInventoryDuplicates } from "@/lib/inventory-data";
@@ -21,9 +21,11 @@ import { ChemicalEditForm } from "@/components/chemicals/ChemicalEditForm";
 import { Badge } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CHEMICAL_LIBRARY } from "@/lib/demoMockData";
+import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [chemicals, setChemicals] = useState<Chemical[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedChemical, setSelectedChemical] = useState<Chemical | null>(null);
@@ -35,20 +37,39 @@ export default function ChemicalsLibrary() {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editingChemical, setEditingChemical] = useState<Partial<Chemical> | null>(null);
     const [sort, setSort] = useState<string>("brand");
+    const [showRicksTips, setShowRicksTips] = useState(false);
 
     const [isAdmin, setIsAdmin] = useState(false);
-
     const [isCleaning, setIsCleaning] = useState(false);
-
     const { isDemoMode } = useDemoMode();
 
     useEffect(() => {
         const user = getCurrentUser();
         setIsAdmin(user?.role === 'admin' || user?.role === 'owner' || isDemoMode);
-
-        // Seed/Fetch data
         loadChemicals();
     }, [isDemoMode]);
+
+    // Handle URL param-triggered modals (from sidebar Label System links)
+    useEffect(() => {
+        const labels = searchParams.get('labels');
+        const mixed = searchParams.get('mixed');
+        const pdf = searchParams.get('pdf');
+        if (labels === 'open') {
+            setLabelMakerOpen(true);
+            searchParams.delete('labels');
+            setSearchParams(searchParams, { replace: true });
+        }
+        if (mixed === 'open') {
+            setMixedLabelMakerOpen(true);
+            searchParams.delete('mixed');
+            setSearchParams(searchParams, { replace: true });
+        }
+        if (pdf === 'all' && !loading) {
+            handlePdfAll();
+            searchParams.delete('pdf');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, loading]);
 
     const loadChemicals = async () => {
         setLoading(true);
@@ -126,6 +147,24 @@ export default function ChemicalsLibrary() {
 
     const uniqueBrands = Array.from(new Set(chemicals.map(c => c.brand || "Other / No Brand"))).sort();
 
+    const handlePdfAll = () => {
+        if (sortedAndFiltered.length === 0) {
+            toast({ title: "No Chemicals", description: "There are no chemicals in the current view to print.", variant: "destructive" });
+            return;
+        }
+        import('jspdf').then(({ default: jsPDF }) => {
+            import('@/lib/print-chemical').then(({ printChemicalCard }) => {
+                const doc = new jsPDF();
+                sortedAndFiltered.forEach((c, idx) => {
+                    if (idx > 0) doc.addPage();
+                    printChemicalCard(c, doc, 20);
+                });
+                doc.save(`Prime_Chemical_Cards_Batch_${new Date().toLocaleDateString()}.pdf`);
+                toast({ title: "Print Generated", description: `Prepared ${sortedAndFiltered.length} chemical cards.`, className: "bg-indigo-900 border-indigo-800 text-white" });
+            });
+        });
+    };
+
     const handleCardClick = (c: Chemical) => {
         // If this is a new "Inventory Only" product, go straight to Edit modal
         // instead of opening the detail view with empty info.
@@ -183,88 +222,67 @@ export default function ChemicalsLibrary() {
                         </Button>
                     </div>
                     <div className="flex flex-col gap-2 w-full lg:w-auto">
-                        <div className="grid grid-cols-3 sm:flex sm:w-auto gap-2">
+                        {/* Row 1: Navigation Tools */}
+                        <div className="grid grid-cols-3 gap-2">
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/dilution-calculator')} 
-                                className="h-9 px-1 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 border font-bold text-[11px] sm:text-xs"
+                                className="h-9 px-2 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 font-bold text-[11px] sm:text-xs"
                             >
-                                <Calculator className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span>Calc</span>
+                                <Calculator className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Calc</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/chemical-training')} 
-                                className="h-9 px-1 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border font-bold text-[11px] sm:text-xs"
+                                className="h-9 px-2 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 font-bold text-[11px] sm:text-xs"
                             >
-                                <Beaker className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span>Decision</span>
+                                <Beaker className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Decision</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/inventory-control?chart=modal')} 
-                                className="h-9 px-1 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 border font-bold text-[11px] sm:text-xs"
+                                className="h-9 px-2 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 font-bold text-[11px] sm:text-xs"
                             >
-                                <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2" /> <span className="truncate">Ref Chart</span>
+                                <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Ref Chart</span>
                             </Button>
                         </div>
                         {isAdmin && (
-                            <div className="grid grid-cols-4 sm:flex sm:w-auto gap-2">
+                            /* Row 2: Admin Actions */
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <div className="flex items-center gap-1">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={handleCleanup}
                                         disabled={isCleaning}
-                                        className="h-9 px-1 sm:px-3 sm:h-10 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 border font-bold text-[11px] sm:text-xs"
+                                        className="flex-1 h-9 px-2 sm:px-3 sm:h-10 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 font-bold text-[11px] sm:text-xs"
                                         title="Cleanup Duplicate Inventory Items"
                                     >
-                                        {isCleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1 sm:mr-2" /> : <Trash2 className="w-3.5 h-3.5 mr-1 sm:mr-2" />}
-                                        Fix Duplicates (?)
+                                        {isCleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
+                                        Fix Duplicates
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => window.alert("Smart Sync: Fix Duplicates\n\nThis tool merges duplicate records by prioritizing your ratio data, and automatically links unlinked items to their Knowledge Base cards.\n\nSee Help > Smart Sync for full details.")}
-                                        className="h-9 w-6 text-amber-500/50 hover:text-amber-400"
+                                        onClick={() => window.alert("Smart Sync: Fix Duplicates\n\nThis tool merges duplicate records and auto-links unlinked items to their Knowledge Base cards.")}
+                                        className="h-9 w-6 text-amber-500/50 hover:text-amber-400 shrink-0"
                                     >
                                         <HelpCircle className="w-4 h-4" />
                                     </Button>
                                 </div>
                                 <Button 
-                                    variant="outline" 
-                                    onClick={() => setLabelMakerOpen(true)} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 border font-bold text-[11px] sm:text-xs"
+                                    variant="outline"
+                                    onClick={() => setShowRicksTips(true)} 
+                                    className="h-9 px-2 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-600 hover:text-white text-purple-400 font-bold text-[11px] sm:text-xs"
                                 >
-                                    <Tag className="w-3.5 h-3.5 mr-1 sm:mr-2" /> Labels
-                                </Button>
-                                <Button 
-                                    onClick={() => setMixedLabelMakerOpen(true)} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] sm:text-[10px] shadow-lg shadow-indigo-600/20"
-                                >
-                                    <Plus className="w-4 h-4 mr-1" /> Mixed
+                                    <Zap className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Rick's Tips</span>
                                 </Button>
                                 <Button 
                                     variant="outline"
-                                    onClick={() => {
-                                        if (sortedAndFiltered.length === 0) {
-                                            toast({ title: "No Chemicals", description: "There are no chemicals in the current view to print.", variant: "destructive" });
-                                            return;
-                                        }
-                                        
-                                        import('jspdf').then(({ default: jsPDF }) => {
-                                            import('@/lib/print-chemical').then(({ printChemicalCard }) => {
-                                                const doc = new jsPDF();
-                                                sortedAndFiltered.forEach((c, idx) => {
-                                                    if (idx > 0) doc.addPage();
-                                                    printChemicalCard(c, doc, 20);
-                                                });
-                                                doc.save(`Prime_Chemical_Cards_Batch_${new Date().toLocaleDateString()}.pdf`);
-                                                toast({ title: "Print Generated", description: `Prepared ${sortedAndFiltered.length} chemical cards for printing.`, className: "bg-indigo-900 border-indigo-800 text-white" });
-                                            });
-                                        });
-                                    }} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 border font-bold text-[11px] sm:text-xs"
+                                    onClick={handlePdfAll}
+                                    className="h-9 px-2 sm:px-3 sm:h-10 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 font-bold text-[11px] sm:text-xs"
                                 >
-                                    <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2" /> PDF All
+                                    <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">PDF All</span>
                                 </Button>
                                 <Button 
                                     onClick={() => {
@@ -284,9 +302,9 @@ export default function ChemicalsLibrary() {
                                         });
                                         setEditDialogOpen(true);
                                     }} 
-                                    className="h-9 px-1 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[11px] sm:text-[10px]"
+                                    className="h-9 px-2 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[11px] sm:text-[10px]"
                                 >
-                                    <Plus className="w-4 h-4 mr-0 sm:mr-2" /> <span className="hidden sm:inline">Add Product</span><span className="sm:hidden">Add</span>
+                                    <Plus className="w-4 h-4 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Add Product</span>
                                 </Button>
                             </div>
                         )}
@@ -413,6 +431,11 @@ export default function ChemicalsLibrary() {
             <MixedLabelMaker 
                 open={mixedLabelMakerOpen}
                 onOpenChange={setMixedLabelMakerOpen}
+            />
+
+            <RicksTipsModal
+                open={showRicksTips}
+                onOpenChange={setShowRicksTips}
             />
 
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

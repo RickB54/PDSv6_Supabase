@@ -88,7 +88,7 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
         // 1. Get Library Chemicals
         const library = await getChemicals();
         
-        // 2. Get Inventory Chemicals
+        // 2. Get Inventory Chemicals (includes image_url captured from mobile/camera uploads)
         const { data: inventoryData, error } = await supabase
             .from('chemicals')
             .select('*')
@@ -99,32 +99,47 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             return library;
         }
 
-        // 3. Merge them. If an inventory item is not in library, add it.
-        const result = [...library];
+        // 3. Merge: patch library cards with inventory images as fallback, then add unlinked inventory items
+        const result = library.map(libCard => {
+            // If the library card already has a primary image, nothing to do
+            if (libCard.primary_image_url) return libCard;
+
+            // Look for a linked or name-matched inventory item that has an image
+            const matched = (inventoryData || []).find(inv =>
+                inv.chemical_library_id === libCard.id ||
+                (inv.name.toLowerCase() === libCard.name.toLowerCase() &&
+                 (inv.brand || '').toLowerCase() === (libCard.brand || '').toLowerCase())
+            );
+
+            if (matched?.image_url) {
+                // Use the inventory image as a fallback – non-destructive, only in memory
+                return { ...libCard, primary_image_url: matched.image_url };
+            }
+            return libCard;
+        });
         
         if (inventoryData) {
             inventoryData.forEach(inv => {
                 // Check if this inventory item is already represented by a library card
-                // Check by link ID first
                 const isLinked = library.some(lib => lib.id === inv.chemical_library_id);
-                // Then check by name/brand match as a fallback
                 const isNamed = library.some(lib => 
                     lib.name.toLowerCase() === inv.name.toLowerCase() && 
                     (lib.brand || '').toLowerCase() === (inv.brand || '').toLowerCase()
                 );
                 
                 if (!isLinked && !isNamed) {
-                    // Add a pseudo-chemical object for this inventory item
+                    // Add a pseudo-chemical for this inventory-only item
                     result.push({
-                        id: inv.id, // Using inventory ID as the "chemical ID" for the picker
+                        id: inv.id,
                         name: inv.name,
                         brand: inv.brand || '',
-                        category: 'Exterior', // Default for now
+                        category: 'Exterior',
                         description: `Inventory Item (No library card found)`,
                         used_for: [],
                         dilution_ratios: [],
-                        primary_image_url: inv.image_url,
-                        is_inventory_only: true // Flag to help UI know it's not a full library card
+                        primary_image_url: inv.image_url || inv.imageUrl,
+                        gallery_image_urls: [],
+                        is_inventory_only: true
                     } as any);
                 }
             });
@@ -264,18 +279,30 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
             .select()
             .single();
 
-        if (!error && data && updates.dilution_ratios && !skipInventorySync) {
+        if (!error && data && !skipInventorySync) {
             try {
                 const inventoryItems = await getInventoryChemicals();
                 const matching = inventoryItems.filter(inv => inv.chemicalLibraryId === id);
+                
                 for (const item of matching) {
-                    await saveInventoryChemical({
-                        ...item,
-                        dilutionRatios: data.dilution_ratios || []
-                    }, false, true); // Important: skipLibrarySync
+                    const updatesToInventory: any = { ...item };
+                    let changed = false;
+
+                    if (updates.dilution_ratios) {
+                        updatesToInventory.dilutionRatios = data.dilution_ratios || [];
+                        changed = true;
+                    }
+                    if (updates.primary_image_url) {
+                        updatesToInventory.imageUrl = updates.primary_image_url;
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        await saveInventoryChemical(updatesToInventory, false, true); // skipLibrarySync
+                    }
                 }
             } catch (syncErr) {
-                console.error('Failed to sync inventory ratios on partial update:', syncErr);
+                console.error('Failed to sync inventory on partial update:', syncErr);
             }
         }
 
