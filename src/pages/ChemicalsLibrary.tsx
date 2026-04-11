@@ -88,7 +88,7 @@ export default function ChemicalsLibrary() {
         const data = await loadChemicals();
         if (selectedChemical) {
             const fresh = data.find(c => c.id === selectedChemical.id);
-            if (fresh) setSelectedChemical(fresh);
+            if (fresh) setSelectedChemical(fresh as Chemical);
         }
     };
 

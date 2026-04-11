@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy, ShieldAlert } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +87,7 @@ const InventoryControl = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
   const [inventoryCleanupOpen, setInventoryCleanupOpen] = useState(false);
+  const [bulkCleanupWarningOpen, setBulkCleanupWarningOpen] = useState(false);
   const [activeImportTab, setActiveImportTab] = useState<"chemicals" | "supplies" | "equipment" | "tools" | "materials">("chemicals");
   const [modalMode, setModalMode] = useState<'chemical' | 'supply' | 'equipment'>('chemical');
   const [editing, setEditing] = useState<any | null>(null);
@@ -1631,7 +1632,7 @@ const InventoryControl = () => {
           </Button>
 
           <Button
-            onClick={() => setInventoryCleanupOpen(true)}
+            onClick={() => setBulkCleanupWarningOpen(true)}
             variant="outline"
             className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-red-500/50 group"
           >
@@ -1743,7 +1744,7 @@ const InventoryControl = () => {
                   <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0 w-full sm:w-auto"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
                   <Button size="sm" variant="outline" onClick={() => { setLabelMakerChemical(null); setLabelMakerOpen(true); }} className="border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400 w-full sm:w-auto"><Tag className="h-3 w-3 mr-1" /> Create Label</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }} className="w-full sm:w-auto"><FileText className="h-3 w-3 mr-1" /> Import</Button>
-                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20 w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" onClick={() => setBulkCleanupWarningOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20 w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                   <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300 w-full sm:w-auto" onClick={() => { try { downloadInventoryPDF('chemicals'); } catch(e) { toast({ title: "PDF Error", description: "Failed to generate inventory PDF.", variant: "destructive"}); } }}><Download className="h-3 w-3 mr-1" /> PDF</Button>
                   <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300 w-full sm:w-auto" onClick={() => printInventory('chemicals')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
                   <Button size="sm" variant="outline" className="text-emerald-400 hover:text-emerald-300 w-full sm:w-auto" onClick={() => { try { downloadDilutionPDF(); } catch(e) { toast({ title: "PDF Error", description: "Failed to generate reference chart PDF.", variant: "destructive"}); } }}><Download className="h-3 w-3 mr-1" /> PDF Ref Chart</Button>
@@ -1892,7 +1893,7 @@ const InventoryControl = () => {
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={openAddMaterial} className="bg-blue-600 hover:bg-blue-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Supply</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("supplies"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
-                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" onClick={() => setBulkCleanupWarningOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                   <Button size="sm" variant="outline" className="text-blue-400 hover:text-blue-300" onClick={() => downloadInventoryPDF('supplies')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
                   <Button size="sm" variant="outline" className="text-blue-400 hover:text-blue-300" onClick={() => printInventory('supplies')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
                 </div>
@@ -2099,7 +2100,7 @@ const InventoryControl = () => {
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={openAddTool} className="bg-purple-600 hover:bg-purple-500 text-white border-0"><Plus className="h-3 w-3 mr-1" /> Add Equipment</Button>
                   <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("equipment"); setInventoryImportOpen(true); }}><FileText className="h-3 w-3 mr-1" /> Import</Button>
-                  <Button size="sm" variant="outline" onClick={() => setInventoryCleanupOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  <Button size="sm" variant="outline" onClick={() => setBulkCleanupWarningOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
                   <Button size="sm" variant="outline" className="text-purple-400 hover:text-purple-300" onClick={() => downloadInventoryPDF('equipment')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
                   <Button size="sm" variant="outline" className="text-purple-400 hover:text-purple-300" onClick={() => printInventory('equipment')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
                 </div>
@@ -2557,6 +2558,38 @@ const InventoryControl = () => {
              onOpenRefChart={() => setIsDilutionModalOpen(true)}
            />
       )}
+
+      {/* Bulk Cleanup Navigation Warning */}
+      <AlertDialog open={bulkCleanupWarningOpen} onOpenChange={setBulkCleanupWarningOpen}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-500 text-xl font-bold">
+              <ShieldAlert className="w-6 h-6" />
+              Restricted Area Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400 pt-2 text-base">
+              You are about to leave the Inventory page. Bulk Cleanup is highly destructive and can wipe your entire inventory.
+              <br/><br/>
+              To proceed, you will be redirected to the <strong className="text-red-400">Settings Danger Zone</strong> and required to enter the security PIN.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex gap-3">
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white mt-0 h-11 w-full">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                setBulkCleanupWarningOpen(false);
+                navigate('/settings?action=danger-zone');
+              }}
+              className="bg-red-700 hover:bg-red-600 text-white font-bold h-11 w-full"
+            >
+              Proceed to Danger Zone
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog open={isDilutionModalOpen} onOpenChange={(val) => {
         setIsDilutionModalOpen(val);
         if (!val) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,7 @@ import { ListChecks } from "lucide-react";
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getCurrentUser();
   const { isFullScreen, toggleFullScreen } = useFullScreen();
   const { isDemoMode, isAdminPreview, setAdminPreview, visibleSections, setVisibleSections, saveConfig, isPublicDemoDisabled, setPublicDemoDisabled, disabledReason, setDisabledReason } = useDemoMode();
@@ -177,6 +178,23 @@ const Settings = () => {
   const [pinError, setPinError] = useState<string>("");
   const pinRequired = true; // Always require PIN for destructive actions
   const pinValid = !!dangerPin && !!pinInput && dangerPin === pinInput;
+
+  // Auto-trigger Danger Zone if navigated to with query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("action") === "danger-zone") {
+      setTimeout(() => {
+        const dangerSection = document.getElementById("danger-zone-section");
+        if (dangerSection) dangerSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (!dangerUnlocked) {
+          setPinInput("");
+          setPinModalOpen(true);
+        }
+      }, 300); // Wait for render
+      // Remove the query param so it doesn't re-trigger on subsequent re-renders naturally
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, dangerUnlocked, navigate]);
   const confirmValid = confirmText.trim().toUpperCase() === "DELETE";
 
   const isAdmin = user?.role === 'admin';
@@ -993,13 +1011,7 @@ const Settings = () => {
                 </div>
               </Button>
 
-              <Button onClick={() => setInventoryCleanupOpen(true)} variant="outline" className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-red-500/50 group md:col-span-1">
-                <Trash2 className="h-6 w-6 mr-3 text-red-500 group-hover:text-red-400" />
-                <div className="text-left">
-                  <div className="font-semibold">Bulk Cleanup</div>
-                  <div className="text-xs text-zinc-500 font-normal">Delete multiple items easily</div>
-                </div>
-              </Button>
+
 
               <Button onClick={handleBackupToDrive} variant="outline" className="h-16 justify-start border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-emerald-500/50 group">
                 <Upload className="h-6 w-6 mr-3 text-emerald-500 group-hover:text-emerald-400" />
@@ -1073,6 +1085,7 @@ const Settings = () => {
 
         {/* Danger Zone */}
         <Card
+          id="danger-zone-section"
           className={`border-2 cursor-pointer transition-all duration-300 ${dangerUnlocked ? 'bg-gradient-to-br from-red-950/30 to-zinc-950 border-red-900/50' : 'bg-zinc-950 border-zinc-800 hover:border-red-900/30'}`}
           onClick={() => { if (!dangerUnlocked) { setPinInput(""); setPinModalOpen(true); } }}
         >
@@ -1214,6 +1227,29 @@ const Settings = () => {
                     >
                       <Trash2 className="h-5 w-5 mr-2" />
                       RESET OPERATIONS
+                    </Button>
+                  </div>
+                </div>
+
+                {/* BULK CLEANUP INVENTORY */}
+                <div className="bg-red-950/10 border border-red-900/30 rounded-lg p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-red-500 flex items-center gap-2 text-lg">
+                        <Trash2 className="h-5 w-5" />
+                        Bulk Cleanup (Inventory)
+                      </h3>
+                      <p className="text-sm text-zinc-400 mt-1 max-w-xl">
+                        Open the bulk deletion tool to quickly select and permanently wipe multiple inventory items (chemicals, supplies, equipment).
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-red-900/70 border border-red-800 hover:bg-red-800 text-red-100 h-10 px-4"
+                      onClick={() => setInventoryCleanupOpen(true)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Launch Cleanup Tool
                     </Button>
                   </div>
                 </div>
