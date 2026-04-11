@@ -110,9 +110,6 @@ All colors MUST be HSL.
 
   html, body, #root {
     @apply bg-background text-foreground;
-    overflow-x: clip;
-    overscroll-behavior-x: none !important; /* Force disable browser back/forward swipe navigation */
-    touch-action: pan-y; /* Only allow vertical scrolling, block horizontal gestures */
   }
 }
 

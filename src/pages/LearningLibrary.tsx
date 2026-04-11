@@ -371,11 +371,18 @@ export default function LearningLibrary() {
                 await loadItems();
             }
         } else if (categoryModalType === 'delete') {
-            const res = await deleteLibraryCategory(targetCategory);
-            if (res.success) {
-                toast({ title: "Category Deleted", description: `Unassigned ${res.count} resources back to General.` });
+            const isPlaceholder = placeholderCategories.includes(targetCategory);
+            if (isPlaceholder) {
+                setPlaceholderCategories(prev => prev.filter(c => c !== targetCategory));
+                toast({ title: "Category Removed", description: "The empty category was removed." });
                 if (activeCategory === targetCategory) setActiveCategory("All");
-                await loadItems();
+            } else {
+                const res = await deleteLibraryCategory(targetCategory);
+                if (res.success) {
+                    toast({ title: "Category Deleted", description: `Unassigned ${res.count} resources back to General.` });
+                    if (activeCategory === targetCategory) setActiveCategory("All");
+                    await loadItems();
+                }
             }
         }
         setIsCategoryModalOpen(false);
@@ -499,16 +506,16 @@ export default function LearningLibrary() {
                                             {cat}
                                         </button>
                                         {isAdmin && cat !== 'All' && cat !== 'General' && (
-                                            <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                            <div className="flex opacity-100 group-hover:opacity-100 transition-opacity pr-1">
                                                 <Button
                                                     size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-blue-400"
-                                                    onClick={() => { setTargetCategory(cat); setNewCategoryName(cat); setCategoryModalType('rename'); setIsCategoryModalOpen(true); }}
+                                                    onClick={(e) => { e.stopPropagation(); setTargetCategory(cat); setNewCategoryName(cat); setCategoryModalType('rename'); setIsCategoryModalOpen(true); }}
                                                 >
                                                     <Edit2 className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button
                                                     size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-red-400"
-                                                    onClick={() => { setTargetCategory(cat); setCategoryModalType('delete'); setIsCategoryModalOpen(true); }}
+                                                    onClick={(e) => { e.stopPropagation(); setTargetCategory(cat); setCategoryModalType('delete'); setIsCategoryModalOpen(true); }}
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>

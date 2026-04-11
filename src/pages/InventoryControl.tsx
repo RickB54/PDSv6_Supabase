@@ -1659,9 +1659,9 @@ const InventoryControl = () => {
         </div>
 
         {/* Chemicals Section (Yellow) */}
-        <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50 relative">
+        <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky z-30 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
+            className="p-4 bg-zinc-950 sticky z-50 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('chemicals')}
           >
@@ -1811,9 +1811,9 @@ const InventoryControl = () => {
         </div>
 
         {/* Supplies Section (Blue) - Renamed from Materials */}
-        <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50 relative">
+        <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky z-30 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
+            className="p-4 bg-zinc-950 sticky z-50 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('materials')}
           >
@@ -2023,9 +2023,9 @@ const InventoryControl = () => {
         </div>
 
         {/* Equipment Section (Purple) - Renamed from Tools */}
-        <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50 relative">
+        <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
           <div
-            className="p-4 bg-zinc-950/95 backdrop-blur-md sticky z-30 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
+            className="p-4 bg-zinc-950 sticky z-50 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('tools')}
           >
