@@ -9,13 +9,15 @@ interface TipSelectionScreenProps {
   // Allows the developer to set where the customer returns after the checkout.
   // Defaults to the window's origin when not provided.
   clientUrl?: string; 
+  customerId?: string | null;
 }
 
 export default function TipSelectionScreen({ 
   jobId, 
   remainingBalanceInCents,
   onCancel,
-  clientUrl
+  clientUrl,
+  customerId
 }: TipSelectionScreenProps) {
   const [loading, setLoading] = useState(false);
   
@@ -45,7 +47,8 @@ export default function TipSelectionScreen({
           job_id: jobId,
           remaining_balance_in_cents: remainingBalanceInCents,
           tip: finalTip,
-          clientUrl: clientUrl || window.location.origin
+          clientUrl: clientUrl || window.location.origin,
+          customer_id: customerId || undefined
         }
       });
 

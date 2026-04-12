@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, ArrowRight, Wallet } from 'lucide-react';
+import { X, DollarSign, ArrowRight, Wallet, User as UserIcon } from 'lucide-react';
 import TipSelectionScreen from './TipSelectionScreen';
+import { getUnifiedCustomers } from '@/lib/customers';
 
 /**
  * QuickPayModal
@@ -18,6 +19,9 @@ export default function QuickPayModal() {
   
   const [suggestedAmount, setSuggestedAmount] = useState<number | null>(null);
   const [suggestedJobId, setSuggestedJobId] = useState<string | null>(null);
+
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
 
   // Read the suggestion when the modal opens
   useEffect(() => {
@@ -40,8 +44,14 @@ export default function QuickPayModal() {
       }
       
       setAmountStr('');
+      setSelectedCustomerId('');
       setPhase(1);
       setOpen(true);
+      
+      // Fetch customers
+      getUnifiedCustomers().then(results => {
+        setCustomers(results || []);
+      }).catch(() => setCustomers([]));
     };
 
     window.addEventListener('open-quick-pay', handleOpen);
@@ -80,6 +90,7 @@ export default function QuickPayModal() {
         jobId={finalJobId}
         remainingBalanceInCents={remainingBalanceInCents}
         clientUrl={window.location.origin}
+        customerId={selectedCustomerId || null}
         onCancel={handleClose}
       />
     );
@@ -134,6 +145,29 @@ export default function QuickPayModal() {
               placeholder="0.00"
               className="w-full pl-10 pr-4 py-4 bg-gray-50 border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-2xl text-4xl font-black text-gray-900 transition-colors"
             />
+          </div>
+
+          <div className="mt-6">
+            <div className="mb-2 text-sm font-bold text-gray-700 flex items-center justify-between">
+              <span>Attach Customer (Optional)</span>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <UserIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
+              >
+                <option value="">No Customer Associated</option>
+                {customers.map((c: any) => (
+                  <option key={c.id || c.auth_id || c.name} value={c.id || c.auth_id}>
+                    {c.first_name || c.name || `User ${c.id?.slice(0,4)}`} {c.last_name || ''}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button

@@ -336,7 +336,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   // Standalone Top Items
   const TOP_ITEMS = [
-    { title: 'Quick Pay', url: '#quick-pay', icon: DollarSign, highlight: 'green' as const, iconColor: 'text-emerald-500', key: 'quick-pay' },
     ...CONFIGURED_TOP_ITEMS,
     { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
     { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics' },

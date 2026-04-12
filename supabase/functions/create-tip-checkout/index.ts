@@ -25,7 +25,7 @@ serve(async (req: Request) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { job_id, remaining_balance_in_cents, tip, clientUrl } = body;
+    const { job_id, remaining_balance_in_cents, tip, clientUrl, customer_id } = body;
 
     if (!job_id || typeof remaining_balance_in_cents !== 'number') {
       throw new Error("Missing required fields: job_id, remaining_balance_in_cents");
@@ -73,6 +73,7 @@ serve(async (req: Request) => {
         job_id,
         base_amount: remaining_balance_in_cents.toString(),
         tip_amount: tipAmount.toString(),
+        ...(customer_id ? { customer_id } : {})
       },
       success_url,
       cancel_url,

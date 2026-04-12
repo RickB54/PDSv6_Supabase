@@ -97,6 +97,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Finance & Sales", icon: DollarSign,
             items: [
+                { title: "Quick Pay", url: "#quick-pay", key: "quick-pay", icon: DollarSign, highlight: "green", iconColor: "text-emerald-500", helpTopicId: "quick-pay" },
                 { title: "Estimates", url: "/estimates", role: "admin", key: "estimates", highlight: "green", icon: FileText, helpTopicId: 'estimates' },
                 { title: "Invoicing", url: "/invoicing", role: "admin", key: "invoicing", icon: FileText, helpTopicId: 'invoicing' },
                 { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator, helpTopicId: 'accounting' },
