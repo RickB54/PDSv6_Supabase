@@ -19,7 +19,8 @@ import {
     Package,
     Calculator,
     Beaker,
-    CalendarDays
+    CalendarDays,
+    DollarSign
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -37,6 +38,18 @@ const renderSidebarContent = (collapsed: boolean, navigate: any) => (
         >
             <Phone className="w-5 h-5 text-primary animate-pulse" />
             {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
+        </Button>
+
+        {/* Quick Pay Shortcut */}
+        <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "default"}
+            onClick={() => window.dispatchEvent(new Event('open-quick-pay'))}
+            title="Collect Payment (Quick Pay)"
+            className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-emerald-500/20 transition-all`}
+        >
+            <DollarSign className="w-5 h-5 text-emerald-500" />
+            {!collapsed && <span className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400">Quick Pay</span>}
         </Button>
 
         {/* Pricing Scenario Shortcut */}
