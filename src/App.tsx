@@ -53,6 +53,7 @@ import FAQ from "./pages/FAQ";
 import BookNow from "./pages/BookNow";
 import ThankYou from "./pages/ThankYou";
 import Checkout from "./pages/Checkout";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import CustomerAccount from "./pages/CustomerAccount";
 import CustomerProfile from "./pages/CustomerProfile";
 import Portal from "./pages/Portal";
@@ -120,7 +121,7 @@ const isAppRoute = (path: string) => {
   
   const websitePrefixes = [
     '/', '/about', '/contact', '/faq', '/services', '/book', '/availability', 
-    '/blog', '/checkout', '/thank-you', '/login', '/signup', 
+    '/blog', '/checkout', '/payment-success', '/thank-you', '/login', '/signup', 
     '/forgot-password', '/update-password', '/portal', '/f150-setup', '/contact-support'
   ];
   
@@ -188,7 +189,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
 
   const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
-  const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/availability', '/blog', '/thank-you', '/checkout', '/portal', '/f150-setup', '/contact-support'];
+  const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/availability', '/blog', '/thank-you', '/checkout', '/payment-success', '/portal', '/f150-setup', '/contact-support'];
   const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/');
 
   const publicRoutes = (
@@ -203,6 +204,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <Route path="/blog" element={<PrimeBlog />} />
       <Route path="/thank-you" element={<ThankYou />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/portal" element={<Portal />} />
       <Route path="/f150-setup" element={<MobileSetup />} />
       <Route path="/contact-support" element={<ContactSupport />} />

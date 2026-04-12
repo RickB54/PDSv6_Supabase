@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -35,6 +35,7 @@ import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
 import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionModal";
 import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummary";
 import HelpModal from "@/components/help/HelpModal";
+import TipSelectionScreen from "@/components/TipSelectionScreen";
 
 type DisplayService = {
   id: string;
@@ -98,6 +99,10 @@ const ServiceChecklist = () => {
   const [destinationFee, setDestinationFee] = useState(0);
   const [notes, setNotes] = useState("");
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
+
+  // Tip Checkout Flow
+  const [showTipScreen, setShowTipScreen] = useState(false);
+  const [finishedJobId, setFinishedJobId] = useState<string | null>(null);
 
   // New generic job flow state
   const [selectedPackage, setSelectedPackage] = useState<string>("");
@@ -1336,6 +1341,10 @@ const ServiceChecklist = () => {
       const customerName = customer?.name || genericCustomerName || 'Generic Customer';
       pushAdminAlert('job_completed', `Job completed for ${customerName}`, 'system', { checklistId: idToUse, customerId: selectedCustomer });
       toast({ title: 'Job Finished', description: 'Materials posted and completion archived.' });
+      
+      // Trigger tip and payment
+      setFinishedJobId(idToUse);
+      setShowTipScreen(true);
     } catch (e: any) {
       const msg = e?.message || 'Unknown error';
       toast({ title: 'Finish Failed', description: `Step: ${step}. ${msg}`, variant: 'destructive' });
@@ -2228,6 +2237,21 @@ const ServiceChecklist = () => {
                   <Receipt className="h-5 w-5 mr-3" />
                   SAVE & CREATE INVOICE
                 </Button>
+                <Button 
+                  onClick={async () => {
+                    const idToUse = checklistId || await saveGenericChecklist();
+                    if (!idToUse) {
+                      toast({ title: 'Error', description: 'Could not link job. Cannot process payment.', variant: 'destructive' });
+                      return;
+                    }
+                    setFinishedJobId(idToUse);
+                    setShowTipScreen(true);
+                  }} 
+                  className="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-14 text-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-2 border-emerald-400/50 mt-2 rounded-xl"
+                >
+                  <DollarSign className="h-7 w-7 mr-3" />
+                  COLLECT IN-PERSON PAYMENT (W/ TIP)
+                </Button>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -2346,6 +2370,14 @@ const ServiceChecklist = () => {
         role={(getCurrentUser()?.role as any) || 'employee'}
         initialTopicId={helpTopicId}
       />
+      {showTipScreen && finishedJobId && (
+        <TipSelectionScreen
+          jobId={finishedJobId}
+          remainingBalanceInCents={Math.round(calculateTotal() * 100)}
+          clientUrl={window.location.origin}
+          onCancel={() => setShowTipScreen(false)}
+        />
+      )}
     </div>
   );
 };
