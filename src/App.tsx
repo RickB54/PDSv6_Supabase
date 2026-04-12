@@ -97,6 +97,7 @@ import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
 import { ChatAudioAlert } from "@/components/chat/ChatAudioAlert";
 import { useLocation as useRouterLocation } from "react-router-dom";
 import { CallAssistantModal } from "@/components/calling/CallAssistantModal";
+import QuickPayModal from "@/components/QuickPayModal";
 import ScrollToTop from "./components/ScrollToTop";
 import AvailabilityManager from "./pages/AvailabilityManager";
 import Availability from "./pages/Availability";
@@ -518,6 +519,7 @@ const App = () => {
                     helpId={helpId}
                   />
                   <CallAssistantModal open={callAssistantOpen} onOpenChange={setCallAssistantOpen} />
+                  <QuickPayModal />
                 </WalkthroughProvider>
               </DemoProvider>
             </BrowserRouter>

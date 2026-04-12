@@ -336,6 +336,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
   // Standalone Top Items
   const TOP_ITEMS = [
+    { title: 'Quick Pay', url: '#quick-pay', icon: DollarSign, highlight: 'green' as const, iconColor: 'text-emerald-500', key: 'quick-pay' },
     ...CONFIGURED_TOP_ITEMS,
     { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
     { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics' },
@@ -409,6 +410,8 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       e.preventDefault();
       if (url === '#call-assistant') {
         window.dispatchEvent(new Event('open-call-assistant'));
+      } else if (url === '#quick-pay') {
+        window.dispatchEvent(new Event('open-quick-pay'));
       } else if (url.startsWith('#help')) {
         const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
         window.dispatchEvent(new CustomEvent('open-help', { detail: { role, topicId } }));
@@ -539,7 +542,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
                       <Link to={targetUrl} style={{ color: isActive ? '#2563eb' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
-                        <item.icon className={`h-4 w-4 shrink-0 ${open ? 'mr-0' : ''} ${isChatAlert ? 'text-red-500' : ''}`} />
+                        <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                         {(open || openMobile) && (
                           <div className="flex items-center justify-between flex-1 min-w-0">
                             <span className="truncate">{item.title}</span>

@@ -2194,7 +2194,16 @@ const ServiceChecklist = () => {
               )}
               <div className="flex justify-between text-2xl border-t border-zinc-800 pt-4 mt-2">
                 <span className="font-bold text-white">Total Due:</span>
-                <span className="font-bold text-emerald-400 font-mono">${calculateTotal().toFixed(2)}</span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  ${(() => {
+                     const t = calculateTotal();
+                     try { 
+                       localStorage.setItem('recent_service_amount', t.toString()); 
+                       localStorage.setItem('recent_service_job_id', checklistId || '');
+                     } catch(e) {}
+                     return t.toFixed(2);
+                  })()}
+                </span>
               </div>
             </div>
           </Card>
