@@ -84,6 +84,8 @@ export interface Customer {
     howFound?: string;
     howFoundOther?: string;
     shortVideos?: string[];
+    has_google_review?: boolean;
+    engagements?: any[];
 }
 
 // ------------------------------------------------------------------

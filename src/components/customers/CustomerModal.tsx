@@ -9,12 +9,19 @@ import { upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer, getLibraryItems, LibraryItem, supabase } from "@/lib/supa-data";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2, FileBarChart, Plus, ChevronDown, ExternalLink } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Calendar, Clock, Search, Image as ImageIcon, Video, Link as LinkIcon, X, Camera, Trash2, FileBarChart, Plus, ChevronDown, ExternalLink, Send, TicketPercent, MessageSquare, History, Star, ShieldCheck, Zap } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
-import { useBookingsStore } from "@/store/bookings";
+import { useBookingsStore, Booking } from "@/store/bookings";
+import { useCouponsStore } from "@/store/coupons";
+import { useFollowUpStore } from "@/store/followup";
+import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -33,6 +40,14 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [linkedVehicles, setLinkedVehicles] = useState<any[]>([]);
   const [currentVehicleIdx, setCurrentVehicleIdx] = useState<number | null>(null);
   const { items: allBookings } = useBookingsStore();
+  const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
+  const { addLog } = useFollowUpStore();
+
+  const [engagements, setEngagements] = useState<any[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const [outreachNote, setOutreachNote] = useState("");
+  const [outreachCouponId, setOutreachCouponId] = useState("");
+  const [includeDiscount, setIncludeDiscount] = useState(false);
 
   const user = getCurrentUser();
   const isAdmin = user?.role === 'admin';
@@ -82,6 +97,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     videoUrl: "",
     learningCenterUrl: "",
     videoNote: "",
+    has_google_review: false,
     vehicles: [],
   });
 
@@ -145,8 +161,17 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 }))
               }));
             }
+
+            // Fetch engagements
+            const { data: engs } = await supabase
+                .from('engagements')
+                .select('*')
+                .eq('customer_email', initial.email)
+                .order('created_at', { ascending: false });
+            if (engs) setEngagements(engs);
+
           } catch (e) {
-            console.error("Error loading linked vehicles", e);
+            console.error("Error loading linked data", e);
           }
         }
       } else {
@@ -185,6 +210,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
     initForm();
     getLibraryItems().then(items => setLibraryItems(items || []));
+    refreshCoupons();
   }, [initial, open, defaultType]);
 
   const handleChange = (key: keyof Customer, value: string) => {
@@ -376,6 +402,78 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     });
   };
 
+  const handleSendDirectEmail = async () => {
+    if (!form.email) {
+      toast.error("No email address provided.");
+      return;
+    }
+    
+    setIsSending(true);
+    try {
+      const activeCoupons = allCoupons.filter(c => c.active);
+      const coupon = activeCoupons.find(c => c.id === outreachCouponId);
+      const discountLabel = coupon ? (coupon.percent ? `${coupon.percent}% OFF` : `$${coupon.amount} OFF`) : undefined;
+      
+      const latestBooking = allBookings
+        .filter(b => (b.customerEmail || '').toLowerCase() === (form.email || '').toLowerCase())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+      if (isProspect) {
+        await onSendProspectEmail(form, {
+          customNote: outreachNote.trim() || undefined,
+          couponCode: includeDiscount ? coupon?.code : undefined,
+          discountLabel: includeDiscount ? discountLabel : undefined
+        });
+        
+        addLog({
+          id: `log_p_direct_${Date.now()}`,
+          customerName: form.name,
+          customerEmail: form.email || "",
+          dateSent: new Date().toISOString(),
+          frequency: "Manual Outreach",
+          emailType: "prospect_intro",
+          customNote: outreachNote.trim() || undefined,
+          couponCode: includeDiscount ? coupon?.code : undefined
+        });
+      } else if (latestBooking) {
+        await onSendReminderEmail(latestBooking, "Manual Follow-up", {
+          customNote: outreachNote.trim() || undefined,
+          couponCode: includeDiscount ? coupon?.code : undefined,
+          discountLabel: includeDiscount ? discountLabel : undefined
+        });
+
+        addLog({
+          id: `log_c_direct_${Date.now()}`,
+          customerName: form.name,
+          customerEmail: form.email || "",
+          dateSent: new Date().toISOString(),
+          frequency: "Manual Outreach",
+          emailType: "maintenance_reminder",
+          customNote: outreachNote.trim() || undefined,
+          couponCode: includeDiscount ? coupon?.code : undefined
+        });
+      }
+
+      // Refresh engagements
+      const { data: engs } = await supabase
+        .from('engagements')
+        .select('*')
+        .eq('customer_email', form.email)
+        .order('created_at', { ascending: false });
+      if (engs) setEngagements(engs);
+
+      setOutreachNote("");
+      setIncludeDiscount(false);
+      setOutreachCouponId("");
+      toast.success("Direct outreach sent successfully!");
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Failed to send outreach", { description: e.message });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleSubmit = async () => {
     const payload = { ...form };
     if (!payload.id) delete payload.id;
@@ -526,6 +624,18 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       onChange={(e) => handleChange("email", e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-lg border border-zinc-800/50">
+                   <div className="flex items-center gap-2">
+                      <Star className={cn("h-4 w-4", form.has_google_review ? "text-amber-500 fill-amber-500" : "text-zinc-500")} />
+                      <span className="text-xs font-bold uppercase tracking-tight text-zinc-300">Google Business Review Left?</span>
+                   </div>
+                   <Switch 
+                    checked={form.has_google_review || false}
+                    onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_google_review: checked }))}
+                    className="data-[state=checked]:bg-blue-600 scale-90"
+                   />
                 </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -787,32 +897,158 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   {/* REAL BOOKING HISTORY */}
                   <div className="space-y-3 mt-4">
                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Verified Booking History</h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar border border-zinc-800 rounded p-2 bg-zinc-900/30">
+                    <div className="space-y-3 max-h-56 overflow-y-auto custom-scrollbar border border-zinc-800 rounded-xl p-3 bg-zinc-900/30">
                       {allBookings.filter(b => (b.customer || '').toLowerCase() === (form.name || '').toLowerCase()).length === 0 && (
-                        <div className="text-sm text-zinc-500 text-center py-4">No bookings found for this customer name.</div>
+                        <div className="text-xs text-zinc-500 text-center py-8 border border-dashed border-zinc-800 rounded-lg italic font-medium">
+                          No booking history detected in our cloud archives.
+                        </div>
                       )}
                       {allBookings
                         .filter(b => (b.customer || '').toLowerCase() === (form.name || '').toLowerCase())
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map(booking => (
-                          <div key={booking.id} className="p-2 bg-zinc-950 rounded border border-zinc-800 flex justify-between items-center text-sm">
-                            <div>
-                              <div className="text-zinc-300 font-medium">
-                                {new Date(booking.date).toLocaleDateString()}
-                                <span className="text-zinc-600 mx-2">|</span>
-                                {booking.title}
-                              </div>
-                              {booking.addons && booking.addons.length > 0 && (
-                                <div className="text-xs text-zinc-500 mt-1">
-                                  + {booking.addons.join(", ")}
+                          <div key={booking.id} className="p-3 bg-zinc-950 rounded-xl border border-zinc-800/80 group/booking hover:border-blue-500/30 transition-all shadow-sm">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <div className="text-[13px] text-zinc-200 font-bold uppercase tracking-tight group-hover/booking:text-blue-400 transition-colors">
+                                  {booking.title}
                                 </div>
-                              )}
+                                <div className="text-[10px] text-zinc-500 font-medium flex items-center gap-1.5 mt-0.5 opacity-80">
+                                   <Calendar className="h-3 w-3" /> {format(new Date(booking.date), 'MMMM dd, yyyy')}
+                                   <span className="opacity-30">•</span>
+                                   <Clock className="h-3 w-3" /> {format(new Date(booking.date), 'h:mm a')}
+                                </div>
+                              </div>
+                              <Badge className={cn(
+                                "text-[9px] font-black uppercase px-2 py-0.5 rounded-md border",
+                                booking.status === 'done' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                                booking.status === 'confirmed' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                                "bg-zinc-800 text-zinc-500 border-zinc-700"
+                              )}>
+                                {booking.status}
+                              </Badge>
                             </div>
-                            {booking.price && (
-                              <div className="text-emerald-500 font-mono">${booking.price.toFixed(2)}</div>
+                            
+                            {(booking.vehicleYear || booking.vehicleMake) && (
+                              <div className="mt-2 text-[10px] bg-zinc-900/50 p-2 rounded-lg border border-zinc-800/50 text-zinc-400 flex flex-wrap gap-x-3 gap-y-1">
+                                <span className="flex items-center gap-1 font-bold text-zinc-300">
+                                   <Car className="h-3 w-3 opacity-50" /> {booking.vehicleYear} {booking.vehicleMake} {booking.vehicleModel}
+                                </span>
+                                {booking.vehicleColor && <span className="opacity-60 italic">• {booking.vehicleColor}</span>}
+                                {booking.price && <span className="ml-auto font-black text-emerald-500">${booking.price.toFixed(2)}</span>}
+                              </div>
+                            )}
+
+                            {booking.notes && (
+                              <div className="mt-2 text-[10px] text-zinc-500 italic line-clamp-2 border-t border-zinc-900 pt-1.5 opacity-70 leading-relaxed">
+                                "{booking.notes}"
+                              </div>
                             )}
                           </div>
                         ))}
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-zinc-800" />
+
+                  {/* DIRECT MARKETING & ENGAGEMENT */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-blue-500" />
+                        Marketing & Outreach
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-[10px] text-blue-400 p-0 hover:bg-transparent hover:text-blue-300"
+                        onClick={() => window.open('/follow-up', '_blank')}
+                      >
+                        Open Retention Hub <ExternalLink className="w-3 h-3 ml-1" />
+                      </Button>
+                    </div>
+
+                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-xl p-4 space-y-4">
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Quick Displacement Note</label>
+                          <Textarea 
+                            placeholder="Personalize this outreach to convert this client..."
+                            value={outreachNote}
+                            onChange={(e) => setOutreachNote(e.target.value)}
+                            className="bg-zinc-950 border-zinc-800 min-h-[90px] text-xs font-medium focus:ring-blue-500/20 rounded-xl"
+                          />
+                       </div>
+
+                       <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="flex-1 space-y-2">
+                             <div className="flex items-center justify-between px-2">
+                                <label className="text-[9px] font-black uppercase text-zinc-600">Apply Incentive</label>
+                                <div className="flex items-center gap-2 scale-75">
+                                  <Switch checked={includeDiscount} onCheckedChange={setIncludeDiscount} />
+                                </div>
+                             </div>
+                             <Select 
+                              disabled={!includeDiscount}
+                              value={outreachCouponId} 
+                              onValueChange={setOutreachCouponId}
+                             >
+                                <SelectTrigger className="h-10 bg-zinc-950 border-zinc-800 text-[11px] font-black uppercase tracking-tight rounded-xl">
+                                  <SelectValue placeholder="CAMPAIGN ASSETS..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-950 border-zinc-800 text-white rounded-xl">
+                                  {allCoupons.filter(c => c.active).map(c => (
+                                    <SelectItem key={c.id} value={c.id} className="text-xs font-bold uppercase tracking-tight">
+                                      {c.code} ({c.percent ? `${c.percent}% OFF` : `$${c.amount} OFF`})
+                                    </SelectItem>
+                                  ))}
+                                  {allCoupons.filter(c => c.active).length === 0 && (
+                                    <div className="p-4 text-[10px] text-zinc-500 italic text-center uppercase tracking-widest">No active coupons detected</div>
+                                  )}
+                                </SelectContent>
+                             </Select>
+                          </div>
+
+                          <div className="flex flex-col justify-end">
+                             <Button 
+                               onClick={handleSendDirectEmail}
+                               disabled={isSending || !form.email}
+                               className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-900/20 rounded-xl transition-all"
+                             >
+                               {isSending ? "Dispatching..." : "Send Now"}
+                               <Send className="w-3.5 h-3.5 ml-2" />
+                             </Button>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Engagement History List */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <History className="h-3.5 w-3.5 text-zinc-500" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Dispatched History Log</span>
+                      </div>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                        {engagements.length === 0 && (
+                          <div className="text-[10px] text-zinc-700 italic px-4 py-2 bg-zinc-900/10 rounded-lg border border-dashed border-zinc-800/40">No prior professional outreach history found for this email.</div>
+                        )}
+                        {engagements.map((eng, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-zinc-900/20 rounded-xl border border-zinc-800/40 text-[10px] group/item hover:bg-zinc-900/40 transition-all">
+                             <div className="flex items-center gap-3">
+                                <Badge variant="outline" className={cn(
+                                   "text-[8px] font-black px-1.5 h-4 border-zinc-700 uppercase",
+                                   eng.type === 'initial' ? "text-purple-400 bg-purple-500/5" : "text-blue-400 bg-blue-500/5"
+                                )}>
+                                  {eng.type === 'initial' ? 'WELCOME' : 'FOLLOWUP'}
+                                </Badge>
+                                <span className="text-zinc-500 font-bold tracking-tight opacity-70">{format(new Date(eng.created_at), 'MMM dd, yyyy')}</span>
+                                {eng.coupon_code && <span className="text-emerald-500 font-black tracking-tight underline decoration-emerald-500/30">[{eng.coupon_code}]</span>}
+                             </div>
+                             <div className="text-zinc-400 font-medium truncate max-w-[180px] italic opacity-80 group-hover/item:opacity-100 transition-opacity">
+                                "{eng.note || 'No note attached'}"
+                             </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </>
