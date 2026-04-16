@@ -175,7 +175,7 @@
     "addOnMeta": {
       "ceramic-coating": {
         "id": "ceramic-coating",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "ceramic-trim-coat": {
@@ -190,7 +190,7 @@
       },
       "deep-interior": {
         "id": "deep-interior",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "eco-package": {
@@ -205,7 +205,7 @@
       },
       "engine-detail": {
         "id": "engine-detail",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "headlight-restoration": {
@@ -220,7 +220,7 @@
       },
       "paint-touch-up": {
         "id": "paint-touch-up",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "odor-treatment": {
@@ -230,7 +230,7 @@
       },
       "odor-eliminator": {
         "id": "odor-eliminator",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "paint-correction": {
@@ -240,7 +240,7 @@
       },
       "paint-sealant": {
         "id": "paint-sealant",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "pet-hair-removal": {
@@ -281,7 +281,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1775922820010
+    "version": 1776353206665
   },
   "vehicleTypesLive": [
     {

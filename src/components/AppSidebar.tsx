@@ -539,33 +539,62 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
                 return (
                   <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}>
-                      <Link to={targetUrl} style={{ color: isActive ? '#2563eb' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
-                        <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
-                        {(open || openMobile) && (
-                          <div className="flex items-center justify-between flex-1 min-w-0">
-                            <span className="truncate">{item.title}</span>
-                            {item.helpTopicId && (
-                              <div 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  window.dispatchEvent(new CustomEvent('open-help', { 
-                                    detail: { 
-                                      topicId: item.helpTopicId,
-                                      role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
-                                    } 
-                                  }));
-                                }}
-                                className="p-1 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all cursor-help"
-                                title={`Help for ${item.title}`}
-                              >
-                                <HelpCircle className="w-3.5 h-3.5" />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Link>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      {targetUrl.startsWith('#') ? (
+                        <button onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                          <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
+                          {(open || openMobile) && (
+                            <div className="flex items-center justify-between flex-1 min-w-0">
+                              <span className="truncate">{item.title}</span>
+                              {item.helpTopicId && (
+                                <div 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.dispatchEvent(new CustomEvent('open-help', { 
+                                      detail: { 
+                                        topicId: item.helpTopicId,
+                                        role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                      } 
+                                    }));
+                                  }}
+                                  className="p-1 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all cursor-help"
+                                  title={`Help for ${item.title}`}
+                                >
+                                  <HelpCircle className="w-3.5 h-3.5" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      ) : (
+                        <Link to={targetUrl} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)} style={{ color: isActive ? '#2563eb' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                          <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
+                          {(open || openMobile) && (
+                            <div className="flex items-center justify-between flex-1 min-w-0">
+                              <span className="truncate">{item.title}</span>
+                              {item.helpTopicId && (
+                                <div 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.dispatchEvent(new CustomEvent('open-help', { 
+                                      detail: { 
+                                        topicId: item.helpTopicId,
+                                        role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                      } 
+                                    }));
+                                  }}
+                                  className="p-1 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all cursor-help"
+                                  title={`Help for ${item.title}`}
+                                >
+                                  <HelpCircle className="w-3.5 h-3.5" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Link>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -626,45 +655,84 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
                             return (
                               <SidebarMenuSubItem key={item.title}>
                                 <SidebarMenuSubButton asChild isActive={isActive}>
-                                  <Link 
-                                    to={targetUrl} 
-                                    style={{ color: isActive ? '#2563eb' : undefined }}
-                                    className={cn(
-                                      "flex items-center gap-2 py-2 h-auto text-[11px]",
-                                      isActive ? "!text-[#2563eb] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
-                                    )} 
-                                    onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
-                                  >
-                                    <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
-                                      {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : "text-zinc-500")} />}
-                                      <span className="truncate">{item.title}</span>
-                                      {item.helpTopicId && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            window.dispatchEvent(new CustomEvent('open-help', { 
-                                              detail: { 
-                                                topicId: item.helpTopicId,
-                                                role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
-                                              } 
-                                            }));
-                                          }}
-                                          className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5"
-                                          title={`Help for ${item.title}`}
-                                        >
-                                          <HelpCircle className="w-3 h-3" />
-                                        </button>
+                                  {targetUrl.startsWith('#') ? (
+                                    <button
+                                      className={cn(
+                                        "flex items-center gap-2 py-2 h-auto text-[11px] w-full text-left",
+                                        isActive ? "!text-[#2563eb] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
+                                      )} 
+                                      onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
+                                    >
+                                      <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
+                                        {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
+                                        <span className={cn("truncate", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
+                                        {item.helpTopicId && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              window.dispatchEvent(new CustomEvent('open-help', { 
+                                                detail: { 
+                                                  topicId: item.helpTopicId,
+                                                  role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                                } 
+                                              }));
+                                            }}
+                                            className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5"
+                                            title={`Help for ${item.title}`}
+                                          >
+                                            <HelpCircle className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                      {item.badge !== undefined && item.badge > 0 && (
+                                        <span className="ml-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white font-black">
+                                          {item.badge}
+                                        </span>
                                       )}
-                                    </div>
-                                    {isActive && !item.helpTopicId && <div className="ml-auto w-1 h-1 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]" />}
-                                    {item.badge !== undefined && item.badge > 0 && (
-                                      <span className="ml-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white font-black">
-                                        {item.badge}
-                                      </span>
-                                    )}
-                                  </Link>
+                                    </button>
+                                  ) : (
+                                    <Link 
+                                      to={targetUrl} 
+                                      style={{ color: isActive ? '#2563eb' : undefined }}
+                                      className={cn(
+                                        "flex items-center gap-2 py-2 h-auto text-[11px]",
+                                        isActive ? "!text-[#2563eb] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
+                                      )} 
+                                      onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}
+                                    >
+                                      <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
+                                        {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
+                                        <span className={cn("truncate", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
+                                        {item.helpTopicId && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              window.dispatchEvent(new CustomEvent('open-help', { 
+                                                detail: { 
+                                                  topicId: item.helpTopicId,
+                                                  role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                                } 
+                                              }));
+                                            }}
+                                            className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5"
+                                            title={`Help for ${item.title}`}
+                                          >
+                                            <HelpCircle className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                      {isActive && !item.helpTopicId && <div className="ml-auto w-1 h-1 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]" />}
+                                      {item.badge !== undefined && item.badge > 0 && (
+                                        <span className="ml-2 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white font-black">
+                                          {item.badge}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  )}
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             );

@@ -242,100 +242,76 @@ export default function PackagePricing() {
 
   async function saveToBackend(updated: PriceMap) {
     if (isDemoActive()) {
-      console.warn("Demo Mode: saveToBackend blocked.");
+      toast.error("Changes not saved in demo.");
       return;
     }
+
     try {
+      // 1. Local API POST (for non-Supabase environments/fallback)
       await fetch(`${API_BASE}/packages/prices`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
       });
-    } catch { }
 
-    // Supabase write-through: upsert per-vehicle prices for packages/add-ons
-    try {
+      // 2. Supabase Strict Sync
       if (isSupabaseEnabled()) {
-        const getVal = (kind: 'package' | 'addon', id: string, vt: keyof Pricing): number => {
-          const k = `${kind}:${id}:${vt}`;
-          const raw = updated[k];
-          const n = raw != null ? parseFloat(raw) : NaN;
-          return Number.isFinite(n) ? n : 0;
-        };
 
-        const allPackages = [...builtInPackages, ...getCustomPackages()];
-        const pkgRows = allPackages.map(p => ({
-          id: p.id,
-          name: p.name,
-          description: (p as any).description || '',
-          compact_price: getVal('package', p.id, 'compact') || (p.pricing?.compact ?? (p as any).basePrice ?? 0),
-          midsize_price: getVal('package', p.id, 'midsize') || (p.pricing?.midsize ?? (p as any).basePrice ?? 0),
-          truck_price: getVal('package', p.id, 'truck') || (p.pricing?.truck ?? (p as any).basePrice ?? 0),
-          luxury_price: getVal('package', p.id, 'luxury') || (p.pricing?.luxury ?? (p as any).basePrice ?? 0),
-          discount_percent: null,
-          discount_start: null,
-          discount_end: null,
-          image_url: getPackageMeta(p.id)?.imageDataUrl || "",
-          is_active: getPackageMeta(p.id)?.visible !== false && !getPackageMeta(p.id)?.deleted,
-        }));
+        const allPkgs = [...servicePackages, ...getCustomPackages()];
+        const pkgRows = allPkgs
+          .filter(p => !getPackageMeta(p.id)?.deleted)
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            compact_price: Number(updated[`package:${p.id}:compact`] || p.pricing.compact),
+            midsize_price: Number(updated[`package:${p.id}:midsize`] || p.pricing.midsize),
+            truck_price: Number(updated[`package:${p.id}:truck`] || p.pricing.truck),
+            luxury_price: Number(updated[`package:${p.id}:luxury`] || p.pricing.luxury),
+            is_active: (getPackageMeta(p.id)?.visible !== false),
+            image_url: getPackageMeta(p.id)?.imageDataUrl || ""
+          }));
 
-        const allAddOns = [...builtInAddOns, ...getCustomAddOns()];
-        const addRows = allAddOns.map(a => ({
-          id: a.id,
-          name: a.name,
-          description: (a as any).description || '',
-          compact_price: getVal('addon', a.id, 'compact') || (a.pricing?.compact ?? (a as any).basePrice ?? 0),
-          midsize_price: getVal('addon', a.id, 'midsize') || (a.pricing?.midsize ?? (a as any).basePrice ?? 0),
-          truck_price: getVal('addon', a.id, 'truck') || (a.pricing?.truck ?? (a as any).basePrice ?? 0),
-          luxury_price: getVal('addon', a.id, 'luxury') || (a.pricing?.luxury ?? (a as any).basePrice ?? 0),
-          discount_percent: null,
-          discount_start: null,
-          discount_end: null,
-          is_active: getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted,
-        }));
+        const allAddons = [...builtInAddOns, ...getCustomAddOns()];
+        const addRows = allAddons
+          .filter(a => !getAddOnMeta(a.id)?.deleted)
+          .map(a => ({
+            id: a.id,
+            name: a.name,
+            description: (a as any).description || "",
+            compact_price: Number(updated[`addon:${a.id}:compact`] || a.pricing.compact),
+            midsize_price: Number(updated[`addon:${a.id}:midsize`] || a.pricing.midsize),
+            truck_price: Number(updated[`addon:${a.id}:truck`] || a.pricing.truck),
+            luxury_price: Number(updated[`addon:${a.id}:luxury`] || a.pricing.luxury),
+            is_active: (getAddOnMeta(a.id)?.visible !== false)
+          }));
 
-        // --- NUCLEAR GHOST PURGE: Force-deactivate everything in Supabase not in our current managed list ---
+        // DELETE "GHOSTS" (Any ID in Supabase not in our current defined collections)
         try {
-          const allManagedIds = [...currentPkgIds, ...currentAddonIds];
-          const { data: allSupItems } = await supabase.from('add_ons').select('id, name').eq('is_active', true);
-          const ghosts = (allSupItems || []).filter(item => !currentAddonIds.includes(item.id));
-          
-          if (ghosts.length > 0) {
-            console.log(`[Sync] Pruning ${ghosts.length} ghost add-ons:`, ghosts.map(g => g.name));
-            for (const ghost of ghosts) {
-              await supaAddOns.update(ghost.id, { is_active: false });
-            }
-            toast({
-              title: "Cloud Sanitized",
-              description: `Deactivated ${ghosts.length} stale add-ons found in Supabase.`,
-            });
-          }
-
-          const { data: allSupPkgs } = await supabase.from('packages').select('id, name').eq('is_active', true);
-          const pkgGhosts = (allSupPkgs || []).filter(item => !currentPkgIds.includes(item.id));
+          const { data: allSupPkgs } = await supabase.from('packages').select('id');
+          const validPkgIds = allPkgs.map(p => p.id);
+          const pkgGhosts = (allSupPkgs || []).filter(p => !validPkgIds.includes(p.id));
           if (pkgGhosts.length > 0) {
-            for (const ghost of pkgGhosts) {
-              await supaPkgs.update(ghost.id, { is_active: false });
-            }
+            for (const g of pkgGhosts) await supaPkgs.remove(g.id);
           }
-        } catch (e) { 
-          console.error("Nuclear prune failed", e); 
+          const { data: allSupAddons } = await supabase.from('add_ons').select('id');
+          const validAddonIds = allAddons.map(a => a.id);
+          const addonGhosts = (allSupAddons || []).filter(a => !validAddonIds.includes(a.id));
+          if (addonGhosts.length > 0) {
+            for (const g of addonGhosts) await supaAddOns.remove(g.id);
+          }
+        } catch (e) {
+          console.error("Strict ghost removal failed", e);
         }
 
-        try { 
-          // Upsert current packages
-          for (const row of pkgRows) {
-            await supaPkgs.upsert([row]);
-          }
-        } catch (e) { console.error("Pkg upsert failure", e); }
-        try { 
-          // Upsert current add-ons
-          for (const row of addRows) {
-            await supaAddOns.upsert([row]);
-          }
-        } catch (e) { console.error("Addon upsert failure", e); }
+        // UPSERT ALLOWED DATA
+        if (pkgRows.length > 0) await supaPkgs.upsert(pkgRows);
+        if (addRows.length > 0) await supaAddOns.upsert(addRows);
       }
-    } catch (e) { console.error("saveToBackend failed", e); }
+    } catch (e) {
+      console.error("saveToBackend failed", e);
+      toast.error("Failed to sync with cloud database.");
+    }
   }
 
   async function saveToLocalforage(updated: PriceMap) {
@@ -1137,7 +1113,7 @@ export default function PackagePricing() {
 
               cloudMetaPkgs[p.id] = {
                 id: p.id,
-                visible: p.is_active !== false,
+                visible: p.is_active === true,
                 deleted: false,
                 imageDataUrl: p.image_url || ""
               };
@@ -1152,7 +1128,7 @@ export default function PackagePricing() {
 
               cloudMetaAddons[a.id] = {
                 id: a.id,
-                visible: a.is_active !== false,
+                visible: a.is_active === true,
                 deleted: false
               };
             });

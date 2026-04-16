@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -198,6 +198,7 @@ const BookNow = () => {
   const [customPackagesLive, setCustomPackagesLive] = useState<any[]>([]);
   const [customAddOnsLive, setCustomAddOnsLive] = useState<any[]>([]);
   const [lastSyncTs, setLastSyncTs] = useState<number | null>(null);
+
   // Dynamic vehicle type display labels
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
     compact: "Compact/Sedan (Small cars and sedans)",
@@ -208,9 +209,140 @@ const BookNow = () => {
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact', 'midsize', 'truck', 'luxury']);
   const [showClassification, setShowClassification] = useState(false);
 
+  const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
+
+  const fetchLive = async () => {
+    // START ATOMIC UPDATE
+    let finalSavedPrices: Record<string, string> = {};
+    let finalPackageMeta: Record<string, any> = {};
+    let finalAddOnMeta: Record<string, any> = {};
+    let finalCustomPackages: any[] = [];
+    let finalCustomAddOns: any[] = [];
+
+    // Initialize with built-ins as HIDDEN by default. 
+    // They ONLY become visible if Supabase says is_active = true.
+    // Smart Defaults: Show only what the user wants by default
+    builtInPackages.forEach(p => {
+      const isEssential = p.id.startsWith('prime-essential');
+      finalPackageMeta[p.id] = { id: p.id, visible: isEssential, deleted: false };
+    });
+    
+    const defaultAddonIds = [
+      'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
+      'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment'
+    ];
+    builtInAddOns.forEach(a => {
+      const isDefault = defaultAddonIds.includes(a.id);
+      finalAddOnMeta[a.id] = { id: a.id, visible: isDefault, deleted: false };
+    });
+
+    if (isSupabaseEnabled()) {
+      try {
+        let pkgs: any[] = [];
+        try { pkgs = await supaPkgs.getAll(); } catch (e) { console.warn("Supabase pkgs fetch failed (likely RLS):", e); }
+
+        let addons: any[] = [];
+        try { addons = await supaAddOns.getAll(); } catch (e) { console.warn("Supabase addons fetch failed (likely RLS):", e); }
+
+        let allMetaItems: any[] = [];
+        try { allMetaItems = await contentService.getAllServiceMeta(); } catch (e) { console.warn("Supabase meta fetch failed (likely RLS):", e); }
+
+        if (pkgs.length > 0) {
+          pkgs.forEach((p: any) => {
+            const id = p.id;
+            finalPackageMeta[id] = {
+              id,
+              visible: p.is_active === true,
+              deleted: false,
+              imageDataUrl: p.image_url || ""
+            };
+            if (p.compact_price != null) finalSavedPrices[`package:${id}:compact`] = String(p.compact_price);
+            if (p.midsize_price != null) finalSavedPrices[`package:${id}:midsize`] = String(p.midsize_price);
+            if (p.truck_price != null) finalSavedPrices[`package:${id}:truck`] = String(p.truck_price);
+            if (p.luxury_price != null) finalSavedPrices[`package:${id}:luxury`] = String(p.luxury_price);
+          });
+        }
+
+        if (addons.length > 0) {
+          addons.forEach((a: any) => {
+            const id = a.id;
+            finalAddOnMeta[id] = {
+              id,
+              visible: a.is_active === true,
+              deleted: false
+            };
+            if (a.compact_price != null) finalSavedPrices[`addon:${id}:compact`] = String(a.compact_price);
+            if (a.midsize_price != null) finalSavedPrices[`addon:${id}:midsize`] = String(a.midsize_price);
+            if (a.truck_price != null) finalSavedPrices[`addon:${id}:truck`] = String(a.truck_price);
+            if (a.luxury_price != null) finalSavedPrices[`addon:${id}:luxury`] = String(a.luxury_price);
+          });
+        }
+
+        const builtInPkgIds = builtInPackages.map(b => b.id);
+        const builtInAddOnIds = builtInAddOns.map(b => b.id);
+
+        finalCustomPackages = pkgs.filter((p: any) => !builtInPkgIds.includes(p.id)).map((p: any) => ({
+          id: p.id, name: p.name, description: p.description || "", pricing: { compact: p.compact_price, midsize: p.midsize_price, truck: p.truck_price, luxury: p.luxury_price }, steps: []
+        }));
+
+        finalCustomAddOns = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
+          id: a.id, name: a.name, description: a.description || "", pricing: { compact: a.compact_price, midsize: a.midsize_price, truck: a.truck_price, luxury: a.luxury_price }
+        }));
+
+      } catch (e) {
+        console.error("Supabase live sync failed:", e);
+      }
+    }
+
+    // ATOMIC STATE UPDATE: Update everything in one go to prevent flickering/disappearing items
+    setSavedPricesLive(finalSavedPrices);
+    setPackageMetaLive(finalPackageMeta);
+    setAddOnMetaLive(finalAddOnMeta);
+    setCustomPackagesLive(finalCustomPackages);
+    setCustomAddOnsLive(finalCustomAddOns);
+    setLastSyncTs(Date.now());
+  };
+
   useEffect(() => {
-    // Load dynamic vehicle types
-    const loadVT = async () => {
+    fetchLive();
+    const intervalId = setInterval(fetchLive, 120000); // Polling reduced to 2 minutes
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Use derived lists with useMemo where possible to avoid re-calculating on every tiny render
+  const livePackages = useMemo(() => {
+    const visibleBuiltIns = builtInPackages.filter(p => packageMetaLive[p.id]?.visible === true);
+    const visibleCustomPkgs = customPackagesLive.filter((p: any) => packageMetaLive[p.id]?.visible === true);
+    
+    return [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
+      const pricing = {
+        compact: parseFloat(savedPricesLive[`package:${p.id}:compact`]) || p.pricing?.compact || 0,
+        midsize: parseFloat(savedPricesLive[`package:${p.id}:midsize`]) || p.pricing?.midsize || 0,
+        truck: parseFloat(savedPricesLive[`package:${p.id}:truck`]) || p.pricing?.truck || 0,
+        luxury: parseFloat(savedPricesLive[`package:${p.id}:luxury`]) || p.pricing?.luxury || 0,
+      };
+      return { ...p, pricing };
+    });
+  }, [packageMetaLive, customPackagesLive, savedPricesLive]);
+
+  const liveAddOns = useMemo(() => {
+    const visibleBuiltAddOns = builtInAddOns.filter(a => addOnMetaLive[a.id]?.visible === true);
+    const visibleCustomAddOns = customAddOnsLive.filter((a: any) => addOnMetaLive[a.id]?.visible === true);
+
+    return [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
+      const pricing = {
+        compact: parseFloat(savedPricesLive[`addon:${a.id}:compact`]) || (a.pricing?.compact ?? 0),
+        midsize: parseFloat(savedPricesLive[`addon:${a.id}:midsize`]) || (a.pricing?.midsize ?? 0),
+        truck: parseFloat(savedPricesLive[`addon:${a.id}:truck`]) || (a.pricing?.truck ?? 0),
+        luxury: parseFloat(savedPricesLive[`addon:${a.id}:luxury`]) || (a.pricing?.luxury ?? 0),
+      };
+      return { ...a, pricing };
+    });
+  }, [addOnMetaLive, customAddOnsLive, savedPricesLive]);
+
+  useEffect(() => {
+    const loadVehicleTypes = async () => {
+      // 1. Try Supabase
       if (isSupabaseEnabled()) {
         try {
           const types = await contentService.getVehicleTypes();
@@ -219,143 +351,12 @@ const BookNow = () => {
             const labels: Record<string, string> = {};
             types.forEach(t => labels[t.id] = t.name + (t.description ? ` (${t.description})` : ''));
             setVehicleLabels(labels);
+            return;
           }
         } catch { }
       }
-    };
-    loadVT();
-    const onChanged = (e: any) => {
-      if (e?.detail?.kind === 'vehicle-types') loadVT();
-    };
-    window.addEventListener('content-changed', onChanged as any);
-    return () => window.removeEventListener('content-changed', onChanged as any);
-  }, []);
 
-  const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
-
-  const fetchLive = async () => {
-    try {
-      const res = await fetch(`/api/packages/live?v=${Date.now()}`, { 
-        headers: { 
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        } 
-      });
-      if (res.ok) {
-        const ct = res.headers.get('Content-Type') || '';
-        if (ct.includes('application/json')) {
-          const data = await res.json();
-          if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
-            setSavedPricesLive(data.savedPrices || {});
-            setPackageMetaLive(data.packageMeta || {});
-            setAddOnMetaLive(data.addOnMeta || {});
-            setCustomPackagesLive(data.customPackages || []);
-            setCustomAddOnsLive(data.customAddOns || []);
-            setLastSyncTs(Date.now());
-          }
-        }
-      }
-    } catch { }
-    try {
-      const snapshot = await buildFullSyncPayload();
-      setSavedPricesLive(snapshot.savedPrices || {});
-      setPackageMetaLive(snapshot.packageMeta || {});
-      setAddOnMetaLive(snapshot.addOnMeta || {});
-      setCustomPackagesLive(snapshot.customPackages || []);
-      setCustomAddOnsLive(snapshot.customAddOns || []);
-      setLastSyncTs(Date.now());
-    } catch { }
-
-    // Priority 2: Cloud / Supabase (Source of Truth)
-    if (isSupabaseEnabled()) {
-        try {
-          const [pkgs, addons] = await Promise.all([supaPkgs.getAll(), supaAddOns.getAll()]);
-
-          const newPackageMeta: Record<string, any> = {};
-          const newSavedPrices: Record<string, string> = {};
-
-          pkgs.forEach((p: any) => {
-            newPackageMeta[p.id] = {
-              visible: p.is_active !== false,
-              deleted: false, // assuming if it's in the DB it's not "deleted" in the metadata sense, or we filter elsewhere
-              imageDataUrl: undefined // Supabase doesn't store the massive data URL in the main table usually, or if it does, map it here
-            };
-            // Map prices
-            newSavedPrices[`package:${p.id}:compact`] = String(p.compact_price || 0);
-            newSavedPrices[`package:${p.id}:midsize`] = String(p.midsize_price || 0);
-            newSavedPrices[`package:${p.id}:truck`] = String(p.truck_price || 0);
-            newSavedPrices[`package:${p.id}:luxury`] = String(p.luxury_price || 0);
-          });
-
-          const newAddOnMeta: Record<string, any> = {};
-          addons.forEach((a: any) => {
-            newAddOnMeta[a.id] = {
-              visible: a.is_active === true,
-              deleted: false
-            };
-            newSavedPrices[`addon:${a.id}:compact`] = String(a.compact_price || 0);
-            newSavedPrices[`addon:${a.id}:midsize`] = String(a.midsize_price || 0);
-            newSavedPrices[`addon:${a.id}:truck`] = String(a.truck_price || 0);
-            newSavedPrices[`addon:${a.id}:luxury`] = String(a.luxury_price || 0);
-          });
-
-          setPackageMetaLive(newPackageMeta);
-          setAddOnMetaLive(newAddOnMeta);
-          setSavedPricesLive(newSavedPrices);
-          // For now, customPackages logic in Supabase might need more work if they are stored differently, 
-          // but assuming they overwrite built-ins or are just rows in the 'packages' table.
-          // IF 'packages' table includes custom packages, we don't need separate customPackagesLive array interactions 
-          // unless BookNow logic splits them explicity. 
-          // BookNow merges: [...visibleBuiltIns, ...visibleCustomPkgs]
-          // The built-in IDs won't change. 
-          // The supabase `pkgs` includes BOTH built-in overrides AND custom packages. 
-          // So we might need to populate customPackagesLive with any row that isn't a built-in ID.
-
-          const builtInIds = builtInPackages.map(b => b.id);
-          const customs = pkgs.filter((p: any) => !builtInIds.includes(p.id)).map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            pricing: {
-              compact: p.compact_price,
-              midsize: p.midsize_price,
-              truck: p.truck_price,
-              luxury: p.luxury_price
-            },
-            steps: [] // Steps might be missing if not joined, but prices are key
-          }));
-          setCustomPackagesLive(customs);
-
-          const builtInAddOnIds = builtInAddOns.map(b => b.id);
-          const customAdds = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
-            id: a.id,
-            name: a.name,
-            pricing: {
-              compact: a.compact_price,
-              midsize: a.midsize_price,
-              truck: a.truck_price,
-              luxury: a.luxury_price
-            },
-            steps: []
-          }));
-          setCustomAddOnsLive(customAdds);
-
-          setLastSyncTs(Date.now());
-        } catch (e) {
-          console.error("Supabase fallback fetch failed", e);
-        }
-    }
-  };
-
-  useEffect(() => {
-    fetchLive();
-    const intervalId = setInterval(fetchLive, 2000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Load dynamic vehicle types from live endpoint and keep in sync on admin edits
-  useEffect(() => {
-    const loadVehicleTypes = async () => {
+      // 2. Fallback to API if Supabase fails/not configured
       try {
         const res = await fetch(`/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
         if (res.ok) {
@@ -370,29 +371,19 @@ const BookNow = () => {
             });
             setVehicleLabels(map);
             setVehicleOptions(opts.length ? opts : ['compact', 'midsize', 'truck', 'luxury']);
-            // ensure current selection is valid
             if (!opts.includes(vehicleType)) setVehicleType(opts[0] || 'compact');
           }
         }
-      } catch { }
+      } catch { 
+        setVehicleOptions(['compact', 'midsize', 'truck', 'luxury']);
+      }
     };
     loadVehicleTypes();
     const onChanged = (e: any) => {
-      if (e && e.detail && (e.detail.kind === 'vehicle-types' || e.detail.type === 'vehicle-types')) loadVehicleTypes();
+      if (e?.detail?.kind === 'vehicle-types' || e?.detail?.type === 'vehicle-types') loadVehicleTypes();
     };
     window.addEventListener('content-changed', onChanged as any);
     return () => window.removeEventListener('content-changed', onChanged as any);
-  }, []);
-
-  // Hard reload page when admin triggers force refresh (vehicle types changed)
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'force-refresh') {
-        window.location.reload();
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const allBuiltInSteps: Record<string, { id: string; name: string }> = Object.fromEntries(
@@ -400,97 +391,13 @@ const BookNow = () => {
       .map(([id, name]) => [id as string, { id: id as string, name: name as string }])
   );
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
-  const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'];
 
-  const visibleBuiltIns = builtInPackages.filter(p => (packageMetaLive[p.id]?.visible) !== false && !packageMetaLive[p.id]?.deleted);
-  const visibleCustomPkgs = customPackagesLive.filter((p: any) => (packageMetaLive[p.id]?.visible) !== false && !packageMetaLive[p.id]?.deleted);
-  const livePackages = [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
-    const pricing: Record<string, number> = {
-      compact: parseFloat(savedPricesLive[getKey('package', p.id, 'compact')]) || p.pricing?.compact || 0,
-      midsize: parseFloat(savedPricesLive[getKey('package', p.id, 'midsize')]) || p.pricing?.midsize || 0,
-      truck: parseFloat(savedPricesLive[getKey('package', p.id, 'truck')]) || p.pricing?.truck || 0,
-      luxury: parseFloat(savedPricesLive[getKey('package', p.id, 'luxury')]) || p.pricing?.luxury || 0,
-    };
-    // bring in any dynamically seeded vehicle-type pricing
-    Object.keys(savedPricesLive).forEach((k) => {
-      const prefix = `package:${p.id}:`;
-      if (k.startsWith(prefix)) {
-        const veh = k.slice(prefix.length);
-        const val = parseFloat(savedPricesLive[k]);
-        if (!Number.isNaN(val) && val > 0) pricing[veh] = val;
-      }
-    });
-    const metaSteps: string[] | undefined = packageMetaLive[p.id]?.stepIds;
-    const steps = metaSteps && metaSteps.length > 0
-      ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
-      : p.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s));
-    return { ...p, pricing, steps };
-  });
-
-  // Filter packages based on mode (3-pack or 6-pack)
-  const [packageMode, setPackageMode] = React.useState<string>('6-pack');
-
-  React.useEffect(() => {
-    fetch('/package-mode.json?v=' + Date.now())
-      .then(res => res.json())
-      .then(data => {
-        console.log('📦 Package mode loaded:', data.mode);
-        setPackageMode(data.mode || '6-pack');
-      })
-      .catch(() => setPackageMode('6-pack'));
-  }, []);
-
-  // Filter packages: only include Essential and Elite Prime Packages
-  const filteredPackages = livePackages.filter(p =>
-    p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')
-  );
-
-  const visibleBuiltAddOns = builtInAddOns.filter(a => {
-    const meta = addOnMetaLive[a.id];
-    return (meta?.visible) !== false && !meta?.deleted;
-  });
-  const visibleCustomAddOns = customAddOnsLive.filter((a: any) => {
-    const meta = addOnMetaLive[a.id];
-    return (meta?.visible) !== false && !meta?.deleted;
-  });
-  const liveAddOns = (() => {
-    const raw = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
-      const pricing: Record<string, number> = {
-        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || (a.pricing?.compact ?? 0),
-        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || (a.pricing?.midsize ?? 0),
-        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || (a.pricing?.truck ?? 0),
-        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || (a.pricing?.luxury ?? 0),
-      };
-      Object.keys(savedPricesLive).forEach((k) => {
-        const prefix = `addon:${a.id}:`;
-        if (k.startsWith(prefix)) {
-          const veh = k.slice(prefix.length);
-          const val = parseFloat(savedPricesLive[k]);
-          if (!Number.isNaN(val)) pricing[veh] = val;
-        }
-      });
-      const metaSteps: string[] | undefined = addOnMetaLive[a.id]?.stepIds;
-      const steps = metaSteps && metaSteps.length > 0
-        ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
-        : (a.steps ? a.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s)) : []);
-      return { ...a, pricing, steps };
-    });
-
-    // Final safety filter: unique names only to stop "Ghost" duplicates
-    const seenNames = new Set();
-    const builtInIds = builtInAddOns.map(b => b.id);
-    const customIds = customAddOnsLive.map(c => c.id);
-
-    return raw.filter(a => {
-      // Safety: Only show if it's a built-in OR a recognized custom add-on from our managed state
-      if (!builtInIds.includes(a.id) && !customIds.includes(a.id)) return false;
-
-      const n = (a.name || "").trim().toLowerCase();
-      if (seenNames.has(n)) return false;
-      seenNames.add(n);
-      return true;
-    });
-  })();
+  // Derived filtered packages for display
+  const filteredPackages = useMemo(() => {
+    return livePackages.filter(p =>
+      p.id.includes('prime-essential')
+    );
+  }, [livePackages]);
 
   // Compute total (service + add-ons)
   const selectedService = filteredPackages.find(s => s.id === formData.package);

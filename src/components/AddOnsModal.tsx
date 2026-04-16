@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, X, PlusCircle, CheckCircle2 } from "lucide-react";
-import { addOns } from "@/lib/services";
+import { addOns as builtInAddOns } from "@/lib/services";
+import { isSupabaseEnabled } from "@/lib/auth";
+import * as supaAddOns from "@/services/supabase/addOns";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 
@@ -15,6 +17,43 @@ export const AddOnsModal: React.FC<AddOnsModalProps> = ({
     open,
     onOpenChange,
 }) => {
+    const [liveAddOns, setLiveAddOns] = useState<any[]>(builtInAddOns);
+
+    useEffect(() => {
+        const fetchAddOns = async () => {
+            if (!open) return;
+            
+            if (isSupabaseEnabled()) {
+                try {
+                    const addons = await supaAddOns.getAll();
+                    const ALLOWED_ADDON_IDS = [
+                        'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
+                        'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment',
+                        'scratch-repair', 'deep-interior', 'paint-sealant', 'odor-eliminator',
+                        'paint-touch-up', 'ceramic-coating', 'paint-correction', 'odor-treatment'
+                    ];
+
+                    // STRICT FILTER: Only show active, managed add-ons
+                    const active = addons.filter((a: any) => 
+                        a.is_active === true && ALLOWED_ADDON_IDS.includes(a.id)
+                    ).map((a: any) => ({
+                        id: a.id,
+                        name: a.name,
+                        description: a.description || builtInAddOns.find(b => b.id === a.id)?.description || "Professional service upgrade.",
+                        basePrice: a.compact_price || 0
+                    }));
+                    
+                    if (active.length > 0) {
+                        setLiveAddOns(active);
+                    }
+                } catch (e) {
+                    console.error("AddOnsModal fetch failed", e);
+                }
+            }
+        };
+        fetchAddOns();
+    }, [open]);
+
     const generatePDF = () => {
         const doc = new jsPDF('p', 'mm', 'a4');
         const timestamp = new Date().toLocaleString();
@@ -33,7 +72,7 @@ export const AddOnsModal: React.FC<AddOnsModalProps> = ({
 
         let currentY = 45;
 
-        const tableData = addOns.map(addon => [
+        const tableData = liveAddOns.map(addon => [
             addon.name,
             addon.description || "No description provided.",
             `$${addon.basePrice}+`
@@ -99,7 +138,7 @@ export const AddOnsModal: React.FC<AddOnsModalProps> = ({
 
                 <div className="flex-1 overflow-auto p-8 space-y-6 bg-zinc-50/50 print:bg-white">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {addOns.map((addon) => (
+                        {liveAddOns.map((addon) => (
                             <div key={addon.id} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 group">
                                 <div className="flex justify-between items-start">
                                     <h3 className="text-lg font-black text-blue-900 uppercase tracking-tight group-hover:text-red-600 transition-colors">

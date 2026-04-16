@@ -243,17 +243,22 @@ export const servicePackages: ServicePackage[] = [
 */
 
 export const addOns: AddOn[] = [
-  { id: 'ceramic-coating', name: 'Ceramic Coating', category: 'exterior', description: 'Long-lasting paint protection with hydrophobic properties', basePrice: 500, pricing: { compact: 500, midsize: 500, truck: 550, luxury: 600 } },
-  { id: 'paint-correction', name: 'Paint Correction', category: 'exterior', description: 'Remove swirls, scratches, and restore paint clarity', basePrice: 300, pricing: { compact: 300, midsize: 350, truck: 400, luxury: 450 } },
-  { id: 'deep-interior', name: 'Deep Interior Detail', category: 'interior', description: 'Thorough cleaning of all interior surfaces, carpets, and upholstery', basePrice: 150, pricing: { compact: 150, midsize: 175, truck: 200, luxury: 225 } },
-  { id: 'odor-treatment', name: 'Odor Elimination Treatment', category: 'interior', description: 'Professional ozone treatment to eliminate persistent odors', basePrice: 100, pricing: { compact: 100, midsize: 100, truck: 100, luxury: 100 } },
+  { id: 'wheel-cleaning', name: 'Wheel Cleaning', category: 'exterior', description: 'Thorough cleaning of wheels and brake dust using safe, non-acidic products; includes lug areas and wheel faces.', basePrice: 20, pricing: { compact: 20, midsize: 25, truck: 30, luxury: 40 } },
+  { id: 'clay-bar', name: 'Clay Bar & Iron Decontamination', category: 'exterior', description: 'Deep removal of embedded surface contaminants and iron particles', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 120 } },
+  { id: 'headlight-restoration', name: 'Headlight Restoration', category: 'exterior', description: 'Restore clarity to oxidized and yellowed headlights', basePrice: 35, pricing: { compact: 35, midsize: 40, truck: 50, luxury: 65 } },
+  { id: 'leather-conditioning', name: 'Leather Conditioning', category: 'interior', description: 'Nourishing treatment for leather surfaces to restore suppleness and protect against UV and wear.', basePrice: 25, pricing: { compact: 25, midsize: 30, truck: 35, luxury: 45 } },
+  { id: 'ceramic-trim-coat', name: 'Ceramic Trim Coat Restoration', category: 'exterior', description: 'Restores faded exterior plastics and applies a ceramic coating for long-lasting color and UV protection.', basePrice: 60, pricing: { compact: 60, midsize: 75, truck: 95, luxury: 125 } },
+  { id: 'engine-bay', name: 'Engine Bay Cleaning', category: 'exterior', description: 'Careful degreasing and dressing of the engine bay; safe processes to improve appearance without high-pressure intrusion.', basePrice: 70, pricing: { compact: 70, midsize: 85, truck: 100, luxury: 120 } },
   { id: 'pet-hair', name: 'Pet Hair Removal', category: 'interior', description: 'Specialized removal of embedded pet hair from all surfaces', basePrice: 75, pricing: { compact: 75, midsize: 85, truck: 95, luxury: 105 } },
   { id: 'stain-treatment', name: 'Stain Treatment', category: 'interior', description: 'Professional stain removal for carpets and upholstery', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 110 } },
   { id: 'scratch-repair', name: 'Scratch Repair', category: 'exterior', description: 'Minor scratch repair and touch-up', basePrice: 200, pricing: { compact: 200, midsize: 200, truck: 200, luxury: 200 } },
-  { id: 'eco-package', name: 'Eco-Friendly Package', category: 'exterior', description: 'Complete detail using environmentally-safe products', basePrice: 120, pricing: { compact: 120, midsize: 130, truck: 140, luxury: 150 } },
-  { id: 'headlight-restoration', name: 'Headlight Restoration', category: 'exterior', description: 'Restore clarity to oxidized and yellowed headlights', basePrice: 35, pricing: { compact: 35, midsize: 40, truck: 50, luxury: 65 } },
-  { id: 'engine-detail', name: 'Engine Bay Detailing', category: 'exterior', description: 'Professional cleaning and dressing of engine compartment', basePrice: 110, pricing: { compact: 110, midsize: 110, truck: 110, luxury: 110 } },
-  { id: 'clay-bar', name: 'Clay Bar & Iron Decontamination', category: 'exterior', description: 'Deep removal of embedded surface contaminants and iron particles', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 120 } }
+  { id: 'deep-interior', name: 'Deep Interior Detail', category: 'interior', description: 'Thorough cleaning of all interior surfaces, carpets, and upholstery', basePrice: 150, pricing: { compact: 150, midsize: 175, truck: 200, luxury: 225 } },
+  { id: 'paint-sealant', name: 'Paint Sealant Application', category: 'exterior', description: 'Application of a durable synthetic sealant to enhance gloss and protect paint against environmental elements.', basePrice: 90, pricing: { compact: 90, midsize: 110, truck: 130, luxury: 160 } },
+  { id: 'odor-eliminator', name: 'Odor Eliminator', category: 'interior', description: 'Targeted odor neutralization (food, smoke, pet) using professional-grade products; does not mask—neutralizes.', basePrice: 15, pricing: { compact: 15, midsize: 20, truck: 25, luxury: 35 } },
+  { id: 'paint-touch-up', name: 'Minor Paint Touch-Up', category: 'exterior', description: 'Spot touch-ups for small chips and scratches using compatible paint; not a full panel respray.', basePrice: 75, pricing: { compact: 75, midsize: 90, truck: 110, luxury: 140 } },
+  { id: 'ceramic-coating', name: 'Ceramic Coating', category: 'exterior', description: 'Long-lasting paint protection with hydrophobic properties', basePrice: 500, pricing: { compact: 500, midsize: 500, truck: 550, luxury: 600 } },
+  { id: 'paint-correction', name: 'Paint Correction', category: 'exterior', description: 'Remove swirls, scratches, and restore paint clarity', basePrice: 300, pricing: { compact: 300, midsize: 350, truck: 400, luxury: 450 } },
+  { id: 'odor-treatment', name: 'Odor Elimination Treatment', category: 'interior', description: 'Professional ozone treatment to eliminate persistent odors', basePrice: 100, pricing: { compact: 100, midsize: 100, truck: 100, luxury: 100 } }
 ];
 
 export type VehicleType = 'compact' | 'midsize' | 'truck' | 'luxury';

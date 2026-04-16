@@ -56,16 +56,24 @@ export default function LearningLibrary() {
     const [newCategoryName, setNewCategoryName] = useState<string>("");
 
     const categories = useMemo(() => {
-        const unique = Array.from(new Set([
-            ...items.map(i => i.category || 'General'),
-            ...placeholderCategories
-        ]));
-        return ["All", ...unique.sort()];
+        const allCats = new Set<string>();
+        items.forEach(i => {
+            const parts = (i.category || 'General').split(',').map(s => s.trim()).filter(Boolean);
+            parts.forEach(p => allCats.add(p));
+        });
+        placeholderCategories.forEach(c => allCats.add(c));
+        
+        // Return unique categories, preserving original case for display but sorted consistently
+        return ["All", ...Array.from(allCats).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))];
     }, [items, placeholderCategories]);
 
     const filteredItems = useMemo(() => {
         if (activeCategory === "All") return items;
-        return items.filter(i => (i.category || 'General') === activeCategory);
+        const target = activeCategory.toLowerCase();
+        return items.filter(i => {
+            const cats = (i.category || 'General').split(',').map(s => s.trim().toLowerCase());
+            return cats.includes(target);
+        });
     }, [items, activeCategory]);
 
     useEffect(() => {
@@ -606,7 +614,9 @@ export default function LearningLibrary() {
                                                     {item.duration && (
                                                         <span className="text-[10px] uppercase font-bold tracking-wider bg-zinc-800 text-zinc-400 px-2 py-1 rounded border border-zinc-700/50">{item.duration}</span>
                                                     )}
-                                                    <span className="text-[10px] uppercase font-bold tracking-wider bg-blue-900/30 text-blue-400 px-2 py-1 rounded border border-blue-900/50">{item.category}</span>
+                                                    {(item.category || 'General').split(',').map(c => c.trim()).filter(Boolean).map(cat => (
+                                                        <span key={cat} className="text-[10px] uppercase font-bold tracking-wider bg-blue-900/30 text-blue-400 px-2 py-1 rounded border border-blue-900/50">{cat}</span>
+                                                    ))}
                                                     <span className="text-[10px] uppercase font-bold tracking-wider bg-zinc-800 text-zinc-400 px-2 py-1 rounded border border-zinc-700/50">{item.type}</span>
                                                 </div>
                                             </CardContent>
@@ -641,36 +651,65 @@ export default function LearningLibrary() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
-                                <Label>Category</Label>
-                                <Select
-                                    value={formData.category}
-                                    onValueChange={(val) => {
-                                        if (val === 'new') {
+                            <div className="space-y-4">
+                                <Label>Categories (Select all that apply)</Label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 bg-zinc-950 border border-zinc-800 rounded-lg max-h-[150px] overflow-y-auto custom-scrollbar">
+                                    {categories.filter(c => c !== "All").map(cat => {
+                                        const currentCats = (formData.category || '').split(',').map(s => s.trim()).filter(Boolean);
+                                        const isChecked = currentCats.includes(cat);
+                                        
+                                        return (
+                                            <div key={cat} className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`cat-${cat}`}
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        const isChecked = e.target.checked;
+                                                        // Get current tags from the most up-to-date formData
+                                                        const latestCats = (formData.category || '').split(',').map(s => s.trim()).filter(Boolean);
+                                                        
+                                                        let nextCats: string[];
+                                                        if (isChecked) {
+                                                            nextCats = Array.from(new Set([...latestCats, cat]));
+                                                        } else {
+                                                            nextCats = latestCats.filter(c => c.toLowerCase() !== cat.toLowerCase());
+                                                        }
+                                                        
+                                                        setFormData(prev => ({ 
+                                                            ...prev, 
+                                                            category: nextCats.length > 0 ? nextCats.join(', ') : 'General' 
+                                                        }));
+                                                    }}
+                                                    className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900"
+                                                />
+                                                <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                    {cat}
+                                                </label>
+                                            </div>
+                                        );
+                                    })}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
                                             const newCat = prompt("Enter new category name:");
                                             if (newCat && newCat.trim()) {
                                                 const trimmed = newCat.trim();
                                                 if (!placeholderCategories.includes(trimmed)) {
                                                     setPlaceholderCategories(prev => [...prev, trimmed]);
                                                 }
-                                                setFormData({ ...formData, category: trimmed });
+                                                // Also auto-select it
+                                                const currentCats = (formData.category || '').split(',').map(s => s.trim()).filter(Boolean);
+                                                if (!currentCats.includes(trimmed)) {
+                                                    setFormData({ ...formData, category: [...currentCats, trimmed].join(', ') });
+                                                }
                                             }
-                                        } else {
-                                            setFormData({ ...formData, category: val });
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-700 text-white">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                        {categories.filter(c => c !== "All").map(c => (
-                                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                                        ))}
-                                        <SelectSeparator />
-                                        <SelectItem value="new" className="text-blue-400 font-bold">+ Create New Category</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                        }}
+                                        className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 text-xs font-bold py-1"
+                                    >
+                                        <Plus className="w-3 h-3" /> <span>Add New</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

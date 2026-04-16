@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -124,260 +124,140 @@ const CustomerPortal = () => {
   const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
   const fetchLive = async () => {
-    // Priority 1: Persistent Local API Memory (Fastest, reflects immediate Admin edits)
-    try {
-      const res = await fetch(`/api/packages/live?v=${Date.now()}`, { 
-        headers: { 
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        } 
-      });
-      if (res.ok) {
-        const ct = res.headers.get('Content-Type') || '';
-        if (ct.includes('application/json')) {
-          const data = await res.json();
-          if (data.packageMeta && Object.keys(data.packageMeta).length > 0) {
-            setSavedPricesLive(data.savedPrices || {});
-            setPackageMetaLive(data.packageMeta || {});
-            setAddOnMetaLive(data.addOnMeta || {});
-            setCustomPackagesLive(data.customPackages || []);
-            setCustomAddOnsLive(data.customAddOns || []);
-          }
-        }
-      }
-    } catch { }
+    let finalSavedPrices: Record<string, string> = {};
+    let finalPackageMeta: Record<string, any> = {};
+    let finalAddOnMeta: Record<string, any> = {};
+    let finalCustomPackages: any[] = [];
+    let finalCustomAddOns: any[] = [];
 
-    // Priority 2: Cloud / Supabase (The Permanent Source of Truth)
+    // Initialize with built-ins as hidden by default (Strict Protection)
+    // Smart Defaults: Show only what the user wants by default
+    builtInPackages.forEach(p => {
+      const isEssential = p.id.startsWith('prime-essential');
+      finalPackageMeta[p.id] = { id: p.id, visible: isEssential, deleted: false };
+    });
+    
+    const defaultAddonIds = [
+      'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
+      'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment'
+    ];
+    builtInAddOns.forEach(a => {
+      const isDefault = defaultAddonIds.includes(a.id);
+      finalAddOnMeta[a.id] = { id: a.id, visible: isDefault, deleted: false };
+    });
+
     if (isSupabaseEnabled()) {
       try {
-        const [pkgs, addons] = await Promise.all([
-          supaPkgs.getAll(), 
-          supaAddOns.getAll()
-        ]);
+        let pkgs: any[] = [];
+        try { pkgs = await supaPkgs.getAll(); } catch (e) { console.warn("Supabase pkgs fetch failed (likely RLS):", e); }
 
-        const newPackageMeta: Record<string, any> = { ...getAllPackageMeta() };
-        const newSavedPrices: Record<string, string> = {};
+        let addons: any[] = [];
+        try { addons = await supaAddOns.getAll(); } catch (e) { console.warn("Supabase addons fetch failed (likely RLS):", e); }
 
-        pkgs.forEach((p: any) => {
-          const id = p.id;
-          // Preserve existing meta (like locally saved fields) but update from DB
-          newPackageMeta[id] = {
-            ...(newPackageMeta[id] || {}),
-            id,
-            visible: p.is_active !== false,
-            deleted: false,
-            imageDataUrl: p.image_url || newPackageMeta[id]?.imageDataUrl || ""
-          };
-          // Map prices to the live sync map
-          if (p.compact_price != null) newSavedPrices[`package:${id}:compact`] = String(p.compact_price);
-          if (p.midsize_price != null) newSavedPrices[`package:${id}:midsize`] = String(p.midsize_price);
-          if (p.truck_price != null) newSavedPrices[`package:${id}:truck`] = String(p.truck_price);
-          if (p.luxury_price != null) newSavedPrices[`package:${id}:luxury`] = String(p.luxury_price);
-        });
-        
-        // Load Global Settings
-        const allMetaItems = await contentService.getAllServiceMeta();
-        const globalMeta = allMetaItems.find(m => m.key === 'global_settings');
-        if (globalMeta && globalMeta.meta) {
-          setShowBookNow(globalMeta.meta.showBookNow !== false);
-          if (globalMeta.meta.businessStatus) {
-            setBusinessStatus(globalMeta.meta.businessStatus);
-          }
+        let allMetaItems: any[] = [];
+        try { allMetaItems = await contentService.getAllServiceMeta(); } catch (e) { console.warn("Supabase meta fetch failed (likely RLS):", e); }
+
+        if (pkgs.length > 0) {
+          pkgs.forEach((p: any) => {
+            const id = p.id;
+            finalPackageMeta[id] = {
+              id,
+              visible: p.is_active === true,
+              deleted: false,
+              imageDataUrl: p.image_url || ""
+            };
+            if (p.compact_price != null) finalSavedPrices[`package:${id}:compact`] = String(p.compact_price);
+            if (p.midsize_price != null) finalSavedPrices[`package:${id}:midsize`] = String(p.midsize_price);
+            if (p.truck_price != null) finalSavedPrices[`package:${id}:truck`] = String(p.truck_price);
+            if (p.luxury_price != null) finalSavedPrices[`package:${id}:luxury`] = String(p.luxury_price);
+          });
         }
-        
-        const btm = allMetaItems.find(m => m.key === 'booking_test_mode');
-        setBookingTestMode(!!btm?.meta?.active);
 
-        const newAddOnMeta: Record<string, any> = {};
-        addons.forEach((a: any) => {
-          const id = a.id;
-          newAddOnMeta[id] = {
-            ...(newAddOnMeta[id] || {}),
-            id,
-            visible: a.is_active === true, // STRICT: Must be explicitly true
-            deleted: false
-          };
-          if (a.compact_price != null) newSavedPrices[`addon:${id}:compact`] = String(a.compact_price);
-          if (a.midsize_price != null) newSavedPrices[`addon:${id}:midsize`] = String(a.midsize_price);
-          if (a.truck_price != null) newSavedPrices[`addon:${id}:truck`] = String(a.truck_price);
-          if (a.luxury_price != null) newSavedPrices[`addon:${id}:luxury`] = String(a.luxury_price);
-        });
+        if (addons.length > 0) {
+          addons.forEach((a: any) => {
+            const id = a.id;
+            finalAddOnMeta[id] = {
+              id,
+              visible: a.is_active === true,
+              deleted: false
+            };
+            if (a.compact_price != null) finalSavedPrices[`addon:${id}:compact`] = String(a.compact_price);
+            if (a.midsize_price != null) finalSavedPrices[`addon:${id}:midsize`] = String(a.midsize_price);
+            if (a.truck_price != null) finalSavedPrices[`addon:${id}:truck`] = String(a.truck_price);
+            if (a.luxury_price != null) finalSavedPrices[`addon:${id}:luxury`] = String(a.luxury_price);
+          });
+        }
 
-        setPackageMetaLive(newPackageMeta);
-        setAddOnMetaLive(newAddOnMeta);
-        setSavedPricesLive(newSavedPrices);
-
-        // Map custom inputs
-        const builtInIds = builtInPackages.map(b => b.id);
-        const customs = pkgs.filter((p: any) => !builtInIds.includes(p.id)).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          pricing: {
-            compact: p.compact_price,
-            midsize: p.midsize_price,
-            truck: p.truck_price,
-            luxury: p.luxury_price
-          },
-          steps: []
-        }));
-        setCustomPackagesLive(customs);
-
+        const builtInPkgIds = builtInPackages.map(b => b.id);
         const builtInAddOnIds = builtInAddOns.map(b => b.id);
-        const customAdds = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
-          id: a.id,
-          name: a.name,
-          pricing: {
-            compact: a.compact_price,
-            midsize: a.midsize_price,
-            truck: a.truck_price,
-            luxury: a.luxury_price
-          },
-          steps: []
-        }));
-        setCustomAddOnsLive(customAdds);
 
-        setLastSyncTs(Date.now());
-        return; // Success, skip fallback
+        finalCustomPackages = pkgs.filter((p: any) => !builtInPkgIds.includes(p.id)).map((p: any) => ({
+          id: p.id, name: p.name, description: p.description || "", pricing: { compact: p.compact_price, midsize: p.midsize_price, truck: p.truck_price, luxury: p.luxury_price }, steps: []
+        }));
+
+        finalCustomAddOns = addons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
+          id: a.id, name: a.name, description: a.description || "", pricing: { compact: a.compact_price, midsize: a.midsize_price, truck: a.truck_price, luxury: a.luxury_price }
+        }));
+
+        const globalMeta = allMetaItems.find(m => m.key === 'global_settings');
+        if (globalMeta?.meta) {
+          setShowBookNow(globalMeta.meta.showBookNow !== false);
+          if (globalMeta.meta.businessStatus) setBusinessStatus(globalMeta.meta.businessStatus);
+        }
       } catch (e) {
-        console.error("Supabase CustomerPortal fetch failed, falling back to local snapshot", e);
+        console.error("Supabase live sync failed:", e);
       }
     }
 
-    // Priority 2: Local Snapshot (Offline / Legacy / API Mock)
-    try {
-      const snapshot = await buildFullSyncPayload();
-      setSavedPricesLive(snapshot.savedPrices || {});
-      setPackageMetaLive(snapshot.packageMeta || {});
-      setAddOnMetaLive(snapshot.addOnMeta || {});
-      setCustomPackagesLive(snapshot.customPackages || []);
-      setCustomAddOnsLive(snapshot.customAddOns || []);
-      setLastSyncTs(Date.now());
-    } catch { }
+    setSavedPricesLive(finalSavedPrices);
+    setPackageMetaLive(finalPackageMeta);
+    setAddOnMetaLive(finalAddOnMeta);
+    setCustomPackagesLive(finalCustomPackages);
+    setCustomAddOnsLive(finalCustomAddOns);
+    setLastSyncTs(Date.now());
   };
 
   useEffect(() => {
-    const loadVehicleTypes = async () => {
-      // 1. Try Supabase
-      if (isSupabaseEnabled()) {
-        try {
-          // contentService imported at top
-          const types = await contentService.getVehicleTypes();
-          if (types && types.length > 0) {
-            setVehicleOptions(types.filter(t => t.is_active).map(t => t.id));
-            const labels: Record<string, string> = {};
-            types.forEach(t => labels[t.id] = t.name + (t.description ? ` (${t.description})` : ''));
-            setVehicleLabels(labels);
-            return;
-          }
-        } catch { }
-      }
-
-      // Fallback
-      setVehicleOptions(['compact', 'midsize', 'truck', 'luxury']);
-    };
-    loadVehicleTypes();
-    const onChanged = (e: any) => {
-      if (e && e.detail && (e.detail.kind === 'vehicle-types' || e.detail.type === 'vehicle-types')) loadVehicleTypes();
-    };
-    window.addEventListener('content-changed', onChanged as any);
-    return () => window.removeEventListener('content-changed', onChanged as any);
-  }, []);
-
-  useEffect(() => {
     fetchLive();
-    const intervalId = setInterval(fetchLive, 2000);
-    return () => {
-      clearInterval(intervalId);
-    };
+    const intervalId = setInterval(fetchLive, 120000); 
+    return () => clearInterval(intervalId);
   }, []);
 
-  // Build live packages and add-ons arrays
   const allBuiltInSteps: Record<string, { id: string; name: string }> = Object.fromEntries(
     builtInPackages.flatMap(p => p.steps.map(s => [typeof s === 'string' ? s : s.id, typeof s === 'string' ? s : s.name]))
       .map(([id, name]) => [id as string, { id: id as string, name: name as string }])
   );
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
 
-  // Combine all packages (Built-in + Custom) to ensure nothing is hidden by custom overrides logic
-  const allPotentialPackages = [...builtInPackages, ...customPackagesLive];
-
-  // Filter for Visibility and map prices
-  const livePackages = allPotentialPackages
-    .filter((p: any) => {
-      // Check metadata visibility (admin toggle)
-      const meta = packageMetaLive[p.id];
-      
-      // STRICT: Must be visible AND NOT deleted/archived
-      // Default behavior: 
-      // - If we have meta, follow it.
-      // - If no meta and it's a Prime Elite package, hide it by default.
-      // - For others (Essential), show by default.
-      let isVisible = true;
-      if (meta) {
-        isVisible = meta.visible !== false && meta.deleted !== true;
-      } else if (p.id.startsWith('prime-elite')) {
-        isVisible = false;
-      }
-      
-      return isVisible;
-    })
-    .filter((p: any) => p.id.startsWith('prime-essential') || p.id.startsWith('prime-elite')) // Strictly Prime tiers
-    .map((p: any) => {
-      const pricing = { ...p.pricing };
-      Object.keys(pricing).forEach(vType => {
-        const key = `package:${p.id}:${vType}`;
-        if (savedPricesLive[key]) pricing[vType as any] = parseFloat(savedPricesLive[key]);
-      });
+  const livePackages = useMemo(() => {
+    const visibleBuiltIns = builtInPackages.filter(p => packageMetaLive[p.id]?.visible === true && p.id.includes('prime-essential'));
+    const visibleCustomPkgs = customPackagesLive.filter((p: any) => packageMetaLive[p.id]?.visible === true);
+    
+    return [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
+      const pricing = {
+        compact: parseFloat(savedPricesLive[`package:${p.id}:compact`]) || p.pricing?.compact || 0,
+        midsize: parseFloat(savedPricesLive[`package:${p.id}:midsize`]) || p.pricing?.midsize || 0,
+        truck: parseFloat(savedPricesLive[`package:${p.id}:truck`]) || p.pricing?.truck || 0,
+        luxury: parseFloat(savedPricesLive[`package:${p.id}:luxury`]) || p.pricing?.luxury || 0,
+      };
       return { ...p, pricing };
     });
+  }, [packageMetaLive, customPackagesLive, savedPricesLive]);
 
-  const visibleBuiltAddOns = builtInAddOns.filter(a => {
-    const meta = addOnMetaLive[a.id];
-    return (meta?.visible) !== false && !meta?.deleted;
-  });
-  const visibleCustomAddOns = customAddOnsLive.filter((a: any) => {
-    const meta = addOnMetaLive[a.id];
-    return (meta?.visible) !== false && !meta?.deleted;
-  });
-  const liveAddOns = (() => {
-    const raw = [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
-      const pricing: Record<string, number> = {
-        compact: parseFloat(savedPricesLive[getKey('addon', a.id, 'compact')]) || (a.pricing?.compact ?? 0),
-        midsize: parseFloat(savedPricesLive[getKey('addon', a.id, 'midsize')]) || (a.pricing?.midsize ?? 0),
-        truck: parseFloat(savedPricesLive[getKey('addon', a.id, 'truck')]) || (a.pricing?.truck ?? 0),
-        luxury: parseFloat(savedPricesLive[getKey('addon', a.id, 'luxury')]) || (a.pricing?.luxury ?? 0),
+  const liveAddOns = useMemo(() => {
+    const visibleBuiltAddOns = builtInAddOns.filter(a => addOnMetaLive[a.id]?.visible === true);
+    const visibleCustomAddOns = customAddOnsLive.filter((a: any) => addOnMetaLive[a.id]?.visible === true);
+
+    return [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
+      const pricing = {
+        compact: parseFloat(savedPricesLive[`addon:${a.id}:compact`]) || (a.pricing?.compact ?? 0),
+        midsize: parseFloat(savedPricesLive[`addon:${a.id}:midsize`]) || (a.pricing?.midsize ?? 0),
+        truck: parseFloat(savedPricesLive[`addon:${a.id}:truck`]) || (a.pricing?.truck ?? 0),
+        luxury: parseFloat(savedPricesLive[`addon:${a.id}:luxury`]) || (a.pricing?.luxury ?? 0),
       };
-      Object.keys(savedPricesLive).forEach((k) => {
-        const prefix = `addon:${a.id}:`;
-        if (k.startsWith(prefix)) {
-          const veh = k.slice(prefix.length);
-          const val = parseFloat(savedPricesLive[k]);
-          if (!Number.isNaN(val)) pricing[veh] = val;
-        }
-      });
-      const metaSteps: string[] | undefined = addOnMetaLive[a.id]?.stepIds;
-      const steps = metaSteps && metaSteps.length > 0
-        ? metaSteps.map(id => ({ id, name: allBuiltInSteps[id]?.name || customServicesMap[id] || id }))
-        : (a.steps ? a.steps.map((s: any) => (typeof s === 'string' ? { id: s, name: s } : s)) : []);
-      return { ...a, pricing, steps };
+      return { ...a, pricing };
     });
-
-    // Strategy: Unique names only to filter out "Ghost" duplicates in database
-    const seenNames = new Set();
-    const builtInIds = builtInAddOns.map(b => b.id);
-    const customIds = customAddOnsLive.map(c => c.id);
-    
-    return raw.filter(a => {
-      // Safety: Only show if it's a built-in OR a recognized custom add-on from our managed state
-      if (!builtInIds.includes(a.id) && !customIds.includes(a.id)) return false;
-
-      const n = (a.name || "").trim().toLowerCase();
-      if (seenNames.has(n)) return false;
-      seenNames.add(n);
-      return true;
-    });
-  })();
+  }, [addOnMetaLive, customAddOnsLive, savedPricesLive]);
 
   const service = livePackages.find(s => s.id === selectedService);
   const servicePrice = service ? service.pricing[vehicleType] : 0;
@@ -386,7 +266,7 @@ const CustomerPortal = () => {
     return sum + (found ? found.pricing[vehicleType] : 0);
   }, 0);
   const destinationFee = calculateDestinationFee(distance);
-  const total = servicePrice + addOnsTotal + destinationFee;
+  const total = (servicePrice || 0) + (addOnsTotal || 0) + (destinationFee || 0);
 
   const toggleAddOn = (id: string) => {
     setSelectedAddOns(prev =>
