@@ -49,8 +49,9 @@ export interface UnifiedCustomer {
  * 4. Match by Name (only as last resort, and not if it's a generic name)
  */
 function dedupeByKey(items: UnifiedCustomer[]): UnifiedCustomer[] {
-  const mergedSource = new Map<string, UnifiedCustomer>(); // ID -> Record
-  const emailMap = new Map<string, string>(); // Email -> ID
+  const mergedSource = new Map<string, UnifiedCustomer>(); // Primary ID -> Record
+  const emailMap = new Map<string, string>(); // email -> ID
+  const nameMap = new Map<string, string>(); // normalized name -> ID
 
   const isPlaceholder = (val?: string) => {
     if (!val) return true;
@@ -58,53 +59,59 @@ function dedupeByKey(items: UnifiedCustomer[]): UnifiedCustomer[] {
     return ['unknown', 'none', 'n/a', 'no-email'].some(p => lower.includes(p));
   };
 
+  const normalizeName = (n: string) => n.toLowerCase().replace(/\s+/g, ' ').trim();
+
   for (const c of items) {
-    if (!c.name || c.name.trim() === '') continue; // Skip items without names
+    if (!c.name || c.name.trim() === '') continue;
 
+    const nameKey = normalizeName(c.name);
     const emailKey = c.email?.toLowerCase().trim();
-    const idKey = c.id;
-
-    // 1. Try to find by ID
-    let existingId = idKey && mergedSource.has(idKey) ? idKey : null;
-
-    // 2. Try to find by Email (if valid)
-    if (!existingId && emailKey && !isPlaceholder(emailKey)) {
-      existingId = emailMap.get(emailKey) || null;
+    
+    // Determine the "best" existing record for this person
+    let targetId = c.id && mergedSource.has(c.id) ? c.id : null;
+    
+    if (!targetId && emailKey && !isPlaceholder(emailKey)) {
+      targetId = emailMap.get(emailKey) || null;
+    }
+    
+    if (!targetId && nameKey) {
+      targetId = nameMap.get(nameKey) || null;
     }
 
-    if (existingId) {
-      const existing = mergedSource.get(existingId)!;
-      // Merge new data into existing reference
-      // Prioritize Supabase UUID for the ID if available
-      const newId = (c.id && c.id.length > 20) ? c.id : existing.id;
-
+    if (targetId) {
+      const existing = mergedSource.get(targetId)!;
+      
+      // Update the ID to the most stable one (Supabase UUID > local)
+      const finalId = (c.id && c.id.length > 20) ? c.id : (existing.id || c.id);
+      
+      // Merge properties
       Object.assign(existing, {
         ...c,
-        id: newId,
-        // Prefer 'customer' if EITHER is customer. 
-        type: (existing.type === 'customer' || c.type === 'customer') ? 'customer' : (c.type || existing.type || 'customer'),
-        // Keep existing valid data if new is empty
+        id: finalId,
+        // CRITICAL: If the user says they are a prospect, keep that if possible, 
+        // but if either source explicitly says 'customer', we usually lean there. 
+        // User just said Forrest is a prospect.
+        type: (c.type === 'prospect' || existing.type === 'prospect') ? 'prospect' : 'customer',
         phone: c.phone || existing.phone,
         email: c.email || existing.email,
         address: c.address || existing.address,
-        vehicle: c.vehicle || existing.vehicle,
-        model: c.model || existing.model,
-        year: c.year || existing.year,
-        vehicleType: c.vehicleType || existing.vehicleType,
         updatedAt: (new Date(c.updatedAt || 0) > new Date(existing.updatedAt || 0)) ? c.updatedAt : existing.updatedAt
       });
 
-      // Update maps
-      if (newId) mergedSource.set(newId, existing); // re-set in case ID changed
-      if (emailKey && !isPlaceholder(emailKey)) emailMap.set(emailKey, newId || existingId);
-
+      // Maintain mapping consistency
+      if (finalId !== targetId) {
+        mergedSource.delete(targetId);
+        mergedSource.set(finalId, existing);
+        // Update other maps to point to the new ID
+        for (let [k, v] of emailMap) if (v === targetId) emailMap.set(k, finalId);
+        for (let [k, v] of nameMap) if (v === targetId) nameMap.set(k, finalId);
+      }
     } else {
       const entry = { ...c, type: c.type || 'customer' };
-      // If no ID, generate a temp one purely for map tracking (will use real ID if available)
-      const internalId = c.id || `temp-${Math.random().toString(36).slice(2, 9)}`;
-
-      mergedSource.set(internalId, entry);
-      if (emailKey && !isPlaceholder(emailKey)) emailMap.set(emailKey, internalId);
+      const newId = c.id || `id-${Math.random().toString(36).slice(2, 9)}`;
+      mergedSource.set(newId, entry);
+      if (emailKey && !isPlaceholder(emailKey)) emailMap.set(emailKey, newId);
+      if (nameKey) nameMap.set(nameKey, newId);
     }
   }
 

@@ -59,59 +59,48 @@ interface BookingsState {
   update: (id: string, patch: Partial<Booking>) => Promise<void>;
   move: (id: string, dateISO: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (isBackground?: boolean) => Promise<void>;
   subscribeRealtime: () => () => void;
 }
 
 export const useBookingsStore = create<BookingsState>((set, get) => ({
-  items: [], // Start empty, fetch on mount
+  items: loadLocal(), // Start with local data for instant load
   pendingCount: 0,
   loading: false,
 
-  refresh: async () => {
-    set({ loading: true });
+  refresh: async (isBackground = false) => {
+    if (!isBackground) set({ loading: true });
     try {
       // Fetch from Supabase
-      console.log('🔄 Fetching bookings from Supabase...');
       const remoteItems: Booking[] = await getSupabaseBookings();
-      console.log(`✅ Fetched ${remoteItems.length} bookings from Supabase`);
-      console.log('📊 Bookings:', remoteItems.map(b => ({ id: b.id, customer: b.customer, status: b.status, date: b.date })));
 
-      // MIGRATION CHECK: 
+      // MIGRATION / FALLBACK CHECK: 
       // If Remote is empty BUT Local has data, migrate all local to remote.
       if (remoteItems.length === 0) {
         const localItems = loadLocal();
         if (localItems.length > 0) {
           console.log("Migrating local bookings to Supabase...", localItems.length);
-          // Upload all
           await Promise.all(localItems.map(b => upsertSupabaseBooking(b)));
-          // Refetch to confirm
           const migratedItems = await getSupabaseBookings();
           set({
             items: migratedItems,
             pendingCount: migratedItems.filter((i: Booking) => i.status === "pending").length
           });
-          // Clear local storage after successful migration?
-          // For safety, maybe rename key or leave as backup for now.
-          // localStorage.removeItem(STORAGE_KEY); 
-          set({ loading: false });
+          if (!isBackground) set({ loading: false });
           return;
         }
       }
-
-      const tentativeCount = remoteItems.filter(i => i.status === 'tentative').length;
-      console.log(`🟡 ${tentativeCount} TENTATIVE bookings (should glow in sidebar)`);
 
       set({
         items: remoteItems,
         pendingCount: remoteItems.filter((i: Booking) => i.status === "pending").length
       });
     } catch (e) {
-      console.error("❌ Booking sync failed, falling back to local for view", e);
-      // Fallback
+      console.error("❌ Booking sync failed", e);
+      // Ensure we have current local data if cloud fails
       set({ items: loadLocal() });
     } finally {
-      set({ loading: false });
+      if (!isBackground) set({ loading: false });
     }
   },
 
@@ -128,7 +117,7 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
           const refresh = get().refresh;
           // For now, simpler to just re-fetch to ensure all joins (customer, vehicle) are correct
           // But we could also manually patch if we wanted to be even faster.
-          await refresh();
+          await refresh(true);
         }
       )
       .subscribe();

@@ -308,10 +308,50 @@ export default function BookingsPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const viewParam = params.get('view');
+    const bookingId = params.get('id');
+
     if (viewParam === 'analytics') {
       setViewMode('analytics');
     }
-  }, [location.search]);
+
+    if (bookingId && items.length > 0) {
+      const booking = items.find(b => b.id === bookingId);
+      if (booking) {
+        // Find matching customer
+        const matchingCust = customers.find(c => c.name === booking.customer);
+        setSelectedCustomer(matchingCust || null);
+        setSelectedBooking(booking);
+        
+        // Populate formData
+        setFormData({
+          customer: booking.customer || "",
+          customerId: booking.customerId || matchingCust?.id,
+          email: booking.customerEmail || matchingCust?.email || "",
+          phone: booking.customerPhone || matchingCust?.phone || "",
+          service: booking.title || "",
+          vehicle: booking.vehicle || matchingCust?.vehicleType || "",
+          vehicleYear: booking.vehicleYear || matchingCust?.year || "",
+          vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
+          vehicleModel: booking.vehicleModel || matchingCust?.model || "",
+          address: booking.address || "",
+          time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
+          endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
+          assignedEmployee: booking.assignedEmployee || "",
+          bookedBy: booking.bookedBy || "",
+          notes: booking.notes || "",
+          addons: booking.addons || [],
+          hasReminder: booking.hasReminder || false,
+          reminderFrequency: booking.reminderFrequency?.toString() || "3",
+          status: booking.status || "confirmed",
+          vehicleId: booking.vehicleId
+        });
+        
+        setIsAddModalOpen(true);
+        // Clear param so it doesn't re-open on every render
+        window.history.replaceState({}, '', location.pathname);
+      }
+    }
+  }, [location.search, items, customers]);
 
   // Handle vehicle data returned from classification page
   useEffect(() => {
@@ -518,7 +558,7 @@ export default function BookingsPage() {
     setAnalyticsDefaultTab("reminders");
   };
 
-  // Helper: Notify Admin of Employee Actions
+   // Helper: Notify Admin of Employee Actions
   const notifyEmployeeChange = async (action: 'create' | 'update' | 'delete', booking: Booking | any) => {
     // Only notify if current user is an employee (or checking role strictly)
     const currentUser = getCurrentUser();
@@ -561,23 +601,97 @@ export default function BookingsPage() {
     }
   };
 
+  const handleSavePDF = () => {
+    if (!formData.customer || !formData.service) {
+      toast.error('Please fill in Customer and Service to generate PDF');
+      return;
+    }
+
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text('New Booking Details', 20, 20);
+
+    doc.setFontSize(10);
+    doc.text(`Created: ${new Date().toLocaleString()}`, 20, 28);
+
+    // Draw a line
+    doc.setLineWidth(0.5);
+    doc.line(20, 32, 190, 32);
+
+    let y = 45;
+    const addLine = (label: string, value: string) => {
+      doc.setFont(undefined, 'bold');
+      doc.text(label, 20, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(String(value || 'N/A'), 60, y);
+      y += 8;
+    };
+
+    addLine('Customer:', formData.customer);
+    if (formData.email) addLine('Email:', formData.email);
+    if (formData.phone) addLine('Phone:', formData.phone);
+    addLine('Service:', formData.service);
+    if (formData.addons && formData.addons.length > 0) {
+      addLine('Add-Ons:', formData.addons.join(', '));
+    }
+    addLine('Date:', selectedDate ? format(selectedDate, "MMM d, yyyy") : 'N/A');
+    addLine('Time:', formData.time);
+    addLine('Address:', formData.address);
+
+    y += 4;
+    doc.setFont(undefined, 'bold');
+    doc.text('Vehicle Information:', 20, y);
+    y += 8;
+    addLine('Type:', formData.vehicle);
+    addLine('Details:', `${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}`);
+
+    y += 4;
+    addLine('Assigned To:', formData.assignedEmployee);
+
+    if (formData.notes) {
+      y += 4;
+      doc.setFont(undefined, 'bold');
+      doc.text('Notes:', 20, y);
+      y += 6;
+      doc.setFont(undefined, 'normal');
+      const splitNotes = doc.splitTextToSize(formData.notes, 170);
+      doc.text(splitNotes, 20, y);
+    }
+
+    const pdfDataUrl = doc.output('dataurlstring');
+    const safeName = formData.customer.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `Booking_${safeName}_${new Date().getTime()}.pdf`;
+
+    savePDFToArchive(
+      'Bookings',
+      formData.customer,
+      `b-pdf-${Date.now()}`,
+      pdfDataUrl,
+      { fileName }
+    );
+    toast.success('PDF saved to File Manager (Bookings)');
+  };
+
   const handleSave = async () => {
-    const { isDemoMode } = useDemoMode();
+    console.log("!!! SAVE BUTTON CLICKED !!!");
+    
+    // 1. Validation Logic
     if (isDemoMode) {
       toast.info("Demo Mode (Read-Only): Booking simulation successful. No data was saved.");
       setIsAddModalOpen(false);
       return;
     }
+
     if (!formData.customer || !formData.service) {
       toast.error("Customer and Service are required");
       return;
     }
 
-    // Sync to Customer Profile
+    console.log(">>> handleSave EXECUTION STARTED");
+    const saveToast = toast.loading("Saving booking...");
     try {
-      // Resolve customer ID from selection if names match, otherwise undefined (or previous formData.customerId if just editing details)
+      // 1. Sync to Customer Profile (Non-blocking)
       const resolvedCustomerId = (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId;
-
       const custPayload = {
         id: resolvedCustomerId,
         name: formData.customer,
@@ -589,116 +703,149 @@ export default function BookingsPage() {
         year: formData.vehicleYear,
         updatedAt: new Date().toISOString()
       };
-      await upsertCustomer(custPayload);
-    } catch (e) { console.error('Customer sync failed', e); }
+      upsertCustomer(custPayload).catch(e => console.error('Customer sync failed', e)); 
 
-    const dateBase = selectedDate || new Date();
-    const [hours, minutes] = formData.time.split(":").map(Number);
-    const date = new Date(dateBase);
-    date.setHours(hours, minutes, 0, 0);
+      // 2. Prepare Date Objects
+      const dateBase = selectedDate || new Date();
+      const timeStr = formData.time || "09:00";
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      const date = new Date(dateBase);
+      date.setHours(isNaN(hours) ? 9 : hours, isNaN(minutes) ? 0 : minutes, 0, 0);
 
-    let resultingBooking: any;
+      const endTimeStr = formData.endTime || "17:00";
+      const [endHours, endMinutes] = endTimeStr.split(":").map(Number);
+      const endDate = new Date(dateBase);
+      endDate.setHours(isNaN(endHours) ? 17 : endHours, isNaN(endMinutes) ? 0 : endMinutes, 0, 0);
 
-    if (selectedBooking) {
-      // Update
-      const updates = {
-        customer: formData.customer,
-        title: formData.service,
-        date: date.toISOString(),
-        endTime: formData.endTime ? (() => {
-          const [endHours, endMinutes] = formData.endTime.split(":").map(Number);
-          const endDate = new Date(dateBase);
-          endDate.setHours(endHours, endMinutes, 0, 0);
-          return endDate.toISOString();
-        })() : undefined,
-        status: formData.status,
-        vehicle: formData.vehicle,
-        vehicleYear: formData.vehicleYear,
-        vehicleMake: formData.vehicleMake,
-        vehicleModel: formData.vehicleModel,
-        address: formData.address,
-        assignedEmployee: formData.assignedEmployee,
-        bookedBy: formData.bookedBy, // Save bookedBy
-        notes: formData.notes,
-        addons: formData.addons,
-        hasReminder: formData.hasReminder,
-        reminderFrequency: parseInt(formData.reminderFrequency) || 0,
-        vehicleId: formData.vehicleId,
-        customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
-        customerEmail: formData.email,
-        customerPhone: formData.phone
-      };
-      update(selectedBooking.id, updates);
-      resultingBooking = { ...selectedBooking, ...updates };
+      let resultingBooking: any;
 
-      // Notify Admin if Employee
-      notifyEmployeeChange('update', resultingBooking);
+      if (selectedBooking) {
+        // Update
+        const updates: Partial<Booking> = {
+          customer: formData.customer,
+          title: formData.service,
+          date: date.toISOString(),
+          endTime: endDate.toISOString(),
+          status: formData.status as any,
+          vehicle: formData.vehicle,
+          vehicleYear: formData.vehicleYear,
+          vehicleMake: formData.vehicleMake,
+          vehicleModel: formData.vehicleModel,
+          address: formData.address,
+          assignedEmployee: formData.assignedEmployee,
+          bookedBy: formData.bookedBy,
+          notes: formData.notes,
+          addons: formData.addons,
+          hasReminder: formData.hasReminder,
+          reminderFrequency: parseInt(formData.reminderFrequency) || 0,
+          vehicleId: formData.vehicleId,
+          customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
+          customerEmail: formData.email,
+          customerPhone: formData.phone
+        };
+        
+        await update(selectedBooking.id, updates);
+        resultingBooking = { ...selectedBooking, ...updates };
 
-      toast.success("Booking updated");
-    } else {
-      // Create
-      const newBooking: Booking = {
-        id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b-${Date.now()}`,
-        customer: formData.customer,
-        customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
-        title: formData.service,
-        date: date.toISOString(),
-        endTime: formData.endTime ? (() => {
-          const [endHours, endMinutes] = formData.endTime.split(":").map(Number);
-          const endDate = new Date(dateBase);
-          endDate.setHours(endHours, endMinutes, 0, 0);
-          return endDate.toISOString();
-        })() : undefined,
-        status: formData.status,
-        vehicle: formData.vehicle,
-        vehicleYear: formData.vehicleYear,
-        vehicleMake: formData.vehicleMake,
-        vehicleModel: formData.vehicleModel,
-        address: formData.address,
-        assignedEmployee: formData.assignedEmployee,
-        bookedBy: formData.bookedBy, // Save bookedBy
-        notes: formData.notes,
-        addons: formData.addons,
-        hasReminder: formData.hasReminder,
-        reminderFrequency: parseInt(formData.reminderFrequency) || 0,
-        vehicleId: formData.vehicleId, // Store the specific vehicle ID
-        customerEmail: formData.email,
-        customerPhone: formData.phone,
-        createdAt: new Date().toISOString()
-      };
-      add(newBooking as any);
-      resultingBooking = newBooking;
+        // Notify Admin if Employee
+        await notifyEmployeeChange('update', resultingBooking);
+      } else {
+        // Create
+        const newBooking: Booking = {
+          id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b-${Date.now()}`,
+          customer: formData.customer,
+          customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
+          title: formData.service,
+          date: date.toISOString(),
+          endTime: endDate.toISOString(),
+          status: formData.status as any,
+          vehicle: formData.vehicle,
+          vehicleYear: formData.vehicleYear,
+          vehicleMake: formData.vehicleMake,
+          vehicleModel: formData.vehicleModel,
+          address: formData.address,
+          assignedEmployee: formData.assignedEmployee,
+          bookedBy: formData.bookedBy,
+          notes: formData.notes,
+          addons: formData.addons,
+          hasReminder: formData.hasReminder,
+          reminderFrequency: parseInt(formData.reminderFrequency) || 0,
+          vehicleId: formData.vehicleId,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          createdAt: new Date().toISOString()
+        };
+        
+        await add(newBooking as any);
+        resultingBooking = newBooking;
 
-      // Notify Admin if Employee
-      notifyEmployeeChange('create', resultingBooking);
-
-      toast.success("Booking created");
-    }
-
-    // Sync to Google Calendar if signed in
-    if (isSignedIn()) {
-      try {
-        await createGoogleEvent({
-          summary: `Detailing: ${resultingBooking.customer}`,
-          description: `Service: ${resultingBooking.title}\nVehicle: ${resultingBooking.vehicle}\nNotes: ${resultingBooking.notes || 'No notes'}`,
-          start: new Date(resultingBooking.date),
-          end: resultingBooking.endTime ? new Date(resultingBooking.endTime) : new Date(new Date(resultingBooking.date).getTime() + 3 * 60 * 60000),
-        });
-        toast.success("Synced to Google Calendar");
-      } catch (err) {
-        console.error("Google sync failed:", err);
-        toast.error("Google Calendar sync failed. Check console.");
+        // Notify Admin if Employee
+        await notifyEmployeeChange('create', resultingBooking);
       }
+
+      toast.dismiss(saveToast);
+      toast.success(selectedBooking ? "Booking updated" : "Booking created");
+      
+      // Post-save logic (Google Sync, PDF, etc)
+      if (isSignedIn()) {
+        try {
+          await createGoogleEvent({
+            summary: `Detailing: ${resultingBooking.customer}`,
+            description: `Service: ${resultingBooking.title}\nVehicle: ${resultingBooking.vehicle}\nNotes: ${resultingBooking.notes || 'No notes'}`,
+            start: new Date(resultingBooking.date),
+            end: resultingBooking.endTime ? new Date(resultingBooking.endTime) : new Date(new Date(resultingBooking.date).getTime() + 3 * 60 * 60000),
+          });
+          toast.success("Synced to Google Calendar");
+        } catch (err) {
+          console.error("Google sync failed:", err);
+          toast.error("Google Calendar sync failed.");
+        }
+      }
+
+      // Generate and Save PDF automatically
+      try {
+        handleSavePDF();
+      } catch (pdfErr) {
+        console.error("PDF generation failed:", pdfErr);
+      }
+
+      // Final cleanup and close
+      console.log("Save complete, closing modal...");
+      setIsAddModalOpen(false);
+      
+      // Delay state resets slightly to allow modal animation to complete
+      setTimeout(() => {
+        setSelectedBooking(null);
+        setSelectedCustomer(null);
+        setFormData({
+          customerId: undefined,
+          customer: "",
+          email: "",
+          phone: "",
+          service: "",
+          vehicle: "",
+          vehicleYear: "",
+          vehicleMake: "",
+          vehicleModel: "",
+          address: "",
+          time: "09:00",
+          endTime: "17:00",
+          assignedEmployee: "",
+          bookedBy: "",
+          notes: "",
+          addons: [],
+          hasReminder: false,
+          reminderFrequency: "6",
+          status: "confirmed",
+          vehicleId: undefined
+        });
+      }, 300);
+
+    } catch (saveErr: any) {
+      toast.dismiss(saveToast);
+      console.error("CRITICAL SAVE ERROR:", saveErr);
+      toast.error(`Failed to save booking: ${saveErr.message || 'Unknown error'}`);
     }
-
-    // Generate and Save PDF automatically
-    handleSavePDF(); // Default customer copy
-
-    setIsAddModalOpen(false);
-    setSelectedBooking(null);
-    setSelectedCustomer(null);
-    setSelectedCustomer(null);
-    setFormData({ customerId: undefined, customer: "", email: "", phone: "", service: "", vehicle: "", vehicleYear: "", vehicleMake: "", vehicleModel: "", address: "", time: "09:00", endTime: "17:00", assignedEmployee: "", bookedBy: "", notes: "", addons: [], hasReminder: false, reminderFrequency: "6", status: "confirmed", vehicleId: undefined });
   };
 
   const handleCancelBooking = async () => {
@@ -804,76 +951,6 @@ export default function BookingsPage() {
     }
   };
 
-  const handleSavePDF = () => {
-    if (!formData.customer || !formData.service) {
-      toast.error('Please fill in Customer and Service to generate PDF');
-      return;
-    }
-
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text('New Booking Details', 20, 20);
-
-    doc.setFontSize(10);
-    doc.text(`Created: ${new Date().toLocaleString()}`, 20, 28);
-
-    // Draw a line
-    doc.setLineWidth(0.5);
-    doc.line(20, 32, 190, 32);
-
-    let y = 45;
-    const addLine = (label: string, value: string) => {
-      doc.setFont(undefined, 'bold');
-      doc.text(label, 20, y);
-      doc.setFont(undefined, 'normal');
-      doc.text(String(value || 'N/A'), 60, y);
-      y += 8;
-    };
-
-    addLine('Customer:', formData.customer);
-    if (formData.email) addLine('Email:', formData.email);
-    if (formData.phone) addLine('Phone:', formData.phone);
-    addLine('Service:', formData.service);
-    if (formData.addons && formData.addons.length > 0) {
-      addLine('Add-Ons:', formData.addons.join(', '));
-    }
-    addLine('Date:', selectedDate ? format(selectedDate, "MMM d, yyyy") : 'N/A');
-    addLine('Time:', formData.time);
-    addLine('Address:', formData.address);
-
-    y += 4;
-    doc.setFont(undefined, 'bold');
-    doc.text('Vehicle Information:', 20, y);
-    y += 8;
-    addLine('Type:', formData.vehicle);
-    addLine('Details:', `${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}`);
-
-    y += 4;
-    addLine('Assigned To:', formData.assignedEmployee);
-
-    if (formData.notes) {
-      y += 4;
-      doc.setFont(undefined, 'bold');
-      doc.text('Notes:', 20, y);
-      y += 6;
-      doc.setFont(undefined, 'normal');
-      const splitNotes = doc.splitTextToSize(formData.notes, 170);
-      doc.text(splitNotes, 20, y);
-    }
-
-    const pdfDataUrl = doc.output('dataurlstring');
-    const safeName = formData.customer.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `Booking_${safeName}_${new Date().getTime()}.pdf`;
-
-    savePDFToArchive(
-      'Bookings',
-      formData.customer,
-      `b-pdf-${Date.now()}`,
-      pdfDataUrl,
-      { fileName }
-    );
-    toast.success('PDF saved to File Manager (Bookings)');
-  };
 
   const handlePrintFullSchedule = () => {
     const doc = new jsPDF();
@@ -1474,38 +1551,6 @@ export default function BookingsPage() {
                 <div className="flex flex-col">
                   <DialogTitle className="text-xl font-bold flex items-center gap-2">
                     {selectedBooking ? 'Edit Booking' : 'New Booking'}
-                    {window.location.hostname === 'localhost' && !selectedBooking && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="text-[10px] h-4 p-0 text-yellow-500 font-black uppercase tracking-tighter"
-                        onClick={() => {
-                          const profiles = [
-                            { name: "James Wilson", email: "james.w@example.com", phone: "5552345678", make: "Tesla", model: "Model 3", year: "2023", vType: "Compact/Sedan (Small cars and sedans)", service: "Prime Essential Exterior" },
-                            { name: "Sarah Miller", email: "sarah.m@example.com", phone: "5559876543", make: "Ford", model: "F-150", year: "2021", vType: "Truck/Van/Large SUV (Trucks, vans, large SUVs)", service: "Prime Essential Full Detail" },
-                            { name: "Robert Chen", email: "r.chen@tech.io", phone: "5554567890", make: "BMW", model: "X5", year: "2024", vType: "Mid-Size/SUV (Mid-size cars and SUVs)", service: "Prime Essential Interior" },
-                            { name: "Elena Rodriguez", email: "elena.rod@lifestyle.com", phone: "5553210987", make: "Porsche", model: "Cayenne", year: "2022", vType: "Mid-Size/SUV (Mid-size cars and SUVs)", service: "Prime Essential Full Detail" },
-                            { name: "Marcus Thorne", email: "m.thorne@heavy.net", phone: "5558889999", make: "Chevrolet", model: "Suburban", year: "2020", vType: "Truck/Van/Large SUV (Trucks, vans, large SUVs)", service: "Prime Essential Full Detail" }
-                          ];
-                          const p = profiles[Math.floor(Math.random() * profiles.length)];
-                          setFormData(prev => ({
-                            ...prev,
-                            customer: p.name,
-                            email: p.email,
-                            phone: p.phone,
-                            vehicleMake: p.make,
-                            vehicleModel: p.model,
-                            vehicleYear: p.year,
-                            vehicle: p.vType,
-                            service: p.service,
-                            notes: "[MOCK_DATA] Test booking - can be deleted"
-                          }));
-                          toast.info("Mock profile loaded (Date preserved)");
-                        }}
-                      >
-                        [Fill Mock]
-                      </Button>
-                    )}
                   </DialogTitle>
                   <div className="flex items-center gap-2 mt-1">
                     <label className="text-[10px] uppercase font-bold text-zinc-500">Scheduled Date:</label>
@@ -1526,39 +1571,25 @@ export default function BookingsPage() {
 
                 {/* HEADER ACTIONS (CLEANER SAVE/CLOSE) */}
                 <div className="flex items-center gap-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={handleSave}
-                          className="h-10 w-10 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
-                        >
-                          <Save className="h-6 w-6" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Save Changes</TooltipContent>
-                    </Tooltip>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleSave}
+                    className="h-10 w-10 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                    title="Save Changes"
+                  >
+                    <Save className="h-6 w-6" />
+                  </Button>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => {
-                            if (window.confirm("Close without saving?")) {
-                              setIsAddModalOpen(false);
-                            }
-                          }}
-                          className="h-10 w-10 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-                        >
-                          <X className="h-6 w-6" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Close Modal</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="h-10 w-10 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                    title="Close"
+                  >
+                    <X className="h-6 w-6" />
+                  </Button>
                 </div>
               </div>
             </DialogHeader>
@@ -2078,6 +2109,15 @@ export default function BookingsPage() {
                 <Button 
                   variant="secondary" 
                   size="sm" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
+                >
+                  <Save className="mr-1.5 h-4 w-4" /> Save Booking
+                </Button>
+
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
                   onClick={handleStartJob} 
                   className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
                 >
@@ -2415,16 +2455,23 @@ export default function BookingsPage() {
 
                 <div className="space-y-2">
                   {(() => {
-                    // Get unique customers from all bookings
+                    // Get unique customers from ALL bookings (not just current view)
                     const uniqueCustomers = Array.from(
-                      new Set(unifiedEvents.map(e => e.customer || 'INTERNAL: System Blocks'))
+                      new Set([
+                        ...items.map(b => b.customer),
+                        ...unifiedEvents.map(e => e.customer || 'INTERNAL: System Blocks')
+                      ])
                     ).map(customerName => {
-                      // Filter events for this "customer"
-                      let customerEvents = unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName);
+                      if (!customerName) return null;
+                      // Aggregate all activity for this customer
+                      let customerEvents = [
+                        ...items.filter(b => b.customer === customerName).map(b => ({ ...b, type: 'booking' as const })),
+                        ...unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName && e.type !== 'booking')
+                      ];
 
                       // Apply Source Filter
                       if (sourceFilter) {
-                        customerEvents = customerEvents.filter(e => e.source_origin === sourceFilter);
+                        customerEvents = customerEvents.filter(e => (e as any).source_origin === sourceFilter);
                       }
                       
                       // Apply date range filters if active (redundant if already in unifiedEvents but good for safety)
@@ -2504,41 +2551,50 @@ export default function BookingsPage() {
                           <CollapsibleContent>
                             <div className="border-t border-zinc-800 p-4 bg-zinc-900/30">
                               <div className="grid md:grid-cols-2 gap-4">
-                                {/* Customer Details */}
                                 {!customer.isSystem ? (
-                                  <div className="space-y-3">
-                                    <h3 className="font-semibold text-sm text-muted-foreground uppercase">Contact Information</h3>
+                                  <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                      <h3 className="font-semibold text-sm text-zinc-500 uppercase tracking-widest">Profile Identity</h3>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-[11px] font-black border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                        onClick={() => navigate(`/search-customer?search=${encodeURIComponent(customer.name)}`)}
+                                      >
+                                        <User className="w-3.5 h-3.5 mr-2" />
+                                        View in Database
+                                      </Button>
+                                    </div>
 
-                                    <div className="flex items-start gap-2">
-                                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                      <div>
-                                        <div className="text-xs text-muted-foreground">Email</div>
-                                        <div className="text-sm">{customer.email}</div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                                        <div className="text-[10px] text-zinc-500 uppercase font-black mb-1">Email Connection</div>
+                                        <div className="text-sm truncate text-zinc-300 font-bold">{customer.email || '—'}</div>
+                                      </div>
+                                      <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                                        <div className="text-[10px] text-zinc-500 uppercase font-black mb-1">Mobile Contact</div>
+                                        <div className="text-sm text-zinc-300 font-bold">{customer.phone || '—'}</div>
                                       </div>
                                     </div>
 
-                                    <div className="flex items-start gap-2">
-                                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                      <div>
-                                        <div className="text-xs text-muted-foreground">Phone</div>
-                                        <div className="text-sm">{customer.phone}</div>
-                                      </div>
+                                    <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50 group/address">
+                                       <div className="text-[10px] text-zinc-500 uppercase font-black mb-1 flex items-center gap-2">
+                                         <MapPinIcon className="w-3 h-3 group-hover/address:text-red-500 transition-colors" /> Registered Address
+                                       </div>
+                                       <div className="text-sm text-zinc-300 font-bold">{customer.address || '—'}</div>
                                     </div>
-
-                                    <div className="flex items-start gap-2">
-                                      <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                      <div>
-                                        <div className="text-xs text-muted-foreground">Address</div>
-                                        <div className="text-sm">{customer.address}</div>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-2">
-                                      <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                      <div>
-                                        <div className="text-xs text-muted-foreground">Vehicle</div>
-                                        <div className="text-sm">{customer.vehicle}</div>
-                                      </div>
+                                    
+                                    <div className="bg-blue-900/10 p-3 rounded-xl border border-blue-500/20 flex items-center justify-between">
+                                       <div className="flex items-center gap-3">
+                                         <div className="p-2 bg-blue-500/10 rounded-lg">
+                                           <Car className="w-4 h-4 text-blue-400" />
+                                         </div>
+                                         <div>
+                                           <div className="text-[10px] text-blue-400/70 uppercase font-black tracking-widest">Primary Vehicle</div>
+                                           <div className="text-sm font-bold text-zinc-200">{customer.vehicle || 'Not assigned'}</div>
+                                         </div>
+                                       </div>
+                                       <Badge className="bg-blue-500/20 text-blue-400 border-none text-[9px] font-black">ACTIVE PROFILE</Badge>
                                     </div>
                                   </div>
                                 ) : (
@@ -2589,7 +2645,7 @@ export default function BookingsPage() {
                                         <div className="flex items-center gap-2 mt-1">
                                             <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                                                Source: <span className="text-purple-300 font-medium">{event.source_origin || (event.type === 'booking' ? (items.find(i => i.id === event.id)?.source || 'Manual Entry') : 'System')}</span>
+                                                Source: <span className="text-purple-300 font-medium">{('source_origin' in event ? (event as any).source_origin : (event.source || 'Manual Entry'))}</span>
                                             </div>
                                         </div>
 

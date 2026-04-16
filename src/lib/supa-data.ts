@@ -1807,7 +1807,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 id: b.id,
                 // Map columns first, fallback to meta
                 title: b.service_package || b.title || meta.title || b.service || 'Service',
-                customer: b.customers?.full_name || b.customer_name || meta.customer_name || 'Unknown',
+                customer: b.customers?.full_name || b.customer_name || meta.customer_name || meta.customer || 'Unknown',
                 customerEmail: b.customers?.email || meta.email,
                 customerPhone: b.customers?.phone || meta.phone,
                 customerId: b.customer_id,
@@ -1859,6 +1859,11 @@ export const upsertSupabaseBooking = async (booking: any) => {
             add_ons: booking.addons || [],
             booking_vehicle: {
               ...(booking.vehicle_info || booking.booking_vehicle || {}),
+              customer_name: booking.customer || booking.customer_name, // fallback for schema safety
+              make: booking.vehicleMake || booking.make,
+              model: booking.vehicleModel || booking.model,
+              year: booking.vehicleYear || booking.year,
+              type: booking.vehicle || booking.type,
               reminder_frequency: booking.reminderFrequency,
               custom_reminder_date: booking.customReminderDate
             },
