@@ -13,10 +13,18 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useCouponsStore } from "@/store/coupons";
+import { useFollowUpStore } from "@/store/followup";
+import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
+import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +54,15 @@ const SearchCustomer = () => {
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [allEngagements, setAllEngagements] = useState<any[]>([]);
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
+  const { addLog } = useFollowUpStore();
+
+  // Temporary local state for outreach per customer
+  const [outreachNotes, setOutreachNotes] = useState<Record<string, string>>({});
+  const [outreachCouponIds, setOutreachCouponIds] = useState<Record<string, string>>({});
+  const [outreachDiscounts, setOutreachDiscounts] = useState<Record<string, boolean>>({});
 
   const { isDemoMode } = useDemoMode();
 
@@ -82,6 +99,14 @@ const SearchCustomer = () => {
       }
     } finally {
       setIsRefreshing(false);
+    }
+    
+    // Fetch all engagements globally once
+    try {
+      const { data: engs } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
+      if (engs) setAllEngagements(engs);
+    } catch (e) {
+      console.warn("Could not fetch engagements", e);
     }
   };
 
@@ -354,6 +379,63 @@ const SearchCustomer = () => {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
+  const handleSendDirectOutreach = async (customer: Customer) => {
+    if (!customer.email) {
+      toast({ title: "No Email", description: "Customer record is missing an email address.", variant: 'destructive' });
+      return;
+    }
+
+    setSendingEmailId(customer.id!);
+    try {
+      const note = outreachNotes[customer.id!] || "";
+      const couponId = outreachCouponIds[customer.id!] || "";
+      const hasDiscount = outreachDiscounts[customer.id!] || false;
+
+      const activeCoupons = allCoupons.filter(c => c.active);
+      const coupon = activeCoupons.find(c => c.id === couponId);
+      const discountLabel = coupon ? (coupon.percent ? `${coupon.percent}% OFF` : `$${coupon.amount} OFF`) : undefined;
+
+      const latestBooking = allBookings
+        .filter(b => (b.customerEmail || '').toLowerCase() === (customer.email || '').toLowerCase())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+      if (latestBooking) {
+        await onSendReminderEmail(latestBooking, "Manual Outreach", {
+          customNote: note.trim() || undefined,
+          couponCode: hasDiscount ? coupon?.code : undefined,
+          discountLabel: hasDiscount ? discountLabel : undefined
+        });
+
+        addLog({
+          id: `log_c_direct_list_${Date.now()}`,
+          customerName: customer.name,
+          customerEmail: customer.email || "",
+          dateSent: new Date().toISOString(),
+          frequency: "Manual Outreach",
+          emailType: "maintenance_reminder",
+          customNote: note.trim() || undefined,
+          couponCode: hasDiscount ? coupon?.code : undefined
+        });
+
+        toast({ title: "Email Dispatched", description: `Personalized follow-up sent to ${customer.name}.` });
+        
+        // Refresh local cache
+        const { data: engs } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
+        if (engs) setAllEngagements(engs);
+        
+        // Clear inputs
+        setOutreachNotes(prev => ({ ...prev, [customer.id!]: "" }));
+        setOutreachDiscounts(prev => ({ ...prev, [customer.id!]: false }));
+      } else {
+        toast({ title: "No Bookings", description: "This outreach tool requires a previous booking record to pull date data.", variant: 'destructive' });
+      }
+    } catch (e: any) {
+      toast({ title: "Outreach Failed", description: e.message, variant: 'destructive' });
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Customer Database" />
@@ -443,7 +525,22 @@ const SearchCustomer = () => {
                         </div>
                       )}
 
-                      <div><h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3><div className="flex gap-3 text-sm text-zinc-400"><span>{customer.phone || 'No phone'}</span><span className="hidden sm:inline">•</span><span className="hidden sm:inline">{customer.vehicle} {customer.model}</span></div></div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                           <h3 className="font-bold text-zinc-200 text-lg">{customer.name}</h3>
+                           {customer.has_google_review && (
+                             <Badge variant="outline" className="h-5 bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-1.5 ml-2">
+                               <Star className="h-3 w-3 fill-amber-500" />
+                               <span className="text-[9px] font-black uppercase tracking-tight">VIP</span>
+                             </Badge>
+                           )}
+                        </div>
+                        <div className="flex gap-3 text-sm text-zinc-400">
+                          <span>{customer.phone || 'No phone'}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:inline">{customer.vehicle} {customer.model}</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                       <div className="flex gap-1 mr-4">
@@ -490,12 +587,115 @@ const SearchCustomer = () => {
                           </section>
                           <section><h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact info</h4>
                             <div className="space-y-3">
-                              <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Email</div><div className="text-zinc-300 text-sm">{customer.email || '—'}</div></div>
-                              <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
+                                <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Email</div><div className="text-zinc-300 text-sm">{customer.email || '—'}</div></div>
+                                <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
+                               <div className="flex items-center gap-4 mt-2">
+                                  <span className="text-xs font-bold text-amber-500/80 uppercase tracking-tighter flex items-center gap-1.5">
+                                    <Star className={cn("h-3.5 w-3.5", customer.has_google_review ? "fill-amber-500" : "opacity-30")} />
+                                    Review Status:
+                                  </span>
+                                  <div className="flex items-center gap-2 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
+                                     <span className="text-[10px] font-bold text-zinc-500 uppercase">{customer.has_google_review ? 'Left on Google' : 'No Review Yet'}</span>
+                                  </div>
+                               </div>
                               {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                             </div>
                           </section>
-                          {customer.notes && (<section className="bg-amber-900/10 border border-amber-500/20 p-3 rounded"><div className="text-amber-500 text-xs font-bold mb-1">Notes</div><div className="text-amber-200/80 text-sm italic">{customer.notes}</div></section>)}
+                          {customer.notes && (<section className="bg-blue-900/10 border border-blue-500/20 p-3 rounded-xl"><div className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-1.5">Administrative Notes</div><div className="text-zinc-300 text-sm italic leading-relaxed">"{customer.notes}"</div></section>)}
+
+                          {/* QUICK MARKETING OUTREACH */}
+                          <section className="bg-zinc-950 p-5 rounded-2xl border border-blue-500/10 space-y-4">
+                            <div className="flex items-center justify-between">
+                               <h4 className="text-blue-500 text-xs font-black uppercase tracking-[0.1em] flex items-center gap-2">
+                                 <Zap className="h-4 w-4" /> Integrated Marketing
+                               </h4>
+                               <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => window.open('/follow-up', '_blank')}
+                                className="h-6 text-[9px] text-zinc-500 hover:text-blue-400 p-0"
+                               >
+                                 Open Hub <ExternalLink className="w-3 h-3 ml-1" />
+                               </Button>
+                            </div>
+
+                            <div className="space-y-4">
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black uppercase text-zinc-600 tracking-wider">Follow-up Message</label>
+                                  <Textarea 
+                                    placeholder="Dispatch a personalized note..."
+                                    value={outreachNotes[customer.id!] || ""}
+                                    onChange={(e) => setOutreachNotes(prev => ({ ...prev, [customer.id!]: e.target.value }))}
+                                    className="bg-zinc-900 border-zinc-800 min-h-[70px] text-xs font-medium rounded-xl"
+                                  />
+                               </div>
+                               
+                               <div className="flex items-center gap-3">
+                                  <div className="flex-1 space-y-1.5">
+                                    <div className="flex items-center justify-between px-1">
+                                      <label className="text-[9px] font-black uppercase text-zinc-600 tracking-wider">Loyalty Offer</label>
+                                      <Switch 
+                                        checked={outreachDiscounts[customer.id!] || false} 
+                                        onCheckedChange={(v) => setOutreachDiscounts(prev => ({ ...prev, [customer.id!]: v }))}
+                                        className="scale-75 data-[state=checked]:bg-blue-600"
+                                      />
+                                    </div>
+                                    <Select 
+                                      disabled={!outreachDiscounts[customer.id!]}
+                                      value={outreachCouponIds[customer.id!] || ""}
+                                      onValueChange={(v) => setOutreachCouponIds(prev => ({ ...prev, [customer.id!]: v }))}
+                                    >
+                                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[10px] font-bold uppercase rounded-lg">
+                                        <SelectValue placeholder="CHOOSE CODE..." />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                        {allCoupons.filter(c => c.active).map(c => (
+                                          <SelectItem key={c.id} value={c.id} className="text-[10px] font-black">
+                                            {c.code} ({c.percent ? `${c.percent}%` : `$${c.amount}`})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="pt-4">
+                                     <Button 
+                                       disabled={sendingEmailId === customer.id}
+                                       onClick={() => handleSendDirectOutreach(customer)}
+                                       className="h-8 px-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-tighter rounded-full shadow-lg shadow-blue-900/20"
+                                     >
+                                       {sendingEmailId === customer.id ? "..." : <Send className="h-3 w-3" />}
+                                     </Button>
+                                  </div>
+                               </div>
+                            </div>
+
+                            {/* Engagement History Inline */}
+                            <div className="space-y-2 mt-4">
+                               <div className="flex items-center gap-1.5 px-1 opacity-50">
+                                  <History className="h-3 w-3 text-zinc-500" />
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Dispatch Log</span>
+                               </div>
+                               <div className="space-y-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                                  {allEngagements.filter(e => (e.customer_email || '').toLowerCase() === (customer.email || '').toLowerCase()).length === 0 && (
+                                    <div className="text-[9px] text-zinc-700 italic px-2">No prior outreach recorded.</div>
+                                  )}
+                                  {allEngagements
+                                    .filter(e => (e.customer_email || '').toLowerCase() === (customer.email || '').toLowerCase())
+                                    .slice(0, 3)
+                                    .map((eng, idx) => (
+                                      <div key={idx} className="flex items-center justify-between p-2 bg-zinc-900/40 rounded-lg border border-zinc-800/20 text-[9px]">
+                                         <div className="flex items-center gap-2">
+                                            {eng.coupon_code && <span className="text-emerald-500 font-black">[{eng.coupon_code}]</span>}
+                                            <span className="text-zinc-500 font-bold">{format(new Date(eng.created_at), 'MMM dd')}</span>
+                                         </div>
+                                         <div className="text-zinc-400 line-clamp-1 max-w-[120px] font-medium leading-none italic">
+                                            "{eng.note}"
+                                         </div>
+                                      </div>
+                                    ))}
+                               </div>
+                            </div>
+                          </section>
 
                           {/* Media Gallery Section */}
                           {((customer.generalPhotos && customer.generalPhotos.length > 0) ||
@@ -608,33 +808,59 @@ const SearchCustomer = () => {
                                 const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
                                 return (
-                                  <div key={booking.id} className="p-3 bg-zinc-950 rounded border border-zinc-800 hover:border-zinc-700 transition-all">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <Calendar className="h-3 w-3 text-zinc-500" />
-                                          <span className="text-zinc-300 text-sm font-medium">{dateStr}</span>
-                                          <span className="text-zinc-600 text-xs">@</span>
-                                          <span className="text-zinc-400 text-xs">{timeStr}</span>
-                                        </div>
-                                        <div className="mt-1.5 text-sm text-zinc-200 font-medium">{booking.title || 'Service'}</div>
-                                        {booking.price && (
-                                          <div className="mt-1 text-xs text-emerald-400 font-semibold">${booking.price.toFixed(2)}</div>
-                                        )}
-                                        {booking.createdAt && (
-                                          <div className="mt-1 text-[10px] text-zinc-600">
-                                            Booked: {new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(booking.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                    <div key={booking.id} className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 hover:border-blue-500/30 transition-all group/booking shadow-inner mb-2 last:mb-0">
+                                      <div className="flex items-start justify-between mb-3">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                                            <span className="text-zinc-200 text-[13px] font-black uppercase tracking-tight">{dateStr}</span>
+                                            <span className="text-zinc-600 text-xs">•</span>
+                                            <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
                                           </div>
-                                        )}
+                                          <div className="text-[14px] text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-tight">{booking.title || 'Premium Detail Service'}</div>
+                                          
+                                          {/* Detailed Vehicle Info from the Booking itself */}
+                                          <div className="mt-3 grid grid-cols-2 gap-2">
+                                            {(booking.vehicleYear || booking.vehicleMake) && (
+                                              <div className="bg-zinc-900/50 px-2 py-1.5 rounded border border-zinc-800 text-[10px] text-zinc-400 flex items-center gap-2">
+                                                <Car className="h-3 w-3 opacity-50" />
+                                                <span className="font-bold text-zinc-300">{booking.vehicleYear} {booking.vehicleMake} {booking.vehicleModel}</span>
+                                              </div>
+                                            )}
+                                            <div className="bg-zinc-900/50 px-2 py-1.5 rounded border border-zinc-800 text-[10px] text-zinc-400 flex items-center gap-2">
+                                              <Clock className="h-3 w-3 opacity-50" />
+                                              <span className="font-bold text-zinc-500">Service Record</span>
+                                            </div>
+                                          </div>
+
+                                          <div className="mt-2 flex items-center gap-4">
+                                            {booking.price && (
+                                              <div className="text-sm text-emerald-500 font-black tracking-tight">${booking.price.toFixed(2)}</div>
+                                            )}
+                                            {booking.createdAt && (
+                                              <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest opacity-60">
+                                                Log ID: {booking.id.slice(-6).toUpperCase()}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <Badge className={cn(
+                                          "text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border",
+                                          booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]" :
+                                          booking.status === 'confirmed' ? "bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]" :
+                                          "bg-zinc-800 text-zinc-500 border-zinc-700"
+                                        )}>
+                                          {booking.status}
+                                        </Badge>
                                       </div>
-                                      <span className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${booking.status === 'done' ? 'bg-emerald-500/10 text-emerald-400' :
-                                        booking.status === 'tentative' ? 'bg-yellow-500/10 text-yellow-400' :
-                                          booking.status === 'confirmed' ? 'bg-blue-500/10 text-blue-400' :
-                                            'bg-zinc-800 text-zinc-400'
-                                        }`}>{booking.status}</span>
+
+                                      {booking.notes && (
+                                        <div className="mt-3 p-2 bg-zinc-900/30 border-l-2 border-blue-500/30 text-[10px] text-zinc-400 italic leading-relaxed">
+                                          "{booking.notes}"
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
-                                );
+                                  );
                               })
                             ) : (<div className="text-center py-8 text-zinc-600 border border-dashed border-zinc-800 rounded">No booking history.</div>)}
                           </div>
