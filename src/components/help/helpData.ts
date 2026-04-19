@@ -492,6 +492,7 @@ export const adminMenuTopics: HelpTopic[] = [
       '**Overview**: The master list of all current and historical detailing jobs.',
       '• **Status tracking**: Move jobs from Tentative to Confirmed to Completed.',
       '• **Sync**: Automatically appears in Invoicing once the job is finished.',
+      '• **Badge Logic**: The blue number next to "Bookings" in the sidebar represents exactly how many active jobs you have, counting only Tentative, Pending, Confirmed, and In Progress statuses (excluding Done and Blocked).'
     ],
     route: '/bookings',
     section: 'menu',

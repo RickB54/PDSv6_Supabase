@@ -1422,38 +1422,46 @@ interface MediaUploadFieldProps {
 function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: MediaUploadFieldProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  
+  const currentPhotos = photos || [];
 
   return (
-    <div className="space-y-1">
-      <Label className="text-[10px] text-zinc-500 uppercase font-bold">{label}</Label>
-      <div className="relative aspect-square rounded-md bg-zinc-900 border border-zinc-800 overflow-hidden ring-1 ring-zinc-800/50">
-        {photos && photos[0] ? (
-          <>
-            <img src={photos[0]} alt={label} className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={() => onRemove(type, 0, vIdx)}
-              className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors backdrop-blur-sm"
-            >
-              <X className="h-3 w-3 text-white" />
-            </button>
-          </>
-        ) : (
-          <div
-            onClick={() => fileRef.current?.click()}
-            className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-800/50 transition-colors"
+    <div className="space-y-2">
+      <Label className="text-[10px] text-zinc-500 uppercase font-bold">{label} ({currentPhotos.length})</Label>
+      
+      {currentPhotos.map((photoUrl, idx) => (
+        <div key={idx} className="relative aspect-square w-full rounded-md bg-zinc-900 border border-zinc-800 overflow-hidden ring-1 ring-zinc-800/50">
+          <img src={photoUrl} alt={`${label} ${idx + 1}`} className="w-full h-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onRemove(type, idx, vIdx)}
+            className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors backdrop-blur-sm shadow-md"
           >
-            <ImageIcon className="h-4 w-4 text-zinc-700 mb-1" />
-            <p className="text-[8px] text-zinc-600">Upload</p>
-          </div>
-        )}
+            <X className="h-3 w-3 text-white" />
+          </button>
+        </div>
+      ))}
+
+      <div className="relative aspect-square w-full rounded-md bg-zinc-900 border border-zinc-800 border-dashed overflow-hidden ring-1 ring-zinc-800/50">
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-800/50 transition-colors"
+        >
+          <ImageIcon className="h-4 w-4 text-zinc-700 mb-1" />
+          <p className="text-[8px] text-zinc-600">Add Photo</p>
+        </div>
 
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0], type, 0, vIdx)}
+          onChange={(e) => {
+             if (e.target.files?.[0]) {
+               onUpload(e.target.files[0], type, currentPhotos.length, vIdx);
+               e.target.value = '';
+             }
+          }}
         />
         <input
           ref={cameraRef}
@@ -1461,7 +1469,12 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0], type, 0, vIdx)}
+          onChange={(e) => {
+             if (e.target.files?.[0]) {
+               onUpload(e.target.files[0], type, currentPhotos.length, vIdx);
+               e.target.value = '';
+             }
+          }}
         />
         <button
           type="button"

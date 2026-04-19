@@ -368,11 +368,15 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const isRealAdminOrEmployee = realUser?.role === "admin" || realUser?.role === "employee";
 
   const MENU_GROUPS = useMemo(() => {
-    const tentativeBookings = allBookings.filter(b => b.status === 'tentative');
-    const bookingAlerts = getAdminAlerts().filter(a => a.type === 'booking_created' && !a.read);
+    const activeBookings = allBookings.filter(b => {
+      if (b.isArchived) return false;
+      const status = (b.status || '').toLowerCase().trim();
+      return status === 'confirmed' || status === 'tentative' || status === 'pending' || status === 'in_progress' || status === 'in-progress';
+    });
 
-    let badgeCount = isDemoMode ? 3 : (bookingAlerts.length > 0 ? bookingAlerts.length : tentativeBookings.length);
-    let badgeColor: 'red' | 'blue' = (isDemoMode || bookingAlerts.length > 0) ? 'red' : 'blue';
+    // Determine the badge simply from active bookings
+    let badgeCount = isDemoMode ? 3 : activeBookings.length;
+    let badgeColor: 'red' | 'blue' = (isDemoMode) ? 'red' : 'blue';
 
     return getMenuGroups({
       todoCount,
