@@ -33,7 +33,7 @@ import {
     useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, ImageIcon, MessageSquare, Sparkles, Rocket, Facebook, History, Filter, ChevronDown, Clock, Share2, Wand2, RotateCcw, HelpCircle } from "lucide-react";
+import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, Image as ImageIcon, MessageSquare, Sparkles, Rocket, Facebook, History, Filter, ChevronDown, Clock, Share2, Wand2, RotateCcw, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
@@ -254,9 +254,9 @@ export default function BlogReorder() {
     };
 
     const filteredItems = items.filter(item =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.category || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

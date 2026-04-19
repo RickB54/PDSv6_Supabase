@@ -2493,7 +2493,10 @@ export default function BookingsPage() {
 
                       // Apply Source Filter
                       if (sourceFilter) {
-                        customerEvents = customerEvents.filter(e => (e as any).source_origin === sourceFilter);
+                        customerEvents = customerEvents.filter(e => {
+                          const source = (e as any).source || (e as any).source_origin;
+                          return source === sourceFilter;
+                        });
                       }
                       
                       if (dateFilter.start) {

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
+import { format } from "date-fns";
+import { RetentionHub } from "@/components/customers/RetentionHub";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
@@ -544,13 +546,15 @@ const Prospects = () => {
                           {customer.notes && (<section className="bg-amber-900/10 border border-amber-500/20 p-3 rounded"><div className="text-amber-500 text-xs font-bold mb-1">Notes</div><div className="text-amber-200/80 text-sm italic">{customer.notes}</div></section>)}
                         </div>
 
-                        <div>
-                          <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Prospect Info</h4>
-                          <div className="space-y-3 bg-zinc-950 p-4 rounded border border-zinc-800/50">
-                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Source:</span><span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-300">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || '—'}</span></div>
-                            <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Created:</span><span className="text-zinc-300 text-sm">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span></div>
+                          <div className="space-y-6">
+                            <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Prospect Info</h4>
+                            <div className="space-y-3 bg-zinc-950 p-4 rounded border border-zinc-800/50 mb-6">
+                              <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Source:</span><span className="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-300">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || '—'}</span></div>
+                              <div className="flex items-center gap-2"><span className="text-zinc-500 text-sm w-24">Created:</span><span className="text-zinc-300 text-sm">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span></div>
+                            </div>
+                            
+                            <RetentionHub customer={customer} />
                           </div>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -582,6 +586,11 @@ const Prospects = () => {
                   )}
                 </div>
                 {c.notes && <div className="text-sm text-zinc-500 italic border-l-2 border-zinc-700 pl-2">{c.notes}</div>}
+                
+                <div className="pt-2 border-t border-zinc-800">
+                   <RetentionHub customer={c} />
+                </div>
+
                 <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
                   <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 text-zinc-400">
                     {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}

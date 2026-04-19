@@ -7,7 +7,9 @@ import supabase from "@/lib/supabase";
 import { formatETDate, formatETTime } from "@/lib/utils";
 
 function formatFileName(dateISO: string, customer: string, service: string) {
-  const d = new Date(dateISO);
+  const d = dateISO ? new Date(dateISO) : new Date();
+  if (isNaN(d.getTime())) return `${new Date().toISOString().split('T')[0]}_${customer.replace(/\s/g, '-')}_${service.replace(/\s/g, '-')}.pdf`;
+  
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
@@ -326,7 +328,7 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
   }
 }
 
-export async function onSendReminderEmail(booking: Booking, frequencyLabel: string, options?: { customNote?: string; couponCode?: string; discountLabel?: string }) {
+export async function onSendReminderEmail(booking: Booking, frequencyLabel: string, options?: { customNote?: string; couponCode?: string; discountLabel?: string; bccMe?: boolean }) {
   try {
     const year = new Date().getFullYear();
 
@@ -452,10 +454,15 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
         currentY += 7;
         doc.setFont(undefined, 'normal');
         
-        // Strip HTML for the log PDF
-        const textContent = reminderHtml
+        // Strip HTML for the log PDF - BETTER VERSION
+        let textContent = reminderHtml
           .replace(/<style[^>]*>.*<\/style>/gms, '')
           .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/[^\x00-\x7F]/g, "") // Remove non-ASCII characters (emojis) that break jsPDF
           .replace(/\s+/g, ' ')
           .trim();
           
@@ -489,6 +496,7 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
       const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           to: booking.customerEmail,
+          bcc: options?.bccMe ? "cleanyourroofandmore@gmail.com" : undefined, // User's email from notes
           subject: options?.couponCode 
             ? `🎁 A Special Gift from Prime Auto Detail for ${booking.customer}`
             : `✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
@@ -509,7 +517,7 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
   }
 }
 
-export async function onSendProspectEmail(prospect: any, options?: { customNote?: string; couponCode?: string; discountLabel?: string }) {
+export async function onSendProspectEmail(prospect: any, options?: { customNote?: string; couponCode?: string; discountLabel?: string; bccMe?: boolean }) {
   try {
     const year = new Date().getFullYear();
 
@@ -618,9 +626,14 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
         doc.setFont(undefined, 'bold');
         doc.text(`PROSPECT: ${prospect.name} (${prospect.email})`, 20, 45);
         
-        const textContent = prospectHtml
+        doc.setFont(undefined, 'normal');
+        
+        // Better text stripping for Prospect PDF
+        let textContent = prospectHtml
           .replace(/<style[^>]*>.*<\/style>/gms, '')
           .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/[^\x00-\x7F]/g, "") 
           .replace(/\s+/g, ' ')
           .trim();
         
@@ -631,7 +644,7 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
         
         const dataUrl = doc.output('dataurlstring');
         const fileName = `WELCOME_PROSPECT_${prospect.name.replace(/\s/g, '_')}_${Date.now()}.pdf`;
-        await uploadToFileManager(dataUrl, `Welcome Outreach/${year}/${monthName}/`, { customer: prospect.name } as any, { 
+        await uploadToFileManager(dataUrl, `Welcome Outreach/${year}/${monthName}/`, { customer: prospect.name, date: new Date().toISOString() } as any, { 
           service: "Welcome Outreach"
         });
       } catch (pdfErr) {
@@ -653,6 +666,7 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
       const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           to: prospect.email,
+          bcc: options?.bccMe ? "cleanyourroofandmore@gmail.com" : undefined,
           subject: `✨ A Special Welcome to Prime Auto Detail for ${prospect.name}`,
           customerName: prospect.name,
           service: "Initial Welcome",

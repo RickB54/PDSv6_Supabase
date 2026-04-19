@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { RetentionHub } from "@/components/customers/RetentionHub";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,15 +55,7 @@ const SearchCustomer = () => {
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [allEngagements, setAllEngagements] = useState<any[]>([]);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
-  const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
-  const { addLog } = useFollowUpStore();
-
-  // Temporary local state for outreach per customer
-  const [outreachNotes, setOutreachNotes] = useState<Record<string, string>>({});
-  const [outreachCouponIds, setOutreachCouponIds] = useState<Record<string, string>>({});
-  const [outreachDiscounts, setOutreachDiscounts] = useState<Record<string, boolean>>({});
 
   const { isDemoMode } = useDemoMode();
 
@@ -109,14 +102,6 @@ const SearchCustomer = () => {
       }
     } finally {
       setIsRefreshing(false);
-    }
-    
-    // Fetch all engagements globally once
-    try {
-      const { data: engs } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
-      if (engs) setAllEngagements(engs);
-    } catch (e) {
-      console.warn("Could not fetch engagements", e);
     }
   };
 
@@ -398,69 +383,6 @@ const SearchCustomer = () => {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
-  const handleSendDirectOutreach = async (customer: Customer) => {
-    if (!customer.email) {
-      toast({ title: "No Email", description: "Customer record is missing an email address.", variant: 'destructive' });
-      return;
-    }
-
-    setSendingEmailId(customer.id!);
-    try {
-      const note = outreachNotes[customer.id!] || "";
-      const couponId = outreachCouponIds[customer.id!] || "";
-      const hasDiscount = outreachDiscounts[customer.id!] || false;
-
-      const activeCoupons = allCoupons.filter(c => c.active);
-      const coupon = activeCoupons.find(c => c.id === couponId);
-      const discountLabel = coupon ? (coupon.percent ? `${coupon.percent}% OFF` : `$${coupon.amount} OFF`) : undefined;
-
-      const related = allBookings
-        .filter(b => 
-          (b.customerId === customer.id) || 
-          (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-          (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-        )
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      const latestBooking = related[0];
-
-      if (latestBooking) {
-        await onSendReminderEmail(latestBooking, "Manual Outreach", {
-          customNote: note.trim() || undefined,
-          couponCode: hasDiscount ? coupon?.code : undefined,
-          discountLabel: hasDiscount ? discountLabel : undefined
-        });
-
-        addLog({
-          id: `log_c_direct_list_${Date.now()}`,
-          customerName: customer.name,
-          customerEmail: customer.email || "",
-          dateSent: new Date().toISOString(),
-          frequency: "Manual Outreach",
-          emailType: "maintenance_reminder",
-          customNote: note.trim() || undefined,
-          couponCode: hasDiscount ? coupon?.code : undefined
-        });
-
-        toast({ title: "Email Dispatched", description: `Personalized follow-up sent to ${customer.name}.` });
-        
-        // Refresh local cache
-        const { data: engs } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
-        if (engs) setAllEngagements(engs);
-        
-        // Clear inputs
-        setOutreachNotes(prev => ({ ...prev, [customer.id!]: "" }));
-        setOutreachDiscounts(prev => ({ ...prev, [customer.id!]: false }));
-      } else {
-        toast({ title: "No Bookings", description: "This outreach tool requires a previous booking record to pull date data.", variant: 'destructive' });
-      }
-    } catch (e: any) {
-      toast({ title: "Outreach Failed", description: e.message, variant: 'destructive' });
-    } finally {
-      setSendingEmailId(null);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Customer Database" />
@@ -620,7 +542,7 @@ const SearchCustomer = () => {
                                 const latestB = related[0];
                                 
                                 const isP = (v: any) => !v || v === '-' || v === '—' || v === 'N/A';
-                                const pri_v = (customer.vehicles && customer.vehicles.length > 0) ? customer.vehicles[0] : {};
+                                const pri_v: any = (customer.vehicles && customer.vehicles.length > 0) ? customer.vehicles[0] : {};
                                 
                                 const v_year = !isP(pri_v.year) ? pri_v.year : (!isP(customer.year) ? customer.year : (!isP(latestB?.vehicleYear) ? latestB?.vehicleYear : '-'));
                                 const v_make = !isP(pri_v.make) ? pri_v.make : (!isP(customer.vehicle) ? customer.vehicle : (!isP(latestB?.vehicleMake) ? latestB?.vehicleMake : '-'));
@@ -674,99 +596,7 @@ const SearchCustomer = () => {
                             </section>
                           )}
 
-                          {/* QUICK MARKETING OUTREACH */}
-                          <section className="bg-zinc-950 p-5 rounded-2xl border border-blue-500/10 space-y-4 shadow-xl">
-                            <div className="flex items-center justify-between">
-                               <h4 className="text-blue-500 text-xs font-black uppercase tracking-[0.1em] flex items-center gap-2">
-                                 <Zap className="h-4 w-4" /> CRM Marketing Hub
-                               </h4>
-                               <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => window.open('/follow-up-center', '_blank')}
-                                className="h-6 text-[9px] text-zinc-500 hover:text-blue-400 p-0"
-                               >
-                                 Open Center <ExternalLink className="w-3 h-3 ml-1" />
-                               </Button>
-                            </div>
-
-                            <div className="space-y-4">
-                               <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black uppercase text-zinc-600 tracking-wider">Follow-up Message</label>
-                                  <Textarea 
-                                    placeholder="Dispatch a personalized note..."
-                                    value={outreachNotes[customer.id!] || ""}
-                                    onChange={(e) => setOutreachNotes(prev => ({ ...prev, [customer.id!]: e.target.value }))}
-                                    className="bg-zinc-900 border-zinc-800 min-h-[70px] text-xs font-medium rounded-xl"
-                                  />
-                               </div>
-                               
-                               <div className="flex items-center gap-3">
-                                  <div className="flex-1 space-y-1.5">
-                                    <div className="flex items-center justify-between px-1">
-                                      <label className="text-[9px] font-black uppercase text-zinc-600 tracking-wider">Loyalty Offer</label>
-                                      <Switch 
-                                        checked={outreachDiscounts[customer.id!] || false} 
-                                        onCheckedChange={(v) => setOutreachDiscounts(prev => ({ ...prev, [customer.id!]: v }))}
-                                        className="scale-75 data-[state=checked]:bg-blue-600"
-                                      />
-                                    </div>
-                                    <Select 
-                                      disabled={!outreachDiscounts[customer.id!]}
-                                      value={outreachCouponIds[customer.id!] || ""}
-                                      onValueChange={(v) => setOutreachCouponIds(prev => ({ ...prev, [customer.id!]: v }))}
-                                    >
-                                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[10px] font-bold uppercase rounded-lg">
-                                        <SelectValue placeholder="CHOOSE CODE..." />
-                                      </SelectTrigger>
-                                      <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                        {allCoupons.filter(c => c.active).map(c => (
-                                          <SelectItem key={c.id} value={c.id} className="text-[10px] font-black">
-                                            {c.code} ({c.percent ? `${c.percent}%` : `$${c.amount}`})
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="pt-4">
-                                     <Button 
-                                       disabled={sendingEmailId === customer.id}
-                                       onClick={() => handleSendDirectOutreach(customer)}
-                                       className="h-8 px-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-tighter rounded-full shadow-lg shadow-blue-900/20"
-                                     >
-                                       {sendingEmailId === customer.id ? "..." : <Send className="h-3 w-3" />}
-                                     </Button>
-                                  </div>
-                               </div>
-                            </div>
-
-                            {/* Engagement History Inline */}
-                            <div className="space-y-2 mt-4">
-                               <div className="flex items-center gap-1.5 px-1 opacity-50">
-                                  <History className="h-3 w-3 text-zinc-500" />
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Dispatch Log</span>
-                               </div>
-                               <div className="space-y-1.5 max-h-24 overflow-y-auto custom-scrollbar">
-                                  {allEngagements.filter(e => (e.customer_email || '').toLowerCase() === (customer.email || '').toLowerCase()).length === 0 && (
-                                    <div className="text-[9px] text-zinc-700 italic px-2">No prior outreach recorded.</div>
-                                  )}
-                                  {allEngagements
-                                    .filter(e => (e.customer_email || '').toLowerCase() === (customer.email || '').toLowerCase())
-                                    .slice(0, 3)
-                                    .map((eng, idx) => (
-                                      <div key={idx} className="flex items-center justify-between p-2 bg-zinc-900/40 rounded-lg border border-zinc-800/20 text-[9px]">
-                                         <div className="flex items-center gap-2">
-                                            {eng.coupon_code && <span className="text-emerald-500 font-black">[{eng.coupon_code}]</span>}
-                                            <span className="text-zinc-500 font-bold">{format(new Date(eng.created_at), 'MMM dd')}</span>
-                                         </div>
-                                         <div className="text-zinc-400 line-clamp-1 max-w-[120px] font-medium leading-none italic">
-                                            "{eng.note}"
-                                         </div>
-                                      </div>
-                                    ))}
-                               </div>
-                            </div>
-                          </section>
+                          <RetentionHub customer={customer} />
                         </div>
 
                         {/* RIGHT COLUMN: BOOKING FORENSICS */}

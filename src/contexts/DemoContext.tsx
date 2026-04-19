@@ -140,6 +140,8 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
     loadConfig();
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   const canAccess = (key: string) => {
