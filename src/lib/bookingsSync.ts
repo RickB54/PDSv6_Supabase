@@ -496,7 +496,7 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
       const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           to: booking.customerEmail,
-          bcc: options?.bccMe ? "cleanyourroofandmore@gmail.com" : undefined, // User's email from notes
+          bcc: options?.bccMe ? "rick.primeautodetail@gmail.com" : undefined, // User's email from notes
           subject: options?.couponCode 
             ? `🎁 A Special Gift from Prime Auto Detail for ${booking.customer}`
             : `✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
@@ -666,7 +666,7 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
       const { data, error } = await supabase.functions.invoke('send-booking-email', {
         body: {
           to: prospect.email,
-          bcc: options?.bccMe ? "cleanyourroofandmore@gmail.com" : undefined,
+          bcc: options?.bccMe ? "rick.primeautodetail@gmail.com" : undefined,
           subject: `✨ A Special Welcome to Prime Auto Detail for ${prospect.name}`,
           customerName: prospect.name,
           service: "Initial Welcome",
