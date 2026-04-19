@@ -145,6 +145,7 @@ const SearchCustomer = () => {
           color: data.color,
           mileage: data.mileage
         },
+        vehicles: (data as any).vehicles,
         generalPhotos: data.generalPhotos,
         beforePhotos: data.beforePhotos,
         afterPhotos: data.afterPhotos,
@@ -611,9 +612,14 @@ const SearchCustomer = () => {
                                 const latestB = related[0];
                                 
                                 const isP = (v: any) => !v || v === '-' || v === '—' || v === 'N/A';
-                                const v_year = !isP(customer.year) ? customer.year : (!isP(latestB?.vehicleYear) ? latestB?.vehicleYear : '-');
-                                const v_make = !isP(customer.vehicle) ? customer.vehicle : (!isP(latestB?.vehicleMake) ? latestB?.vehicleMake : '-');
-                                const v_model = !isP(customer.model) ? customer.model : (!isP(latestB?.vehicleModel) ? latestB?.vehicleModel : '-');
+                                const pri_v = (customer.vehicles && customer.vehicles.length > 0) ? customer.vehicles[0] : {};
+                                
+                                const v_year = !isP(pri_v.year) ? pri_v.year : (!isP(customer.year) ? customer.year : (!isP(latestB?.vehicleYear) ? latestB?.vehicleYear : '-'));
+                                const v_make = !isP(pri_v.make) ? pri_v.make : (!isP(customer.vehicle) ? customer.vehicle : (!isP(latestB?.vehicleMake) ? latestB?.vehicleMake : '-'));
+                                const v_model = !isP(pri_v.model) ? pri_v.model : (!isP(customer.model) ? customer.model : (!isP(latestB?.vehicleModel) ? latestB?.vehicleModel : '-'));
+                                const v_type = !isP(pri_v.type) ? pri_v.type : (!isP(customer.vehicleType) ? customer.vehicleType : (!isP(latestB?.vehicle) ? latestB?.vehicle : '-'));
+                                const v_color = !isP(pri_v.color) ? pri_v.color : (!isP(customer.color) ? customer.color : '-');
+                                const v_mileage = !isP(pri_v.mileage) ? pri_v.mileage : (!isP(customer.mileage) ? customer.mileage : '-');
 
                                 return (
                                   <>
@@ -623,11 +629,11 @@ const SearchCustomer = () => {
                                     </div>
                                     <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50">
                                       <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">Type / Color</div>
-                                      <div className="text-zinc-200 font-black tracking-tight">{(!isP(customer.vehicleType) ? customer.vehicleType : (!isP(latestB?.vehicle) ? latestB?.vehicle : '-'))} / {(!isP(customer.color) ? customer.color : '-')}</div>
+                                      <div className="text-zinc-200 font-black tracking-tight">{v_type} / {v_color}</div>
                                     </div>
                                     <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50 col-span-2">
                                       <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">Odometer / Mileage Range</div>
-                                      <div className="text-zinc-200 font-black tracking-tight">{(!isP(customer.mileage) ? customer.mileage : '-')}</div>
+                                      <div className="text-zinc-200 font-black tracking-tight">{v_mileage}</div>
                                     </div>
                                   </>
                                 );

@@ -306,6 +306,26 @@ export default function BookingsPage() {
     }
   }, [location.search]);
 
+  // Resolve selectedCustomer if customerId is in URL but not yet selected
+  useEffect(() => {
+    if (formData.customerId && !selectedCustomer && customers.length > 0) {
+      const cust = customers.find(c => c.id === formData.customerId);
+      if (cust) {
+        setSelectedCustomer(cust);
+        // Also ensure vehicle matches if we have multiple
+        if (cust.vehicles && cust.vehicles.length > 0) {
+           const match = cust.vehicles.find((v: any) => 
+            v.make === formData.vehicleMake && 
+            v.model === formData.vehicleModel
+           );
+           if (match) {
+             setFormData(prev => ({ ...prev, vehicleId: match.id }));
+           }
+        }
+      }
+    }
+  }, [formData.customerId, selectedCustomer, customers]);
+
   // Sync view mode with URL param 'view'
   useEffect(() => {
     const params = new URLSearchParams(location.search);

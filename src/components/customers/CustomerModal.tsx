@@ -116,8 +116,25 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           cOut = match[2];
         }
 
+        let baseVehicles = initial.vehicles || [];
+        if (baseVehicles.length === 0 && (initial.vehicle || initial.model || initial.year)) {
+          baseVehicles = [{
+            id: undefined,
+            make: initial.vehicle || "",
+            model: initial.model || "",
+            year: initial.year ? String(initial.year) : "",
+            type: initial.vehicleType || "",
+            color: initial.color || "",
+            mileage: initial.mileage ? String(initial.mileage) : "",
+            conditionInside: initial.conditionInside || cIn || "",
+            conditionOutside: initial.conditionOutside || cOut || "",
+            generalPhotos: [], beforePhotos: [], afterPhotos: [], videoUrls: []
+          }];
+        }
+
         setForm({
           ...initial,
+          vehicles: baseVehicles,
           services: initial.services || [],
           type: initial.type || defaultType,
           conditionInside: initial.conditionInside || cIn,
@@ -141,16 +158,15 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
               .order('created_at', { ascending: true });
             if (vehs) {
               setLinkedVehicles(vehs);
-              setForm(prev => ({
-                ...prev,
-                vehicles: vehs.map(v => ({
+              setForm(prev => {
+                const mappedVehicles = vehs.map(v => ({
                   id: v.id,
-                  make: v.make,
-                  model: v.model,
+                  make: v.make || "",
+                  model: v.model || "",
                   year: v.year ? String(v.year) : "",
-                  type: v.type,
-                  color: v.color,
-                  vin: v.vin,
+                  type: v.type || "",
+                  color: v.color || "",
+                  vin: v.vin || "",
                   mileage: v.mileage || "",
                   conditionInside: v.condition_inside || "",
                   conditionOutside: v.condition_outside || "",
@@ -158,8 +174,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   beforePhotos: v.before_photos || [],
                   afterPhotos: v.after_photos || [],
                   videoUrls: v.video_urls || []
-                }))
-              }));
+                }));
+                // Only overwrite if we actually found vehicles in the DB, otherwise keep the legacy fallback
+                if (mappedVehicles.length > 0) {
+                  return { ...prev, vehicles: mappedVehicles };
+                }
+                return prev;
+              });
             }
 
             // Fetch engagements
@@ -403,20 +424,29 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   };
 
   const handleBook = () => {
-    const v = (form.vehicles || [])[0] || {};
+    // Find the first vehicle with at least some data, or default to the first row
+    const v = (form.vehicles || []).find(veh => veh.year || veh.make || veh.model) || (form.vehicles || [])[0] || {};
+    
     const params = new URLSearchParams();
     params.set('add', 'true');
     if (form.id) params.set('customerId', form.id);
-    if (form.name) params.set('customerName', form.name);
-    if (form.email) params.set('email', form.email);
-    if (form.phone) params.set('phone', form.phone);
-    if (form.address) params.set('address', form.address);
     
-    // Vehicle info
-    const vYear = v.year || form.year;
-    const vMake = v.make || form.vehicle;
-    const vModel = v.model || form.model;
-    const vType = v.type || form.vehicleType;
+    // Name, Email, Phone, Address
+    const name = form.name || "";
+    const email = form.email || "";
+    const phone = form.phone || "";
+    const address = form.address || "";
+    
+    if (name) params.set('customerName', name);
+    if (email) params.set('email', email);
+    if (phone) params.set('phone', phone);
+    if (address) params.set('address', address);
+    
+    // Vehicle info: Priority to the identified vehicle row 'v', then top-level 'form' properties
+    const vYear = v.year || form.year || "";
+    const vMake = v.make || form.vehicle || "";
+    const vModel = v.model || form.model || "";
+    const vType = v.type || form.vehicleType || "";
     
     if (vYear) params.set('vehicleYear', vYear);
     if (vMake) params.set('vehicleMake', vMake);
