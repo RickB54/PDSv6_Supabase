@@ -581,7 +581,7 @@ const SearchCustomer = () => {
                       <div className="flex justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
                         {!customer.is_archived && (
                           <Button asChild variant="outline" size="sm" className="h-9 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
-                            <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Job</Link>
+                            <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Job</Link>
                           </Button>
                         )}
                         <Button asChild variant="outline" size="sm" className="h-9 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">

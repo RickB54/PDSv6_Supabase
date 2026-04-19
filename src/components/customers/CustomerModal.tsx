@@ -402,6 +402,31 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     });
   };
 
+  const handleBook = () => {
+    const v = (form.vehicles || [])[0] || {};
+    const params = new URLSearchParams();
+    params.set('add', 'true');
+    if (form.id) params.set('customerId', form.id);
+    if (form.name) params.set('customerName', form.name);
+    if (form.email) params.set('email', form.email);
+    if (form.phone) params.set('phone', form.phone);
+    if (form.address) params.set('address', form.address);
+    
+    // Vehicle info
+    const vYear = v.year || form.year;
+    const vMake = v.make || form.vehicle;
+    const vModel = v.model || form.model;
+    const vType = v.type || form.vehicleType;
+    
+    if (vYear) params.set('vehicleYear', vYear);
+    if (vMake) params.set('vehicleMake', vMake);
+    if (vModel) params.set('vehicleModel', vModel);
+    if (vType) params.set('vehicleType', vType);
+
+    const url = `/bookings?${params.toString()}`;
+    window.location.href = url; // Hard redirect to trigger the useEffect in BookingsPage
+  };
+
   const handleSendDirectEmail = async () => {
     if (!form.email) {
       toast.error("No email address provided.");
@@ -1303,8 +1328,19 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            {form.id && (
+               <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleBook}
+                className="border-blue-600 text-blue-500 hover:bg-blue-600/10"
+               >
+                 <Calendar className="w-4 h-4 mr-2" />
+                 Book Appointment
+               </Button>
+            )}
             <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90">
               {loading ? 'Uploading...' : `Save ${isProspect ? 'Prospect' : 'Customer'}`}
             </Button>

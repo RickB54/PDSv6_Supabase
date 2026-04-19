@@ -59,6 +59,14 @@ const Prospects = () => {
     }
   }, [isDemoMode]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('search');
+    if (q) {
+      setSearchTerm(decodeURIComponent(q));
+    }
+  }, [location.search]);
+
   const refresh = async () => {
     setIsRefreshing(true);
     setLoading(true);
@@ -482,7 +490,7 @@ const Prospects = () => {
                       <div className="flex justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
                         {!customer.is_archived && (
                           <Button asChild variant="outline" size="sm" className="h-9 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300">
-                            <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Convert to Customer</Link>
+                            <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Appointment</Link>
                           </Button>
                         )}
                         <Button asChild variant="outline" size="sm" className="h-9 border-zinc-700 hover:bg-zinc-800"><Link to={`/service-checklist?customerId=${customer.id}`}><FileBarChart className="h-4 w-4 mr-2" /> Start Service</Link></Button>

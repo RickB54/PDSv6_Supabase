@@ -275,6 +275,7 @@ export default function BookingsPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const shouldAdd = params.get('add') === 'true';
+    const customerId = params.get('customerId');
     const customerName = params.get('customerName');
     const email = params.get('email');
     const phone = params.get('phone');
@@ -287,6 +288,7 @@ export default function BookingsPage() {
     if (shouldAdd) {
       setFormData(prev => ({
         ...prev,
+        customerId: customerId || prev.customerId,
         customer: customerName ? decodeURIComponent(customerName) : prev.customer,
         address: address ? decodeURIComponent(address) : prev.address,
         email: email ? decodeURIComponent(email) : prev.email,
@@ -2502,6 +2504,7 @@ export default function BookingsPage() {
                         address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || fullCustomer?.address || 'N/A') : 'Internal System',
                         phone: fullCustomer?.phone || 'N/A',
                         email: fullCustomer?.email || 'N/A',
+                        type: fullCustomer?.type || 'customer',
                         events: sortedEvents,
                         isSystem: customerName === 'INTERNAL: System Blocks'
                       };
@@ -2559,7 +2562,10 @@ export default function BookingsPage() {
                                         variant="outline"
                                         size="sm"
                                         className="h-8 text-[11px] font-black border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                                        onClick={() => navigate(`/search-customer?search=${encodeURIComponent(customer.name)}`)}
+                                        onClick={() => {
+                                          const targetPath = customer.type === 'prospect' ? '/prospects' : '/search-customer';
+                                          navigate(`${targetPath}?search=${encodeURIComponent(customer.name)}`);
+                                        }}
                                       >
                                         <User className="w-3.5 h-3.5 mr-2" />
                                         View in Database
