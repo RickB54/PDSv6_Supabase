@@ -248,8 +248,8 @@ export function RetentionHub({ customer, onRefresh }: Props) {
            Composition: Design the offer
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-           <div className="space-y-4 bg-zinc-900/40 p-5 rounded-2xl border border-white/5">
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
+           <div className="w-full xl:w-2/3 space-y-4 bg-zinc-900/40 p-5 rounded-2xl border border-white/5">
               <div className="space-y-1.5">
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Personal Message</label>
@@ -268,7 +268,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                     placeholder={isProspect ? "e.g. Welcome to Prime! Here is a special offer to get you started..." : "e.g. It's been a while since your last detail! We'd love to refresh your vehicle..."}
                     value={outreachNote}
                     onChange={(e) => setOutreachNote(e.target.value)}
-                    className="bg-zinc-950 border-zinc-800 min-h-[120px] text-xs font-semibold rounded-xl focus:ring-blue-500/20 placeholder:text-zinc-800 resize-none"
+                    className="bg-zinc-950 border-zinc-800 min-h-[140px] text-xs font-semibold rounded-xl focus:ring-blue-500/20 placeholder:text-zinc-800 resize-none w-full"
                   />
               </div>
               
@@ -318,7 +318,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                  size="lg"
                  disabled={isSending || !customer.email}
                  onClick={() => setShowPreview(true)}
-                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest h-14 rounded-2xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all"
+                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-[11px] uppercase tracking-widest h-14 rounded-2xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-4 whitespace-normal"
                >
                  <Eye className="h-4 w-4 mr-2" /> Review Outreach Email
                </Button>
@@ -368,7 +368,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
 
       {/* Outreach Preview & Modification Modal */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-xl bg-zinc-950 border-zinc-800 text-white rounded-[32px] overflow-hidden p-0">
+        <DialogContent className="max-w-4xl w-[90vw] bg-zinc-950 border-zinc-800 text-white rounded-[32px] overflow-hidden p-0">
            <DialogHeader className="p-6 bg-zinc-900/50 border-b border-white/5">
               <div className="flex items-center gap-3">
                  <div className="p-2 bg-blue-500/10 rounded-xl">
