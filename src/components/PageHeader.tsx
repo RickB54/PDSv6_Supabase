@@ -12,6 +12,8 @@ import { Link } from "react-router-dom";
 import { useCartStore } from "@/store/cart";
 import { useFullScreen } from "@/hooks/useFullScreen";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { contentService } from "@/lib/content";
+import { useEffect } from "react";
 
 interface PageHeaderProps {
   title?: string;
@@ -26,6 +28,26 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   const location = useLocation();
   const [showAbout, setShowAbout] = useState(false);
   const { isFullScreen, toggleFullScreen } = useFullScreen();
+  const [businessStatus, setBusinessStatus] = useState<any>(null);
+
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const allMeta = await contentService.getAllServiceMeta();
+        const gs = allMeta.find(m => m.key === 'global_settings');
+        if (gs?.meta?.businessStatus) {
+           setBusinessStatus(gs.meta.businessStatus);
+        }
+      } catch (err) {}
+    };
+    loadStatus();
+    
+    const handleContentChange = (e: any) => {
+      if (e.detail?.kind === 'settings') loadStatus();
+    };
+    window.addEventListener('content-changed', handleContentChange as any);
+    return () => window.removeEventListener('content-changed', handleContentChange as any);
+  }, []);
 
   const handleLogout = async () => {
     useCartStore.getState().clear();
@@ -36,11 +58,31 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   // Show back button if we are not at root
   const showBackButton = location.pathname !== '/';
 
+  const hasBanner = !!(businessStatus && businessStatus.isTopBannerActive);
+  const headerTop = isDemoMode 
+    ? (hasBanner ? 'top-[80px] sm:top-[84px]' : 'top-[40px]')
+    : (hasBanner ? 'top-[40px] sm:top-[44px]' : 'top-0');
+
   return (
     <>
-      <header className={`fixed ${isDemoMode ? 'top-10 z-[150]' : 'top-0 z-40'} left-0 right-0 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300`}>
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
-        <div className="relative flex items-center justify-between gap-4 px-6 py-4">
+      {hasBanner && (
+        <div className={`fixed left-0 right-0 z-[150] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
+          isDemoMode ? 'top-[40px]' : 'top-0'
+        } ${
+          businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
+          businessStatus.mode === 'spring-prep' ? 'bg-emerald-600' :
+          businessStatus.mode === 'emergency' ? 'bg-red-600' :
+          'bg-orange-600'
+        }`}>
+          <div className="flex items-center justify-center gap-2">
+            <span className="hidden sm:inline opacity-70">///</span>
+            <span>{businessStatus.bannerText}</span>
+            <span className="hidden sm:inline opacity-70">///</span>
+          </div>
+        </div>
+      )}
+
+      <header className={`fixed ${headerTop} z-[140] left-0 right-0 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300 h-[64px]`}>
           <div className="flex items-center gap-1.5 sm:gap-4 flex-nowrap min-w-0">
             {user && (
               <SidebarTrigger className="text-foreground -ml-2 sm:ml-0" />

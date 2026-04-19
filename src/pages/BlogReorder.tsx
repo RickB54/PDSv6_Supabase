@@ -261,10 +261,9 @@ export default function BlogReorder() {
 
     return (
         <div className="min-h-screen bg-black text-white flex flex-col">
-            <Navbar />
             <PageHeader title="BLOG REORDERING" />
 
-            <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
+            <main className="flex-1 container mx-auto px-4 pt-32 pb-12 max-w-4xl">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="space-y-2 text-left w-full sm:w-auto">
                         <div className="flex items-center gap-3 mb-2">

@@ -94,7 +94,7 @@ export const Navbar = () => {
   return (
     <>
       {businessStatus && !!businessStatus.isTopBannerActive && (
-        <div className={`fixed left-0 right-0 z-50 py-2 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg animate-in slide-in-from-top duration-500 ${
+        <div className={`fixed left-0 right-0 z-[60] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
           isDemoMode ? 'top-[40px]' : 'top-0'
         } ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
@@ -108,10 +108,10 @@ export const Navbar = () => {
           </div>
         </div>
       )}
-      <nav className={`fixed left-0 right-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300 ${
+      <nav className={`fixed left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300 ${
         isDemoMode 
-          ? (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[72px] sm:top-[76px]' : 'top-[40px]')
-          : (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[32px] sm:top-[36px]' : 'top-0')
+          ? (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[80px] sm:top-[84px]' : 'top-[40px]')
+          : (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[40px] sm:top-[44px]' : 'top-0')
       }`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
