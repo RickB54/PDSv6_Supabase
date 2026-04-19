@@ -9,7 +9,7 @@ import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/su
 import { format } from "date-fns";
 import { RetentionHub } from "@/components/customers/RetentionHub";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_PROSPECTS } from "@/lib/demoMockData";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
@@ -556,6 +556,65 @@ const Prospects = () => {
                             <RetentionHub customer={customer} />
                           </div>
                       </div>
+
+                      {/* MEDIA GALLERY - dynamic */}
+                      {(() => {
+                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
+                        customer.generalPhotos?.forEach(url => allPhotos.push({url, label: 'General', type: 'general'}));
+                        customer.beforePhotos?.forEach(url => allPhotos.push({url, label: 'Before', type: 'before'}));
+                        customer.afterPhotos?.forEach(url => allPhotos.push({url, label: 'After', type: 'after'}));
+                        for (const v of customer.vehicles || []) {
+                          const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+                          v.generalPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - General', type: 'general'}));
+                          v.beforePhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - Before', type: 'before'}));
+                          v.afterPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - After', type: 'after'}));
+                        }
+                        if (allPhotos.length === 0) return null;
+
+                        const displayPhotos = allPhotos.slice(0, 6);
+                        const hasMore = allPhotos.length > 6;
+
+                        return (
+                          <div className="mt-12 pt-8 border-t border-zinc-800/50">
+                            <div className="flex items-center justify-between mb-6">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                <ImageIcon className="h-3 w-3" /> Media Archive ({allPhotos.length} items)
+                              </h4>
+                              {hasMore && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-7 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                                  onClick={() => window.location.href = `/vehicle-gallery?customerId=${customer.id}`}
+                                >
+                                  VIEW ALL IN GALLERY <ExternalLink className="w-3 h-3 ml-2" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                              {displayPhotos.map((p, i) => (
+                                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
+                                  <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
+                                  <div className={`absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase ${
+                                    p.type === 'before' ? 'bg-orange-600/80' : 
+                                    p.type === 'after' ? 'bg-emerald-600/80' : 
+                                    'bg-blue-600/60'
+                                  }`}>{p.type}</div>
+                                </div>
+                              ))}
+                              {hasMore && (
+                                <div 
+                                  className="relative aspect-square rounded-2xl overflow-hidden border border-dashed border-zinc-700 bg-zinc-950/40 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900 transition-all group"
+                                  onClick={() => window.location.href = `/vehicle-gallery?customerId=${customer.id}`}
+                                >
+                                  <span className="text-xl font-black text-purple-500/50 group-hover:text-purple-400">+{allPhotos.length - 6}</span>
+                                  <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">More Assets</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

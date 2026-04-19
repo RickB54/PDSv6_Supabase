@@ -700,18 +700,48 @@ const SearchCustomer = () => {
                           v.afterPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - After', type: 'after'}));
                         }
                         if (allPhotos.length === 0) return null;
+
+                        const displayPhotos = allPhotos.slice(0, 6);
+                        const hasMore = allPhotos.length > 6;
+
                         return (
                           <div className="mt-12 pt-8 border-t border-zinc-800/50">
-                            <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-6 flex items-center gap-2">
-                              <ImageIcon className="h-3 w-3" /> Media Gallery ({allPhotos.length} items)
-                            </h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                              {allPhotos.map((p, i) => (
+                            <div className="flex items-center justify-between mb-6">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                <ImageIcon className="h-3 w-3" /> Media Archive ({allPhotos.length} items)
+                              </h4>
+                              {hasMore && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-7 text-[10px] font-black border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                                  onClick={() => navigate(`/vehicle-gallery?customerId=${customer.id}`)}
+                                >
+                                  VIEW ALL IN GALLERY <ExternalLink className="w-3 h-3 ml-2" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                              {displayPhotos.map((p, i) => (
                                 <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
                                   <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
-                                  <div className={p.type === 'before' ? 'absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase bg-orange-600/80' : p.type === 'after' ? 'absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase bg-emerald-600/80' : 'absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase bg-blue-600/60'}>{p.type}</div>
+                                  <div className={cn(
+                                    "absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase",
+                                    p.type === 'before' ? 'bg-orange-600/80' : 
+                                    p.type === 'after' ? 'bg-emerald-600/80' : 
+                                    'bg-blue-600/60'
+                                  )}>{p.type}</div>
                                 </div>
                               ))}
+                              {hasMore && (
+                                <div 
+                                  className="relative aspect-square rounded-2xl overflow-hidden border border-dashed border-zinc-700 bg-zinc-950/40 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900 transition-all group"
+                                  onClick={() => navigate(`/vehicle-gallery?customerId=${customer.id}`)}
+                                >
+                                  <span className="text-xl font-black text-blue-500/50 group-hover:text-blue-400">+{allPhotos.length - 6}</span>
+                                  <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">More Assets</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

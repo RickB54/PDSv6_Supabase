@@ -83,6 +83,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
       )}
 
       <header className={`fixed ${headerTop} z-[140] left-0 right-0 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300 h-[64px]`}>
+        <div className="relative flex items-center justify-between gap-4 px-6 h-full">
           <div className="flex items-center gap-1.5 sm:gap-4 flex-nowrap min-w-0">
             {user && (
               <SidebarTrigger className="text-foreground -ml-2 sm:ml-0" />

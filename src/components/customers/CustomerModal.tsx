@@ -444,12 +444,24 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                          </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
-                        <MediaUploadField label="Before" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                        <MediaUploadField label="After" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                        <MediaUploadField label="General" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                        <div className="grid grid-cols-3 gap-3">
+                          <MediaUploadField label="Before" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                          <MediaUploadField label="After" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                          <MediaUploadField label="General" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                        </div>
+                        {form.id && (
+                          <div className="pt-2 border-t border-zinc-800/50 flex justify-end">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1.5"
+                              onClick={() => window.open(`/vehicle-gallery?customerId=${form.id}`, '_blank')}
+                            >
+                              OPEN FULL VEHICLE GALLERY <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    </div>
                   ))}
                 </div>
 
