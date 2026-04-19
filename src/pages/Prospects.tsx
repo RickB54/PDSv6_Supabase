@@ -314,8 +314,14 @@ const Prospects = () => {
     customer.generalPhotos?.forEach((url) => photos.push({ url, label: "General" }));
     customer.beforePhotos?.forEach((url) => photos.push({ url, label: "Before" }));
     customer.afterPhotos?.forEach((url) => photos.push({ url, label: "After" }));
+    for (const v of customer.vehicles || []) {
+      const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+      v.generalPhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · General` }));
+      v.beforePhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · Before` }));
+      v.afterPhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · After` }));
+    }
     setGalleryPhotos(photos);
-    setGalleryInitialIndex(startIndex);
+    setGalleryInitialIndex(Math.min(startIndex, Math.max(0, photos.length - 1)));
     setGalleryOpen(true);
   };
 

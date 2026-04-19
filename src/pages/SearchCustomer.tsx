@@ -359,11 +359,19 @@ const SearchCustomer = () => {
 
   const openGallery = (customer: Customer, startIndex = 0) => {
     const photos: { url: string; label?: string }[] = [];
+    // Customer-level photos
     customer.generalPhotos?.forEach((url) => photos.push({ url, label: "General" }));
     customer.beforePhotos?.forEach((url) => photos.push({ url, label: "Before" }));
     customer.afterPhotos?.forEach((url) => photos.push({ url, label: "After" }));
+    // Per-vehicle photos
+    for (const v of customer.vehicles || []) {
+      const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+      v.generalPhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · General` }));
+      v.beforePhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · Before` }));
+      v.afterPhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · After` }));
+    }
     setGalleryPhotos(photos);
-    setGalleryInitialIndex(startIndex);
+    setGalleryInitialIndex(Math.min(startIndex, Math.max(0, photos.length - 1)));
     setGalleryOpen(true);
   };
 
@@ -849,42 +857,40 @@ const SearchCustomer = () => {
                             })()}
                           </div>
                         </div>
-                      </div>
-
-                      {/* MEDIA GALLERY: Full width below the grid */}
-                      <div className="mt-12 pt-8 border-t border-zinc-800/50">
-                          {((customer.generalPhotos && customer.generalPhotos.length > 0) ||
-                            (customer.beforePhotos && customer.beforePhotos.length > 0) ||
-                            (customer.afterPhotos && customer.afterPhotos.length > 0) ||
-                            customer.videoUrl) && (
-                               <section>
-                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-6 flex items-center gap-2"><ImageIcon className="h-3 w-3" /> Historical Visual Evidence Gallery</h4>
-                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                   {customer.generalPhotos?.map((p, i) => (
-                                      <div key={`g-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
-                                        <img src={p} alt="General" className="w-full h-full object-cover" />
-                                      </div>
-                                   ))}
-                                   {customer.beforePhotos?.map((p, i) => (
-                                      <div key={`b-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, (customer.generalPhotos?.length || 0) + i)}>
-                                        <div className="absolute top-2 left-2 bg-black/60 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase">Before</div>
-                                        <img src={p} alt="Before" className="w-full h-full object-cover" />
-                                      </div>
-                                   ))}
-                                   {customer.afterPhotos?.map((p, i) => (
-                                      <div key={`a-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, (customer.generalPhotos?.length || 0) + (customer.beforePhotos?.length || 0) + i)}>
-                                        <div className="absolute top-2 left-2 bg-blue-600/80 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase">After</div>
-                                        <img src={p} alt="After" className="w-full h-full object-cover" />
-                                      </div>
-                                   ))}
-                                 </div>
-                               </section>
-                            )}
-                      </div>
+                                            {/* MEDIA GALLERY - dynamic */}
+                      {(() => {
+                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
+                        customer.generalPhotos?.forEach(url => allPhotos.push({url, label: 'General', type: 'general'}));
+                        customer.beforePhotos?.forEach(url => allPhotos.push({url, label: 'Before', type: 'before'}));
+                        customer.afterPhotos?.forEach(url => allPhotos.push({url, label: 'After', type: 'after'}));
+                        for (const v of customer.vehicles || []) {
+                          const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+                          v.generalPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - General', type: 'general'}));
+                          v.beforePhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - Before', type: 'before'}));
+                          v.afterPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - After', type: 'after'}));
+                        }
+                        if (allPhotos.length === 0) return null;
+                        return (
+                          <div className="mt-12 pt-8 border-t border-zinc-800/50">
+                            <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-6 flex items-center gap-2">
+                              <ImageIcon className="h-3 w-3" /> Media Gallery ({allPhotos.length} items)
+                            </h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                              {allPhotos.map((p, i) => (
+                                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
+                                  <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
+                                  <div className={p.type === 'before' ? 'absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase bg-orange-600/80' : p.type === 'after' ? 'absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase bg-emerald-600/80' : 'absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase bg-blue-600/60'}>{p.type}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
-                  )}
-                </div>
-              );
+                  </div>
+                )}
+              </div>
+            );
             })}
         </div>
 
@@ -916,3 +922,5 @@ const SearchCustomer = () => {
 };
 
 export default SearchCustomer;
+
+
