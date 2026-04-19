@@ -2496,11 +2496,14 @@ export default function BookingsPage() {
                         customerEvents = customerEvents.filter(e => (e as any).source_origin === sourceFilter);
                       }
                       
-                      // Apply date range filters if active (redundant if already in unifiedEvents but good for safety)
-                      if (dateFilter.start && dateFilter.end) {
+                      if (dateFilter.start) {
                         customerEvents = customerEvents.filter(e => {
                           const d = parseISO(e.date);
-                          return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
+                          const rangeEnd = dateFilter.end || dateFilter.start;
+                          return isWithinInterval(d, { 
+                            start: startOfDay(dateFilter.start!), 
+                            end: endOfDay(rangeEnd!) 
+                          });
                         });
                       }
 
