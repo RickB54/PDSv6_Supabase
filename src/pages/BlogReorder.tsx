@@ -260,93 +260,54 @@ export default function BlogReorder() {
     );
 
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col">
-            <PageHeader title="BLOG REORDERING" />
+        <div className="min-h-screen bg-black text-white">
+            <PageHeader title="Blog Layout Architect" />
 
-            <main className="flex-1 container mx-auto px-4 pt-32 pb-12 max-w-4xl">
+            <main className="container mx-auto px-4 pt-32 pb-24 relative z-10">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
-                    <div className="space-y-2 text-left w-full sm:w-auto">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Button
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-indigo-400 hover:text-white hover:bg-indigo-500/10 rounded-full"
+                                className="h-8 w-8 text-indigo-400 hover:text-white"
                                 onClick={() => navigate('/app-manual#visual-architect')}
-                                title="Page Help"
                             >
                                 <HelpCircle className="w-4 h-4" />
                             </Button>
+                            <h2 className="text-4xl font-black tracking-tighter uppercase italic">
+                                VISUAL ARCHITECT
+                                <span className="ml-3 text-xl text-indigo-500/50">{items.length}</span>
+                            </h2>
                         </div>
-                        <h2 className="text-4xl font-black tracking-tighter uppercase italic flex items-center gap-3">
-                            VISUAL ARCHITECT
-                            <span className="text-xl font-black text-indigo-500/50">
-                                {items.length}
-                            </span>
-                        </h2>
-                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
                             EDIT · REORDER · AI WRITE · SOCIAL BLAST
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                        <div className="relative group flex-1 min-w-[300px]">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" />
+                    <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                        <div className="relative flex-1 min-w-[200px]">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                             <Input
-                                placeholder="Search to reorder specific topics..."
+                                placeholder="Search to reorder..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                className="bg-zinc-900/50 border-zinc-800 pl-11 h-14 rounded-2xl focus:ring-1 focus:ring-indigo-500/50 transition-all text-sm font-bold"
+                                className="bg-zinc-900/50 border-zinc-800 pl-11 h-12 rounded-2xl"
                             />
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm("")}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
                         </div>
                         <Button
-                            onClick={() => setShowHistory(h => !h)}
-                            className={`h-14 px-5 rounded-2xl font-black transition-all w-full sm:w-auto border ${
-                                showHistory
-                                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                                    : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                            }`}
-                            title="Activity History"
+                            variant="outline"
+                            onClick={() => setShowHistory(!showHistory)}
+                            className={`h-12 px-4 rounded-xl font-black ${showHistory ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-zinc-900/50 border-zinc-800 text-zinc-400'}`}
                         >
-                            <History className="w-5 h-5 mr-2" />
-                            HISTORY
-                            {activityLog.length > 0 && (
-                                <span className="ml-2 bg-amber-500 text-black text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center">
-                                    {activityLog.length > 99 ? '99+' : activityLog.length}
-                                </span>
-                            )}
+                            <History className="w-4 h-4 mr-2" /> HISTORY
                         </Button>
-                        <Button
-                            onClick={() => {
-                                setIsNewAIPost(true);
-                                setEditingItem(null);
-                                setFormData({ id: '', title: '', description: '', category: 'General Detailing', is_published: false, is_pinned: false });
-                                setIsAIAssistantOpen(true);
-                            }}
-                            className="bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-500 text-indigo-400 hover:text-white font-black rounded-2xl h-14 px-5 transition-all w-full sm:w-auto"
-                            title="AI Content Strategist"
-                        >
-                            <Sparkles className="w-5 h-5 mr-2" />
-                            AI WRITE
-                        </Button>
-                        <Button
+                        <Button 
                             onClick={handleSaveOrder}
                             disabled={isSaving || isLoading}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl h-14 px-8 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all w-full sm:w-auto"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl h-12 px-6 shadow-lg shadow-emerald-500/10 active:scale-95 transition-all"
                         >
-                            {isSaving ? (
-                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                            ) : (
-                                <Save className="w-5 h-5 mr-2" />
-                            )}
-                            SAVE ORDER
+                             <Save className="w-4 h-4 mr-2" /> SAVE
                         </Button>
                     </div>
                 </div>
