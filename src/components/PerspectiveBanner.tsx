@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { X, User, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrentUser } from '@/lib/auth';
+import { useDemoMode } from '@/contexts/DemoContext';
 
 export const PerspectiveBanner = () => {
     const location = useLocation();
@@ -13,8 +14,8 @@ export const PerspectiveBanner = () => {
     // Only show if the user is actually an admin trying to see other views
     const isAdmin = user?.role === 'admin';
     
-    const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
-    const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
+    const isViewingAsCustomer = (isAdmin && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+    const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
     
     if (!isAdmin) return null;
     if (!isViewingAsCustomer && !isViewingAsEmployee) return null;
@@ -44,7 +45,10 @@ export const PerspectiveBanner = () => {
             </div>
             
             <button 
-                onClick={() => navigate('/dashboard/admin')}
+                onClick={() => {
+                    localStorage.removeItem('view_as_mode');
+                    navigate('/dashboard/admin');
+                }}
                 className="flex items-center gap-2 px-3 py-1 bg-white text-zinc-900 hover:bg-zinc-100 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 group"
             >
                 EXIT Mode

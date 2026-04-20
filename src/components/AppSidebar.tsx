@@ -62,8 +62,20 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [businessStatus, setBusinessStatus] = useState<any>(null);
 
-  const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
-  const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
+  const isViewingAsCustomer = (isAdmin && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+  const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
+
+  useEffect(() => {
+    if (isAdmin) {
+      if (location.pathname === '/dashboard/employee') {
+        localStorage.setItem('view_as_mode', 'employee');
+      } else if (location.pathname === '/customer-dashboard') {
+        localStorage.setItem('view_as_mode', 'customer');
+      } else if (location.pathname === '/dashboard/admin') {
+        localStorage.removeItem('view_as_mode');
+      }
+    }
+  }, [location.pathname, isAdmin]);
 
   useEffect(() => {
     (async () => {
@@ -413,7 +425,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       
       return group.items.length > 0 || groupMatches;
     });
-  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections, searchQuery, isViewingAsEmployee]);
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections, searchQuery, isViewingAsEmployee, isViewingAsCustomer]);
 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
