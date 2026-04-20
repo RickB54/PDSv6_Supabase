@@ -62,6 +62,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [businessStatus, setBusinessStatus] = useState<any>(null);
 
+  const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+  const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
+
   useEffect(() => {
     (async () => {
       try {
@@ -335,8 +338,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     }
   }, [location.pathname, location.search]);
 
-  const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
-  const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
 
   // Standalone Top Items
   const TOP_ITEMS = [
