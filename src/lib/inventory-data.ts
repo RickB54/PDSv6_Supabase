@@ -103,7 +103,14 @@ export interface SetupMedia {
     type: 'image' | 'video';
     url: string;
     caption?: string;
+    category?: string; // category id
     createdAt?: string;
+}
+
+export interface SetupCategory {
+    id: string;
+    name: string;
+    order: number;
 }
 
 export interface UsageHistory {
@@ -746,27 +753,73 @@ export async function deleteUsageHistory(id: string): Promise<void> {
 
 const SETUP_MEDIA_KEY = "f150_command_center_media";
 
-export async function getSetupMedia(): Promise<SetupMedia[]> {
+const DEFAULT_CATEGORIES: SetupCategory[] = [
+    { id: 'cat_reels', name: 'Reels & Hoses', order: 0 },
+    { id: 'cat_large_equip', name: 'Large Equipment', order: 1 },
+    { id: 'cat_chemicals', name: 'Chemicals', order: 2 },
+    { id: 'cat_interior', name: 'Interior Setup', order: 3 },
+    { id: 'cat_misc', name: 'Miscellaneous', order: 4 },
+];
+
+async function getFullMeta() {
     try {
         const { contentService } = await import('./content');
         const meta = await contentService.getServiceMeta(SETUP_MEDIA_KEY);
-        if (meta && meta.meta && Array.isArray(meta.meta.media)) {
-            return meta.meta.media;
-        }
-        return [];
+        if (meta && meta.meta) return meta.meta;
+        return { media: [], categories: DEFAULT_CATEGORIES };
+    } catch {
+        return { media: [], categories: DEFAULT_CATEGORIES };
+    }
+}
+
+async function saveFullMeta(payload: { media: SetupMedia[]; categories: SetupCategory[] }) {
+    const { contentService } = await import('./content');
+    await contentService.upsertServiceMeta({
+        key: SETUP_MEDIA_KEY,
+        title: "F150 Command Center Gallery",
+        description: "Visual setup documentation for the mobile rig.",
+        meta: payload
+    });
+}
+
+export async function getSetupMedia(): Promise<SetupMedia[]> {
+    try {
+        const full = await getFullMeta();
+        return Array.isArray(full.media) ? full.media : [];
     } catch (err) {
         console.error('Error loading setup media:', err);
         return [];
     }
 }
 
+export async function getSetupCategories(): Promise<SetupCategory[]> {
+    try {
+        const full = await getFullMeta();
+        const cats = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        return cats.sort((a: SetupCategory, b: SetupCategory) => a.order - b.order);
+    } catch {
+        return DEFAULT_CATEGORIES;
+    }
+}
+
+export async function saveSetupCategories(categories: SetupCategory[]): Promise<void> {
+    if (isDemoActive()) return;
+    try {
+        const full = await getFullMeta();
+        await saveFullMeta({ media: full.media || [], categories });
+    } catch (err) {
+        console.error('Error saving categories:', err);
+        throw err;
+    }
+}
+
 export async function saveSetupMedia(media: SetupMedia): Promise<void> {
     if (isDemoActive()) return;
     try {
-        const { contentService } = await import('./content');
-        const current = await getSetupMedia();
-        
-        // Append or Update
+        const full = await getFullMeta();
+        const current: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
+        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+
         const next = [...current];
         const idx = next.findIndex(m => m.id === media.id);
         if (idx >= 0) {
@@ -775,14 +828,23 @@ export async function saveSetupMedia(media: SetupMedia): Promise<void> {
             next.push(media);
         }
 
-        await contentService.upsertServiceMeta({
-            key: SETUP_MEDIA_KEY,
-            title: "F150 Command Center Gallery",
-            description: "Visual setup documentation for the mobile rig.",
-            meta: { media: next }
-        });
+        await saveFullMeta({ media: next, categories });
     } catch (err) {
         console.error('Error saving setup media:', err);
+        throw err;
+    }
+}
+
+export async function updateSetupMediaCategory(id: string, categoryId: string): Promise<void> {
+    if (isDemoActive()) return;
+    try {
+        const full = await getFullMeta();
+        const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
+        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        const updated = media.map(m => m.id === id ? { ...m, category: categoryId } : m);
+        await saveFullMeta({ media: updated, categories });
+    } catch (err) {
+        console.error('Error updating media category:', err);
         throw err;
     }
 }
@@ -790,16 +852,11 @@ export async function saveSetupMedia(media: SetupMedia): Promise<void> {
 export async function deleteSetupMedia(id: string): Promise<void> {
     if (isDemoActive()) return;
     try {
-        const { contentService } = await import('./content');
-        const current = await getSetupMedia();
-        const next = current.filter(m => m.id !== id);
-
-        await contentService.upsertServiceMeta({
-            key: SETUP_MEDIA_KEY,
-            title: "F150 Command Center Gallery",
-            description: "Visual setup documentation for the mobile rig.",
-            meta: { media: next }
-        });
+        const full = await getFullMeta();
+        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
+        const next = media.filter(m => m.id !== id);
+        await saveFullMeta({ media: next, categories });
     } catch (err) {
         console.error('Error deleting setup media:', err);
         throw err;
