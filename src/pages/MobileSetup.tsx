@@ -323,7 +323,7 @@ const MobileSetup = () => {
 
   // ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#030303] text-zinc-100 selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#030303] text-zinc-100 selection:bg-indigo-500/30 w-full overflow-x-hidden">
       <PageHeader title="F150 Command Center" />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -332,35 +332,35 @@ const MobileSetup = () => {
         <div className="relative mb-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/50 shadow-2xl overflow-hidden p-6 md:p-10">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80')] opacity-50 bg-cover bg-center" />
           
-          <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-            <div className="relative h-20 w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
-              <Truck className="h-10 w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
+          <div className="relative z-10 flex flex-col items-center text-center lg:text-left lg:items-start lg:flex-row gap-6 md:gap-8">
+            <div className="relative h-16 w-16 md:h-20 md:w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
+              <Truck className="h-8 w-8 md:h-10 md:w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
             </div>
 
-            <div className="flex-1 text-center lg:text-left min-w-0 px-1">
-              <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none break-words">F150 Command Center</h1>
-              <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0">
+            <div className="flex-1 w-full min-w-0">
+              <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-2 md:mb-3 leading-tight break-words">F150 Command Center</h1>
+              <p className="text-zinc-400 text-xs sm:text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                 Professional mobile detailing configuration. Real-time equipment inventory and visual setup documentation.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full lg:w-auto">
               <Button
                 variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
                 onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
               >
-                <FolderOpen className="h-5 w-5" /> Manage Categories
+                <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
               </Button>
               <Button
                 disabled={uploading}
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-10 h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 md:px-10 h-12 md:h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all w-full sm:w-auto"
               >
                 {uploading && uploadProgress
                   ? <><span className="mr-2 animate-bounce">↑</span> {uploadProgress.done}/{uploadProgress.total}</>
-                  : <><Plus className="mr-2 h-6 w-6" />Add Rig Photos</>}
+                  : <><Plus className="mr-2 h-5 w-5 md:h-6 md:w-6" />Add Rig Photos</>}
               </Button>
             </div>
           </div>
@@ -438,24 +438,24 @@ const MobileSetup = () => {
               </Card>
             )}
 
-            {/* Category rows */}
+            {/* Category rows mapped to vertical grid */}
             {categories.map((cat, catIdx) => {
               const catMedia = getMediaForCat(cat.id);
               return (
-                <section key={cat.id}>
-                  {/* Row header */}
-                  <div className="flex items-center gap-3 mb-4">
+                <section key={cat.id} className="space-y-4">
+                  {/* Category Header - Indigo Theme to match Equipment Pool */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
                     <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />
-                    <h2 className="text-base font-black uppercase tracking-widest text-white">{cat.name}</h2>
-                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest bg-zinc-800 px-2 py-0.5 rounded-full">
+                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">{cat.name}</h2>
+                    <span className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">
                       {catMedia.length}
                     </span>
                     <div className="ml-auto flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-600 hover:text-white"
-                        title="Move category up"
+                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                        title="Move up"
                         onClick={() => moveCat(catIdx, -1)}
                         disabled={catIdx === 0}
                       >
@@ -464,8 +464,8 @@ const MobileSetup = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-600 hover:text-white"
-                        title="Move category down"
+                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                        title="Move down"
                         onClick={() => moveCat(catIdx, 1)}
                         disabled={catIdx === categories.length - 1}
                       >
@@ -474,59 +474,46 @@ const MobileSetup = () => {
                     </div>
                   </div>
 
-                  {/* Horizontal scrolling row */}
-                  {catMedia.length === 0 ? (
-                    <div
+                  {/* Vertical Grid for Photos */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                    {catMedia.map((item) => {
+                      const globalIndex = media.findIndex(m => m.id === item.id);
+                      return (
+                        <MediaCard
+                          key={item.id}
+                          item={item}
+                          categories={categories}
+                          onDelete={removeMedia}
+                          onReassign={handleReassign}
+                          onOpenGallery={() => openLightbox(globalIndex)}
+                        />
+                      );
+                    })}
+                    {/* Add-to-this-category slot */}
+                    <button
                       onClick={() => {
                         setSelectedCategoryForUpload(cat.id);
                         fileInputRef.current?.click();
                       }}
-                      className="h-44 border-2 border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all"
+                      className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
                     >
-                      <Plus className="h-6 w-6 text-zinc-600" />
-                      <span className="text-xs text-zinc-600 font-bold uppercase tracking-widest">Add to {cat.name}</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent snap-x">
-                      {catMedia.map((item) => {
-                        const globalIndex = media.findIndex(m => m.id === item.id);
-                        return (
-                          <MediaCard
-                            key={item.id}
-                            item={item}
-                            categories={categories}
-                            onDelete={removeMedia}
-                            onReassign={handleReassign}
-                            onOpenGallery={() => openLightbox(globalIndex)}
-                          />
-                        );
-                      })}
-                      {/* Add-to-this-category slot */}
-                      <button
-                        onClick={() => {
-                          setSelectedCategoryForUpload(cat.id);
-                          fileInputRef.current?.click();
-                        }}
-                        className="shrink-0 w-48 h-36 border-2 border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
-                      >
-                        <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
-                        <span className="text-[10px] text-zinc-600 group-hover:text-indigo-400 font-bold uppercase tracking-widest">Add</span>
-                      </button>
-                    </div>
-                  )}
+                      <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
+                    </button>
+                  </div>
                 </section>
               );
             })}
 
             {/* Uncategorized section */}
             {uncategorized.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-4">
+              <section className="space-y-4">
+                <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
                   <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" />
-                  <h2 className="text-base font-black uppercase tracking-widest text-zinc-500">Uncategorized</h2>
+                  <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400">General Views</h2>
                   <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">{uncategorized.length}</span>
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent snap-x">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                   {uncategorized.map((item) => {
                     const globalIndex = media.findIndex(m => m.id === item.id);
                     return (
@@ -895,7 +882,7 @@ function MediaCard({
   onOpenGallery: () => void;
 }) {
   return (
-    <div className="shrink-0 w-56 md:w-72 relative group rounded-2xl overflow-hidden border-2 border-zinc-800 bg-zinc-900 aspect-[4/3] shadow-lg hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition-all duration-300 snap-center">
+    <div className="relative group rounded-2xl overflow-hidden border-2 border-zinc-800 bg-zinc-900 aspect-[4/3] shadow-lg hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition-all duration-300">
       <div 
         className="absolute inset-0 z-10 cursor-pointer" 
         onClick={onOpenGallery}
