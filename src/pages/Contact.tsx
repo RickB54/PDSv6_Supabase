@@ -47,6 +47,7 @@ const Contact = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showBookNow, setShowBookNow] = useState(false);
   const [businessStatus, setBusinessStatus] = useState<any>(null);
+  const [lastMailto, setLastMailto] = useState("");
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -178,7 +179,7 @@ const Contact = () => {
     const pdfDataUrl = doc.output('dataurlstring');
     savePDFToArchive("Prospects", formData.name, `inquiry_${Date.now()}`, pdfDataUrl);
 
-    // Open Gmail compose with refined wording
+    // Generate Universal mailto link for ALL mail clients (Yahoo, Outlook, Apple, etc.)
     const subject = `Service Inquiry: ${formData.name} [${formData.vehicleType}]`;
     const body = `New Service Inquiry\n\n` +
       `Name: ${formData.name}\n` +
@@ -192,16 +193,17 @@ const Contact = () => {
       `Message:\n${formData.message}\n\n` +
       `Submitted: ${new Date().toLocaleString()}`;
     
-    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailLink, "_blank");
-
+    const mailtoLink = `mailto:Rick.PrimeAutoDetail@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setLastMailto(mailtoLink);
+    
+    // Instead of forcing a redirect, we set submitted=true and let the user decide if they want to click a 'Send Email Copy' button
+    // This allows non-Gmail users to stay on the page and see the success message
     setSubmitted(true);
     setSubmitting(false);
 
-    // No hard redirect - stay on page to show success message clearly
     toast({
-      title: "Inquiry Received!",
-      description: "Thank you for your interest in Prime Auto Detail.",
+      title: "Inquiry Saved!",
+      description: "We've received your info and saved it to our system.",
     });
 
     // Reset form
@@ -552,17 +554,31 @@ const Contact = () => {
 
               {submitted && (
                 <div className="animate-in fade-in zoom-in duration-500">
-                  <Card className="p-6 bg-emerald-950/20 border-emerald-500/50 flex flex-col items-center text-center gap-3">
+                  <Card className="p-6 bg-emerald-950/20 border-emerald-500/50 flex flex-col items-center text-center gap-4">
                     <div className="p-2 bg-emerald-500 rounded-full">
                       <Check className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="text-xl font-bold text-emerald-400">Thank you for your message!</h4>
-                    <p className="text-zinc-300">
-                      {showBookNow 
-                        ? "Your inquiry has been received. We appreciate you reaching out to Prime Auto Detail and will be in touch with you shortly."
-                        : "Prime Auto Detail is currently in pre-launch / final preparation. Your information has been received and added to our prospect list. We appreciate your interest and will be in touch as we move closer to launch."
-                      }
+                    <div className="space-y-1">
+                      <h4 className="text-xl font-bold text-emerald-400 uppercase tracking-tight">System Logged Successfully</h4>
+                      <p className="text-xs text-emerald-500/70 font-black uppercase tracking-widest">Master Database Updated</p>
+                    </div>
+                    <p className="text-zinc-300 text-sm">
+                      We have received your details and added them to our secure prospect system. Rick will review your inquiry shortly.
                     </p>
+                    
+                    <div className="w-full pt-2 space-y-3">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold">Optional: Send a copy from your email app</p>
+                      <Button 
+                        type="button"
+                        onClick={() => {
+                          if (lastMailto) window.location.href = lastMailto;
+                        }}
+                        variant="outline" 
+                        className="w-full border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-12"
+                      >
+                         Dispatch Email Copy (Any App)
+                      </Button>
+                    </div>
                   </Card>
                 </div>
               )}
