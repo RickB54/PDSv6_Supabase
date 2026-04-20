@@ -65,6 +65,9 @@ const Contact = () => {
     if (!formData.serviceInterested) newErrors.serviceInterested = "Please select a service of interest";
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      console.warn("Validation failing on:", newErrors);
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -72,9 +75,10 @@ const Contact = () => {
     e.preventDefault();
 
     if (!validateForm()) {
+      const fieldList = Object.keys(errors); // This might be stale due to setState, better use newErrors in validateForm but for now:
       toast({
-        title: "Please fix errors",
-        description: "Check the form for validation errors",
+        title: "Missing Information",
+        description: "Please check all required fields (Name, Email, Phone, City, Vehicle, Service).",
         variant: "destructive"
       });
       return;
@@ -83,16 +87,32 @@ const Contact = () => {
     // 2. Upload Files to Supabase Storage if any
     let fileUrls: string[] = [];
     if (attachments.length > 0 && isSupabaseEnabled()) {
-      for (const file of attachments) {
-        const filePath = `prospects/${Date.now()}_${file.name}`;
-        const { data, error } = await supabase.storage
-          .from('customer_media')
-          .upload(filePath, file);
-        
-        if (data) {
-          const { data: { publicUrl } } = supabase.storage.from('customer_media').getPublicUrl(filePath);
-          fileUrls.push(publicUrl);
+      setSubmitting(true);
+      try {
+        for (const file of attachments) {
+          const filePath = `prospects/${Date.now()}_${file.name}`;
+          const { data, error: uploadError } = await supabase.storage
+            .from('customer_media')
+            .upload(filePath, file);
+          
+          if (uploadError) {
+            console.error("Storage upload error:", uploadError);
+            throw new Error(`Upload failed: ${uploadError.message}`);
+          }
+
+          if (data) {
+            const { data: { publicUrl } } = supabase.storage.from('customer_media').getPublicUrl(filePath);
+            fileUrls.push(publicUrl);
+          }
         }
+      } catch (uploadErr: any) {
+        toast({
+          title: "Upload Failed",
+          description: uploadErr.message || "Could not upload photos. Please try again or submit without photos.",
+          variant: "destructive"
+        });
+        setSubmitting(false);
+        return;
       }
     }
 
@@ -340,18 +360,16 @@ const Contact = () => {
               <p className="text-muted-foreground font-medium italic">Interested in professional detailing? Complete the form below to get started.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6" name="contact-prelaunch" method="POST" data-netlify="true" netlify-honeypot="bot-field" noValidate>
-              <input type="hidden" name="form-name" value="contact-prelaunch" />
-              <input type="hidden" name="bot-field" />
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-bold">Full Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Your legal name"
+                    placeholder="Enter your full name"
                     required
                     className={errors.name ? "border-destructive h-12" : "h-12"}
                   />
