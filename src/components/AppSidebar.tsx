@@ -361,6 +361,12 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined }
   ].filter(item => {
     if (isDemoMode && item.key && !canAccess(item.key)) return false;
+    
+    // Role check for top items
+    const isStrictView = isViewingAsCustomer || isViewingAsEmployee;
+    if (item.role === 'admin' && (!isAdmin || isStrictView)) return false;
+    if (item.role === 'employee' && !isAdmin && !isStrictView) return false;
+
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });

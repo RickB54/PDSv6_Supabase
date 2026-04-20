@@ -108,7 +108,6 @@ export const getMenuGroups = (counts: {
                 { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator, helpTopicId: 'accounting' },
                 { title: "Mileage", url: "/mileage", key: "mileage", icon: Truck, helpTopicId: 'mileage' },
                 { title: "Payroll", url: "/payroll", role: "admin", key: "payroll", badge: counts.payrollDueCount > 0 ? counts.payrollDueCount : undefined, icon: DollarSign, helpTopicId: 'payroll' },
-
                 { title: "Company Budget", url: "/company-budget", role: "admin", key: "company-budget", icon: DollarSign, helpTopicId: 'company-budget' },
                 { title: "Taxes", url: "/taxes", role: "admin", key: "taxes", icon: FileText, helpTopicId: 'taxes' },
                 { title: "Package Pricing", url: "/package-pricing", role: "admin", key: "package-pricing", icon: DollarSign, helpTopicId: 'package-pricing' },
