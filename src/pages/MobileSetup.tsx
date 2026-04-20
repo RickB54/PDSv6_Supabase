@@ -27,6 +27,7 @@ import {
   ZoomIn,
   Download,
   ArrowLeft,
+  Warehouse,
 } from "lucide-react";
 import {
   getChemicals,
