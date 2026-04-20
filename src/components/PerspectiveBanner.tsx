@@ -4,13 +4,26 @@ import { X, User, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrentUser } from '@/lib/auth';
 import { useDemoMode } from '@/contexts/DemoContext';
+import { contentService } from '@/lib/content';
 
 export const PerspectiveBanner = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const user = getCurrentUser();
     const { isDemoMode } = useDemoMode();
+    const [businessStatus, setBusinessStatus] = React.useState<any>(null);
     
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const meta = await contentService.getServiceMeta("global_settings");
+                if (meta && meta.meta && meta.meta.businessStatus) {
+                    setBusinessStatus(meta.meta.businessStatus);
+                }
+            } catch {}
+        })();
+    }, []);
+
     // Only show if the user is actually an admin trying to see other views
     const isAdmin = user?.role === 'admin';
     
@@ -21,12 +34,14 @@ export const PerspectiveBanner = () => {
     if (!isViewingAsCustomer && !isViewingAsEmployee) return null;
     
     const isCustomer = isViewingAsCustomer;
-    const topOffset = isDemoMode ? 'top-[40px]' : 'top-0';
+    const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? 40 : 0);
+    const topStyle = { top: `${offset}px` };
     
     return (
-        <div className={cn(
+        <div 
+            style={topStyle}
+            className={cn(
             "fixed left-0 right-0 z-[110] h-10 flex items-center justify-between px-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500",
-            topOffset,
             isCustomer ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
         )}>
             <div className="flex items-center gap-3">

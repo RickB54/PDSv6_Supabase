@@ -21,6 +21,7 @@ import "@/lib/storage-utils";
 import { DemoProvider, useDemoMode, DemoBanner } from "@/contexts/DemoContext";
 import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
+import { contentService } from "@/lib/content";
 
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -168,6 +169,18 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const { isDemoMode, mockUser, isLoading } = useDemoMode();
   const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
+  const [businessStatus, setBusinessStatus] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const meta = await contentService.getServiceMeta("global_settings");
+        if (meta && meta.meta && meta.meta.businessStatus) {
+           setBusinessStatus(meta.meta.businessStatus);
+        }
+      } catch {}
+    })();
+  }, []);
 
   // ONLY block public/website routes if we are explicitly in demo mode paths.
   // Otherwise, we allow the main content to render while security config loads in background.
@@ -263,7 +276,21 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
      location.pathname.startsWith('/dashboard/employee')
   );
 
-  const paddingClass = (isDemoMode && isPerspectiveMode) ? 'pt-20' : (isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0');
+  const isBusinessBanner = !!businessStatus?.isTopBannerActive;
+
+  // Each banner is approx 40px
+  let totalBanners = 0;
+  if (isDemoMode) totalBanners++;
+  if (isPerspectiveMode) totalBanners++;
+  if (isBusinessBanner) totalBanners++;
+
+  const ptMap: Record<number, string> = {
+    0: 'pt-0',
+    1: 'pt-10',
+    2: 'pt-20',
+    3: 'pt-[120px]'
+  };
+  const paddingClass = ptMap[totalBanners] || 'pt-0';
 
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   return (

@@ -96,7 +96,7 @@ export const Navbar = () => {
     const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
     const isPerspectiveMode = isAdmin && (isViewingAsCustomer || isViewingAsEmployee);
 
-    const bannerTop = (isDemoMode ? 40 : 0) + (isPerspectiveMode ? 40 : 0);
+    const bannerTop = isDemoMode ? 40 : 0;
 
     return (
     <>
@@ -116,7 +116,7 @@ export const Navbar = () => {
         </div>
       )}
       <nav 
-        style={{ top: `${bannerTop + (businessStatus?.isTopBannerActive ? (isMobile ? 36 : 40) : 0)}px` }}
+        style={{ top: `${bannerTop + (businessStatus?.isTopBannerActive ? (isMobile ? 36 : 40) : 0) + (isPerspectiveMode ? 40 : 0)}px` }}
         className={`fixed left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300`}
       >
         <div className="container mx-auto px-4">
