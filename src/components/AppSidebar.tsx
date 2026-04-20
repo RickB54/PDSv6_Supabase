@@ -62,6 +62,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [businessStatus, setBusinessStatus] = useState<any>(null);
 
+  const isAdmin = user?.role === 'admin' || isDemoMode;
+  const isEmployee = user?.role === 'employee';
+  const isCustomer = user?.role === 'customer';
+
   const isViewingAsCustomer = (isAdmin && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
   const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
 
@@ -135,9 +139,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     }
   }, [userProp]);
 
-  const isAdmin = user?.role === 'admin' || isDemoMode;
-  const isEmployee = user?.role === 'employee';
-  const isCustomer = user?.role === 'customer';
 
   const [showAbout, setShowAbout] = useState(false);
   const handleLogoClick = () => {
