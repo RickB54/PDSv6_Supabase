@@ -323,23 +323,8 @@ const MobileSetup = () => {
 
   // ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="border-b border-zinc-900 bg-black/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-zinc-500 hover:text-white gap-2"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-          </Button>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Live Rig Sync</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#030303] text-zinc-100 selection:bg-indigo-500/30">
+      <PageHeader title="F150 Command Center" />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
 
@@ -353,8 +338,8 @@ const MobileSetup = () => {
               <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
             </div>
 
-            <div className="flex-1 text-center lg:text-left min-w-0">
-              <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none break-words">F150 Command Center</h1>
+            <div className="flex-1 text-center lg:text-left min-w-0 px-1">
+              <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none break-words">F150 Command Center</h1>
               <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0">
                 Professional mobile detailing configuration. Real-time equipment inventory and visual setup documentation.
               </p>
@@ -382,11 +367,11 @@ const MobileSetup = () => {
         </div>
 
         <Tabs defaultValue="gallery" className="space-y-8">
-          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-14">
-            <TabsTrigger value="gallery" className="rounded-xl px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
+          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-14 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <TabsTrigger value="gallery" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
               <ImageIcon className="mr-2 h-4 w-4" /> Visual Setup
             </TabsTrigger>
-            <TabsTrigger value="inventory" className="rounded-xl px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
+            <TabsTrigger value="inventory" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
               <Package className="mr-2 h-4 w-4" /> Equipment Pool
             </TabsTrigger>
           </TabsList>
@@ -429,6 +414,15 @@ const MobileSetup = () => {
                 </Button>
               </div>
             </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*,video/*,application/pdf"
+              multiple
+              onChange={handleMediaUpload}
+            />
 
             {/* If no media at all */}
             {media.length === 0 && (
