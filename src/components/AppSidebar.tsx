@@ -62,7 +62,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [businessStatus, setBusinessStatus] = useState<any>(null);
 
-  const isAdmin = user?.role === 'admin' || isDemoMode;
+  const isAdmin = user?.role === 'admin';
   const isEmployee = user?.role === 'employee';
   const isCustomer = user?.role === 'customer';
 
@@ -186,7 +186,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
 
       if (dbUser) {
         const currentUser = getCurrentUser();
-        if (currentUser?.role !== dbUser.role) {
+        const isSimulated = !!localStorage.getItem('view_as_mode');
+        
+        if (!isSimulated && currentUser?.role !== dbUser.role) {
           const { finalizeSupabaseSession } = await import('@/lib/auth');
           await finalizeSupabaseSession(authUser);
           setUser(getCurrentUser());
@@ -565,7 +567,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
           {(isAdmin || isEmployee) && !isViewingAsCustomer && (
             <>
               {(TOP_ITEMS || []).map((item: any) => {
-                if (item.role === 'admin' && !isAdmin && !isDemoMode) return null;
+                if (item.role === 'admin' && !isAdmin) return null;
                 const targetUrl = getUrl(item.url);
                 const isActive = location.pathname === targetUrl;
                 const isChatAlert = item.url === '/team-chat' && chatUnread;

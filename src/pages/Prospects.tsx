@@ -11,6 +11,8 @@ import { RetentionHub } from "@/components/customers/RetentionHub";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { getCurrentUser } from "@/lib/auth";
+import { auditEmployeeAction } from "@/lib/audit";
 import { MOCK_PROSPECTS } from "@/lib/demoMockData";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
@@ -29,9 +31,6 @@ import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
-import { getCurrentUser } from "@/lib/auth";
-import { auditEmployeeAction } from "@/lib/audit";
-
 const Prospects = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,6 +53,7 @@ const Prospects = () => {
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
 
   const { isDemoMode } = useDemoMode();
+  const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
 
   useEffect(() => {
     // Always load fresh data on mount to ensure we see new prospects
@@ -496,7 +496,11 @@ const Prospects = () => {
                           {customer.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                        {isAdmin && (
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                       {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                     </div>
@@ -674,7 +678,11 @@ const Prospects = () => {
                     {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 text-zinc-400"><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 text-red-500">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 </div>
               </div>
             ))}

@@ -80,7 +80,6 @@ export const getMenuGroups = (counts: {
             title: "Customer Intake", icon: UserPlus,
             items: [
                 { title: "Phone Assistant", url: "#call-assistant", key: "phone-assistant", icon: Phone, helpTopicId: 'phone-assistant' },
-                { title: "Availability Manager", url: "/availability-manager", role: "admin", key: "availability-manager", icon: CalendarCheck, highlight: "green", iconColor: "blue", helpTopicId: 'availability-manager' },
                 { title: "Package Comparison", url: "/package-selection", key: "package-selection", icon: Package, helpTopicId: 'package-selection' },
                 { title: "Vehicle Classification", url: "/vehicle-classification", key: "vehicle-classification", icon: FileText, helpTopicId: 'vehicle-classification' },
                 { title: "Client Evaluation", url: "/client-evaluation", key: "client-evaluation", icon: ClipboardCheck, helpTopicId: 'client-evaluation' },
@@ -92,6 +91,7 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "employee", key: "employee-schedule", icon: CalendarDays, helpTopicId: 'staff-schedule' },
                 { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays, badge: counts.tentativeBookingsCount, badgeColor: counts.bookingsBadgeColor, helpTopicId: 'bookings' },
+                { title: "Hybrid Availability System", url: "/availability-manager", role: "admin", key: "availability-manager", icon: CalendarCheck, highlight: "green", iconColor: "blue", helpTopicId: 'availability-manager' },
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck, helpTopicId: 'service-checklist' },
                 { title: "Tasks", url: "/tasks", key: "tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare, helpTopicId: 'tasks' },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users, helpTopicId: 'search-customer' },
@@ -150,6 +150,7 @@ export const getMenuGroups = (counts: {
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package, helpTopicId: 'inventory-control' },
                 { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", key: "dilution-chart-interactive", icon: Printer, helpTopicId: 'dilution-chart-interactive' },
                 { title: "Mobile Setup", url: "/mobile-setup", role: "admin", key: "mobile-setup", icon: Package, helpTopicId: 'mobile-setup' },
+                { title: "Shop Setup", url: "/shop-setup", role: "admin", key: "shop-setup", icon: Package, helpTopicId: 'shop-setup' },
                 { title: "Detailing Vendors", url: "/detailing-vendors", role: "admin", key: "detailing-vendors", icon: Users, helpTopicId: 'detailing-vendors' },
             ]
         },

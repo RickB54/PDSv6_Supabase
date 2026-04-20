@@ -169,6 +169,10 @@ export default function ChemicalsLibrary() {
         // If this is a new "Inventory Only" product, go straight to Edit modal
         // instead of opening the detail view with empty info.
         if ((c as any).is_inventory_only) {
+            if (!isAdmin) {
+                toast({ title: "Inbound Product", description: "This product is waiting for Admin to complete its Knowledge Base card.", variant: "default" });
+                return;
+            }
             setEditingChemical({
                 ...c,
                 id: undefined, // Ensure it treats as a new library entry
@@ -190,6 +194,10 @@ export default function ChemicalsLibrary() {
     };
 
     const handleDeleteChemical = async (id: string) => {
+        if (!isAdmin) {
+            toast({ title: "Access Denied", description: "You do not have permission to delete chemical cards.", variant: "destructive" });
+            return;
+        }
         const success = await deleteChemical(id);
         if (!success) {
             toast({ title: "Error", description: "Failed to delete chemical.", variant: "destructive" });

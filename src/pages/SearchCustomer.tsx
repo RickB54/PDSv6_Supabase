@@ -61,6 +61,7 @@ const SearchCustomer = () => {
   const [activeModalTab, setActiveModalTab] = useState("profile");
 
   const { isDemoMode } = useDemoMode();
+  const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
 
   useEffect(() => {
     refresh();
@@ -490,8 +491,12 @@ const SearchCustomer = () => {
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
+                         {isAdmin && (
+                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         )}
                       </div>
                       {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                     </div>

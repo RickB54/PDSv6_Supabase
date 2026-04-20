@@ -80,6 +80,7 @@ export default function BookingsPage() {
 
   // Form State
   const { isDemoMode } = useDemoMode();
+  const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
 
   const [formData, setFormData] = useState({
     customerId: undefined as string | undefined,
@@ -771,7 +772,10 @@ export default function BookingsPage() {
         resultingBooking = { ...selectedBooking, ...updates };
 
         // Notify Admin if Employee
-        await notifyEmployeeChange('update', resultingBooking);
+        const currentUser = getCurrentUser();
+        if (currentUser?.role === 'employee') {
+          await auditEmployeeAction('update', 'Booking', resultingBooking);
+        }
       } else {
         // Create
         const newBooking: Booking = {
@@ -781,14 +785,14 @@ export default function BookingsPage() {
           title: formData.service,
           date: date.toISOString(),
           endTime: endDate.toISOString(),
-          status: (user?.role === 'admin' ? formData.status : 'tentative') as any,
+          status: (getCurrentUser()?.role === 'admin' ? formData.status : 'tentative') as any,
           vehicle: formData.vehicle,
           vehicleYear: formData.vehicleYear,
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
-          bookedBy: formData.bookedBy || user?.name || 'Staff',
+          bookedBy: formData.bookedBy || getCurrentUser()?.name || 'Staff',
           notes: formData.notes,
           addons: formData.addons,
           hasReminder: formData.hasReminder,
@@ -803,7 +807,8 @@ export default function BookingsPage() {
         resultingBooking = newBooking;
 
         // AUDIT for Employee
-        if (user?.role === 'employee') {
+        const userForAudit = getCurrentUser();
+        if (userForAudit?.role === 'employee') {
           await auditEmployeeAction('create', 'Booking', resultingBooking);
         }
       }
@@ -1106,7 +1111,7 @@ export default function BookingsPage() {
             <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-7 text-xs px-2">Year</Button>
           </div>
 
-          <Button variant="outline" size="icon" onClick={refresh} className="h-8 w-8" title="Refresh">
+          <Button variant="outline" size="icon" onClick={() => refresh()} className="h-8 w-8" title="Refresh">
             <RotateCcw className="h-3 w-3" />
           </Button>
 
@@ -1157,7 +1162,7 @@ export default function BookingsPage() {
               <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-8 text-xs px-3">Year</Button>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={refresh} title="Refresh">
+              <Button variant="outline" size="icon" onClick={() => refresh()} title="Refresh">
                 <RotateCcw className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} title="Print All Bookings">
@@ -2088,7 +2093,7 @@ export default function BookingsPage() {
                   </Button>
                 )}
                 
-                {selectedBooking && (
+                {selectedBooking && isAdmin && (
                   <Button 
                     variant="destructive" 
                     size="icon" 

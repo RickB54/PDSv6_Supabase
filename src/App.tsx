@@ -46,6 +46,7 @@ import UserManagement from "./pages/UserManagement";
 import StaffSchedule from "./pages/StaffSchedule";
 import FileManager from "./pages/FileManager";
 import MobileSetup from "./pages/MobileSetup";
+import ShopSetup from "./pages/ShopSetup";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
@@ -138,9 +139,10 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   const user = getCurrentUser();
   const { isDemoMode } = useDemoMode();
 
-  if (isDemoMode) return <>{children}</>;
-
+  // Redirect to login if NO user and no simulation
   if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
+
+  // Enforce roles strictly
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
     if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
@@ -150,11 +152,12 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 };
 
 const DefaultRedirect = ({ user }: { user: any }) => {
-  const { isDemoMode } = useDemoMode();
-  if (isDemoMode) return <Navigate to="/dashboard/admin" replace />;
-  if (!user) return <Navigate to="/" replace />;
-  if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
-  if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
+  const simUser = getCurrentUser();
+  const effectiveUser = simUser || user;
+  
+  if (!effectiveUser) return <Navigate to="/" replace />;
+  if (effectiveUser?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
+  if (effectiveUser?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
   return <Navigate to="/customer-dashboard" replace />;
 };
 
@@ -222,6 +225,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/portal" element={<Portal />} />
       <Route path="/f150-setup" element={<MobileSetup />} />
+      <Route path="/shop-setup-preview" element={<ShopSetup />} />
       <Route path="/contact-support" element={<ContactSupport />} />
     </>
   );
@@ -339,6 +343,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/demo/inventory-control" element={<ProtectedRoute allowedRoles={[]}><InventoryControl /></ProtectedRoute>} />
           <Route path="/file-manager" element={<ProtectedRoute allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
           <Route path="/mobile-setup" element={<ProtectedRoute allowedRoles={['admin']}><MobileSetup /></ProtectedRoute>} />
+          <Route path="/shop-setup" element={<ProtectedRoute allowedRoles={['admin']}><ShopSetup /></ProtectedRoute>} />
           <Route path="/detailing-vendors" element={<ProtectedRoute allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
           <Route path="/training-manual" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
           <Route path="/chemical-training" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />

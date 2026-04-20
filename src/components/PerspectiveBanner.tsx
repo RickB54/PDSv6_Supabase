@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { X, User, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getRealUser } from '@/lib/auth';
 import { useDemoMode } from '@/contexts/DemoContext';
 import { contentService } from '@/lib/content';
 
@@ -10,6 +10,7 @@ export const PerspectiveBanner = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const user = getCurrentUser();
+    const realUser = getRealUser();
     const { isDemoMode } = useDemoMode();
     const [businessStatus, setBusinessStatus] = React.useState<any>(null);
     
@@ -25,7 +26,8 @@ export const PerspectiveBanner = () => {
     }, []);
 
     // Only show if the user is actually an admin trying to see other views
-    const isAdmin = user?.role === 'admin';
+    // We check realUser to ensure the banner doesn't POOF away when mode is active
+    const isAdmin = realUser?.role === 'admin' || isDemoMode;
     
     const isViewingAsCustomer = (isAdmin && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
     const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
@@ -35,7 +37,8 @@ export const PerspectiveBanner = () => {
     
     const isCustomer = isViewingAsCustomer;
     // Force a re-calculation and use a higher z-index to be absolute
-    const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? 40 : 0);
+    // Using a slightly larger offset (42px) for the business status banner to ensure the shadow and border don't overlap
+    const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? (window.innerWidth < 640 ? 36 : 42) : 0);
     const topStyle = { 
         top: `${offset}px`,
         zIndex: 99999,

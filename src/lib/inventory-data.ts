@@ -751,7 +751,8 @@ export async function deleteUsageHistory(id: string): Promise<void> {
 // MOBILE SETUP MEDIA
 // ============================================
 
-const SETUP_MEDIA_KEY = "f150_command_center_media";
+export const MOBILE_SETUP_KEY = "f150_command_center_media";
+export const SHOP_SETUP_KEY = "shop_command_center_media";
 
 const DEFAULT_CATEGORIES: SetupCategory[] = [
     { id: 'cat_reels', name: 'Reels & Pressure Hoses', order: 0 },
@@ -765,10 +766,10 @@ const DEFAULT_CATEGORIES: SetupCategory[] = [
     { id: 'cat_misc', name: 'Miscellaneous Gear', order: 8 },
 ];
 
-async function getFullMeta() {
+async function getFullMeta(key: string) {
     try {
         const { contentService } = await import('./content');
-        const meta = await contentService.getServiceMeta(SETUP_MEDIA_KEY);
+        const meta = await contentService.getServiceMeta(key);
         if (meta && meta.meta) return meta.meta;
         return { media: [], categories: DEFAULT_CATEGORIES };
     } catch {
@@ -776,19 +777,19 @@ async function getFullMeta() {
     }
 }
 
-async function saveFullMeta(payload: { media: SetupMedia[]; categories: SetupCategory[] }) {
+async function saveFullMeta(key: string, payload: { media: SetupMedia[]; categories: SetupCategory[] }) {
     const { contentService } = await import('./content');
     await contentService.upsertServiceMeta({
-        key: SETUP_MEDIA_KEY,
-        title: "F150 Command Center Gallery",
-        description: "Visual setup documentation for the mobile rig.",
+        key: key,
+        title: key === SHOP_SETUP_KEY ? "Shop Setup Gallery" : "F150 Command Center Gallery",
+        description: "Visual setup documentation.",
         meta: payload
     });
 }
 
-export async function getSetupMedia(): Promise<SetupMedia[]> {
+export async function getSetupMedia(key: string = MOBILE_SETUP_KEY): Promise<SetupMedia[]> {
     try {
-        const full = await getFullMeta();
+        const full = await getFullMeta(key);
         return Array.isArray(full.media) ? full.media : [];
     } catch (err) {
         console.error('Error loading setup media:', err);
@@ -796,9 +797,9 @@ export async function getSetupMedia(): Promise<SetupMedia[]> {
     }
 }
 
-export async function getSetupCategories(): Promise<SetupCategory[]> {
+export async function getSetupCategories(key: string = MOBILE_SETUP_KEY): Promise<SetupCategory[]> {
     try {
-        const full = await getFullMeta();
+        const full = await getFullMeta(key);
         const cats = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
         return cats.sort((a: SetupCategory, b: SetupCategory) => a.order - b.order);
     } catch {
@@ -806,21 +807,21 @@ export async function getSetupCategories(): Promise<SetupCategory[]> {
     }
 }
 
-export async function saveSetupCategories(categories: SetupCategory[]): Promise<void> {
+export async function saveSetupCategories(categories: SetupCategory[], key: string = MOBILE_SETUP_KEY): Promise<void> {
     if (isDemoActive()) return;
     try {
-        const full = await getFullMeta();
-        await saveFullMeta({ media: full.media || [], categories });
+        const full = await getFullMeta(key);
+        await saveFullMeta(key, { media: full.media || [], categories });
     } catch (err) {
         console.error('Error saving categories:', err);
         throw err;
     }
 }
 
-export async function saveSetupMedia(media: SetupMedia): Promise<void> {
+export async function saveSetupMedia(media: SetupMedia, key: string = MOBILE_SETUP_KEY): Promise<void> {
     if (isDemoActive()) return;
     try {
-        const full = await getFullMeta();
+        const full = await getFullMeta(key);
         const current: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
         const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
 
@@ -832,35 +833,35 @@ export async function saveSetupMedia(media: SetupMedia): Promise<void> {
             next.push(media);
         }
 
-        await saveFullMeta({ media: next, categories });
+        await saveFullMeta(key, { media: next, categories });
     } catch (err) {
         console.error('Error saving setup media:', err);
         throw err;
     }
 }
 
-export async function updateSetupMediaCategory(id: string, categoryId: string): Promise<void> {
+export async function updateSetupMediaCategory(id: string, categoryId: string, key: string = MOBILE_SETUP_KEY): Promise<void> {
     if (isDemoActive()) return;
     try {
-        const full = await getFullMeta();
+        const full = await getFullMeta(key);
         const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
         const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
         const updated = media.map(m => m.id === id ? { ...m, category: categoryId } : m);
-        await saveFullMeta({ media: updated, categories });
+        await saveFullMeta(key, { media: updated, categories });
     } catch (err) {
         console.error('Error updating media category:', err);
         throw err;
     }
 }
 
-export async function deleteSetupMedia(id: string): Promise<void> {
+export async function deleteSetupMedia(id: string, key: string = MOBILE_SETUP_KEY): Promise<void> {
     if (isDemoActive()) return;
     try {
-        const full = await getFullMeta();
+        const full = await getFullMeta(key);
         const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
         const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
         const next = media.filter(m => m.id !== id);
-        await saveFullMeta({ media: next, categories });
+        await saveFullMeta(key, { media: next, categories });
     } catch (err) {
         console.error('Error deleting setup media:', err);
         throw err;

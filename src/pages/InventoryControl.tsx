@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { getCurrentUser } from "@/lib/auth";
+import { auditEmployeeAction } from "@/lib/audit";
 import { MOCK_INVENTORY, MOCK_EMPLOYEES } from "@/lib/demoMockData";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
@@ -59,6 +61,8 @@ const transformRatio = (r: string) => {
 
 const InventoryControl = () => {
   const { isDemoMode } = useDemoMode();
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || isDemoMode;
   const stickyTop = isDemoMode ? "top-[112px]" : "top-[72px]";
 
   const { toast } = useToast();
@@ -1495,9 +1499,15 @@ const InventoryControl = () => {
               <UnlinkIcon className="h-4 w-4 mr-1" /> Link
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400" title="Duplicate"><Copy className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
+          {isAdmin && (
+            <>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </TableCell>
     </TableRow>
@@ -1564,17 +1574,19 @@ const InventoryControl = () => {
             </Button>
           )}
         </div>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2" title="Edit Item">
-            <Pencil className="h-4 w-4 mr-2" /> Edit
-          </Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 px-2 text-amber-500 hover:text-amber-400" title="Duplicate">
-            <Copy className="h-4 w-4 mr-2" /> Copy
-          </Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 text-red-500 px-2" title="Delete">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        {isAdmin && (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2" title="Edit Item">
+              <Pencil className="h-4 w-4 mr-2" /> Edit
+            </Button>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 px-2 text-amber-500 hover:text-amber-400" title="Duplicate">
+              <Copy className="h-4 w-4 mr-2" /> Copy
+            </Button>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 text-red-500 px-2" title="Delete">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1618,30 +1630,32 @@ const InventoryControl = () => {
           </div>
         </Card>
 
-        {/* Data Management Actions */}
-        <div className="flex flex-wrap gap-4">
-          <Button
-            onClick={() => setInventoryImportOpen(true)}
-            variant="outline"
-            className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-amber-500/50 group"
-          >
-            <FileText className="h-5 w-5 mr-2 text-amber-500 group-hover:text-amber-400" />
-            <div className="text-left">
-              <div className="font-semibold text-sm">Import Inventory</div>
-            </div>
-          </Button>
-
-          <Button
-            onClick={() => setBulkCleanupWarningOpen(true)}
-            variant="outline"
-            className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-red-500/50 group"
-          >
-            <Trash2 className="h-5 w-5 mr-2 text-red-500 group-hover:text-red-400" />
-            <div className="text-left">
-              <div className="font-semibold text-sm">Bulk Cleanup</div>
-            </div>
-          </Button>
-        </div>
+        {isAdmin && (
+          /* Data Management Actions */
+          <div className="flex flex-wrap gap-4">
+            <Button
+              onClick={() => setInventoryImportOpen(true)}
+              variant="outline"
+              className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-amber-500/50 group"
+            >
+              <FileText className="h-5 w-5 mr-2 text-amber-500 group-hover:text-amber-400" />
+              <div className="text-left">
+                <div className="font-semibold text-sm">Import Inventory</div>
+              </div>
+            </Button>
+  
+            <Button
+              onClick={() => setBulkCleanupWarningOpen(true)}
+              variant="outline"
+              className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-red-500/50 group"
+            >
+              <Trash2 className="h-5 w-5 mr-2 text-red-500 group-hover:text-red-400" />
+              <div className="text-left">
+                <div className="font-semibold text-sm">Bulk Cleanup</div>
+              </div>
+            </Button>
+          </div>
+        )}
 
         {/* Global Expand/Collapse Controls */}
         <div className="flex justify-end gap-2">
@@ -1741,10 +1755,14 @@ const InventoryControl = () => {
             <div className="p-4 border-t border-yellow-500/10 animate-in slide-in-from-top-2 duration-200">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                 <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full text-[10px] font-bold">
-                  <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0 w-full sm:w-auto"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setLabelMakerChemical(null); setLabelMakerOpen(true); }} className="border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400 w-full sm:w-auto"><Tag className="h-3 w-3 mr-1" /> Create Label</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }} className="w-full sm:w-auto"><FileText className="h-3 w-3 mr-1" /> Import</Button>
-                  <Button size="sm" variant="outline" onClick={() => setBulkCleanupWarningOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20 w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                  {isAdmin && (
+                    <>
+                      <Button size="sm" onClick={openAddChemical} className="bg-yellow-600 hover:bg-yellow-500 text-white border-0 w-full sm:w-auto"><Plus className="h-3 w-3 mr-1" /> Add Chemical</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setLabelMakerChemical(null); setLabelMakerOpen(true); }} className="border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400 w-full sm:w-auto"><Tag className="h-3 w-3 mr-1" /> Create Label</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setActiveImportTab("chemicals"); setInventoryImportOpen(true); }} className="w-full sm:w-auto"><FileText className="h-3 w-3 mr-1" /> Import</Button>
+                      <Button size="sm" variant="outline" onClick={() => setBulkCleanupWarningOpen(true)} className="text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/20 w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" /> Cleanup</Button>
+                    </>
+                  )}
                   <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300 w-full sm:w-auto" onClick={() => { try { downloadInventoryPDF('chemicals'); } catch(e) { toast({ title: "PDF Error", description: "Failed to generate inventory PDF.", variant: "destructive"}); } }}><Download className="h-3 w-3 mr-1" /> PDF</Button>
                   <Button size="sm" variant="outline" className="text-yellow-400 hover:text-yellow-300 w-full sm:w-auto" onClick={() => printInventory('chemicals')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
                   <Button size="sm" variant="outline" className="text-emerald-400 hover:text-emerald-300 w-full sm:w-auto" onClick={() => { try { downloadDilutionPDF(); } catch(e) { toast({ title: "PDF Error", description: "Failed to generate reference chart PDF.", variant: "destructive"}); } }}><Download className="h-3 w-3 mr-1" /> PDF Ref Chart</Button>

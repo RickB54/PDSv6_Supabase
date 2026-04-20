@@ -26,7 +26,7 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const renderSidebarContent = (collapsed: boolean, navigate: any) => (
+const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean) => (
     <>
         {/* Top Priority Action */}
         <Button
@@ -40,35 +40,41 @@ const renderSidebarContent = (collapsed: boolean, navigate: any) => (
             {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
         </Button>
 
-        {/* Quick Pay Shortcut */}
-        <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "default"}
-            onClick={() => window.dispatchEvent(new Event('open-quick-pay'))}
-            title="Collect Payment (Quick Pay)"
-            className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-emerald-500/20 transition-all`}
-        >
-            <DollarSign className="w-5 h-5 text-emerald-500" />
-            {!collapsed && <span className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400">Quick Pay</span>}
-        </Button>
+        {/* Quick Pay Shortcut - Admin Only */}
+        {isAdmin && (
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => window.dispatchEvent(new Event('open-quick-pay'))}
+                title="Collect Payment (Quick Pay)"
+                className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-emerald-500/20 transition-all`}
+            >
+                <DollarSign className="w-5 h-5 text-emerald-500" />
+                {!collapsed && <span className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400">Quick Pay</span>}
+            </Button>
+        )}
 
-        {/* Pricing Scenario Shortcut */}
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <Calculator className="w-5 h-5 text-red-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Scenario Builder</span>}
-        </Button>
+        {/* Pricing Scenario Shortcut - Admin Only */}
+        {isAdmin && (
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Calculator className="w-5 h-5 text-red-500" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Scenario Builder</span>}
+            </Button>
+        )}
 
-        {/* Availability Manager - Admin Only */}
-        <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "default"}
-            onClick={() => navigate('/availability-manager')}
-            title="Availability Manager"
-            className={collapsed ? "" : "w-full justify-start gap-2"}
-        >
-            <CalendarCheck className="w-5 h-5 text-blue-600" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Availability</span>}
-        </Button>
+        {/* Hybrid Availability System - Admin Only */}
+        {isAdmin && (
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => navigate('/availability-manager')}
+                title="Hybrid Availability System"
+                className={collapsed ? "" : "w-full justify-start gap-2"}
+            >
+                <CalendarCheck className="w-5 h-5 text-blue-600" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Hybrid Availability</span>}
+            </Button>
+        )}
 
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/staff-schedule')} title="Staff Schedule" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <CalendarDays className="w-5 h-5 text-emerald-500" />
@@ -97,10 +103,12 @@ const renderSidebarContent = (collapsed: boolean, navigate: any) => (
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Notes</span>}
         </Button>
 
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <Package className="w-5 h-5 text-cyan-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Inventory</span>}
-        </Button>
+        {isAdmin && (
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Package className="w-5 h-5 text-cyan-500" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Inventory</span>}
+            </Button>
+        )}
 
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <FlaskConical className="w-5 h-5 text-teal-400" />
@@ -196,6 +204,8 @@ export function GlobalRightSidebar() {
     if (publicPaths.includes(location.pathname)) return null;
 
     // Mobile style logic
+    const isAdmin = user?.role === 'admin';
+
     if (isMobile) {
         return (
             <>
@@ -222,7 +232,7 @@ export function GlobalRightSidebar() {
                             <ChevronRight className="w-5 h-5" />
                         </Button>
                     </div>
-                    {renderSidebarContent(false, navigate)}
+                    {renderSidebarContent(false, navigate, isAdmin)}
                 </div>
             </>
         );
@@ -243,7 +253,7 @@ export function GlobalRightSidebar() {
             >
                 {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
-            {renderSidebarContent(collapsed, navigate)}
+            {renderSidebarContent(collapsed, navigate, isAdmin)}
         </div>
     );
 }

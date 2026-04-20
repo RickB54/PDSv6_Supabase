@@ -33,20 +33,8 @@ export function setAuthMode(mode: AuthMode) {
   // No-op
 }
 
-export function getCurrentUser(): User | null {
-  // 1) Fast-path for Demo Mode simulation
-  try {
-    if (localStorage.getItem('demo_mode_active') === 'true') {
-      return {
-        id: "demo-admin-sim",
-        name: "Demo Admin",
-        email: "demo@primeautodetail.com",
-        role: "admin"
-      };
-    }
-  } catch { }
-
-  // 2) Supabase Persistence Layer
+export function getRealUser(): User | null {
+  // 1) Supabase Persistence Layer
   if (isSupabaseEnabled()) {
     try {
       const cached = localStorage.getItem('currentUser');
@@ -60,6 +48,32 @@ export function getCurrentUser(): User | null {
     }
   }
   return null;
+}
+
+export function getCurrentUser(): User | null {
+  // 1) Fast-path for Demo/Perspective Mode simulation
+  try {
+    const viewAs = localStorage.getItem('view_as_mode');
+    const isDemo = localStorage.getItem('demo_mode_active') === 'true';
+    
+    if (viewAs === 'employee') {
+      return { id: "sim-employee", name: "Staff Member", email: "staff@demo.com", role: "employee" };
+    }
+    if (viewAs === 'customer') {
+      return { id: "sim-customer", name: "Client User", email: "client@demo.com", role: "customer" };
+    }
+    
+    if (isDemo) {
+      return {
+        id: "demo-admin-sim",
+        name: "Demo Admin",
+        email: "demo@primeautodetail.com",
+        role: "admin"
+      };
+    }
+  } catch { }
+
+  return getRealUser();
 }
 
 export function setCurrentUser(user: User | null): void {
