@@ -92,8 +92,8 @@ export const Navbar = () => {
     // Standard navigation only
   };
     const isAdmin = user?.role === 'admin';
-    const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
-    const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
+    const isViewingAsCustomer = (isAdmin && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+    const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
     const isPerspectiveMode = isAdmin && (isViewingAsCustomer || isViewingAsEmployee);
 
     const bannerTop = isDemoMode ? 40 : 0;

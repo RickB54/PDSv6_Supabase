@@ -34,14 +34,19 @@ export const PerspectiveBanner = () => {
     if (!isViewingAsCustomer && !isViewingAsEmployee) return null;
     
     const isCustomer = isViewingAsCustomer;
+    // Force a re-calculation and use a higher z-index to be absolute
     const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? 40 : 0);
-    const topStyle = { top: `${offset}px` };
+    const topStyle = { 
+        top: `${offset}px`,
+        zIndex: 99999,
+        borderTop: '1px solid rgba(255,255,255,0.1)'
+    };
     
     return (
         <div 
             style={topStyle}
             className={cn(
-            "fixed left-0 right-0 z-[110] h-10 flex items-center justify-between px-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500",
+            "fixed left-0 right-0 h-10 flex items-center justify-between px-4 shadow-[0_4px_20px_rgba(0,0,0,0.4)] animate-in fade-in slide-in-from-top-4 duration-500",
             isCustomer ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
         )}>
             <div className="flex items-center gap-3">
