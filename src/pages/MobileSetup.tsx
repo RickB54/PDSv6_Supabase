@@ -917,25 +917,38 @@ function MediaCard({
         <div className="flex gap-1 shrink-0">
           {/* Move to category menu */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10">
                 <MoreVertical className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white text-xs min-w-[160px]">
+            <DropdownMenuContent 
+              align="end" 
+              className="bg-zinc-900 border-zinc-800 text-white text-xs min-w-[160px]"
+              onClick={(e) => e.stopPropagation()}
+            >
               <p className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Move to category</p>
               <DropdownMenuSeparator className="bg-zinc-800" />
               {categories.map((cat) => (
                 <DropdownMenuItem
                   key={cat.id}
-                  onClick={() => onReassign(item.id, cat.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReassign(item.id, cat.id);
+                  }}
                   className={`cursor-pointer font-bold text-xs ${item.category === cat.id ? "text-indigo-400" : "text-white"}`}
                 >
                   {item.category === cat.id && "✓ "}{cat.name}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem onClick={() => onReassign(item.id, "none")} className="text-zinc-500 cursor-pointer text-xs">
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReassign(item.id, "none");
+                }} 
+                className="text-zinc-500 cursor-pointer text-xs"
+              >
                 — Uncategorized
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -945,7 +958,10 @@ function MediaCard({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete(item.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
             className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
             <Trash2 className="h-3.5 w-3.5" />

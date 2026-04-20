@@ -526,59 +526,46 @@ const ShopSetup = () => {
                     </div>
                   </div>
 
-                  {/* Horizontal scrolling row */}
-                  {catMedia.length === 0 ? (
-                    <div
+                  {/* Grid layout instead of horizontal scroll for mobile stability */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                    {catMedia.map((item) => {
+                      const globalIndex = media.findIndex(m => m.id === item.id);
+                      return (
+                        <MediaCard
+                          key={item.id}
+                          item={item}
+                          categories={categories}
+                          onDelete={removeMedia}
+                          onReassign={handleReassign}
+                          onOpenGallery={() => openLightbox(globalIndex)}
+                        />
+                      );
+                    })}
+                    {/* Add-to-this-category slot */}
+                    <button
                       onClick={() => {
                         setSelectedCategoryForUpload(cat.id);
                         fileInputRef.current?.click();
                       }}
-                      className="h-44 border-2 border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all"
+                      className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
                     >
-                      <Plus className="h-6 w-6 text-zinc-600" />
-                      <span className="text-xs text-zinc-600 font-bold uppercase tracking-widest">Add to {cat.name}</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent snap-x">
-                      {catMedia.map((item) => {
-                        const globalIndex = media.findIndex(m => m.id === item.id);
-                        return (
-                          <MediaCard
-                            key={item.id}
-                            item={item}
-                            categories={categories}
-                            onDelete={removeMedia}
-                            onReassign={handleReassign}
-                            onOpenGallery={() => openLightbox(globalIndex)}
-                          />
-                        );
-                      })}
-                      {/* Add-to-this-category slot */}
-                      <button
-                        onClick={() => {
-                          setSelectedCategoryForUpload(cat.id);
-                          fileInputRef.current?.click();
-                        }}
-                        className="shrink-0 w-48 h-36 border-2 border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
-                      >
-                        <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
-                        <span className="text-[10px] text-zinc-600 group-hover:text-indigo-400 font-bold uppercase tracking-widest">Add Area View</span>
-                      </button>
-                    </div>
-                  )}
+                      <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
+                    </button>
+                  </div>
                 </section>
               );
             })}
 
             {/* Uncategorized section */}
             {uncategorized.length > 0 && (
-              <section>
+              <section className="space-y-4">
                 <div className="flex items-center gap-3 mb-4">
                   <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" />
                   <h2 className="text-base font-black uppercase tracking-widest text-zinc-500">Uncategorized Views</h2>
                   <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">{uncategorized.length}</span>
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent snap-x">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                   {uncategorized.map((item) => {
                     const globalIndex = media.findIndex(m => m.id === item.id);
                     return (
@@ -926,15 +913,74 @@ const ShopSetup = () => {
 // ... Sub-components ...
 function MediaCard({ item, categories, onDelete, onReassign, onOpenGallery }: any) {
   return (
-    <div className="shrink-0 w-64 md:w-80 relative group rounded-2xl overflow-hidden border-2 border-zinc-800 bg-zinc-900 aspect-[4/3] shadow-lg snap-center">
-      <div className="absolute inset-0 z-10 cursor-pointer" onClick={onOpenGallery}>
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-lg p-1.5"><Maximize2 className="h-4 w-4 text-white" /></div>
+    <div className="relative group rounded-2xl overflow-hidden border-2 border-zinc-800 bg-zinc-900 aspect-[4/3] shadow-lg hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition-all duration-300">
+      <div 
+        className="absolute inset-0 z-10 cursor-pointer" 
+        onClick={onOpenGallery}
+      >
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-lg p-1.5 backdrop-blur-sm border border-white/10">
+          <Maximize2 className="h-4 w-4 text-white" />
+        </div>
       </div>
-      <img src={item.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black p-4 opacity-0 group-hover:opacity-100 transition-all z-20">
-        <div className="flex justify-between items-center">
-           <span className="text-[10px] font-black uppercase text-white/50">{categories.find((c: any) => c.id === item.category)?.name || "General"}</span>
-           <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} className="h-8 w-8 text-red-400"><Trash2 className="h-4 w-4" /></Button>
+
+      <img src={item.url} alt={item.caption || "Setup photo"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+
+      {/* Overlay controls */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-4 h-24 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">
+        <span className="text-[9px] font-black uppercase tracking-widest text-white/50 truncate max-w-[60%]">
+          {categories.find((c: any) => c.id === item.category)?.name || "General Area"}
+        </span>
+
+        <div className="flex gap-1 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => { e.stopPropagation(); }}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10">
+                <MoreVertical className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="end" 
+              className="bg-zinc-900 border-zinc-800 text-white text-xs min-w-[160px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Move to area</p>
+              <DropdownMenuSeparator className="bg-zinc-800" />
+              {categories.map((cat: any) => (
+                <DropdownMenuItem
+                  key={cat.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReassign(item.id, cat.id);
+                  }}
+                  className={`cursor-pointer font-bold text-xs ${item.category === cat.id ? "text-indigo-400" : "text-white"}`}
+                >
+                  {item.category === cat.id && "✓ "}{cat.name}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator className="bg-zinc-800" />
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReassign(item.id, "none");
+                }} 
+                className="text-zinc-500 cursor-pointer text-xs"
+              >
+                — Uncategorized
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </div>
