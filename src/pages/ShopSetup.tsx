@@ -111,6 +111,11 @@ const ShopSetup = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
+  // Paperwork
+  const [docUploadOpen, setDocUploadOpen] = useState(false);
+  const [docName, setDocName] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
+
   // ─── Load ─────────────────────────────────────────────
   const loadData = async () => {
     try {
@@ -193,6 +198,36 @@ const ShopSetup = () => {
     setUploading(false);
     setUploadProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDocUpload = async () => {
+    if (!docFile || !docName.trim()) return;
+    setUploading(true);
+    try {
+      const publicUrl = await uploadSetupMedia(docFile);
+      if (!publicUrl) throw new Error("Upload failed");
+
+      const newMedia: SetupMedia = {
+        id: crypto.randomUUID(),
+        type: "pdf",
+        url: publicUrl,
+        caption: docName.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      await saveSetupMedia(newMedia, CONTEXT_KEY);
+      const updated = await getSetupMedia(CONTEXT_KEY);
+      setMedia(updated);
+      
+      setDocUploadOpen(false);
+      setDocName("");
+      setDocFile(null);
+      toast({ title: "Document Saved", description: "Added to Shop Paperwork." });
+    } catch {
+      toast({ title: "Upload Failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
   };
 
   // ─── Reassign category ────────────────────────────────
@@ -650,13 +685,13 @@ const ShopSetup = () => {
                   <p className="text-zinc-500 text-sm">Upload MSDS sheets, equipment manuals, and shop procedures.</p>
                 </div>
               </div>
-              <Button
-                size="lg"
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase tracking-widest text-xs px-8 h-14 border border-zinc-700"
-              >
-                <Plus className="mr-2 h-5 w-5" /> Upload PDF Document
-              </Button>
+                <Button
+                  size="lg"
+                  onClick={() => setDocUploadOpen(true)}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/20"
+                >
+                  <Plus className="mr-2 h-5 w-5" /> Upload PDF Document
+                </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -815,6 +850,62 @@ const ShopSetup = () => {
               <button onClick={nextMedia} className="absolute right-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white"><ChevronRight className="h-8 w-8" /></button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── DOCUMENT UPLOAD DIALOG ────────────────────── */}
+      <Dialog open={docUploadOpen} onOpenChange={setDocUploadOpen}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
+              <FileText className="h-6 w-6" /> Upload Paperwork
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500">Add equipment manuals or shop procedures (PDF only).</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Document Name</Label>
+              <Input
+                value={docName}
+                onChange={(e) => setDocName(e.target.value)}
+                placeholder="e.g. Pressure Washer Manual"
+                className="bg-zinc-900 border-zinc-800 text-white h-12 font-bold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Select PDF File</Label>
+              <div className="group relative">
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setDocFile(e.target.files?.[0] || null)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className={`h-24 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all ${
+                  docFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-zinc-800 group-hover:border-indigo-500/50 group-hover:bg-indigo-500/5'
+                }`}>
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-1 ${docFile ? 'bg-emerald-500/20' : 'bg-zinc-800'}`}>
+                    <FileText className={`h-5 w-5 ${docFile ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                  </div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${docFile ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                    {docFile ? docFile.name : "Tap to browse files"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={handleDocUpload}
+              disabled={uploading || !docFile || !docName.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest h-12"
+            >
+              {uploading ? "Uploading Resource..." : "Complete Upload"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
