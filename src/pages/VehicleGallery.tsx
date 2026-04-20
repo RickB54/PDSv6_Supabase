@@ -16,6 +16,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
+import CustomerModal from "@/components/customers/CustomerModal";
+import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { Plus, ExternalLink } from "lucide-react";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 interface MediaItem {
@@ -206,7 +209,7 @@ function MediaTile({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 }
 
 // ─── customer card ────────────────────────────────────────────────────────────
-function CustomerCard({ customer, onOpen }: { customer: Customer; onOpen: (items: MediaItem[], idx: number) => void }) {
+function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; onOpen: (items: MediaItem[], idx: number) => void; onAddMedia: (customer: Customer) => void }) {
     const [expanded, setExpanded] = useState(false);
     const allMedia = useMemo(() => buildMediaForCustomer(customer), [customer]);
 
@@ -234,14 +237,24 @@ function CustomerCard({ customer, onOpen }: { customer: Customer; onOpen: (items
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {allMedia.filter(m => m.type === "video").length > 0 && (
-                        <Badge className="bg-pink-600/20 text-pink-400 border-pink-600/30 text-[9px]">
-                            {allMedia.filter(m => m.type === "video").length} video{allMedia.filter(m => m.type === "video").length !== 1 ? "s" : ""}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 text-[9px] font-black border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+                      onClick={(e) => { e.stopPropagation(); onAddMedia(customer); }}
+                    >
+                        <Plus className="w-3 h-3" /> ADD MEDIA
+                    </Button>
+                    <div className="flex items-center gap-2 mr-2">
+                        {allMedia.filter(m => m.type === "video").length > 0 && (
+                            <Badge className="bg-pink-600/20 text-pink-400 border-pink-600/30 text-[9px]">
+                                {allMedia.filter(m => m.type === "video").length} video{allMedia.filter(m => m.type === "video").length !== 1 ? "s" : ""}
+                            </Badge>
+                        )}
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px]">
+                            {allMedia.filter(m => m.type === "image").length} photo{allMedia.filter(m => m.type === "image").length !== 1 ? "s" : ""}
                         </Badge>
-                    )}
-                    <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px]">
-                        {allMedia.filter(m => m.type === "image").length} photo{allMedia.filter(m => m.type === "image").length !== 1 ? "s" : ""}
-                    </Badge>
+                    </div>
                     {expanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
                 </div>
             </button>
@@ -319,6 +332,23 @@ export default function VehicleGallery() {
     // lightbox
     const [lightboxItems, setLightboxItems] = useState<MediaItem[] | null>(null);
     const [lightboxIdx, setLightboxIdx] = useState(0);
+
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+    const [modalTab, setModalTab] = useState("media");
+
+    const refreshData = async () => {
+        setLoading(true);
+        try {
+            const data = await getSupabaseCustomers();
+            setCustomers(data);
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to reload media.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const openLightbox = (items: MediaItem[], idx: number) => {
         setLightboxItems(items);
@@ -448,6 +478,11 @@ export default function VehicleGallery() {
                                         key={c.id}
                                         customer={c}
                                         onOpen={openLightbox}
+                                        onAddMedia={(customer) => {
+                                          setEditingCustomer(customer);
+                                          setModalTab("media");
+                                          setModalOpen(true);
+                                        }}
                                     />
                                 ))}
                             </div>
@@ -502,6 +537,19 @@ export default function VehicleGallery() {
                     onClose={() => setLightboxItems(null)}
                 />
             )}
+
+            <CustomerModal 
+                open={modalOpen} 
+                onOpenChange={(open) => { setModalOpen(open); if (!open && new URLSearchParams(location.search).has("add")) navigate(location.pathname, { replace: true }); }} 
+                initial={editingCustomer} 
+                initialTab={modalTab}
+                onSave={async (data) => {
+                    await upsertSupabaseCustomer(data);
+                    await refreshData();
+                    if (new URLSearchParams(location.search).has("add")) navigate(location.pathname, { replace: true });
+                    setModalOpen(false);
+                }}
+            />
         </div>
     );
 }

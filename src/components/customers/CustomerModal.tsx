@@ -30,9 +30,10 @@ interface Props {
   initial?: Customer | null;
   onSave: (data: Customer) => Promise<void> | void;
   defaultType?: 'customer' | 'prospect';
+  initialTab?: string;
 }
 
-export default function CustomerModal({ open, onOpenChange, initial, onSave, defaultType = 'customer' }: Props) {
+export default function CustomerModal({ open, onOpenChange, initial, onSave, defaultType = 'customer', initialTab = 'profile' }: Props) {
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -88,18 +89,29 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           cOut = match[2];
         }
 
+        // Parse legacy vehicle_info if it's a string
+        let vInfo = (initial as any).vehicle_info;
+        if (typeof vInfo === 'string') {
+          try { vInfo = JSON.parse(vInfo); } catch (e) { vInfo = {}; }
+        }
+
         let baseVehicles = initial.vehicles || [];
-        if (baseVehicles.length === 0 && (initial.vehicle || initial.model || initial.year)) {
+        const hasLegacyInfo = initial.vehicle || initial.model || initial.year || initial.make || vInfo?.make || vInfo?.vehicle || vInfo?.model;
+        
+        if (baseVehicles.length === 0 && hasLegacyInfo) {
           baseVehicles = [{
-            make: initial.vehicle || "",
-            model: initial.model || "",
-            year: initial.year ? String(initial.year) : "",
-            type: initial.vehicleType || "",
-            color: initial.color || "",
-            mileage: initial.mileage ? String(initial.mileage) : "",
-            conditionInside: initial.conditionInside || cIn || "",
-            conditionOutside: initial.conditionOutside || cOut || "",
-            generalPhotos: [], beforePhotos: [], afterPhotos: [], videoUrls: []
+            make: initial.make || initial.vehicle || vInfo?.make || vInfo?.vehicle || "",
+            model: initial.model || vInfo?.model || "",
+            year: initial.year ? String(initial.year) : String(vInfo?.year || ""),
+            type: initial.vehicleType || vInfo?.type || vInfo?.vehicleType || "",
+            color: initial.color || vInfo?.color || "",
+            mileage: (initial.mileage || vInfo?.mileage) ? String(initial.mileage || vInfo?.mileage) : "",
+            conditionInside: initial.conditionInside || vInfo?.conditionInside || cIn || "",
+            conditionOutside: initial.conditionOutside || vInfo?.conditionOutside || cOut || "",
+            generalPhotos: initial.generalPhotos || vInfo?.generalPhotos || [],
+            beforePhotos: initial.beforePhotos || vInfo?.beforePhotos || [],
+            afterPhotos: initial.afterPhotos || vInfo?.afterPhotos || [],
+            videoUrls: (initial as any).shortVideos || vInfo?.videoUrls || vInfo?.shortVideos || []
           }];
         }
 
@@ -229,14 +241,18 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           const vehicle = { ...updatedVehicles[vehicleIndex] };
           const currentMedia = (vehicle as any)[type] || [];
           const updatedMedia = [...currentMedia];
-          updatedMedia[index] = publicUrl;
+          if (!updatedMedia.includes(publicUrl)) {
+            updatedMedia.push(publicUrl);
+          }
           (vehicle as any)[type] = updatedMedia;
           updatedVehicles[vehicleIndex] = vehicle;
           return { ...prev, vehicles: updatedVehicles };
         } else {
           const current = (prev as any)[type] || [];
           const updated = [...current];
-          updated[index] = publicUrl;
+          if (!updated.includes(publicUrl)) {
+            updated.push(publicUrl);
+          }
           return { ...prev, [type]: updated };
         }
       });
@@ -334,17 +350,20 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue={initialTab} className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 border-b border-white/5 bg-zinc-950 sticky top-0 z-20">
             <TabsList className="bg-transparent border-none p-0 h-12 gap-8">
               <TabsTrigger value="profile" className="data-[state=active]:bg-transparent data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
-                Profile & Vehicles
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="media" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
+                Media & Gallery
               </TabsTrigger>
               <TabsTrigger value="retention" className="data-[state=active]:bg-transparent data-[state=active]:text-emerald-400 data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
-                Retention Hub
+                Retention
               </TabsTrigger>
               <TabsTrigger value="notes" className="data-[state=active]:bg-transparent data-[state=active]:text-amber-400 data-[state=active]:border-b-2 data-[state=active]:border-amber-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
-                Notes & Scripts
+                Notes
               </TabsTrigger>
             </TabsList>
           </div>
@@ -440,28 +459,26 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                          </div>
                          <div className="space-y-1">
                             <Label className="text-[10px] text-zinc-500 uppercase font-black">Body Type</Label>
-                            <Input placeholder="Type" className="h-8 text-xs bg-zinc-950 border-zinc-800" value={vehicle.type} readOnly />
+                            <button
+                              type="button"
+                              className="h-8 w-full text-xs bg-zinc-950 border border-zinc-800 rounded-md px-3 text-left hover:border-blue-500 transition-colors flex items-center justify-between gap-2"
+                              onClick={() => { setCurrentVehicleIdx(vIdx); setVehicleSelectorOpen(true); }}
+                            >
+                              <span className={vehicle.type ? 'text-zinc-200' : 'text-zinc-600'}>{vehicle.type || 'Click to classify...'}</span>
+                              <Search className="h-3 w-3 text-zinc-500 shrink-0" />
+                            </button>
                          </div>
                       </div>
-
-                        <div className="grid grid-cols-3 gap-3">
-                          <MediaUploadField label="Before" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                          <MediaUploadField label="After" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                          <MediaUploadField label="General" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                        </div>
-                        {form.id && (
-                          <div className="pt-2 border-t border-zinc-800/50 flex justify-end">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1.5"
-                              onClick={() => window.open(`/vehicle-gallery?customerId=${form.id}`, '_blank')}
-                            >
-                              OPEN FULL VEHICLE GALLERY <ExternalLink className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
+                       <div className="pt-2 border-t border-zinc-800/50 flex items-center justify-between">
+                         <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Photos → open the Media &amp; Gallery tab</p>
+                         {form.id && (
+                           <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1.5" onClick={() => window.open(`/vehicle-gallery?customerId=${form.id}`, '_blank')}>
+                             GALLERY <ExternalLink className="h-3 w-3" />
+                           </Button>
+                         )}
+                       </div>
                       </div>
+
                   ))}
                 </div>
 
@@ -479,6 +496,52 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="media" className="m-0 p-6 space-y-8 outline-none border-0">
+               <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4 text-indigo-500" /> Media & Gallery Management
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Capture before/after photos and general vehicle media</p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1.5"
+                    onClick={() => window.open(`/vehicle-gallery?customerId=${form.id}`, '_blank')}
+                    disabled={!form.id}
+                  >
+                    OPEN GLOBAL GALLERY <ExternalLink className="h-3 w-3" />
+                  </Button>
+               </div>
+
+               <div className="space-y-6">
+                  {form.vehicles && form.vehicles.length > 0 ? (
+                    form.vehicles.map((vehicle, vIdx) => {
+                      const vLabel = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || `Vehicle ${vIdx + 1}`;
+                      return (
+                        <div key={vIdx} className="p-5 bg-zinc-900/40 border border-zinc-800 rounded-2xl space-y-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Car className="h-3.5 w-3.5 text-zinc-500" />
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-300">{vLabel}</h4>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <MediaUploadField label="Before Photos" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                            <MediaUploadField label="After Photos" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                            <MediaUploadField label="General Media" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-8 text-center border border-dashed border-zinc-800 rounded-2xl bg-zinc-950/30">
+                      <Car className="h-10 w-10 mx-auto text-zinc-800 mb-3" />
+                      <p className="text-zinc-500 text-xs font-bold uppercase">Add a vehicle in the Profile tab first to enable media uploads</p>
+                    </div>
+                  )}
+               </div>
             </TabsContent>
 
             <TabsContent value="retention" className="m-0 p-0 outline-none border-0">

@@ -16,6 +16,8 @@ import {
     DialogTitle,
     DialogFooter
 } from "@/components/ui/dialog";
+import { useFullScreen } from "@/hooks/useFullScreen";
+import { useDemoMode } from "@/contexts/DemoContext";
 import {
     DndContext,
     closestCenter,
@@ -23,7 +25,9 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
-    DragEndEvent
+    DragEndEvent,
+    DragOverlay,
+    DragStartEvent
 } from "@dnd-kit/core";
 import {
     arrayMove,
@@ -36,6 +40,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Save, ArrowLeft, Loader2, Newspaper, Calendar, Pin, Search, X, Edit2, Trash2, Archive, Globe, Lock, Image as ImageIcon, MessageSquare, Sparkles, Rocket, Facebook, History, Filter, ChevronDown, Clock, Share2, Wand2, RotateCcw, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
 import { BlogAIAssistant } from "@/components/BlogAIAssistant";
 import localforage from "localforage";
@@ -59,13 +64,14 @@ export default function BlogReorder() {
     const [searchTerm, setSearchTerm] = useState("");
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
-    const [formData, setFormData] = useState<Partial<LibraryItem>>({});
+    const [formData, setFormData] = useState<Partial<LibraryItem>>({ is_verified: true });
     const [isUploading, setIsUploading] = useState(false);
     const [isSocialBlastOpen, setIsSocialBlastOpen] = useState(false);
     const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
     const [isNewAIPost, setIsNewAIPost] = useState(false);
     const [socialItem, setSocialItem] = useState<LibraryItem | null>(null);
     const [showHistory, setShowHistory] = useState(false);
+    const [activeId, setActiveId] = useState<string | null>(null);
     const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
     const [historyFilter, setHistoryFilter] = useState<ActivityLog['action'] | 'all'>('all');
     
@@ -138,14 +144,22 @@ export default function BlogReorder() {
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
+        setActiveId(null);
 
         if (over && active.id !== over.id) {
             setItems((prevItems) => {
                 const oldIndex = prevItems.findIndex((item) => item.id === active.id);
                 const newIndex = prevItems.findIndex((item) => item.id === over.id);
+                
+                if (oldIndex === -1 || newIndex === -1) return prevItems;
+                
                 return arrayMove(prevItems, oldIndex, newIndex);
             });
         }
+    };
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
     };
 
     const handleSaveOrder = async () => {
@@ -220,7 +234,7 @@ export default function BlogReorder() {
         if (!formData.title) return;
         setIsSaving(true);
         try {
-            const res = await upsertLibraryItem(formData as LibraryItem);
+            const res = await upsertLibraryItem({ ...formData, is_verified: true } as LibraryItem);
             if (res.success) {
                 await logActivity('edit', editingItem, `Title: "${formData.title}"`);
                 toast({ title: "Post Updated" });
@@ -259,11 +273,16 @@ export default function BlogReorder() {
         (item.category || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const { isFullScreen } = useFullScreen();
+
     return (
         <div className="min-h-screen bg-black text-white">
             <PageHeader title="Blog Layout Architect" />
 
-            <main className="container mx-auto px-4 pt-32 pb-24 relative z-10">
+            <main className={cn(
+                "container mx-auto px-4 pb-24 relative",
+                isFullScreen ? "fixed inset-0 z-[100] bg-black pt-24 overflow-y-auto" : "pt-32"
+            )}>
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
@@ -428,6 +447,7 @@ export default function BlogReorder() {
                         <DndContext
                             sensors={sensors}
                             collisionDetection={closestCenter}
+                            onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext
@@ -449,6 +469,22 @@ export default function BlogReorder() {
                                     ))}
                                 </div>
                             </SortableContext>
+                            
+                            <DragOverlay adjustScale={true}>
+                                {activeId ? (
+                                    <div className="opacity-80 scale-105">
+                                        <SortableItem 
+                                            item={items.find(i => i.id === activeId)!}
+                                            onEdit={() => {}}
+                                            onDelete={() => {}}
+                                            onArchive={() => {}}
+                                            onPin={() => {}}
+                                            onSocialBlast={() => {}}
+                                            onAIAssist={() => {}}
+                                        />
+                                    </div>
+                                ) : null}
+                            </DragOverlay>
                         </DndContext>
                     </div>
                 )}

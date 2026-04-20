@@ -43,6 +43,7 @@ const Prospects = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadedThisMount, setHasLoadedThisMount] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState("profile");
   const [expandedCustomers, setExpandedCustomers] = useState<string[]>([]);
   const [allExpanded, setAllExpanded] = useState(false);
   const [openMaps, setOpenMaps] = useState<string[]>([]);
@@ -111,8 +112,8 @@ const Prospects = () => {
     }
   };
 
-  const openAdd = () => { setEditing(null); setModalOpen(true); };
-  const openEdit = (c: Customer) => { setEditing(c); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setActiveModalTab("profile"); setModalOpen(true); };
+  const openEdit = (c: Customer, tab: string = "profile") => { setEditing(c); setActiveModalTab(tab); setModalOpen(true); };
 
   const onSaveModal = async (data: any) => {
     if (isDemoMode) {
@@ -571,8 +572,8 @@ const Prospects = () => {
                         }
                         if (allPhotos.length === 0) return null;
 
-                        const displayPhotos = allPhotos.slice(0, 6);
-                        const hasMore = allPhotos.length > 6;
+                        const displayPhotos = allPhotos.slice(0, 12);
+                        const hasMore = allPhotos.length > 12;
 
                         return (
                           <div className="mt-12 pt-8 border-t border-zinc-800/50">
@@ -580,18 +581,28 @@ const Prospects = () => {
                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                                 <ImageIcon className="h-3 w-3" /> Media Archive ({allPhotos.length} items)
                               </h4>
-                              {hasMore && (
+                               <div className="flex items-center gap-2">
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  className="h-7 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
-                                  onClick={() => window.location.href = `/vehicle-gallery?customerId=${customer.id}`}
+                                  className="h-7 text-[10px] font-black border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+                                  onClick={() => openEdit(customer, "media")}
                                 >
-                                  VIEW ALL IN GALLERY <ExternalLink className="w-3 h-3 ml-2" />
+                                  <Plus className="w-3 h-3" /> ADD MEDIA
                                 </Button>
-                              )}
+                                {allPhotos.length > 0 && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-7 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                                    onClick={() => window.location.href = `/vehicle-gallery?customerId=${customer.id}`}
+                                  >
+                                    VIEW ALL <ExternalLink className="w-3 h-3 ml-0.5" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                               {displayPhotos.map((p, i) => (
                                 <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
                                   <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
@@ -676,7 +687,14 @@ const Prospects = () => {
         onOpenChange={setGalleryOpen}
       />
 
-      <CustomerModal open={modalOpen} onOpenChange={setModalOpen} initial={editing} onSave={onSaveModal} defaultType="prospect" />
+      <CustomerModal 
+        open={modalOpen} 
+        onOpenChange={setModalOpen} 
+        initial={editing} 
+        initialTab={activeModalTab}
+        defaultType="prospect"
+        onSave={onSaveModal} 
+      />
     </div>
   );
 };

@@ -72,7 +72,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
           businessStatus.mode === 'spring-prep' ? 'bg-emerald-600' :
           businessStatus.mode === 'emergency' ? 'bg-red-600' :
-          'bg-orange-600'
+          'bg-red-600'
         }`}>
           <div className="flex items-center justify-center gap-2">
             <span className="hidden sm:inline opacity-70">///</span>
