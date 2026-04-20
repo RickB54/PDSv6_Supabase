@@ -76,13 +76,14 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const topOffset = useMemo(() => {
     let offset = 0;
     if (isDemoMode) offset += 40;
+    if (isViewingAsCustomer || isViewingAsEmployee) offset += 40;
     if (businessStatus?.isTopBannerActive) {
       offset += 36; // Matching Navbar sm:top-[36px]
     }
     // Add Navbar height (64px) to ensure the sidebar starts exactly BELOW it
     offset += 64; 
     return `${offset}px`;
-  }, [isDemoMode, businessStatus]);
+  }, [isDemoMode, businessStatus, isViewingAsCustomer, isViewingAsEmployee]);
 
   // Helper to get correct URL for demo mode
   const getUrl = (url: string) => {

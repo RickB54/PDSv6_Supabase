@@ -106,6 +106,7 @@ import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
 import FollowUpCenter from "./pages/FollowUpCenter";
 import StickerMaker from "./pages/StickerMaker";
+import { PerspectiveBanner } from "./components/PerspectiveBanner";
 
 const queryClient = new QueryClient();
 
@@ -256,13 +257,19 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
     );
   }
 
+  const isPerspectiveMode = user?.role === 'admin' && (
+     location.pathname.startsWith('/customer-dashboard') || 
+     location.pathname.startsWith('/portal') || 
+     location.pathname.startsWith('/dashboard/employee')
+  );
+
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   return (
-    <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
-      <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
+    <div className={`flex min_h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
+      <div className={`dark-theme min-h-screen ${isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0'}`}>
         <AppSidebar key={effectiveUser.id} user={effectiveUser} />
       </div>
-      <div className={`flex-1 ${isDemoMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
+      <div className={`flex-1 ${isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
           <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
@@ -352,7 +359,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
         <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
       </div>
       {effectiveUser?.role !== 'customer' && (
-        <div className={`dark-theme min-h-screen ${isDemoMode ? 'pt-10' : 'pt-0'}`}>
+        <div className={`dark-theme min-h-screen ${isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0'}`}>
           <GlobalRightSidebar />
         </div>
       )}
@@ -502,6 +509,7 @@ const App = () => {
             <BrowserRouter>
               <DemoProvider>
                 <DemoBanner />
+                <PerspectiveBanner />
                 <WalkthroughProvider>
                   <Toaster />
                   <Sonner />
