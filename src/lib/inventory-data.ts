@@ -754,11 +754,15 @@ export async function deleteUsageHistory(id: string): Promise<void> {
 const SETUP_MEDIA_KEY = "f150_command_center_media";
 
 const DEFAULT_CATEGORIES: SetupCategory[] = [
-    { id: 'cat_reels', name: 'Reels & Hoses', order: 0 },
-    { id: 'cat_large_equip', name: 'Large Equipment', order: 1 },
-    { id: 'cat_chemicals', name: 'Chemicals', order: 2 },
-    { id: 'cat_interior', name: 'Interior Setup', order: 3 },
-    { id: 'cat_misc', name: 'Miscellaneous', order: 4 },
+    { id: 'cat_reels', name: 'Reels & Pressure Hoses', order: 0 },
+    { id: 'cat_water', name: 'Pressure Washer & Tank', order: 1 },
+    { id: 'cat_power', name: 'Power Unit & Generator', order: 2 },
+    { id: 'cat_shelving', name: 'Shelving & Storage', order: 3 },
+    { id: 'cat_exterior', name: 'Exterior Gear', order: 4 },
+    { id: 'cat_interior', name: 'Interior Gear', order: 5 },
+    { id: 'cat_chemicals', name: 'Chemical Storage', order: 6 },
+    { id: 'cat_lighting', name: 'Lighting & Polishers', order: 7 },
+    { id: 'cat_misc', name: 'Miscellaneous Gear', order: 8 },
 ];
 
 async function getFullMeta() {

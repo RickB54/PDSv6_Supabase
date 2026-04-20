@@ -367,7 +367,18 @@ const MobileSetup = () => {
 
             {/* Upload controls bar */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl">
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Upload to category:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Upload to:</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-zinc-600 hover:text-indigo-400"
+                  onClick={() => setCatManagerOpen(true)}
+                  title="Manage Categories"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
               <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
                 <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white text-xs font-bold h-9 w-52">
                   <SelectValue placeholder="Pick a category" />
@@ -683,7 +694,7 @@ const MobileSetup = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setCatManagerOpen(false)} className="text-zinc-400">Done</Button>
+            <Button onClick={() => setCatManagerOpen(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest px-8">Save & Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
