@@ -96,24 +96,63 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         }
 
         const ini = initial as any; // cast to access any legacy fields safely
-        let baseVehicles = initial.vehicles || [];
-        const hasLegacyInfo = initial.vehicle || initial.model || initial.year || ini.make || vInfo?.make || vInfo?.vehicle || vInfo?.model;
+
+        // Also try fetching vehicles directly from DB as the most reliable source
+        let dbVehicles: any[] = [];
+        if (initial.id) {
+          try {
+            const { data: vehs } = await supabase
+              .from('vehicles')
+              .select('*')
+              .eq('customer_id', initial.id)
+              .order('created_at', { ascending: true });
+            if (vehs && vehs.length > 0) {
+              dbVehicles = vehs.map((v: any) => ({
+                id: v.id,
+                make: v.make || '',
+                model: v.model || '',
+                year: v.year ? String(v.year) : '',
+                type: v.type || '',
+                color: v.color || '',
+                vin: v.vin || '',
+                mileage: v.mileage || '',
+                conditionInside: v.condition_inside || '',
+                conditionOutside: v.condition_outside || '',
+                generalPhotos: v.general_photos || [],
+                beforePhotos: v.before_photos || [],
+                afterPhotos: v.after_photos || [],
+                videoUrls: v.video_urls || [],
+              }));
+              setLinkedVehicles(vehs);
+            }
+          } catch (e) {
+            console.error("Error loading linked vehicles from DB", e);
+          }
+        }
+
+        // Priority: DB vehicles > initial.vehicles > legacy migration > empty row
+        let baseVehicles: any[] = dbVehicles.length > 0 ? dbVehicles : (initial.vehicles || []);
         
-        if (baseVehicles.length === 0 && hasLegacyInfo) {
+        if (baseVehicles.length === 0) {
+          // Try legacy migration from direct fields or vehicle_info JSONB
+          const make = ini.make || initial.vehicle || vInfo?.make || vInfo?.vehicle || '';
+          const model = initial.model || vInfo?.model || '';
+          const year = initial.year ? String(initial.year) : String(vInfo?.year || '');
           baseVehicles = [{
-            make: ini.make || initial.vehicle || vInfo?.make || vInfo?.vehicle || "",
-            model: initial.model || vInfo?.model || "",
-            year: initial.year ? String(initial.year) : String(vInfo?.year || ""),
-            type: initial.vehicleType || vInfo?.type || vInfo?.vehicleType || "",
-            color: initial.color || vInfo?.color || "",
-            mileage: (initial.mileage || vInfo?.mileage) ? String(initial.mileage || vInfo?.mileage) : "",
-            conditionInside: initial.conditionInside || vInfo?.conditionInside || cIn || "",
-            conditionOutside: initial.conditionOutside || vInfo?.conditionOutside || cOut || "",
+            make,
+            model,
+            year,
+            type: initial.vehicleType || vInfo?.type || vInfo?.vehicleType || '',
+            color: initial.color || vInfo?.color || '',
+            mileage: (initial.mileage || vInfo?.mileage) ? String(initial.mileage || vInfo?.mileage) : '',
+            conditionInside: initial.conditionInside || vInfo?.conditionInside || cIn || '',
+            conditionOutside: initial.conditionOutside || vInfo?.conditionOutside || cOut || '',
             generalPhotos: initial.generalPhotos || vInfo?.generalPhotos || [],
             beforePhotos: initial.beforePhotos || vInfo?.beforePhotos || [],
             afterPhotos: initial.afterPhotos || vInfo?.afterPhotos || [],
-            videoUrls: ini.shortVideos || vInfo?.videoUrls || vInfo?.shortVideos || []
+            videoUrls: ini.shortVideos || vInfo?.videoUrls || vInfo?.shortVideos || [],
           }];
+          // (Even if all empty, we show a blank row so the user can fill it in)
         }
 
         setForm({
@@ -123,19 +162,6 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           conditionInside: initial.conditionInside || cIn,
           conditionOutside: initial.conditionOutside || cOut,
         });
-
-        if (initial.id) {
-          try {
-            const { data: vehs } = await supabase
-              .from('vehicles')
-              .select('*')
-              .eq('customer_id', initial.id)
-              .order('created_at', { ascending: true });
-            if (vehs) setLinkedVehicles(vehs);
-          } catch (e) {
-            console.error("Error loading linked vehicles", e);
-          }
-        }
       } else {
         setForm({
           id: undefined,
