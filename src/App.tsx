@@ -270,7 +270,10 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
     );
   }
 
-  const isPerspectiveMode = user?.role === 'admin' && (
+  const isAdmin = user?.role === 'admin';
+  const isPerspectiveMode = isAdmin && (
+     localStorage.getItem('view_as_mode') === 'customer' ||
+     localStorage.getItem('view_as_mode') === 'employee' ||
      location.pathname.startsWith('/customer-dashboard') || 
      location.pathname.startsWith('/portal') || 
      location.pathname.startsWith('/dashboard/employee')
