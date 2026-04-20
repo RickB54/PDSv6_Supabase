@@ -122,6 +122,18 @@ export default function PrimeBlog() {
                 );
             }
 
+            // Sort: pinned first, then by sort_order, then by date
+            blogItems = [...blogItems].sort((a, b) => {
+                if (a.is_pinned && !b.is_pinned) return -1;
+                if (!a.is_pinned && b.is_pinned) return 1;
+                if (a.sort_order == null && b.sort_order == null) {
+                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                }
+                if (a.sort_order == null) return -1;
+                if (b.sort_order == null) return 1;
+                return (a.sort_order || 0) - (b.sort_order || 0);
+            });
+
             setItems(blogItems);
 
             const dynamicCats = Array.from(new Set(blogItems.map(i => i.category))).filter(c => c && c !== 'General');

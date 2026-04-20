@@ -95,12 +95,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           try { vInfo = JSON.parse(vInfo); } catch (e) { vInfo = {}; }
         }
 
+        const ini = initial as any; // cast to access any legacy fields safely
         let baseVehicles = initial.vehicles || [];
-        const hasLegacyInfo = initial.vehicle || initial.model || initial.year || initial.make || vInfo?.make || vInfo?.vehicle || vInfo?.model;
+        const hasLegacyInfo = initial.vehicle || initial.model || initial.year || ini.make || vInfo?.make || vInfo?.vehicle || vInfo?.model;
         
         if (baseVehicles.length === 0 && hasLegacyInfo) {
           baseVehicles = [{
-            make: initial.make || initial.vehicle || vInfo?.make || vInfo?.vehicle || "",
+            make: ini.make || initial.vehicle || vInfo?.make || vInfo?.vehicle || "",
             model: initial.model || vInfo?.model || "",
             year: initial.year ? String(initial.year) : String(vInfo?.year || ""),
             type: initial.vehicleType || vInfo?.type || vInfo?.vehicleType || "",
@@ -111,7 +112,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             generalPhotos: initial.generalPhotos || vInfo?.generalPhotos || [],
             beforePhotos: initial.beforePhotos || vInfo?.beforePhotos || [],
             afterPhotos: initial.afterPhotos || vInfo?.afterPhotos || [],
-            videoUrls: (initial as any).shortVideos || vInfo?.videoUrls || vInfo?.shortVideos || []
+            videoUrls: ini.shortVideos || vInfo?.videoUrls || vInfo?.shortVideos || []
           }];
         }
 
@@ -282,7 +283,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   };
 
   const handleBook = () => {
-    const v = (form.vehicles || [])[0] || {};
+    const v = ((form.vehicles || [])[0] || {}) as import('@/lib/supa-data').Vehicle;
     const params = new URLSearchParams();
     params.set('add', 'true');
     if (form.id) params.set('customerId', form.id);
@@ -536,9 +537,17 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       );
                     })
                   ) : (
-                    <div className="p-8 text-center border border-dashed border-zinc-800 rounded-2xl bg-zinc-950/30">
-                      <Car className="h-10 w-10 mx-auto text-zinc-800 mb-3" />
-                      <p className="text-zinc-500 text-xs font-bold uppercase">Add a vehicle in the Profile tab first to enable media uploads</p>
+                    <div className="p-5 bg-zinc-900/40 border border-zinc-800 rounded-2xl space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Car className="h-3.5 w-3.5 text-zinc-500" />
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-300">General Photos</h4>
+                        <span className="text-[9px] text-zinc-600 font-bold ml-2">(no vehicle linked — add one in Profile tab to organize by vehicle)</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <MediaUploadField label="Before Photos" type="beforePhotos" photos={form.beforePhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
+                        <MediaUploadField label="After Photos" type="afterPhotos" photos={form.afterPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
+                        <MediaUploadField label="General Media" type="generalPhotos" photos={form.generalPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
+                      </div>
                     </div>
                   )}
                </div>
