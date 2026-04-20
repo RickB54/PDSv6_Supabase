@@ -392,7 +392,13 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       // Filter items within the group
       group.items = group.items.filter(item => {
         if (isDemoMode && item.key && !canAccess(item.key)) return false;
-        if (item.role === 'admin' && !isAdmin && !isDemoMode) return false;
+        
+        // Strict role filtering based on current view mode
+        const isStrictEmployeeView = isViewingAsEmployee;
+        const isAdminCheck = isAdmin || isDemoMode;
+        
+        if (item.role === 'admin' && (!isAdminCheck || isStrictEmployeeView)) return false;
+        if (item.role === 'employee' && !isStrictEmployeeView && !isAdminCheck) return false;
         
         // Match item if it contains search OR if its group matches
         if (searchQuery && !groupMatches && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -435,6 +441,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   };
 
   const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+  const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
 
   return (
     <Sidebar 

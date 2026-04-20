@@ -55,7 +55,6 @@ export const TOP_ITEMS: MenuItem[] = [
     { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, helpTopicId: 'admin-dashboard' },
     { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red", helpTopicId: 'website-admin' },
     { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard, helpTopicId: 'employee-dashboard' },
-    { title: "View As Customer", url: "/customer-dashboard", role: "admin", key: "customer-view-dashboard", icon: LayoutDashboard, helpTopicId: 'customer-view' },
 ];
 
 // Note: Badge counts like todoCount, payrollDueCount, etc. are dynamic and passed from the component.
@@ -71,6 +70,13 @@ export const getMenuGroups = (counts: {
     tentativeBookingsCount: number;
 }): MenuGroup[] => [
 
+        {
+            title: "View As", icon: Globe,
+            items: [
+                { title: "View As Customer", url: "/customer-dashboard", role: "admin", key: "customer-view-dashboard", icon: LayoutDashboard, helpTopicId: 'customer-view' },
+                { title: "View As Employee", url: "/dashboard/employee", role: "admin", key: "employee-view-dashboard", icon: GraduationCap, helpTopicId: 'employee-dashboard' },
+            ]
+        },
         {
             title: "Customer Intake", icon: UserPlus,
             items: [
