@@ -433,11 +433,11 @@ const ShopSetup = () => {
             {/* Upload controls bar */}
             <div className="flex flex-col md:flex-row items-center gap-4 p-5 md:p-6 bg-zinc-900/60 border border-zinc-800 rounded-3xl w-full relative z-10">
               <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Shop Filter:</span>
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Facility Filter:</span>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 text-zinc-600 hover:text-indigo-400 bg-black/20"
+                  className="h-8 w-8 text-indigo-400 hover:text-white bg-indigo-500/10 border border-indigo-500/20"
                   onClick={() => setCatManagerOpen(true)}
                   title="Manage Shop Categories"
                 >
@@ -477,37 +477,41 @@ const ShopSetup = () => {
             />
 
             {/* If no media at all */}
+            {/* If no media at all */}
             {media.length === 0 && (
               <Card className="bg-zinc-900/30 border-dashed border-zinc-800 p-20 text-center rounded-3xl">
                 <div className="bg-zinc-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                   <ImageIcon className="h-8 w-8 text-zinc-600" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Shop organization is empty</h3>
-                <p className="text-zinc-500 mb-6">Upload photos of your workstations, chemical racks, or tool boards.</p>
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="border-zinc-800 text-zinc-400 hover:text-white">
-                  Document Your Shop
+                <h3 className="text-xl font-bold text-white mb-2">Facility Documentation Empty</h3>
+                <p className="text-zinc-500 mb-6 font-medium">Start capturing your workspace organization for the team.</p>
+                <Button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase tracking-wider h-12 px-8 rounded-xl"
+                >
+                  Begin Visual Setup
                 </Button>
               </Card>
             )}
 
-            {/* Category rows */}
+            {/* Category rows - MATCHING MOBILE SETUP GRID PERFECTLY */}
             {categories.map((cat, catIdx) => {
               const catMedia = getMediaForCat(cat.id);
               return (
-                <section key={cat.id}>
-                  {/* Row header */}
-                  <div className="flex items-center gap-3 mb-4">
+                <section key={cat.id} className="space-y-4">
+                  {/* Category Header - Indigo Theme matched to Inventory */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
                     <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />
-                    <h2 className="text-base font-black uppercase tracking-widest text-white">{cat.name}</h2>
-                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest bg-zinc-800 px-2 py-0.5 rounded-full">
+                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">{cat.name}</h2>
+                    <span className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">
                       {catMedia.length}
                     </span>
                     <div className="ml-auto flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-600 hover:text-white"
-                        title="Move area up"
+                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                        title="Move Up"
                         onClick={() => moveCat(catIdx, -1)}
                         disabled={catIdx === 0}
                       >
@@ -516,8 +520,8 @@ const ShopSetup = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-600 hover:text-white"
-                        title="Move area down"
+                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                        title="Move Down"
                         onClick={() => moveCat(catIdx, 1)}
                         disabled={catIdx === categories.length - 1}
                       >
@@ -560,9 +564,9 @@ const ShopSetup = () => {
             {/* Uncategorized section */}
             {uncategorized.length > 0 && (
               <section className="space-y-4">
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
                   <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" />
-                  <h2 className="text-base font-black uppercase tracking-widest text-zinc-500">Uncategorized Views</h2>
+                  <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400">General Workspace Views</h2>
                   <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">{uncategorized.length}</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
