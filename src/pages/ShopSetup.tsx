@@ -25,6 +25,7 @@ import {
   ZoomIn,
   Download,
   ArrowLeft,
+  FileText,
 } from "lucide-react";
 import {
   getChemicals,
@@ -152,16 +153,18 @@ const ShopSetup = () => {
     await Promise.all(
       files.map(async (file) => {
         try {
-          const type = file.type.startsWith("video") ? "video" : "image";
+          const isPdf = file.type === "application/pdf";
+          const type = isPdf ? "pdf" : file.type.startsWith("video") ? "video" : "image";
           const publicUrl = await uploadSetupMedia(file);
           if (!publicUrl) throw new Error(`No URL for ${file.name}`);
 
           const newMedia: SetupMedia = {
             id: crypto.randomUUID(),
-            type: type as "image" | "video",
+            type: type as "image" | "video" | "pdf",
             url: publicUrl,
             caption: file.name,
             category: selectedCategoryForUpload === "none" ? undefined : selectedCategoryForUpload,
+            createdAt: new Date().toISOString()
           };
 
           await saveSetupMedia(newMedia, CONTEXT_KEY);
@@ -352,8 +355,8 @@ const ShopSetup = () => {
               <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
             </div>
 
-            <div className="flex-1 text-center lg:text-left">
-              <h1 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none">Shop Setup Center</h1>
+            <div className="flex-1 text-center lg:text-left min-w-0">
+              <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none break-words">Shop Setup Center</h1>
               <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0">
                 Professional shop floor configuration. Real-time fixed inventory and visual organization documentation.
               </p>
@@ -387,6 +390,9 @@ const ShopSetup = () => {
             </TabsTrigger>
             <TabsTrigger value="inventory" className="rounded-xl px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
               <Package className="mr-2 h-4 w-4" /> Shop Inventory
+            </TabsTrigger>
+            <TabsTrigger value="paperwork" className="rounded-xl px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
+              <FileText className="mr-2 h-4 w-4" /> Related Paperwork
             </TabsTrigger>
           </TabsList>
 
@@ -434,7 +440,7 @@ const ShopSetup = () => {
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept="image/*,video/*"
+              accept="image/*,video/*,application/pdf"
               multiple
               onChange={handleMediaUpload}
             />
@@ -644,6 +650,69 @@ const ShopSetup = () => {
                   ))}
                 </div>
               </div>
+            </div>
+          </TabsContent>
+          {/* ── PAPERWORK TAB ─────────────────────────────── */}
+          <TabsContent value="paperwork" className="mt-0 space-y-12">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-zinc-900/60 border border-zinc-800 p-8 rounded-3xl relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20">
+                  <FileText className="h-8 w-8 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-widest text-white">Shop Documentation</h3>
+                  <p className="text-zinc-500 text-sm">Upload MSDS sheets, equipment manuals, and shop procedures.</p>
+                </div>
+              </div>
+              <Button
+                size="lg"
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase tracking-widest text-xs px-8 h-14 border border-zinc-700"
+              >
+                <Plus className="mr-2 h-5 w-5" /> Upload PDF Document
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {media.filter(m => m.type === 'pdf').length === 0 ? (
+                <div className="col-span-full py-20 text-center bg-zinc-950/30 border border-dashed border-zinc-800 rounded-3xl">
+                   <div className="text-zinc-700 font-black uppercase tracking-[0.3em] text-xs mb-2">Reference Library Empty</div>
+                   <p className="text-zinc-600 text-sm">No PDF documents found in your shop registry.</p>
+                </div>
+              ) : (
+                media.filter(m => m.type === 'pdf').map(doc => (
+                  <Card key={doc.id} className="group relative bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/40 transition-all overflow-hidden p-6 hover:shadow-2xl hover:shadow-indigo-500/10">
+                    <div className="flex items-start gap-4">
+                      <div className="h-14 w-14 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20 group-hover:scale-110 transition-transform">
+                        <FileText className="h-7 w-7 text-red-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-black uppercase tracking-wider text-zinc-100 truncate mb-1">{doc.caption || 'Untitled Document'}</h4>
+                        <p className="text-[10px] text-zinc-500 uppercase font-bold">{new Date(doc.createdAt || '').toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 flex items-center gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:bg-indigo-500/10 hover:border-indigo-500/40 h-9 font-bold uppercase tracking-widest text-[10px]"
+                        onClick={() => window.open(doc.url, '_blank')}
+                      >
+                        <Maximize2 className="mr-2 h-3 w-3" /> View Full
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 text-zinc-600 hover:text-red-400 hover:bg-red-400/10"
+                        onClick={() => removeMedia(doc.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
         </Tabs>

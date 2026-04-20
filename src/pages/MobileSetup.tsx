@@ -151,16 +151,18 @@ const MobileSetup = () => {
     await Promise.all(
       files.map(async (file) => {
         try {
-          const type = file.type.startsWith("video") ? "video" : "image";
+          const isPdf = file.type === "application/pdf";
+          const type = isPdf ? "pdf" : file.type.startsWith("video") ? "video" : "image";
           const publicUrl = await uploadSetupMedia(file);
           if (!publicUrl) throw new Error(`No URL for ${file.name}`);
 
           const newMedia: SetupMedia = {
             id: crypto.randomUUID(),
-            type: type as "image" | "video",
+            type: type as "image" | "video" | "pdf",
             url: publicUrl,
             caption: file.name,
             category: selectedCategoryForUpload === "none" ? undefined : selectedCategoryForUpload,
+            createdAt: new Date().toISOString()
           };
 
           await saveSetupMedia(newMedia);
@@ -351,8 +353,8 @@ const MobileSetup = () => {
               <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
             </div>
 
-            <div className="flex-1 text-center lg:text-left">
-              <h1 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none">F150 Command Center</h1>
+            <div className="flex-1 text-center lg:text-left min-w-0">
+              <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none break-words">F150 Command Center</h1>
               <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0">
                 Professional mobile detailing configuration. Real-time equipment inventory and visual setup documentation.
               </p>

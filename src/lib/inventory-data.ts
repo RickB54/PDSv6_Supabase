@@ -31,11 +31,12 @@ export async function uploadInventoryImage(file: File): Promise<string | null> {
 export async function uploadSetupMedia(file: File): Promise<string | null> {
     if (isDemoActive()) return null;
     
-    const type = file.type.startsWith('video') ? 'video' : 'image';
-    const ext = type === 'video' ? 'mp4' : 'jpg';
+    const isPdf = file.type === 'application/pdf';
+    const type = isPdf ? 'pdf' : file.type.startsWith('video') ? 'video' : 'image';
+    const ext = isPdf ? 'pdf' : type === 'video' ? 'mp4' : 'jpg';
     const filePath = `setup/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
 
-    console.log(`[UploadSetupMedia] Using uploadFile to customer-photos: ${filePath}`);
+    console.log(`[UploadSetupMedia] Using uploadFile to customer-photos: ${filePath} (${type})`);
 
     try {
         const { uploadFile } = await import('./storage-utils');
@@ -100,7 +101,7 @@ export interface Tool {
 
 export interface SetupMedia {
     id: string;
-    type: 'image' | 'video';
+    type: 'image' | 'video' | 'pdf';
     url: string;
     caption?: string;
     category?: string; // category id
