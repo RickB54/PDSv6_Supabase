@@ -334,6 +334,9 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     }
   }, [location.pathname, location.search]);
 
+  const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+  const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
+
   // Standalone Top Items
   const TOP_ITEMS = [
     ...CONFIGURED_TOP_ITEMS,
@@ -408,7 +411,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       
       return group.items.length > 0 || groupMatches;
     });
-  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections, searchQuery]);
+  }, [todoCount, payrollDueCount, inventoryCount, fileCount, allBookings.length, tick, isDemoMode, visibleSections, searchQuery, isViewingAsEmployee]);
 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
@@ -440,8 +443,6 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     }
   };
 
-  const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
-  const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
 
   return (
     <Sidebar 
