@@ -754,7 +754,7 @@ export async function deleteUsageHistory(id: string): Promise<void> {
 export const MOBILE_SETUP_KEY = "f150_command_center_media";
 export const SHOP_SETUP_KEY = "shop_command_center_media";
 
-const DEFAULT_CATEGORIES: SetupCategory[] = [
+const MOBILE_DEFAULT_CATEGORIES: SetupCategory[] = [
     { id: 'cat_reels', name: 'Reels & Pressure Hoses', order: 0 },
     { id: 'cat_water', name: 'Pressure Washer & Tank', order: 1 },
     { id: 'cat_power', name: 'Power Unit & Generator', order: 2 },
@@ -766,14 +766,29 @@ const DEFAULT_CATEGORIES: SetupCategory[] = [
     { id: 'cat_misc', name: 'Miscellaneous Gear', order: 8 },
 ];
 
+const SHOP_DEFAULT_CATEGORIES: SetupCategory[] = [
+    { id: 'cat_wash_bay', name: 'Main Wash Bay', order: 0 },
+    { id: 'cat_chemical_rack', name: 'Chemical Racking', order: 1 },
+    { id: 'cat_machine_bench', name: 'Machine & Polisher Bench', order: 2 },
+    { id: 'cat_pad_station', name: 'Pad & Towel Station', order: 3 },
+    { id: 'cat_tool_board', name: 'Tool & Hardware Board', order: 4 },
+    { id: 'cat_shipping', name: 'Shipping & Receiving', order: 5 },
+    { id: 'cat_break_area', name: 'Employee Break Area', order: 6 },
+    { id: 'cat_office', name: 'Shop Office', order: 7 },
+];
+
+function getDefaultCategories(key: string): SetupCategory[] {
+    return key === SHOP_SETUP_KEY ? SHOP_DEFAULT_CATEGORIES : MOBILE_DEFAULT_CATEGORIES;
+}
+
 async function getFullMeta(key: string) {
     try {
         const { contentService } = await import('./content');
         const meta = await contentService.getServiceMeta(key);
         if (meta && meta.meta) return meta.meta;
-        return { media: [], categories: DEFAULT_CATEGORIES };
+        return { media: [], categories: getDefaultCategories(key) };
     } catch {
-        return { media: [], categories: DEFAULT_CATEGORIES };
+        return { media: [], categories: getDefaultCategories(key) };
     }
 }
 
@@ -800,10 +815,10 @@ export async function getSetupMedia(key: string = MOBILE_SETUP_KEY): Promise<Set
 export async function getSetupCategories(key: string = MOBILE_SETUP_KEY): Promise<SetupCategory[]> {
     try {
         const full = await getFullMeta(key);
-        const cats = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        const cats = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
         return cats.sort((a: SetupCategory, b: SetupCategory) => a.order - b.order);
     } catch {
-        return DEFAULT_CATEGORIES;
+        return getDefaultCategories(key);
     }
 }
 
@@ -823,7 +838,7 @@ export async function saveSetupMedia(media: SetupMedia, key: string = MOBILE_SET
     try {
         const full = await getFullMeta(key);
         const current: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
-        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
 
         const next = [...current];
         const idx = next.findIndex(m => m.id === media.id);
@@ -845,7 +860,7 @@ export async function updateSetupMediaCategory(id: string, categoryId: string, k
     try {
         const full = await getFullMeta(key);
         const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
-        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
         const updated = media.map(m => m.id === id ? { ...m, category: categoryId } : m);
         await saveFullMeta(key, { media: updated, categories });
     } catch (err) {
@@ -858,7 +873,7 @@ export async function deleteSetupMedia(id: string, key: string = MOBILE_SETUP_KE
     if (isDemoActive()) return;
     try {
         const full = await getFullMeta(key);
-        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : DEFAULT_CATEGORIES;
+        const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
         const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
         const next = media.filter(m => m.id !== id);
         await saveFullMeta(key, { media: next, categories });

@@ -343,38 +343,40 @@ const ShopSetup = () => {
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
 
         {/* Hero Header */}
-        <div className="flex flex-col md:flex-row items-center gap-6 mb-10 p-8 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/50 shadow-2xl relative overflow-hidden">
+        <div className="relative mb-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/50 shadow-2xl overflow-hidden p-6 md:p-10">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80')] opacity-10 bg-cover bg-center" />
 
-          <div className="relative h-20 w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group">
-            <Warehouse className="h-10 w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
-            <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
-          </div>
+          <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
+            <div className="relative h-20 w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
+              <Warehouse className="h-10 w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
+              <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
+            </div>
 
-          <div className="flex-1 text-center md:text-left relative py-4 md:py-0">
-            <h1 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Shop Setup Center</h1>
-            <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl">
-              Professional shop floor configuration. Real-time fixed inventory and visual organization documentation.
-            </p>
-          </div>
+            <div className="flex-1 text-center lg:text-left">
+              <h1 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none">Shop Setup Center</h1>
+              <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0">
+                Professional shop floor configuration. Real-time fixed inventory and visual organization documentation.
+              </p>
+            </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-            <Button
-              variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 order-2 sm:order-1"
-              onClick={() => setCatManagerOpen(true)}
-            >
-              <FolderOpen className="h-4 w-4" /> Manage Categories
-            </Button>
-            <Button
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 h-12 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all order-1 sm:order-2"
-            >
-              {uploading && uploadProgress
-                ? <><span className="mr-2 animate-bounce">↑</span> {uploadProgress.done}/{uploadProgress.total}</>
-                : <><Plus className="mr-2 h-5 w-5" />Add Shop Photos</>}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+              <Button
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm"
+                onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
+              >
+                <FolderOpen className="h-5 w-5" /> Manage Categories
+              </Button>
+              <Button
+                disabled={uploading}
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-10 h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all"
+              >
+                {uploading && uploadProgress
+                  ? <><span className="mr-2 animate-bounce">↑</span> {uploadProgress.done}/{uploadProgress.total}</>
+                  : <><Plus className="mr-2 h-6 w-6" />Add Shop Photos</>}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -392,38 +394,40 @@ const ShopSetup = () => {
           <TabsContent value="gallery" className="mt-0 space-y-12">
 
             {/* Upload controls bar */}
-            <div className="grid grid-cols-1 md:flex items-center gap-4 p-4 md:p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl w-full">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Shop Filter:</span>
+            <div className="flex flex-col md:flex-row items-center gap-4 p-5 md:p-6 bg-zinc-900/60 border border-zinc-800 rounded-3xl w-full relative z-10">
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Shop Filter:</span>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-6 w-6 text-zinc-600 hover:text-indigo-400"
+                  className="h-8 w-8 text-zinc-600 hover:text-indigo-400 bg-black/20"
                   onClick={() => setCatManagerOpen(true)}
                   title="Manage Shop Categories"
                 >
-                  <Pencil className="h-3 w-3" />
+                  <Pencil className="h-4 w-4" />
                 </Button>
               </div>
-              <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white text-xs font-bold h-11 w-full md:w-64">
-                  <SelectValue placeholder="Pick a shop area" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className="text-xs font-bold">{c.name}</SelectItem>
-                  ))}
-                  <SelectItem value="none" className="text-xs text-zinc-500">— General Area —</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                size="lg"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-black uppercase tracking-widest text-[10px] h-11 md:h-11 w-full md:w-auto border border-zinc-700"
-              >
-                {uploading ? `Processing ${uploadProgress?.done}/${uploadProgress?.total}...` : "Choose Shop Files"}
-              </Button>
+              <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 items-center">
+                <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white text-sm font-bold h-12 w-full md:w-72">
+                    <SelectValue placeholder="Pick a shop area" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-sm font-bold">{c.name}</SelectItem>
+                    ))}
+                    <SelectItem value="none" className="text-sm text-zinc-500">— General Area —</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="lg"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto border border-zinc-800"
+                >
+                  {uploading ? `Processing ${uploadProgress?.done}...` : "Select From Device"}
+                </Button>
+              </div>
             </div>
 
             <input
