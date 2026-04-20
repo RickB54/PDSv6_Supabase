@@ -106,20 +106,70 @@ export const checklistToolsGuide: HelpTopic = {
 
 export const ricksTipsTopic: HelpTopic = {
   id: 'ricks-chemical-tips',
-  title: "Rick's Chemical Tips",
-  summary: "Expert advice on chemical selections based on active job packages.",
+  title: "Rick's Chemical Tips v3",
+  summary: "Expert advice on chemical selections based on active job packages with dual-style export support.",
   content: [
-    "**Rick's Expertise**: This specialized system maps professional chemical recommendations to your live business packages.",
+    "**Rick's Expertise (v3)**: This specialized system maps professional chemical recommendations to your live business packages, now with upgraded stability and export options.",
     "",
     "📋 **1. Package-Specific Logic**",
     "Chemical needs change based on the service tier. An 'Essential Exterior' has different requirements than an 'Elite Ceramic Coating'. Rick's Tips automatically organizes the primary chemicals for each job type.",
     "",
-    "🛠️ **2. Customization**",
-    "Administrators can modify the recommended chemicals for any package. If you find a better performing soap or sealant for your 'Express Polish', update it here to sync the advice across your entire team.",
+    "🖨️ **2. Dual-Style Export Engine**",
+    "You can now choose how to document your tips:",
+    "• **Print (Doc Style)**: Clean black-and-white layout for physical paper use.",
+    "• **Save (PDF Style)**: Premium colorful layout for digital viewing on tablets or sharing with clients.",
     "",
-    "✅ **3. One-Click Linking**",
-    "These tips integrate directly with your live service catalog. When you update a package on your website, it appears here ready for chemical assignment.",
+    "📦 **3. Minimal Setup Matching**",
+    "The system is now pre-configured with the 'Minimal Chemical Setup' protocols, ensuring every package has a confirmed starting point for your team.",
   ],
+  section: 'chemicals',
+};
+
+export const contactMediaUploadTopic: HelpTopic = {
+  id: 'contact-media-uploads',
+  title: 'Contact Form: Photo Attachments',
+  summary: 'Learn how users can attach photos to inquiries and how you receive them.',
+  content: [
+    '**Client Visibility**: The Public Contact page now includes a multi-file upload system, allowing prospects to show you exactly what they need—before you even speak.',
+    '',
+    '📤 **1. How Customers Upload**',
+    'Customers can select multiple photos from their phone or computer using the "Attach Photos" button. The system supports JPG, PNG, and WebP formats.',
+    '',
+    '🌥️ **2. Supabase Storage Integration**',
+    'Photos are instantly uploaded to a secure "customer_media" bucket in your cloud storage. This prevents slow form submissions and ensures images are safe even if the customer loses connection.',
+    '',
+    '📧 **3. Receiving the Photos**',
+    'When a new inquiry is submitted:',
+    '• **Direct Links**: Your notification email (Rick.PrimeAutoDetail@gmail.com) will automatically include high-resolution, clickable links to every photo attached.',
+    '• **Prospect History**: All photo links are permanently saved in the "Notes" section of the Prospect profile for that client.',
+    '',
+    '🔍 **4. Identification**',
+    'Photos are automatically named with a unique timestamp to prevent overwriting and help you identify "Before" condition during the quoting phase.',
+  ],
+  route: '/website-admin',
+  section: 'menu',
+};
+
+export const chemicalDocsV3Topic: HelpTopic = {
+  id: 'chemical-docs-v3',
+  title: 'Chemical Documentation v3',
+  summary: 'Master the dual-export engine for Standard Prints and Premium Digital PDFs.',
+  content: [
+    "**Version 3 Stability**: We have upgraded the export engine to provide the best of both worlds: high-contrast physical copies and branded digital masterpieces.",
+    "",
+    "🖨️ **1. 'Standard Doc' Printing (Green Icon)**",
+    "Use the Emerald Printer icon for physical shop references. It generates a clean, black-on-white layout modeled after a Word or Google Doc. This saves ink and ensures maximum clarity on paper.",
+    "",
+    "📄 **2. 'Premium Digital' PDF (Blue Icon)**",
+    "Use the Sky Blue PDF icon for digital sharing or tablets. This preserves the premium 'Dark Mode' branding of the app, complete with vibrant colors, rounded borders, and professional glassmorphism.",
+    "",
+    "📋 **3. Sectioned Exporting**",
+    "You can now download sections individually: Package Advice, Chemical Descriptions, or the full Job Setup chart can be exported as standalone documents for your team.",
+    "",
+    "👑 **4. Master Catalog Export**",
+    "Use the 'Save Master Catalog' button to generate a comprehensive 30+ page manual of every chemical and package in your shop, automatically formatted with page breaks and headers for professional binding.",
+  ],
+  route: '/inventory-control?chart=modal',
   section: 'chemicals',
 };
 
@@ -142,6 +192,28 @@ export const chemicalAiTopic: HelpTopic = {
   section: 'chemicals',
 };
 
+export const mobileSetupTopic: HelpTopic = {
+  id: 'mobile-setup-command-center',
+  title: 'Mobile Setup (F150 Command Center)',
+  summary: 'Manage your mobile detailing rig with visual setup guides and specialized equipment lists.',
+  content: [
+    '**The Command Center**: This page is designed for mobile detailing professionals operating out of a van or truck (e.g., your F150). It focuses on rapid inventory management and visual documentation of your rig.',
+    '',
+    '📸 **1. Visual Setup Gallery**',
+    'Capture walk-around videos or photos of your mobile rig setup. This is perfect for training new staff on exactly where tools and chemicals are stored on the truck.',
+    '• **Support & Sync**: All media is uploaded directly to Supabase and synced to your Shop PC instantly.',
+    '• **Direct Camera Source**: On mobile devices, the "Add View" button can trigger your camera directly for real-time rig audits.',
+    '',
+    '🛠️ **2. Specialized Tracking**',
+    'The "Equipment Pool" provides a streamlined view of your chemicals, tools, and materials. Use the "Quick Add" (+) icons to instantly register new equipment into the shop inventory without filling out long forms.',
+    '',
+    '📡 **3. Supabase Sync Activity**',
+    'The footer includes a live "Supabase Sync" indicator. When active, all changes you make on the truck are reflected immediately in the master Admin Dashboard.',
+  ],
+  route: '/mobile-setup',
+  section: 'menu',
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
   demoModeHelpTopic,
@@ -149,6 +221,9 @@ export const adminMenuTopics: HelpTopic[] = [
   inventoryCleanupTopic,
   checklistToolsGuide,
   ricksTipsTopic,
+  chemicalDocsV3Topic,
+  contactMediaUploadTopic,
+  mobileSetupTopic,
   chemicalAiTopic,
   {
     id: 'chemical-decision-system',

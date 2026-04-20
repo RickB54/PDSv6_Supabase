@@ -178,13 +178,6 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "", icon: HelpCircle,
-            items: [
-                { title: "Admin Portal Help", url: "#help-admin", role: "admin", key: "help-admin", icon: HelpCircle, iconColor: "text-sky-500", helpTopicId: "admin-dashboard" },
-                { title: "Staff Support Help", url: "#help-employee", role: "employee", key: "help-employee", icon: HelpCircle, iconColor: "text-emerald-500", helpTopicId: "checklist-tools-guide" },
-            ]
-        },
-        {
             title: "Settings", icon: Settings,
             items: [
                 { title: "Application Settings", url: "/settings", key: "settings", icon: Settings, helpTopicId: 'application-settings' },

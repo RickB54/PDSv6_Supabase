@@ -28,6 +28,26 @@ export async function uploadInventoryImage(file: File): Promise<string | null> {
     return publicUrl;
 }
 
+export async function uploadSetupMedia(file: File): Promise<string | null> {
+    if (isDemoActive()) return null;
+    
+    const type = file.type.startsWith('video') ? 'video' : 'image';
+    const ext = type === 'video' ? 'mp4' : 'jpg';
+    const filePath = `setup/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+
+    console.log(`[UploadSetupMedia] Using uploadFile to customer-photos: ${filePath}`);
+
+    try {
+        const { uploadFile } = await import('./storage-utils');
+        const publicUrl = await uploadFile('customer-photos', file, filePath);
+        console.log(`[UploadSetupMedia] Success! Public URL: ${publicUrl}`);
+        return publicUrl;
+    } catch (error: any) {
+        console.error('Setup media upload error:', error);
+        throw new Error(`Upload failed: ${error.message || 'Check storage permissions'}`);
+    }
+}
+
 import { DilutionRatio } from '@/types/chemicals';
 
 export interface Chemical {
@@ -724,53 +744,64 @@ export async function deleteUsageHistory(id: string): Promise<void> {
 // MOBILE SETUP MEDIA
 // ============================================
 
-export async function getSetupMedia(): Promise<SetupMedia[]> {
-    const { data, error } = await supabase
-        .from('mobile_setup_media')
-        .select('*')
-        .order('created_at', { ascending: false });
+const SETUP_MEDIA_KEY = "f150_command_center_media";
 
-    if (error) {
-        console.error('Error loading setup media:', error);
+export async function getSetupMedia(): Promise<SetupMedia[]> {
+    try {
+        const { contentService } = await import('./content');
+        const meta = await contentService.getServiceMeta(SETUP_MEDIA_KEY);
+        if (meta && meta.meta && Array.isArray(meta.meta.media)) {
+            return meta.meta.media;
+        }
+        return [];
+    } catch (err) {
+        console.error('Error loading setup media:', err);
         return [];
     }
-
-    return (data || []).map(item => ({
-        id: item.id,
-        type: item.type,
-        url: item.url,
-        caption: item.caption,
-        createdAt: item.created_at
-    }));
 }
 
 export async function saveSetupMedia(media: SetupMedia): Promise<void> {
     if (isDemoActive()) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) throw new Error('Not authenticated');
+    try {
+        const { contentService } = await import('./content');
+        const current = await getSetupMedia();
+        
+        // Append or Update
+        const next = [...current];
+        const idx = next.findIndex(m => m.id === media.id);
+        if (idx >= 0) {
+            next[idx] = media;
+        } else {
+            next.push(media);
+        }
 
-    const dbData = {
-        id: media.id,
-        type: media.type,
-        url: media.url,
-        caption: media.caption,
-        user_id: session.user.id,
-        updated_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase
-        .from('mobile_setup_media')
-        .upsert(dbData);
-
-    if (error) throw error;
+        await contentService.upsertServiceMeta({
+            key: SETUP_MEDIA_KEY,
+            title: "F150 Command Center Gallery",
+            description: "Visual setup documentation for the mobile rig.",
+            meta: { media: next }
+        });
+    } catch (err) {
+        console.error('Error saving setup media:', err);
+        throw err;
+    }
 }
 
 export async function deleteSetupMedia(id: string): Promise<void> {
     if (isDemoActive()) return;
-    const { error } = await supabase
-        .from('mobile_setup_media')
-        .delete()
-        .eq('id', id);
+    try {
+        const { contentService } = await import('./content');
+        const current = await getSetupMedia();
+        const next = current.filter(m => m.id !== id);
 
-    if (error) throw error;
+        await contentService.upsertServiceMeta({
+            key: SETUP_MEDIA_KEY,
+            title: "F150 Command Center Gallery",
+            description: "Visual setup documentation for the mobile rig.",
+            meta: { media: next }
+        });
+    } catch (err) {
+        console.error('Error deleting setup media:', err);
+        throw err;
+    }
 }

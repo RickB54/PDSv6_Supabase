@@ -41,6 +41,7 @@ const Contact = () => {
     howFound: "",
     message: ""
   });
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -79,7 +80,21 @@ const Contact = () => {
       return;
     }
 
-    setSubmitting(true);
+    // 2. Upload Files to Supabase Storage if any
+    let fileUrls: string[] = [];
+    if (attachments.length > 0 && isSupabaseEnabled()) {
+      for (const file of attachments) {
+        const filePath = `prospects/${Date.now()}_${file.name}`;
+        const { data, error } = await supabase.storage
+          .from('customer_media')
+          .upload(filePath, file);
+        
+        if (data) {
+          const { data: { publicUrl } } = supabase.storage.from('customer_media').getPublicUrl(filePath);
+          fileUrls.push(publicUrl);
+        }
+      }
+    }
 
     // Save to Prospects Database
     try {
@@ -93,7 +108,7 @@ const Contact = () => {
           vehicleType: formData.vehicleType,
           howFound: formData.howFound,
           services: [formData.serviceInterested],
-          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nClient Message: ${formData.message}`
+          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
         });
 
         // Also create a contact record for redundancy and history
@@ -101,7 +116,7 @@ const Contact = () => {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          message: `Vehicle: ${formData.vehicleType}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}`,
+          message: `Vehicle: ${formData.vehicleType}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`,
         }).catch(() => {});
       }
     } catch (err) {
@@ -120,17 +135,32 @@ const Contact = () => {
     doc.text(`Vehicle Type: ${formData.vehicleType}`, 20, 80);
     doc.text(`Service: ${formData.serviceInterested}`, 20, 90);
     doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 100);
-    doc.text("Message:", 20, 115);
+    
+    let yPos = 115;
+    if (fileUrls.length > 0) {
+      doc.text("Files Attached:", 20, yPos);
+      yPos += 10;
+      doc.setFontSize(8);
+      fileUrls.forEach(url => {
+        doc.text(url, 20, yPos);
+        yPos += 5;
+      });
+      yPos += 5;
+      doc.setFontSize(12);
+    }
+
+    doc.text("Message:", 20, yPos);
+    yPos += 10;
 
     const lines = doc.splitTextToSize(formData.message, 170);
-    doc.text(lines, 20, 125);
+    doc.text(lines, 20, yPos);
 
     const pdfDataUrl = doc.output('dataurlstring');
     savePDFToArchive("Prospects", formData.name, `inquiry_${Date.now()}`, pdfDataUrl);
 
     // Open Gmail compose with refined wording
-    const subject = `Pre-Launch Inquiry: ${formData.name}`;
-    const body = `New Pre-Launch Service Inquiry\n\n` +
+    const subject = `Service Inquiry: ${formData.name} [${formData.vehicleType}]`;
+    const body = `New Service Inquiry\n\n` +
       `Name: ${formData.name}\n` +
       `Email: ${formData.email}\n` +
       `Phone: ${formData.phone}\n` +
@@ -138,6 +168,7 @@ const Contact = () => {
       `Vehicle Type: ${formData.vehicleType}\n` +
       `Interested In: ${formData.serviceInterested}\n` +
       `Timing: ${formData.preferredTiming}\n\n` +
+      (fileUrls.length > 0 ? `ATTACHED PHOTOS (${fileUrls.length}):\n${fileUrls.join('\n')}\n\n` : '') +
       `Message:\n${formData.message}\n\n` +
       `Submitted: ${new Date().toLocaleString()}`;
     
@@ -166,6 +197,7 @@ const Contact = () => {
       howFound: "",
       message: ""
     });
+    setAttachments([]);
     setErrors({});
   };
 
@@ -457,6 +489,39 @@ const Contact = () => {
                   rows={4}
                   className="bg-background"
                 />
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="attachments" className="font-bold cursor-pointer flex items-center gap-2">
+                    <Star className="h-4 w-4 text-emerald-500" />
+                    Attach Photos (Exterior/Interior)
+                  </Label>
+                  <span className="text-[10px] uppercase font-black text-muted-foreground italic">Max 5 MB per pic</span>
+                </div>
+                <div className="relative group">
+                  <Input
+                    id="attachments"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setAttachments(Array.from(e.target.files));
+                      }
+                    }}
+                    className="h-14 py-3 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
+                  />
+                </div>
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {attachments.map((f, i) => (
+                      <Badge key={i} variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold">
+                        {f.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <Button

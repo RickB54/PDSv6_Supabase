@@ -24,6 +24,7 @@ import {
   getSetupMedia, 
   saveSetupMedia, 
   deleteSetupMedia, 
+  uploadSetupMedia,
   Chemical, 
   Material, 
   Tool, 
@@ -43,6 +44,7 @@ const MobileSetup = () => {
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
   const [media, setMedia] = useState<SetupMedia[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   // Quick Add State
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -72,48 +74,58 @@ const MobileSetup = () => {
     loadData();
   }, []);
 
-  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const url = event.target?.result as string;
+    setUploading(true);
+    try {
       const type = file.type.startsWith('video') ? 'video' : 'image';
       
+      // 1. Upload to Supabase Storage
+      const publicUrl = await uploadSetupMedia(file);
+      
+      if (!publicUrl) {
+         throw new Error("Failed to get public URL");
+      }
+
+      // 2. Save record to Database
       const newMedia: SetupMedia = {
         id: crypto.randomUUID(),
         type: type as 'image' | 'video',
-        url,
+        url: publicUrl,
         caption: file.name
       };
 
-      try {
-        await saveSetupMedia(newMedia);
-        const updated = await getSetupMedia();
-        setMedia(updated);
-        
-        toast({
-          title: "Media Synced",
-          description: `Your ${type} has been uploaded to Supabase.`
-        });
-      } catch (err) {
-        toast({ 
-          title: "Sync Failed", 
-          description: "Storage limit reached or connection lost.", 
-          variant: "destructive" 
-        });
-      }
-    };
-    reader.readAsDataURL(file);
-    // Reset input so same file can be uploaded if deleted
-    if (fileInputRef.current) fileInputRef.current.value = "";
+      await saveSetupMedia(newMedia);
+      
+      // 3. Refresh UI
+      const updated = await getSetupMedia();
+      setMedia(updated);
+      
+      toast({
+        title: "Media Synced",
+        description: `Your ${type} has been uploaded to Supabase.`
+      });
+    } catch (err: any) {
+      console.error("Upload error detailed:", err);
+      toast({ 
+        title: "Sync Failed", 
+        description: err.message || "Storage limit reached or connection lost.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setUploading(false);
+      // Reset input so same file can be uploaded if deleted
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const removeMedia = async (id: string) => {
     try {
       await deleteSetupMedia(id);
       setMedia(prev => prev.filter(m => m.id !== id));
+      toast({ title: "Media Removed", description: "Successfully deleted from Supabase." });
     } catch (err) {
       toast({ title: "Delete Failed", description: "Could not remove from Supabase.", variant: "destructive" });
     }
@@ -188,14 +200,15 @@ const MobileSetup = () => {
               onChange={handleMediaUpload}
             />
             <Button 
+              disabled={uploading}
               onClick={() => {
                 if (fileInputRef.current) {
                   fileInputRef.current.click();
                 }
               }}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-6 h-12 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all w-full sm:w-auto"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-6 h-12 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all w-full sm:w-auto disabled:opacity-50"
             >
-              <Plus className="mr-2 h-5 w-5" /> Add View
+              {uploading ? "Uploading..." : <><Plus className="mr-2 h-5 w-5" /> Add View</>}
             </Button>
           </div>
         </div>
