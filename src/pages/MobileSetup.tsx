@@ -45,6 +45,7 @@ const MobileSetup = () => {
   const [loading, setLoading] = useState(true);
   const [media, setMedia] = useState<SetupMedia[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   // Quick Add State
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -75,50 +76,68 @@ const MobileSetup = () => {
   }, []);
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploading(true);
-    try {
-      const type = file.type.startsWith('video') ? 'video' : 'image';
-      
-      // 1. Upload to Supabase Storage
-      const publicUrl = await uploadSetupMedia(file);
-      
-      if (!publicUrl) {
-         throw new Error("Failed to get public URL");
-      }
+    setUploadProgress({ done: 0, total: files.length });
 
-      // 2. Save record to Database
-      const newMedia: SetupMedia = {
-        id: crypto.randomUUID(),
-        type: type as 'image' | 'video',
-        url: publicUrl,
-        caption: file.name
-      };
+    let successCount = 0;
+    let failCount = 0;
 
-      await saveSetupMedia(newMedia);
-      
-      // 3. Refresh UI
-      const updated = await getSetupMedia();
-      setMedia(updated);
-      
+    // Upload all files in parallel
+    await Promise.all(
+      files.map(async (file) => {
+        try {
+          const type = file.type.startsWith('video') ? 'video' : 'image';
+          const publicUrl = await uploadSetupMedia(file);
+
+          if (!publicUrl) throw new Error(`Failed to get public URL for ${file.name}`);
+
+          const newMedia: SetupMedia = {
+            id: crypto.randomUUID(),
+            type: type as 'image' | 'video',
+            url: publicUrl,
+            caption: file.name
+          };
+
+          await saveSetupMedia(newMedia);
+          successCount++;
+        } catch (err: any) {
+          console.error(`Upload error for ${file.name}:`, err);
+          failCount++;
+        } finally {
+          setUploadProgress(prev => prev ? { ...prev, done: prev.done + 1 } : null);
+        }
+      })
+    );
+
+    // Refresh gallery after all uploads complete
+    const updated = await getSetupMedia();
+    setMedia(updated);
+
+    if (successCount > 0 && failCount === 0) {
       toast({
-        title: "Media Synced",
-        description: `Your ${type} has been uploaded to Supabase.`
+        title: `${successCount} Photo${successCount > 1 ? 's' : ''} Uploaded`,
+        description: `Successfully synced to Supabase.`
       });
-    } catch (err: any) {
-      console.error("Upload error detailed:", err);
-      toast({ 
-        title: "Sync Failed", 
-        description: err.message || "Storage limit reached or connection lost.", 
-        variant: "destructive" 
+    } else if (successCount > 0 && failCount > 0) {
+      toast({
+        title: `Partial Upload`,
+        description: `${successCount} succeeded, ${failCount} failed. Check your connection.`,
+        variant: "destructive"
       });
-    } finally {
-      setUploading(false);
-      // Reset input so same file can be uploaded if deleted
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      toast({
+        title: "Upload Failed",
+        description: `None of the ${failCount} file(s) could be uploaded.`,
+        variant: "destructive"
+      });
     }
+
+    setUploading(false);
+    setUploadProgress(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeMedia = async (id: string) => {
@@ -196,19 +215,17 @@ const MobileSetup = () => {
               ref={fileInputRef} 
               className="hidden" 
               accept="image/*,video/*"
-              capture="environment"
+              multiple
               onChange={handleMediaUpload}
             />
             <Button 
               disabled={uploading}
-              onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.click();
-                }
-              }}
+              onClick={() => fileInputRef.current?.click()}
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-6 h-12 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all w-full sm:w-auto disabled:opacity-50"
             >
-              {uploading ? "Uploading..." : <><Plus className="mr-2 h-5 w-5" /> Add View</>}
+              {uploading && uploadProgress
+                ? <><span className="mr-2 animate-bounce">↑</span> Uploading {uploadProgress.done}/{uploadProgress.total}...</>
+                : <><Plus className="mr-2 h-5 w-5" />Add Photos</>}
             </Button>
           </div>
         </div>
