@@ -23,6 +23,8 @@ import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getCurrentUser } from "@/lib/auth";
+import { auditEmployeeAction } from "@/lib/audit";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { RetentionHub } from "@/components/customers/RetentionHub";
@@ -145,6 +147,12 @@ const SearchCustomer = () => {
       await refresh();
       setModalOpen(false);
       toast({ title: "Customer Saved", description: "Record stored." });
+
+      // AUDIT for Employee
+      const user = getCurrentUser();
+      if (user?.role === 'employee') {
+        await auditEmployeeAction(data.id ? 'update' : 'create', 'Customer', data);
+      }
     } catch (err: any) {
       console.error('❌ Supabase upsertSupabaseCustomer failed:', err);
       console.error('Error details:', { message: err?.message, code: err?.code, details: err?.details, hint: err?.hint });
@@ -227,30 +235,11 @@ const SearchCustomer = () => {
   const handleDelete = async () => {
     if (!deleteCustomerId) return;
     try {
-      // Validation: If ID is not a valid UUID (e.g. local temp ID 'c_...'), don't send to Supabase
-      // This prevents the PostgreSQL 'invalid input syntax for type uuid' error
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (uuidRegex.test(deleteCustomerId)) {
-        const result: any = await deleteSupabaseCustomer(deleteCustomerId);
-        if (result?.crmCount === 0) {
-          toast({
-            title: "Deletion Failed",
-            description: "Permission denied or record missing. Please run the 'nuclear_rls_fix.sql' script in Supabase to reset permissions.",
-            variant: "destructive"
-          });
-          return;
-        }
-      } else {
-        console.warn(`Skipping Supabase delete for local/non-UUID id: ${deleteCustomerId}`);
+        await deleteSupabaseCustomer(deleteCustomerId);
       }
-
-      // Also try local delete just in case
       await removeCustomer(deleteCustomerId).catch(() => { });
-
-      // Force refresh of stores that might hold stale data in memory
-      useBookingsStore.getState().refresh();
-      useTasksStore.getState().refresh();
-
       await refresh();
       toast({ title: "Deleted", description: "Customer permanently removed." });
     } catch (error: any) {
@@ -777,7 +766,33 @@ const SearchCustomer = () => {
       </main >
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Permanently?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                const user = getCurrentUser();
+                if (user?.role !== 'admin') {
+                  toast({
+                    title: "Access Denied",
+                    description: "You do not have permission to delete customer records. This action has been logged.",
+                    variant: "destructive"
+                  });
+                  setDeleteCustomerId(null);
+                  return;
+                }
+                await handleDelete();
+              }} 
+              className="bg-destructive"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
 
       <PhotoGalleryLightbox

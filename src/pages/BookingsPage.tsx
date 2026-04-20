@@ -23,7 +23,8 @@ import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { getSupabaseEmployees, getSupabaseBookings } from "@/lib/supa-data";
-import { getCurrentUser } from "@/lib/auth"; // Fix: Import missing function
+import { getCurrentUser } from "@/lib/auth"; 
+import { auditEmployeeAction } from "@/lib/audit";
 import { servicePackages, addOns } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
@@ -99,7 +100,7 @@ export default function BookingsPage() {
     addons: [] as string[],
     hasReminder: false,
     reminderFrequency: "3",
-    status: "confirmed" as BookingStatus,
+    status: (getCurrentUser()?.role === 'admin' ? 'confirmed' : 'tentative') as BookingStatus,
     vehicleId: undefined as string | undefined
   });
 
@@ -780,14 +781,14 @@ export default function BookingsPage() {
           title: formData.service,
           date: date.toISOString(),
           endTime: endDate.toISOString(),
-          status: formData.status as any,
+          status: (user?.role === 'admin' ? formData.status : 'tentative') as any,
           vehicle: formData.vehicle,
           vehicleYear: formData.vehicleYear,
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
-          bookedBy: formData.bookedBy,
+          bookedBy: formData.bookedBy || user?.name || 'Staff',
           notes: formData.notes,
           addons: formData.addons,
           hasReminder: formData.hasReminder,
@@ -801,8 +802,10 @@ export default function BookingsPage() {
         await add(newBooking as any);
         resultingBooking = newBooking;
 
-        // Notify Admin if Employee
-        await notifyEmployeeChange('create', resultingBooking);
+        // AUDIT for Employee
+        if (user?.role === 'employee') {
+          await auditEmployeeAction('create', 'Booking', resultingBooking);
+        }
       }
 
       toast.dismiss(saveToast);
@@ -2811,10 +2814,15 @@ export default function BookingsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
                 if (selectedBooking) {
-                  // Notify Admin if Employee BEFORE removal
-                  notifyEmployeeChange('delete', selectedBooking);
+                  const user = getCurrentUser();
+                  if (user?.role !== 'admin') {
+                    toast.error("Access Denied", { description: "You do not have permission to delete bookings. Please contact an Administrator." });
+                    setIsDeleteDialogOpen(false);
+                    return;
+                  }
+                  
                   remove(selectedBooking.id);
                   toast.success("Booking deleted");
                   setIsAddModalOpen(false);

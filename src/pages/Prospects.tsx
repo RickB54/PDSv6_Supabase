@@ -29,6 +29,8 @@ import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import { getCurrentUser } from "@/lib/auth";
+import { auditEmployeeAction } from "@/lib/audit";
 
 const Prospects = () => {
   const { toast } = useToast();
@@ -156,6 +158,12 @@ const Prospects = () => {
       await refresh();
       setModalOpen(false);
       toast({ title: "Saved", description: "Prospect updated." });
+
+      // AUDIT for Employee
+      const user = getCurrentUser();
+      if (user?.role === 'employee') {
+        await auditEmployeeAction(data.id ? 'update' : 'create', 'Prospect', data);
+      }
     } catch (err: any) {
       console.error('❌ Supabase upsertSupabaseCustomer failed:', err);
       console.error('Error details:', { message: err?.message, code: err?.code, details: err?.details, hint: err?.hint });
@@ -675,8 +683,31 @@ const Prospects = () => {
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Permanently?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                const user = getCurrentUser();
+                if (user?.role !== 'admin') {
+                  toast({
+                    title: "Access Denied",
+                    description: "You do not have permission to delete prospects. This attempt has been logged.",
+                    variant: "destructive"
+                  });
+                  setDeleteCustomerId(null);
+                  return;
+                }
+                await handleDelete();
+              }}
+              className="bg-destructive"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 

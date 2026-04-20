@@ -367,6 +367,11 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   };
 
   const handleDeleteLinkedVehicle = async (vehicleId: string) => {
+    const user = getCurrentUser();
+    if (user?.role !== 'admin') {
+      toast.error("Access Denied", { description: "You do not have permission to delete saved vehicles. Please contact an Administrator." });
+      return;
+    }
     if (!confirm("Are you sure you want to delete this vehicle?")) return;
     try {
       const { error } = await supabase.from('vehicles').delete().eq('id', vehicleId);
