@@ -364,58 +364,59 @@ const ShopSetup = () => {
 
   // ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#030303] text-zinc-100 selection:bg-indigo-500/30">
-      <PageHeader title="Shop Setup" />
+    <div className="min-h-screen bg-[#030303] text-zinc-100 selection:bg-indigo-500/30 overflow-x-hidden w-full max-w-[100vw]">
+      <PageHeader title="Shop Setup Center" />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
 
         {/* Hero Header */}
         <div className="relative mb-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/50 shadow-2xl overflow-hidden p-6 md:p-10">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80')] opacity-10 bg-cover bg-center" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-            <div className="relative h-20 w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
-              <Warehouse className="h-10 w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1549890762-0a3f8933ad76?auto=format&fit=crop&q=80')] opacity-50 bg-cover bg-center" />
+          
+          <div className="relative z-10 flex flex-col items-center text-center lg:text-left lg:items-start lg:flex-row gap-6 md:gap-8">
+            <div className="relative h-16 w-16 md:h-20 md:w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
+              <Warehouse className="h-8 w-8 md:h-10 md:w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
             </div>
 
-            <div className="flex-1 text-center lg:text-left min-w-0 px-1">
-              <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-3 leading-none break-words">Shop Setup Center</h1>
-              <p className="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0">
+            <div className="flex-1 w-full min-w-0">
+              <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-2 md:mb-3 leading-tight break-words">Shop Setup Center</h1>
+              <p className="text-zinc-400 text-xs sm:text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                 Professional shop floor configuration. Real-time fixed inventory and visual organization documentation.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full lg:w-auto">
               <Button
                 variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
                 onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
               >
-                <FolderOpen className="h-5 w-5" /> Manage Categories
+                <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
               </Button>
               <Button
                 variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
                 onClick={() => navigate("/mobile-setup")}
               >
-                <Truck className="h-5 w-5" /> Switch to Mobile
+                <Truck className="h-4 w-4 md:h-5 md:w-5" /> Switch to Mobile
               </Button>
               <Button
                 disabled={uploading}
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-10 h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 md:px-10 h-12 md:h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all w-full sm:w-auto"
               >
                 {uploading && uploadProgress
                   ? <><span className="mr-2 animate-bounce">↑</span> {uploadProgress.done}/{uploadProgress.total}</>
-                  : <><Plus className="mr-2 h-6 w-6" />Add Shop Photos</>}
+                  : <><Plus className="mr-2 h-5 w-5 md:h-6 md:w-6" />Add Shop Photos</>
+                }
               </Button>
             </div>
           </div>
         </div>
 
         <Tabs defaultValue="gallery" className="space-y-8">
-          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-14 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden custom-scrollbar">
+          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-12 md:h-14 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden custom-scrollbar">
             <TabsTrigger value="gallery" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
               <ImageIcon className="mr-2 h-4 w-4" /> Visual Organization
             </TabsTrigger>
