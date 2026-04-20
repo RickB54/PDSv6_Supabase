@@ -8,9 +8,9 @@ export const PerspectiveBanner = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const user = getCurrentUser();
+    const { isDemoMode } = useDemoMode();
     
     // Only show if the user is actually an admin trying to see other views
-    // If they are a real customer, they don't need an "Exit Mode" banner
     const isAdmin = user?.role === 'admin';
     
     const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
@@ -20,10 +20,12 @@ export const PerspectiveBanner = () => {
     if (!isViewingAsCustomer && !isViewingAsEmployee) return null;
     
     const isCustomer = isViewingAsCustomer;
+    const topOffset = isDemoMode ? 'top-[40px]' : 'top-0';
     
     return (
         <div className={cn(
-            "fixed top-0 left-0 right-0 z-[110] h-10 flex items-center justify-between px-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500",
+            "fixed left-0 right-0 z-[110] h-10 flex items-center justify-between px-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500",
+            topOffset,
             isCustomer ? "bg-purple-600 text-white" : "bg-blue-600 text-white"
         )}>
             <div className="flex items-center gap-3">

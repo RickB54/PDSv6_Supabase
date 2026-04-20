@@ -263,13 +263,15 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
      location.pathname.startsWith('/dashboard/employee')
   );
 
+  const paddingClass = (isDemoMode && isPerspectiveMode) ? 'pt-20' : (isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0');
+
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   return (
     <div className={`flex min_h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
-      <div className={`dark-theme min-h-screen ${isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0'}`}>
+      <div className={`dark-theme min-h-screen ${paddingClass}`}>
         <AppSidebar key={effectiveUser.id} user={effectiveUser} />
       </div>
-      <div className={`flex-1 ${isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0'} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
+      <div className={`flex-1 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
           <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

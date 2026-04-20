@@ -20,7 +20,7 @@ import { contentService } from "@/lib/content";
 
 export const Navbar = () => {
     const { isDemoMode } = useDemoMode();
-    const { toggleSidebar } = useSidebar();
+    const { toggleSidebar, isMobile } = useSidebar();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -91,12 +91,19 @@ export const Navbar = () => {
   const handleLogoClick = (e: React.MouseEvent) => {
     // Standard navigation only
   };
-  return (
+    const isAdmin = user?.role === 'admin';
+    const isViewingAsCustomer = location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+    const isViewingAsEmployee = location.pathname.startsWith('/dashboard/employee');
+    const isPerspectiveMode = isAdmin && (isViewingAsCustomer || isViewingAsEmployee);
+
+    const bannerTop = (isDemoMode ? 40 : 0) + (isPerspectiveMode ? 40 : 0);
+
+    return (
     <>
       {businessStatus && !!businessStatus.isTopBannerActive && (
-        <div className={`fixed left-0 right-0 z-[60] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
-          isDemoMode ? 'top-[40px]' : 'top-0'
-        } ${
+        <div 
+          style={{ top: `${bannerTop}px` }}
+          className={`fixed left-0 right-0 z-[60] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
           businessStatus.mode === 'pre-launch' ? 'bg-red-600' : 'bg-primary'
         }`}>
@@ -108,11 +115,10 @@ export const Navbar = () => {
           </div>
         </div>
       )}
-      <nav className={`fixed left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300 ${
-        isDemoMode 
-          ? (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[80px] sm:top-[84px]' : 'top-[40px]')
-          : (businessStatus && !!businessStatus.isTopBannerActive ? 'top-[40px] sm:top-[44px]' : 'top-0')
-      }`}>
+      <nav 
+        style={{ top: `${bannerTop + (businessStatus?.isTopBannerActive ? (isMobile ? 36 : 40) : 0)}px` }}
+        className={`fixed left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300`}
+      >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Sidebar Toggle */}
