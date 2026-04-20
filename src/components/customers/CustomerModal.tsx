@@ -138,12 +138,25 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           const make = ini.make || initial.vehicle || vInfo?.make || vInfo?.vehicle || '';
           const model = initial.model || vInfo?.model || '';
           const year = initial.year ? String(initial.year) : String(vInfo?.year || '');
+          const type = initial.vehicleType || vInfo?.type || vInfo?.vehicleType || '';
+          const color = initial.color || vInfo?.color || '';
+
+          // Last resort: pull from most recent booking for this customer
+          const relatedBookings = allBookings
+            .filter((b: any) =>
+              (b.customerId === initial.id) ||
+              (initial.email && b.customerEmail?.toLowerCase() === initial.email.toLowerCase()) ||
+              (b.customer?.toLowerCase() === initial.name?.toLowerCase())
+            )
+            .sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+          const latestBooking = relatedBookings[0] as any;
+
           baseVehicles = [{
-            make,
-            model,
-            year,
-            type: initial.vehicleType || vInfo?.type || vInfo?.vehicleType || '',
-            color: initial.color || vInfo?.color || '',
+            make: make || latestBooking?.vehicleMake || latestBooking?.vehicle || '',
+            model: model || latestBooking?.vehicleModel || '',
+            year: year || (latestBooking?.vehicleYear ? String(latestBooking.vehicleYear) : ''),
+            type: type || latestBooking?.vehicle || '',
+            color: color || '',
             mileage: (initial.mileage || vInfo?.mileage) ? String(initial.mileage || vInfo?.mileage) : '',
             conditionInside: initial.conditionInside || vInfo?.conditionInside || cIn || '',
             conditionOutside: initial.conditionOutside || vInfo?.conditionOutside || cOut || '',
@@ -152,7 +165,6 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             afterPhotos: initial.afterPhotos || vInfo?.afterPhotos || [],
             videoUrls: ini.shortVideos || vInfo?.videoUrls || vInfo?.shortVideos || [],
           }];
-          // (Even if all empty, we show a blank row so the user can fill it in)
         }
 
         setForm({
