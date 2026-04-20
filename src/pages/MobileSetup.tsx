@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ import {
 // ─────────────────────────────────────────────────────────
 const MobileSetup = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data
@@ -352,6 +354,13 @@ const MobileSetup = () => {
                 onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
               >
                 <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
+              </Button>
+              <Button
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-emerald-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
+                onClick={() => navigate("/shop-setup")}
+              >
+                <Warehouse className="h-4 w-4 md:h-5 md:w-5" /> Switch to Shop
               </Button>
               <Button
                 disabled={uploading}
