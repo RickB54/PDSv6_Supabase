@@ -2,12 +2,31 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "./pdfArchive";
 import { getCurrentUser } from "./auth";
 
+/**
+ * System Audit Module
+ * Logs critical actions for administrative oversight.
+ * Specifically gates and audits employee actions.
+ */
+
+export async function logBackup(details: any) {
+  console.log('[Audit] System Backup initiated:', details);
+}
+
+export async function logRestore(details: any) {
+  console.log('[Audit] System Restore initiated:', details);
+}
+
+export async function logDelete(details: any) {
+  console.log('[Audit] Data deletion audit:', details);
+}
+
 export async function auditEmployeeAction(
   action: 'create' | 'update' | 'delete',
   recordType: 'Customer' | 'Prospect' | 'Booking',
   recordData: any
 ) {
   const user = getCurrentUser();
+  // Only audit if user is employee; admins don't audit themselves in this flow
   if (!user || user.role !== 'employee') return;
 
   try {
@@ -16,6 +35,7 @@ export async function auditEmployeeAction(
     const recordName = recordData.name || recordData.customer || 'Unnamed Record';
     const recordId = recordData.id || 'N/A';
 
+    // Header logic
     doc.setFontSize(20);
     doc.setTextColor(220, 38, 38); // Red
     doc.text('ADMIN NOTIFICATION: Employee Change', 20, 20);
@@ -50,7 +70,7 @@ export async function auditEmployeeAction(
     y += 10;
     doc.setFont(undefined, 'normal');
     
-    // Filter out huge media data for the summary
+    // Filter large data
     const cleanData = { ...recordData };
     delete cleanData.beforePhotos;
     delete cleanData.afterPhotos;
@@ -61,10 +81,11 @@ export async function auditEmployeeAction(
     const splitText = doc.splitTextToSize(dataString, 170);
     doc.text(splitText, 20, y);
 
+    // Finalize
     const pdfDataUrl = doc.output('datauristring');
     const fileName = `AUDIT_${action.toUpperCase()}_${recordType}_${user.name}_${Date.now()}.pdf`.replace(/\s/g, '_');
 
-    // Archive the PDF
+    // Save to Archive
     savePDFToArchive(
       'Admin Updates',
       recordName,

@@ -1,6 +1,6 @@
 import localforage from 'localforage';
 import supabase from '@/lib/supabase';
-import { logBackup, logRestore } from '@/lib/audit';
+import { logBackup, logRestore } from './audit';
 
 export const SCHEMA_VERSION = 2;
 
