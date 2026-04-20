@@ -74,31 +74,38 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
 
   useEffect(() => {
-    if (isLoading) return; // IMPORTANT: Wait for DB config to load before redirecting anyone
+    if (isLoading) return;
+
+    // Detect if we are on a public business page (Website) vs an App page
+    const publicPaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/availability', '/blog', '/thank-you', '/checkout', '/payment-success', '/portal', '/f150-setup', '/contact-support'];
+    const path = location.pathname.toLowerCase().replace(/\/+/g, '/');
+    const isPublicWebsite = publicPaths.includes(path) || path.startsWith('/blog/');
+    const isDemoPath = path.startsWith('/demo');
 
     if (isDemoPath && !isPublicDemoDisabled) {
       localStorage.setItem("demo_mode_active", "true");
       setStayInDemo(true);
+    } else if (isPublicWebsite && stayInDemo && !isAdminPreview && !isDemoPath) {
+      // AUTO-EXIT: If we were in demo mode but navigated to a real website page, 
+      // clear the flag so it doesn't interfere with real inquiries.
+      localStorage.removeItem("demo_mode_active");
+      setStayInDemo(false);
+      console.log("[DemoContext] Auto-exited Training Session for public website integrity.");
     } else if (isDemoPath && isPublicDemoDisabled && !isAdminPreview) {
-      // If they land on /demo but it's disabled, KICK THEM TO LOGIN or HOME
       localStorage.removeItem("demo_mode_active");
       setStayInDemo(false);
       const reasonParam = encodeURIComponent(disabledReason || 'System Maintenance');
       navigate(`/login?demo_disabled=true&reason=${reasonParam}`);
     }
-  }, [isDemoPath, isHome, isPublicDemoDisabled, isLoading, isAdminPreview]);
+  }, [location.pathname, isPublicDemoDisabled, isLoading, isAdminPreview, stayInDemo]);
 
   // Global demo mode check
-  // Public users lose access if isPublicDemoDisabled is true.
-  // Admins keep access via isAdminPreview.
-  const isDemoMode = isAdminPreview || ((stayInDemo || isDemoPath) && !isPublicDemoDisabled);
+  const isDemoMode = isAdminPreview || ((stayInDemo || location.pathname.toLowerCase().startsWith('/demo')) && !isPublicDemoDisabled);
 
   useEffect(() => {
     localStorage.setItem("admin_demo_preview", isAdminPreview.toString());
-    // Also sync to a flag supa-data can read easily
     if (isAdminPreview) localStorage.setItem("demo_mode_active", "true");
     
-    // Dispatch event to notify layout/components
     window.dispatchEvent(new Event("demo-mode-changed"));
   }, [isAdminPreview]);
 

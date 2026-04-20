@@ -304,7 +304,7 @@ const Prospects = () => {
       doc.save(fileName);
       try {
         const dataUrl = doc.output('datauristring');
-        savePDFToArchive('Prospects', 'Prospects', `prospects-${Date.now()}`, dataUrl, { fileName });
+        savePDFToArchive('Prospects', 'Prospects', `prospects-${Date.now()}`, dataUrl, { fileName, silent: true });
         toast({ title: 'Archived', description: 'Saved to File Manager' });
       } catch (e) { }
     } else {

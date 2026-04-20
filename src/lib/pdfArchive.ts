@@ -18,7 +18,7 @@ export function savePDFToArchive(
   customerName: string,
   recordId: string,
   pdfDataUrl: string,
-  opts?: { fileName?: string; path?: string }
+  opts?: { fileName?: string; path?: string; silent?: boolean }
 ): void {
   const timestamp = new Date().toISOString();
   const date = new Date().toLocaleDateString().replace(/\//g, '-');
@@ -134,11 +134,13 @@ export function savePDFToArchive(
     window.dispatchEvent(new CustomEvent('pdf_archive_updated'));
   } catch { }
 
-  // Push persistent admin alert about the new PDF
-  pushAdminAlert(
-    "pdf_saved",
-    `New PDF saved: ${record.fileName}`,
-    "system",
-    { recordType, customerName, recordId, id: record.id }
-  );
+  // Push persistent admin alert about the new PDF (unless silent)
+  if (!opts?.silent) {
+    pushAdminAlert(
+      "pdf_saved",
+      `New PDF saved: ${record.fileName}`,
+      "system",
+      { recordType, customerName, recordId, id: record.id }
+    );
+  }
 }

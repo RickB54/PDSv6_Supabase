@@ -48,16 +48,18 @@ export function generateBookingPDF(booking: Booking, details?: {
   return doc.output('dataurlstring');
 }
 
-export async function uploadToFileManager(fileDataUrl: string, path: string, booking: Booking, details?: { service?: string; price?: number }) {
+export async function uploadToFileManager(fileDataUrl: string, path: string, booking: Booking, details?: { service?: string; price?: number, silent?: boolean }) {
   const fileName = formatFileName(booking.date, booking.customer || 'Customer', (details?.service || booking.title || 'Service'));
-  savePDFToArchive("Bookings", booking.customer || "Customer", booking.id, fileDataUrl, { fileName, path });
+  savePDFToArchive("Bookings", booking.customer || "Customer", booking.id, fileDataUrl, { fileName, path, silent: details?.silent });
   // Flag latest booking event for lightweight real-time UI cues
   localStorage.setItem('lastBookingEvent', JSON.stringify({ id: booking.id, ts: Date.now(), price: details?.price }));
 
-  toast({
-    title: "File Saved",
-    description: `Booking PDF saved to File Manager: ${fileName}`,
-  });
+  if (!details?.silent) {
+    toast({
+      title: "File Saved",
+      description: `Inquiry copy saved to File Manager.`,
+    });
+  }
 }
 
 export async function onBookingCreated(booking: Booking) {
@@ -68,13 +70,7 @@ export async function onBookingCreated(booking: Booking) {
     const monthName = d.toLocaleString(undefined, { month: 'long' });
     const path = `Bookings ${year}/${monthName}/`;
     await uploadToFileManager(pdf, path, booking, { service: booking.title });
-    // Emit admin alert for new booking
-    pushAdminAlert(
-      'booking_created',
-      `New booking: ${booking.title} — ${booking.customer || ''}`.trim(),
-      'system',
-      { id: booking.id, when: booking.date, customer: booking.customer, recordType: 'Bookings' }
-    );
+    // removed pushAdminAlert here - uploadToFileManager -> savePDFToArchive already sends a notification
   } catch (e) {
     console.error('Failed to generate/upload booking PDF', e);
   }
@@ -83,23 +79,7 @@ export async function onBookingCreated(booking: Booking) {
 // Generate a lightweight PDF and alert when booking status changes
 export async function onBookingStatusChanged(booking: Booking, prevStatus: string, nextStatus: string) {
   try {
-    // 1. Basic status update PDF & Alert (Universal)
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Prime Auto Detail", 20, 20);
-    doc.setFontSize(12);
-    doc.text("BOOKING UPDATE", 20, 30);
-    doc.text(`Updated: ${new Date().toLocaleString()}`, 20, 40);
-    doc.text(`Customer: ${booking.customer || 'N/A'}`, 20, 55);
-    doc.text(`Service: ${booking.title}`, 20, 65);
-    doc.text(`Scheduled: ${new Date(booking.date).toLocaleString()}`, 20, 75);
-    doc.text(`Status: ${prevStatus} → ${nextStatus}`, 20, 90);
-    const dataUrl = doc.output('dataurlstring');
-    const d = new Date(booking.date);
-    const year = d.getFullYear();
-    const monthName = d.toLocaleString(undefined, { month: 'long' });
-    const path = `Bookings ${year}/${monthName}/`;
-    uploadToFileManager(dataUrl, path, booking, { service: booking.title });
+    // Removed automatic status-change PDF archival to minimize file manager clutter
 
     // 2. SPECIAL LOGIC: When confirmed, send professional email to customer
     if (nextStatus === 'confirmed') {
@@ -232,7 +212,7 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
 
           const logDataUrl = logDoc.output('dataurlstring');
           const logFileName = `EMAIL_CONFIRMATION_${booking.customer.replace(/\s/g, '_')}_${Date.now()}.pdf`;
-          uploadToFileManager(logDataUrl, `Email Logs/${year}/${monthName}/`, booking, { service: "Email Confirmation Log" });
+          uploadToFileManager(logDataUrl, `Email Logs/${year}/${monthName}/`, booking, { service: "Email Confirmation Log", silent: true });
 
           toast({
             title: "Confirmation Sent",
@@ -472,7 +452,8 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
         const dataUrl = doc.output('dataurlstring');
         const fileName = `OUTREACH_${booking.customer.replace(/\s/g, '_')}_${Date.now()}.pdf`;
         await uploadToFileManager(dataUrl, `Outreach Logs/${year}/${monthName}/`, booking, { 
-          service: "Maintenance Outreach"
+          service: "Maintenance Outreach",
+          silent: true
         });
         
         console.log('✅ Outreach PDF archived to File Manager');
@@ -645,7 +626,8 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
         const dataUrl = doc.output('dataurlstring');
         const fileName = `WELCOME_PROSPECT_${prospect.name.replace(/\s/g, '_')}_${Date.now()}.pdf`;
         await uploadToFileManager(dataUrl, `Welcome Outreach/${year}/${monthName}/`, { customer: prospect.name, date: new Date().toISOString() } as any, { 
-          service: "Welcome Outreach"
+          service: "Welcome Outreach",
+          silent: true
         });
       } catch (pdfErr) {
         console.warn('PDF archive failed', pdfErr);
