@@ -86,7 +86,7 @@ const MobileSetup = () => {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
-  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState<string>("");
+  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState<string>("none");
 
   // Modals
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -114,7 +114,7 @@ const MobileSetup = () => {
       setTools(t);
       setMedia(savedMedia || []);
       setCategories(savedCats || []);
-      if (!selectedCategoryForUpload && savedCats.length > 0) {
+      if (selectedCategoryForUpload === "none" && savedCats.length > 0) {
         setSelectedCategoryForUpload(savedCats[0].id);
       }
     } catch (err) {
@@ -151,7 +151,7 @@ const MobileSetup = () => {
             type: type as "image" | "video",
             url: publicUrl,
             caption: file.name,
-            category: selectedCategoryForUpload || undefined,
+            category: selectedCategoryForUpload === "none" ? undefined : selectedCategoryForUpload,
           };
 
           await saveSetupMedia(newMedia);
@@ -376,7 +376,7 @@ const MobileSetup = () => {
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id} className="text-xs font-bold">{c.name}</SelectItem>
                   ))}
-                  <SelectItem value="" className="text-xs text-zinc-500">— Uncategorized —</SelectItem>
+                  <SelectItem value="none" className="text-xs text-zinc-500">— Uncategorized —</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -783,7 +783,7 @@ function MediaCard({
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem onClick={() => onReassign(item.id, "")} className="text-zinc-500 cursor-pointer text-xs">
+              <DropdownMenuItem onClick={() => onReassign(item.id, "none")} className="text-zinc-500 cursor-pointer text-xs">
                 — Uncategorized
               </DropdownMenuItem>
             </DropdownMenuContent>
