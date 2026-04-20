@@ -310,12 +310,13 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 phone: c.phone,
                 address: c.address,
                 // These top-level properties are key for UI display
-                vehicle: v.make || vi.make || '',
-                model: v.model || vi.model || '',
-                year: v.year || vi.year || '',
-                vehicleType: v.type || vi.type || vi.vehicleType || '',
-                color: v.color || vi.color || '',
-                mileage: v.mileage || vi.mileage || '',
+                // Fallback chain: vehicles table → vehicle_info JSONB → direct customer columns
+                vehicle: v.make || vi.make || c.vehicle || '',
+                model: v.model || vi.model || c.model || '',
+                year: v.year ? String(v.year) : (vi.year ? String(vi.year) : (c.year ? String(c.year) : '')),
+                vehicleType: v.type || vi.type || vi.vehicleType || c.vehicle_type || c.vehicleType || '',
+                color: v.color || vi.color || c.color || '',
+                mileage: v.mileage || vi.mileage || c.mileage || '',
                 vehicles: allVehs,
                 vehicle_info: {
                     make: v.make || vi.make,

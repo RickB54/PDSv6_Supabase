@@ -629,6 +629,15 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
   const cameraRef = useRef<HTMLInputElement>(null);
   const currentPhotos = photos || [];
 
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUpload(file, type, currentPhotos.length, vIdx);
+    }
+    // Reset so same file can be selected again and onChange doesn't double-fire
+    e.target.value = '';
+  };
+
   return (
     <div className="space-y-2">
       <Label className="text-[9px] text-zinc-500 uppercase font-black">{label} ({currentPhotos.length})</Label>
@@ -641,11 +650,22 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
             </button>
           </div>
         ))}
-        <div className="relative aspect-square rounded border border-dashed border-zinc-800 flex items-center justify-center bg-zinc-950/40 hover:bg-zinc-900 transition-colors cursor-pointer" onClick={() => fileRef.current?.click()}>
+        <div
+          className="relative aspect-square rounded border border-dashed border-zinc-800 flex items-center justify-center bg-zinc-950/40 hover:bg-zinc-900 transition-colors cursor-pointer"
+          onClick={() => fileRef.current?.click()}
+        >
           <Plus className="w-4 h-4 text-zinc-700" />
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0], type, currentPhotos.length, vIdx)} />
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0], type, currentPhotos.length, vIdx)} />
-          <button type="button" onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }} className="absolute bottom-1 right-1 p-1 bg-blue-600 rounded-full"><Camera className="w-3 h-3 text-white" /></button>
+          {/* Gallery / file picker */}
+          <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFile} />
+          {/* Camera capture - separate input, button stops propagation so only camera fires */}
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }}
+            className="absolute bottom-1 right-1 p-1 bg-blue-600 rounded-full"
+          >
+            <Camera className="w-3 h-3 text-white" />
+          </button>
         </div>
       </div>
     </div>

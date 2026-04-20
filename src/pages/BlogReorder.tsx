@@ -276,13 +276,10 @@ export default function BlogReorder() {
     const { isFullScreen } = useFullScreen();
 
     return (
-        <div className={cn(
-            "min-h-screen bg-black text-white",
-            isFullScreen && "fixed inset-0 z-[60] overflow-y-auto"
-        )}>
+        <div className="min-h-screen bg-black text-white">
             <PageHeader title="Blog Layout Architect" />
 
-            <main className="container mx-auto px-4 pb-24 relative pt-32">
+            <main className={cn("container mx-auto px-4 pb-24 relative", isFullScreen ? "pt-24" : "pt-32")}>
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
