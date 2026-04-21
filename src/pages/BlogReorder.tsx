@@ -128,8 +128,8 @@ export default function BlogReorder() {
                 if (a.sort_order == null && b.sort_order == null) {
                     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
                 }
-                if (a.sort_order == null) return -1;
-                if (b.sort_order == null) return 1;
+                if (a.sort_order == null) return 1;
+                if (b.sort_order == null) return -1;
                 return (a.sort_order || 0) - (b.sort_order || 0);
             });
 
@@ -279,7 +279,7 @@ export default function BlogReorder() {
         <div className="min-h-screen bg-black text-white">
             <PageHeader title="Blog Layout Architect" />
 
-            <main className={cn("container mx-auto px-4 pb-24 relative", isFullScreen ? "pt-24" : "pt-32")}>
+            <main className="w-full max-w-7xl mx-auto px-4 pb-24 pt-8 relative">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
@@ -440,7 +440,7 @@ export default function BlogReorder() {
                         <p className="text-zinc-600 mt-2">Try adjusting your search or publishing a story.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4">
                         <DndContext
                             sensors={sensors}
                             collisionDetection={closestCenter}
@@ -468,19 +468,23 @@ export default function BlogReorder() {
                             </SortableContext>
                             
                             <DragOverlay adjustScale={true}>
-                                {activeId ? (
-                                    <div className="opacity-80 scale-105">
-                                        <SortableItem 
-                                            item={items.find(i => i.id === activeId)!}
-                                            onEdit={() => {}}
-                                            onDelete={() => {}}
-                                            onArchive={() => {}}
-                                            onPin={() => {}}
-                                            onSocialBlast={() => {}}
-                                            onAIAssist={() => {}}
-                                        />
-                                    </div>
-                                ) : null}
+                                {(() => {
+                                    const activeItem = items.find(i => i.id === activeId);
+                                    if (!activeItem) return null;
+                                    return (
+                                        <div className="opacity-80 scale-105">
+                                            <SortableItem 
+                                                item={activeItem}
+                                                onEdit={() => {}}
+                                                onDelete={() => {}}
+                                                onArchive={() => {}}
+                                                onPin={() => {}}
+                                                onSocialBlast={() => {}}
+                                                onAIAssist={() => {}}
+                                            />
+                                        </div>
+                                    );
+                                })()}
                             </DragOverlay>
                         </DndContext>
                     </div>

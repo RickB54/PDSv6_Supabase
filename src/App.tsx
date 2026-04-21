@@ -301,7 +301,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
 
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   return (
-    <div className={`flex min_h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
+    <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className={`dark-theme min-h-screen ${paddingClass}`}>
         <AppSidebar key={effectiveUser.id} user={effectiveUser} />
       </div>

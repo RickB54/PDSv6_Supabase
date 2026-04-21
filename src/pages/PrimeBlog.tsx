@@ -129,8 +129,8 @@ export default function PrimeBlog() {
                 if (a.sort_order == null && b.sort_order == null) {
                     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
                 }
-                if (a.sort_order == null) return -1;
-                if (b.sort_order == null) return 1;
+                if (a.sort_order == null) return 1;
+                if (b.sort_order == null) return -1;
                 return (a.sort_order || 0) - (b.sort_order || 0);
             });
 

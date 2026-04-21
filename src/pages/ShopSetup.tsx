@@ -29,6 +29,9 @@ import {
   ArrowLeft,
   FileText,
   Truck,
+  Globe,
+  ExternalLink,
+  Eye,
 } from "lucide-react";
 import {
   getChemicals,
@@ -113,11 +116,15 @@ const ShopSetup = () => {
   // Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState("gallery");
 
-  // Paperwork
+  // Business Documents (formerly Paperwork)
   const [docUploadOpen, setDocUploadOpen] = useState(false);
   const [docName, setDocName] = useState("");
   const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUrl, setDocUrl] = useState("");
+  const [isUrlMode, setIsUrlMode] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<SetupMedia | null>(null);
 
   // ─── Load ─────────────────────────────────────────────
   const loadData = async () => {
@@ -204,30 +211,50 @@ const ShopSetup = () => {
   };
 
   const handleDocUpload = async () => {
-    if (!docFile || !docName.trim()) return;
+    if (!docName.trim()) return;
+    if (!isUrlMode && !docFile) return;
+    if (isUrlMode && !docUrl.trim()) return;
+
     setUploading(true);
     try {
-      const publicUrl = await uploadSetupMedia(docFile);
-      if (!publicUrl) throw new Error("Upload failed");
+      let finalUrl = docUrl;
+      let type: "pdf" | "image" | "video" = "pdf";
+
+      if (!isUrlMode && docFile) {
+        const publicUrl = await uploadSetupMedia(docFile);
+        if (!publicUrl) throw new Error("Upload failed");
+        finalUrl = publicUrl;
+      } else {
+        // If it's a Google Doc, ensure it's in preview mode for embedding
+        if (finalUrl.includes('docs.google.com')) {
+          if (finalUrl.includes('/edit')) {
+            finalUrl = finalUrl.replace(/\/edit.*$/, '/preview');
+          } else if (!finalUrl.endsWith('/preview')) {
+            finalUrl = finalUrl.split('?')[0].replace(/\/$/, '') + '/preview';
+          }
+        }
+      }
 
       const newMedia: SetupMedia = {
         id: crypto.randomUUID(),
-        type: "pdf",
-        url: publicUrl,
+        type: "pdf", // Treat all docs as pdf/document for categorization
+        url: finalUrl,
         caption: docName.trim(),
         createdAt: new Date().toISOString()
       };
 
       await saveSetupMedia(newMedia, CONTEXT_KEY);
       const updated = await getSetupMedia(CONTEXT_KEY);
-      setMedia(updated);
+      setMedia(updated || []);
       
       setDocUploadOpen(false);
       setDocName("");
       setDocFile(null);
-      toast({ title: "Document Saved", description: "Added to Shop Paperwork." });
-    } catch {
-      toast({ title: "Upload Failed", variant: "destructive" });
+      setDocUrl("");
+      setActiveTab("paperwork");
+      toast({ title: "Document Saved", description: "Added to Business Documents." });
+    } catch (err: any) {
+      toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -415,7 +442,7 @@ const ShopSetup = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="gallery" className="space-y-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-12 md:h-14 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden custom-scrollbar">
             <TabsTrigger value="gallery" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
               <ImageIcon className="mr-2 h-4 w-4" /> Visual Organization
@@ -424,7 +451,7 @@ const ShopSetup = () => {
               <Package className="mr-2 h-4 w-4" /> Shop Inventory
             </TabsTrigger>
             <TabsTrigger value="paperwork" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
-              <FileText className="mr-2 h-4 w-4" /> Related Paperwork
+              <FileText className="mr-2 h-4 w-4" /> Business Documents
             </TabsTrigger>
           </TabsList>
 
@@ -543,6 +570,7 @@ const ShopSetup = () => {
                           onDelete={removeMedia}
                           onReassign={handleReassign}
                           onOpenGallery={() => openLightbox(globalIndex)}
+                          setViewingDoc={setViewingDoc}
                         />
                       );
                     })}
@@ -581,6 +609,7 @@ const ShopSetup = () => {
                         onDelete={removeMedia}
                         onReassign={handleReassign}
                         onOpenGallery={() => openLightbox(globalIndex)}
+                        setViewingDoc={setViewingDoc}
                       />
                     );
                   })}
@@ -675,66 +704,119 @@ const ShopSetup = () => {
               </div>
             </div>
           </TabsContent>
-          {/* ── PAPERWORK TAB ─────────────────────────────── */}
           <TabsContent value="paperwork" className="mt-0 space-y-12">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-zinc-900/60 border border-zinc-800 p-8 rounded-3xl relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20">
-                  <FileText className="h-8 w-8 text-indigo-400" />
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-zinc-900/60 border border-zinc-800 p-8 rounded-3xl relative z-10 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] -mr-32 -mt-32 rounded-full" />
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="h-16 w-16 bg-indigo-600 rounded-2xl flex items-center justify-center border border-indigo-400/30 shadow-[0_0_20px_rgba(79,70,229,0.3)] animate-pulse">
+                  <FileText className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black uppercase tracking-widest text-white">Shop Documentation</h3>
-                  <p className="text-zinc-500 text-sm">Upload MSDS sheets, equipment manuals, and shop procedures.</p>
+                  <h3 className="text-xl md:text-2xl font-black uppercase tracking-widest text-white italic">Business Documents</h3>
+                  <p className="text-zinc-400 text-sm font-medium">Digital repository for MSDS sheets, shop procedures, and equipment manuals.</p>
                 </div>
               </div>
-                <Button
-                  size="lg"
-                  onClick={() => setDocUploadOpen(true)}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/20"
-                >
-                  <Plus className="mr-2 h-5 w-5" /> Upload PDF Document
-                </Button>
+              <Button
+                size="lg"
+                onClick={() => setDocUploadOpen(true)}
+                className="relative z-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/40 active:scale-95 transition-all"
+              >
+                <Plus className="mr-2 h-5 w-5" /> Add Business Document
+              </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
               {media.filter(m => m.type === 'pdf').length === 0 ? (
-                <div className="col-span-full py-20 text-center bg-zinc-950/30 border border-dashed border-zinc-800 rounded-3xl">
-                   <div className="text-zinc-700 font-black uppercase tracking-[0.3em] text-xs mb-2">Reference Library Empty</div>
-                   <p className="text-zinc-600 text-sm">No PDF documents found in your shop registry.</p>
+                <div className="col-span-full py-24 text-center bg-zinc-900/40 border border-dashed border-zinc-800 rounded-[32px] group hover:border-indigo-500/30 transition-all">
+                  <div className="bg-zinc-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+                    <FileText className="h-8 w-8 text-zinc-600" />
+                  </div>
+                  <div className="text-zinc-400 font-black uppercase tracking-[0.4em] text-xs mb-3">Document Library Empty</div>
+                  <p className="text-zinc-600 text-sm max-w-sm mx-auto font-medium">Capture and store your shop's essential paperwork for instant team access.</p>
                 </div>
               ) : (
-                media.filter(m => m.type === 'pdf').map(doc => (
-                  <Card key={doc.id} className="group relative bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/40 transition-all overflow-hidden p-6 hover:shadow-2xl hover:shadow-indigo-500/10">
-                    <div className="flex items-start gap-4">
-                      <div className="h-14 w-14 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20 group-hover:scale-110 transition-transform">
-                        <FileText className="h-7 w-7 text-red-400" />
+                media.filter(m => m.type === 'pdf').map(doc => {
+                  const isGoogleDoc = doc.url.includes('docs.google.com');
+                  return (
+                    <Card 
+                      key={doc.id} 
+                      className="group relative bg-zinc-950/40 border-zinc-800/60 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden cursor-pointer aspect-[3/4] flex flex-col shadow-2xl hover:shadow-indigo-500/10"
+                      onClick={() => setViewingDoc(doc)}
+                    >
+                      {/* Document Preview Decor (Thumbnail-ish) */}
+                      <div className="relative flex-1 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black overflow-hidden flex flex-col">
+                        {/* Decorative "Paper" effect */}
+                        <div className="absolute inset-x-6 top-6 bottom-4 bg-zinc-900/50 rounded-sm border border-zinc-800/50 shadow-inner group-hover:translate-y-[-2px] transition-transform duration-500 overflow-hidden">
+                           <div className="p-4 space-y-2 opacity-20">
+                             <div className="h-2 w-3/4 bg-white/10 rounded-full" />
+                             <div className="h-2 w-full bg-white/10 rounded-full" />
+                             <div className="h-2 w-5/6 bg-white/10 rounded-full" />
+                             <div className="pt-4 h-2 w-1/2 bg-white/10 rounded-full" />
+                             <div className="h-2 w-full bg-white/10 rounded-full" />
+                             {/* Mock table */}
+                             <div className="mt-4 grid grid-cols-3 gap-1">
+                               <div className="h-3 bg-white/5 rounded-sm" />
+                               <div className="h-3 bg-white/5 rounded-sm" />
+                               <div className="h-3 bg-white/5 rounded-sm" />
+                             </div>
+                           </div>
+                        </div>
+                        
+                        <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        
+                        {/* Status Icon */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-3">
+                          <div className={`p-4 rounded-[2rem] ${isGoogleDoc ? 'bg-blue-600/20 text-blue-400' : 'bg-red-600/20 text-red-400'} border ${isGoogleDoc ? 'border-blue-500/30' : 'border-red-500/30'} group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                            {isGoogleDoc ? <Globe className="h-8 w-8" /> : <FileText className="h-8 w-8" />}
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 bg-black/60 px-3 py-1 rounded-full border border-zinc-800 backdrop-blur-md">
+                            {isGoogleDoc ? 'Google Doc' : 'PDF Source'}
+                          </span>
+                        </div>
+
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
+                           <Button 
+                             onClick={(e) => { e.stopPropagation(); setViewingDoc(doc); }}
+                             className="bg-white text-black font-black uppercase italic tracking-tighter text-[11px] h-9 px-6 rounded-none hover:bg-zinc-200 active:scale-95 transition-all"
+                           >
+                             <Eye className="mr-2 h-4 w-4" /> Open Doc
+                           </Button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-black uppercase tracking-wider text-zinc-100 truncate mb-1">{doc.caption || 'Untitled Document'}</h4>
-                        <p className="text-[10px] text-zinc-500 uppercase font-bold">{new Date(doc.createdAt || '').toLocaleDateString()}</p>
+
+                      {/* Content Info */}
+                      <div className="p-4 border-t border-zinc-800/80 bg-zinc-950 flex-none">
+                        <h4 className="text-[12px] font-black uppercase tracking-wider text-zinc-100 truncate mb-1 leading-tight group-hover:text-indigo-400 transition-colors">{doc.caption || 'Untitled Document'}</h4>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{new Date(doc.createdAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-600 hover:text-white transition-colors">
+                                <MoreVertical className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-white min-w-[140px] shadow-2xl">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewingDoc(doc); }} className="text-xs font-bold gap-2 cursor-pointer hover:bg-white/5 transition-colors">
+                                <Eye className="h-3.5 w-3.5 text-indigo-400" /> View Full screen
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(doc.url, '_blank'); }} className="text-xs font-bold gap-2 cursor-pointer hover:bg-white/5 transition-colors">
+                                <ExternalLink className="h-3.5 w-3.5 text-zinc-400" /> Open Original
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-zinc-800" />
+                              <DropdownMenuItem 
+                                onClick={(e) => { e.stopPropagation(); removeMedia(doc.id); }} 
+                                className="text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2 cursor-pointer transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Delete Document
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="mt-6 flex items-center gap-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:bg-indigo-500/10 hover:border-indigo-500/40 h-9 font-bold uppercase tracking-widest text-[10px]"
-                        onClick={() => window.open(doc.url, '_blank')}
-                      >
-                        <Maximize2 className="mr-2 h-3 w-3" /> View Full
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-9 w-9 text-zinc-600 hover:text-red-400 hover:bg-red-400/10"
-                        onClick={() => removeMedia(doc.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))
+                    </Card>
+                  );
+                })
               )}
             </div>
           </TabsContent>
@@ -855,59 +937,204 @@ const ShopSetup = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── DOCUMENT UPLOAD DIALOG ────────────────────── */}
+      {/* ── DOCUMENT UPLOAD DIALOG (Updated) ────────────────── */}
       <Dialog open={docUploadOpen} onOpenChange={setDocUploadOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl -mr-16 -mt-16 rounded-full" />
+          
           <DialogHeader>
             <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
-              <FileText className="h-6 w-6" /> Upload Paperwork
+              <FileText className="h-6 w-6" /> Add Document
             </DialogTitle>
-            <DialogDescription className="text-zinc-500">Add equipment manuals or shop procedures (PDF only).</DialogDescription>
+            <DialogDescription className="text-zinc-500">Add equipment manuals, shop procedures, or Google Docs.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            {/* Mode Toggle */}
+            <div className="grid grid-cols-2 p-1 bg-zinc-900 rounded-xl border border-zinc-800">
+               <button 
+                 onClick={() => setIsUrlMode(false)}
+                 className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${!isUrlMode ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+               >
+                 <FileText className="h-3.5 w-3.5" /> File Upload
+               </button>
+               <button 
+                 onClick={() => setIsUrlMode(true)}
+                 className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isUrlMode ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+               >
+                 <Globe className="h-3.5 w-3.5" /> Google Link
+               </button>
+            </div>
+
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Document Name</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Document Label</Label>
               <Input
                 value={docName}
                 onChange={(e) => setDocName(e.target.value)}
-                placeholder="e.g. Pressure Washer Manual"
-                className="bg-zinc-900 border-zinc-800 text-white h-12 font-bold"
+                placeholder="e.g. My Shop Procedures"
+                className="bg-zinc-900 border-zinc-800 text-white h-12 font-bold focus:ring-indigo-500/50"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Select PDF File</Label>
-              <div className="group relative">
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setDocFile(e.target.files?.[0] || null)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
-                <div className={`h-24 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all ${
-                  docFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-zinc-800 group-hover:border-indigo-500/50 group-hover:bg-indigo-500/5'
+            {isUrlMode ? (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 text-indigo-400">Google Doc / Web URL</Label>
+                <div className="relative">
+                  <Input
+                    value={docUrl}
+                    onChange={(e) => setDocUrl(e.target.value)}
+                    placeholder="https://docs.google.com/document/d/..."
+                    className="bg-zinc-900 border-zinc-800 text-white h-12 font-bold pl-10"
+                  />
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600" />
+                </div>
+                <p className="text-[10px] text-zinc-600 font-medium">Make sure the document is shared as 'Anyone with the link can view'.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className={`h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all relative overflow-hidden ${
+                  docFile ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-zinc-800 group-hover:border-indigo-500/50 group-hover:bg-indigo-500/5'
                 }`}>
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-1 ${docFile ? 'bg-emerald-500/20' : 'bg-zinc-800'}`}>
-                    <FileText className={`h-5 w-5 ${docFile ? 'text-emerald-400' : 'text-zinc-500'}`} />
-                  </div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${docFile ? 'text-emerald-400' : 'text-zinc-600'}`}>
-                    {docFile ? docFile.name : "Tap to browse files"}
-                  </span>
+                  {!docFile ? (
+                    <>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setDocFile(file);
+                          if (file && !docName.trim()) {
+                            // Strip extension for the label
+                            const name = file.name.replace(/\.[^/.]+$/, "");
+                            setDocName(name);
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="h-12 w-12 rounded-2xl bg-zinc-800 text-zinc-500 flex items-center justify-center mb-2 shadow-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                        <FileText className="h-6 w-6" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Tap to browse PDF</span>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
+                      <div className="h-12 w-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl">
+                        <FileText className="h-6 w-6" />
+                      </div>
+                      <div className="text-center px-4">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block truncate max-w-[200px] mb-1">
+                          {docFile.name}
+                        </span>
+                        <div className="flex items-center justify-center gap-4">
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const blobUrl = URL.createObjectURL(docFile);
+                              setViewingDoc({ id: 'preview', url: blobUrl, caption: docFile.name + " (Preview)", type: 'pdf' });
+                            }}
+                            className="text-[9px] text-indigo-400 uppercase font-black hover:text-indigo-300 p-0 h-auto flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" /> Preview
+                          </Button>
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            onClick={() => { setDocFile(null); setDocName(""); }}
+                            className="text-[9px] text-zinc-500 uppercase font-black hover:text-red-400 p-0 h-auto"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4 flex flex-col gap-2">
+            {!docName.trim() && (docFile || docUrl) && (
+              <p className="text-center text-[10px] font-black uppercase tracking-widest text-red-500 animate-pulse">
+                Please enter a Document Label above
+              </p>
+            )}
+            <Button
+              onClick={handleDocUpload}
+              disabled={uploading || (!isUrlMode && !docFile) || (isUrlMode && !docUrl.trim()) || !docName.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest h-14 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+            >
+              {uploading ? "Locking into Database..." : "Complete Registry"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── FULL SCREEN DOCUMENT VIEWER ──────────────────── */}
+      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[95vh] p-0 bg-[#030303] border-zinc-800 overflow-hidden flex flex-col shadow-2xl rounded-3xl">
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 border-b border-zinc-800 backdrop-blur-xl shrink-0">
+            <div className="flex items-center gap-4">
+               <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${viewingDoc?.url.includes('docs.google.com') ? 'bg-blue-600/20 text-blue-400' : 'bg-red-600/20 text-red-400'} border border-white/5`}>
+                 {viewingDoc?.url.includes('docs.google.com') ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+               </div>
+               <div>
+                 <h2 className="text-sm font-black uppercase tracking-widest text-white leading-none mb-1">{viewingDoc?.caption || 'Business Document'}</h2>
+                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Digital Registry • {new Date(viewingDoc?.createdAt || '').toLocaleDateString()}</p>
+               </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white h-10 px-4 font-bold uppercase tracking-widest text-[10px]"
+                onClick={() => window.open(viewingDoc?.url, '_blank')}
+              >
+                <ExternalLink className="mr-2 h-3.5 w-3.5" /> Source
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10 text-zinc-500 hover:text-white hover:bg-white/5"
+                onClick={() => setViewingDoc(null)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              onClick={handleDocUpload}
-              disabled={uploading || !docFile || !docName.trim()}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest h-12"
-            >
-              {uploading ? "Uploading Resource..." : "Complete Upload"}
-            </Button>
-          </DialogFooter>
+          <div className="flex-1 w-full bg-zinc-950 relative group">
+             {(() => {
+               let displayUrl = viewingDoc?.url || "";
+               if (displayUrl.includes('docs.google.com')) {
+                 if (displayUrl.includes('/edit')) {
+                   displayUrl = displayUrl.replace(/\/edit.*$/, '/preview');
+                 } else if (!displayUrl.endsWith('/preview')) {
+                   displayUrl = displayUrl.split('?')[0].replace(/\/$/, '') + '/preview';
+                 }
+               }
+               return (
+                 <iframe
+                   key={displayUrl}
+                   src={displayUrl}
+                   className="w-full h-full border-none bg-white animate-in zoom-in-95 duration-500"
+                   title="Document Viewer"
+                   style={{ colorScheme: 'light' }}
+                 />
+               );
+             })()}
+             
+             {/* Loading Overlay (hidden when iframe loads) */}
+             <div className="absolute inset-0 pointer-events-none flex items-center justify-center bg-zinc-950 z-[-1]">
+                <div className="flex flex-col items-center gap-4">
+                   <div className="h-12 w-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+                   <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Initializing Reader...</span>
+                </div>
+             </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -916,19 +1143,37 @@ const ShopSetup = () => {
 };
 
 // ... Sub-components ...
-function MediaCard({ item, categories, onDelete, onReassign, onOpenGallery }: any) {
+function MediaCard({ item, categories, onDelete, onReassign, onOpenGallery, setViewingDoc }: any) {
   return (
     <div className="relative group rounded-2xl overflow-hidden border-2 border-zinc-800 bg-zinc-900 aspect-[4/3] shadow-lg hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition-all duration-300">
       <div 
         className="absolute inset-0 z-10 cursor-pointer" 
-        onClick={onOpenGallery}
+        onClick={() => {
+          if (item.type === 'pdf') {
+            setViewingDoc(item);
+          } else {
+            onOpenGallery();
+          }
+        }}
       >
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-lg p-1.5 backdrop-blur-sm border border-white/10">
           <Maximize2 className="h-4 w-4 text-white" />
         </div>
       </div>
 
-      <img src={item.url} alt={item.caption || "Setup photo"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      {item.type === 'pdf' ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-950 gap-4 p-8">
+          <div className="h-16 w-16 bg-red-600/20 rounded-2xl flex items-center justify-center border border-red-500/30">
+            <FileText className="h-8 w-8 text-red-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-100 truncate max-w-[120px]">{item.caption || "Document"}</p>
+            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-tight">PDF • Registry Access</span>
+          </div>
+        </div>
+      ) : (
+        <img src={item.url} alt={item.caption || "Setup photo"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      )}
 
       {/* Overlay controls */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-4 h-24 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">

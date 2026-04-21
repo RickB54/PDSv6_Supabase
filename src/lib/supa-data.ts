@@ -1399,8 +1399,8 @@ export async function getLibraryItems(category?: string): Promise<LibraryItem[]>
             }
 
             // If one has sort_order and the other doesn't, the one WITHOUT sort_order goes first (user request)
-            if (a.sort_order == null) return -1;
-            if (b.sort_order == null) return 1;
+            if (a.sort_order == null) return 1;
+            if (b.sort_order == null) return -1;
 
             // Priority 3: Both have sort_order, use it
             return (a.sort_order || 0) - (b.sort_order || 0);
