@@ -246,6 +246,10 @@ export default function F150Setup() {
     };
 
     const handleDeleteCategory = async (cat: string) => {
+        if (!window.confirm(`Are you sure you want to remove the category "${cat}"? This will not delete your posts; they will be moved to the "General" category.`)) {
+            return;
+        }
+
         const res = await deleteLibraryCategory(cat);
         if (res.success) {
             toast({ title: "Deleted", description: `Moved ${res.count} posts to General.` });

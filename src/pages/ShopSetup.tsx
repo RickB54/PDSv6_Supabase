@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -100,7 +100,7 @@ const ShopSetup = () => {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
-  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState<string>("none");
+  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState<string>("all");
 
   // Modals
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -141,8 +141,9 @@ const ShopSetup = () => {
       setTools(t);
       setMedia(savedMedia || []);
       setCategories(savedCats || []);
-      if (selectedCategoryForUpload === "none" && savedCats.length > 0) {
-        setSelectedCategoryForUpload(savedCats[0].id);
+      // Default to "all" to show the full list in natural order
+      if (selectedCategoryForUpload === "none") {
+        setSelectedCategoryForUpload("all");
       }
     } catch (err) {
       console.error("Failed to load shop setup data", err);
@@ -341,6 +342,11 @@ const ShopSetup = () => {
       });
       return;
     }
+
+    if (!window.confirm(`Are you sure you want to delete the category "${cat.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
     setSavingCats(true);
     try {
       const updated = categories.filter((c) => c.id !== cat.id).map((c, i) => ({ ...c, order: i }));
@@ -388,6 +394,24 @@ const ShopSetup = () => {
   const uncategorized = media.filter((m) => !m.category || !categories.find((c) => c.id === m.category));
 
   const getMediaForCat = (catId: string) => media.filter((m) => m.category === catId);
+
+  const displayCategories = useMemo(() => {
+    // Basic list of categories
+    let list = [...categories];
+    
+    // Add "Uncategorized" to the list if there are any uncategorized items
+    if (uncategorized.length > 0) {
+      list.push({ id: 'none', name: 'General Area', order: 999 });
+    }
+
+    if (!selectedCategoryForUpload || selectedCategoryForUpload === 'all') return list;
+    
+    const selected = list.find(c => c.id === selectedCategoryForUpload);
+    if (!selected) return list;
+    
+    const others = list.filter(c => c.id !== selectedCategoryForUpload);
+    return [selected, ...others];
+  }, [categories, selectedCategoryForUpload, uncategorized.length]);
 
   // ─────────────────────────────────────────────────────
   return (
@@ -475,9 +499,10 @@ const ShopSetup = () => {
               <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 items-center">
                 <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
                   <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white text-sm font-bold h-12 w-full md:w-72">
-                    <SelectValue placeholder="Pick a shop area" />
+                    <SelectValue placeholder="Filter by area" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <SelectItem value="all" className="text-sm font-bold">Show All Areas</SelectItem>
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id} className="text-sm font-bold">{c.name}</SelectItem>
                     ))}
@@ -523,39 +548,46 @@ const ShopSetup = () => {
             )}
 
             {/* Category rows - MATCHING MOBILE SETUP GRID PERFECTLY */}
-            {categories.map((cat, catIdx) => {
-              const catMedia = getMediaForCat(cat.id);
+            {displayCategories.map((cat) => {
+              const isUncategorized = cat.id === 'none';
+              const catMedia = isUncategorized ? uncategorized : getMediaForCat(cat.id);
+              const catIdx = isUncategorized ? -1 : categories.findIndex(c => c.id === cat.id);
+              
               return (
                 <section key={cat.id} className="space-y-4">
                   {/* Category Header - Indigo Theme matched to Inventory */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                    <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />
-                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">{cat.name}</h2>
-                    <span className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${isUncategorized ? 'bg-zinc-800/50 border-zinc-700/50' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
+                    {isUncategorized ? <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" /> : <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />}
+                    <h2 className={`text-sm font-black uppercase tracking-[0.2em] ${isUncategorized ? 'text-zinc-400' : 'text-indigo-200'}`}>
+                      {isUncategorized ? 'General Area' : cat.name}
+                    </h2>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${isUncategorized ? 'text-zinc-600 bg-zinc-800' : 'text-indigo-500/60 bg-indigo-500/10'}`}>
                       {catMedia.length}
                     </span>
-                    <div className="ml-auto flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
-                        title="Move Up"
-                        onClick={() => moveCat(catIdx, -1)}
-                        disabled={catIdx === 0}
-                      >
-                        <ArrowUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
-                        title="Move Down"
-                        onClick={() => moveCat(catIdx, 1)}
-                        disabled={catIdx === categories.length - 1}
-                      >
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    {!isUncategorized && (
+                      <div className="ml-auto flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                          title="Move Up"
+                          onClick={() => moveCat(catIdx, -1)}
+                          disabled={catIdx === 0}
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                          title="Move Down"
+                          onClick={() => moveCat(catIdx, 1)}
+                          disabled={catIdx === categories.length - 1}
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Grid layout instead of horizontal scroll for mobile stability */}
@@ -575,47 +607,23 @@ const ShopSetup = () => {
                       );
                     })}
                     {/* Add-to-this-category slot */}
-                    <button
-                      onClick={() => {
-                        setSelectedCategoryForUpload(cat.id);
-                        fileInputRef.current?.click();
-                      }}
-                      className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
-                    >
-                      <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
-                    </button>
+                    {!isUncategorized && (
+                      <button
+                        onClick={() => {
+                          setSelectedCategoryForUpload(cat.id);
+                          fileInputRef.current?.click();
+                        }}
+                        className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
+                      >
+                        <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
+                      </button>
+                    )}
                   </div>
                 </section>
               );
             })}
 
-            {/* Uncategorized section */}
-            {uncategorized.length > 0 && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
-                  <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" />
-                  <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400">General Workspace Views</h2>
-                  <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">{uncategorized.length}</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                  {uncategorized.map((item) => {
-                    const globalIndex = media.findIndex(m => m.id === item.id);
-                    return (
-                      <MediaCard
-                        key={item.id}
-                        item={item}
-                        categories={categories}
-                        onDelete={removeMedia}
-                        onReassign={handleReassign}
-                        onOpenGallery={() => openLightbox(globalIndex)}
-                        setViewingDoc={setViewingDoc}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            )}
 
           </TabsContent>
 

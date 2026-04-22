@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -94,7 +94,7 @@ const MobileSetup = () => {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
-  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState<string>("none");
+  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState<string>("all");
 
   // Modals
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -126,8 +126,9 @@ const MobileSetup = () => {
       setTools(t);
       setMedia(savedMedia || []);
       setCategories(savedCats || []);
-      if (selectedCategoryForUpload === "none" && savedCats.length > 0) {
-        setSelectedCategoryForUpload(savedCats[0].id);
+      // Default to "all" to show the full list in natural order
+      if (selectedCategoryForUpload === "none") {
+        setSelectedCategoryForUpload("all");
       }
     } catch (err) {
       console.error("Failed to load setup data", err);
@@ -276,6 +277,11 @@ const MobileSetup = () => {
       });
       return;
     }
+
+    if (!window.confirm(`Are you sure you want to delete the category "${cat.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
     setSavingCats(true);
     try {
       const updated = categories.filter((c) => c.id !== cat.id).map((c, i) => ({ ...c, order: i }));
@@ -323,6 +329,17 @@ const MobileSetup = () => {
   const uncategorized = media.filter((m) => !m.category || !categories.find((c) => c.id === m.category));
 
   const getMediaForCat = (catId: string) => media.filter((m) => m.category === catId);
+
+  const displayCategories = useMemo(() => {
+    if (!selectedCategoryForUpload || selectedCategoryForUpload === 'all') return categories;
+    if (selectedCategoryForUpload === 'none') return categories;
+    
+    const selected = categories.find(c => c.id === selectedCategoryForUpload);
+    if (!selected) return categories;
+    
+    const others = categories.filter(c => c.id !== selectedCategoryForUpload);
+    return [selected, ...others];
+  }, [categories, selectedCategoryForUpload]);
 
   // ─────────────────────────────────────────────────────
   return (
@@ -405,9 +422,10 @@ const MobileSetup = () => {
               <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 items-center">
                 <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
                   <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white text-sm font-bold h-12 w-full md:w-72">
-                    <SelectValue placeholder="Pick a category" />
+                    <SelectValue placeholder="Filter by area" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <SelectItem value="all" className="text-sm font-bold">Show All Areas</SelectItem>
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id} className="text-sm font-bold">{c.name}</SelectItem>
                     ))}
@@ -449,8 +467,9 @@ const MobileSetup = () => {
             )}
 
             {/* Category rows mapped to vertical grid */}
-            {categories.map((cat, catIdx) => {
+            {displayCategories.map((cat) => {
               const catMedia = getMediaForCat(cat.id);
+              const catIdx = categories.findIndex(c => c.id === cat.id);
               return (
                 <section key={cat.id} className="space-y-4">
                   {/* Category Header - Indigo Theme to match Equipment Pool */}
@@ -515,31 +534,6 @@ const MobileSetup = () => {
               );
             })}
 
-            {/* Uncategorized section */}
-            {uncategorized.length > 0 && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
-                  <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" />
-                  <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-400">General Views</h2>
-                  <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">{uncategorized.length}</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                  {uncategorized.map((item) => {
-                    const globalIndex = media.findIndex(m => m.id === item.id);
-                    return (
-                      <MediaCard
-                        key={item.id}
-                        item={item}
-                        categories={categories}
-                        onDelete={removeMedia}
-                        onReassign={handleReassign}
-                        onOpenGallery={() => openLightbox(globalIndex)}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            )}
 
           </TabsContent>
 
