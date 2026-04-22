@@ -36,6 +36,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 
 interface ProTip {
   id: string;
@@ -52,8 +53,6 @@ const EmployeeDashboard = () => {
   const [orientationOpen, setOrientationOpen] = useState(false);
   const [startExamOnOpen, setStartExamOnOpen] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
-  const [tips, setTips] = useState<ProTip[]>([]);
-  const [tipsChecked, setTipsChecked] = useState<boolean[]>([]);
 
   // Admin Edit State
   const [editingTip, setEditingTip] = useState<ProTip | null>(null);
@@ -75,31 +74,6 @@ const EmployeeDashboard = () => {
     if (cert) setCertifiedDate(cert);
     try { localStorage.removeItem("employee_tasks"); } catch { }
 
-    // Load persisted pro tips (Rich Format from Manual)
-    const loadTips = async () => {
-      const saved = await localforage.getItem<ProTip[]>("rick_pro_tips");
-      if (saved && saved.length > 0) {
-        setTips(saved);
-        // Load checks
-        const savedAck = JSON.parse(localStorage.getItem("pro_tips_ack") || "[]");
-        setTipsChecked(savedAck);
-      } else {
-        // Fallback to defaults if empty (simulating Manual's default seed if needed, or just empty)
-        // For dashboard, we'll just wait for manual to seed or showed empty.
-        // Actually, let's seed same defaults to be safe/consistent if manual wasn't run yet.
-        const defaults: ProTip[] = [
-          { id: '1', title: 'Always Verify Water Source', content: 'Before hooking up, run the customer\'s spigot for 10 seconds to clear rust/sediment.', createdAt: Date.now() },
-          { id: '2', title: 'Emblem Cleaning', content: 'Use a soft boar\'s hair brush on emblems while the foam cannon soap is dwelling. Rinse thoroughly from multiple angles.', createdAt: Date.now() },
-          { id: '3', title: 'The Two-Bucket Method', content: 'Always keep your rinse bucket clean. If it gets dark, change the water. A dirty MITT creates swirls.', createdAt: Date.now() },
-          { id: '4', title: 'Door Jamb Protocol', content: 'Don\'t blast door jambs with high pressure. Mist them with APC, agitate with a detailing brush, and use a gentle stream or damp microfiber to wipe clean.', createdAt: Date.now() },
-          { id: '5', title: 'Glass Streak Prevention', content: 'Use two towels. One wet (with glass cleaner) to clean, one bone dry to buff. Clean interior glass horizontally and exterior vertically to trace streaks.', createdAt: Date.now() },
-          { id: '6', title: 'Generator Safety', content: 'Face the generator exhaust AWAY from the customer\'s garage or windows. Carbon monoxide is dangerous and smells bad.', createdAt: Date.now() }
-        ];
-        setTips(defaults);
-        localforage.setItem("rick_pro_tips", defaults);
-      }
-    };
-    loadTips();
 
     try {
       const params = new URLSearchParams(location.search);
@@ -112,45 +86,7 @@ const EmployeeDashboard = () => {
   }, [location.search]);
 
   // Sync checks
-  useEffect(() => {
-    try { localStorage.setItem("pro_tips_ack", JSON.stringify(tipsChecked)); } catch { }
-  }, [tipsChecked]);
 
-  // Admin Actions (Match Manual)
-  const saveTip = async () => {
-    if (!newTitle.trim() || !newContent.trim()) return;
-    let updated: ProTip[];
-    if (editingTip) {
-      updated = tips.map(t => t.id === editingTip.id ? { ...t, title: newTitle.trim(), content: newContent.trim() } : t);
-      toast({ title: "Tip Updated", description: "Changes saved." });
-    } else {
-      const tip: ProTip = { id: Date.now().toString(), title: newTitle.trim(), content: newContent.trim(), createdAt: Date.now() };
-      updated = [tip, ...tips];
-      toast({ title: "Tip Added", description: "Pro tip saved successfully." });
-    }
-    setTips(updated);
-    await localforage.setItem("rick_pro_tips", updated);
-    setNewTitle(""); setNewContent(""); setEditingTip(null);
-  };
-
-  const startEdit = (tip: ProTip) => {
-    setEditingTip(tip);
-    setNewTitle(tip.title);
-    setNewContent(tip.content);
-  };
-
-  const cancelEdit = () => {
-    setEditingTip(null);
-    setNewTitle(""); setNewContent("");
-  };
-
-  const deleteTip = async (id: string) => {
-    if (!confirm("Delete this tip?")) return;
-    const updated = tips.filter(t => t.id !== id);
-    setTips(updated);
-    await localforage.setItem("rick_pro_tips", updated);
-    if (editingTip?.id === id) cancelEdit();
-  };
 
   const handleNotifyAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -272,10 +208,10 @@ const EmployeeDashboard = () => {
               </Card>
             </Link>
 
-            {/* Rick's Pro Tips (purple) */}
+            {/* Rick's Tips (purple) */}
             <button type="button" onClick={() => setTipsOpen(true)} className="block text-left h-full">
               <Card className="p-6 bg-purple-700 text-white rounded-xl h-full">
-                <div className="text-2xl font-bold">RICK’S PRO TIPS</div>
+                <div className="text-2xl font-bold">RICK’S TIPS</div>
                 <div className="text-sm opacity-90">Quick professional reminders to reduce rework.</div>
               </Card>
             </button>
@@ -360,93 +296,8 @@ const EmployeeDashboard = () => {
       {/* Orientation Modal */}
       <OrientationModal open={orientationOpen} onOpenChange={setOrientationOpen} startExamOnOpen={startExamOnOpen} />
 
-      {/* Rick's Pro Tips Modal */}
-      <Dialog open={tipsOpen} onOpenChange={setTipsOpen}>
-        <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-white">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-purple-400">
-              <Lightbulb className="w-6 h-6 text-yellow-400" />
-              Rick's Pro Tips
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="h-[60vh] flex flex-col gap-4">
-            {/* Admin Add/Edit Section */}
-            {isAdmin && (
-              <div className={`border p-4 rounded-lg space-y-3 shrink-0 ${editingTip ? 'bg-orange-900/20 border-orange-500/30' : 'bg-purple-900/20 border-purple-500/30'}`}>
-                <div className={`flex items-center gap-2 font-semibold mb-1 ${editingTip ? 'text-orange-300' : 'text-purple-300'}`}>
-                  <UserCheck className="w-4 h-4" /> {editingTip ? 'Admin: Edit Tip' : 'Admin: Add New Tip'}
-                </div>
-                <Input
-                  placeholder="Tip Title (e.g., 'Windshield Cleaning')"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="bg-black/40 border-white/10 text-white placeholder:text-zinc-500 focus:border-purple-500"
-                />
-                <Textarea
-                  placeholder="Tip Content..."
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  className="bg-black/40 border-white/10 text-white placeholder:text-zinc-500 min-h-[80px] focus:border-purple-500"
-                />
-                <div className="flex justify-end gap-2">
-                  {editingTip && (
-                    <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-zinc-400 hover:text-white">
-                      Cancel
-                    </Button>
-                  )}
-                  <Button size="sm" onClick={saveTip} className={editingTip ? "bg-orange-600 hover:bg-orange-500" : "bg-purple-600 hover:bg-purple-500"}>
-                    {editingTip ? "Save Changes" : <> <Plus className="w-4 h-4 mr-1" /> Add Tip </>}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto pr-2">
-              <Accordion type="single" collapsible className="w-full">
-                {tips.map((tip, i) => (
-                  <AccordionItem value={`tip-${i}`} key={tip.id} className="border-zinc-800">
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center justify-between w-full pr-4">
-                        <span className="text-left font-bold text-purple-200">{tip.title}</span>
-                        {user?.role === 'admin' && ( // Explicit check
-                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-orange-400" onClick={() => startEdit(tip)}>
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-red-400" onClick={() => deleteTip(tip.id)}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="bg-zinc-900/50 p-3 rounded">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Checkbox
-                          checked={Boolean(tipsChecked[i])}
-                          onCheckedChange={(v) => {
-                            const next = [...tipsChecked];
-                            next[i] = Boolean(v);
-                            setTipsChecked(next);
-                          }}
-                        />
-                        <span className="text-sm font-medium text-white">I have read and understood this tip.</span>
-                      </div>
-                      <p className="text-sm text-zinc-300 leading-relaxed pl-6 border-l-2 border-purple-500/30">
-                        {tip.content}
-                      </p>
-                      <div className="mt-2 pl-6 text-[10px] text-zinc-600 font-mono">
-                        Updated: {new Date(tip.createdAt).toLocaleDateString()}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Rick's Tips Modal */}
+      <RicksTipsModal open={tipsOpen} onOpenChange={setTipsOpen} />
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={(user?.role === 'admin') ? 'admin' : 'employee'} />
     </div>
   );

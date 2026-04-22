@@ -14,6 +14,7 @@ import { useFullScreen } from "@/hooks/useFullScreen";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { contentService } from "@/lib/content";
 import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   title?: string;
@@ -219,7 +220,13 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         </div>
       </header>
       {/* Spacer to prevent fixed header from cutting off content */}
-      <div className="h-[72px] w-full" />
+      {/* Dynamic spacer to prevent fixed header/banner from cutting off content */}
+      <div className={cn(
+        "w-full transition-all duration-300",
+        hasBanner 
+          ? (isDemoMode ? 'h-[148px] sm:h-[152px]' : 'h-[104px] sm:h-[108px]')
+          : (isDemoMode ? 'h-[104px] sm:h-[108px]' : 'h-[64px]')
+      )} />
 
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </>

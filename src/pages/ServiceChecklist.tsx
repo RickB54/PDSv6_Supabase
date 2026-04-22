@@ -36,6 +36,7 @@ import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionMo
 import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummary";
 import HelpModal from "@/components/help/HelpModal";
 import TipSelectionScreen from "@/components/TipSelectionScreen";
+import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 
 type DisplayService = {
   id: string;
@@ -160,29 +161,9 @@ const ServiceChecklist = () => {
 
   // Rick's Tips State
   const [tipsOpen, setTipsOpen] = useState(false);
-  const [proTips, setProTips] = useState<string[]>([]);
 
 
 
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("pro_tips") || "[]");
-      if (Array.isArray(saved) && saved.length > 0) {
-        setProTips(saved.map(String));
-      } else {
-        setProTips([
-          "Always pre-rinse heavily soiled areas to prevent marring.",
-          "Use dedicated wheel buckets to avoid cross-contamination.",
-          "Work small sections; check results under proper lighting.",
-          "Prime pads correctly; clean pads frequently for consistent cut.",
-          "Decontam thoroughly before correction; coating requires perfect prep.",
-          "Customer handoff: demonstrate care guide to reduce comebacks.",
-        ]);
-      }
-    } catch {
-      setProTips([]);
-    }
-  }, []);
 
   const getKey = (type: 'package' | 'addon', id: string, size: string) => `${type}:${id}:${size}`;
 
@@ -2327,34 +2308,7 @@ const ServiceChecklist = () => {
             }}
           />
 
-          {/* Rick's Pro Tips Modal (View Only) */}
-          <Dialog open={tipsOpen} onOpenChange={setTipsOpen}>
-            <DialogContent className="sm:max-w-[600px] bg-zinc-950 border-zinc-900 text-zinc-100">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-purple-500 flex items-center gap-2">
-                  Rick's Pro Tips
-                </DialogTitle>
-                <DialogDescription className="text-zinc-400">
-                  Quick professional reminders to ensure quality.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 mt-4 max-h-[60vh] overflow-y-auto pr-2">
-                {proTips.length === 0 ? (
-                  <p className="text-zinc-500 italic">No tips available.</p>
-                ) : (
-                  proTips.map((tip, i) => (
-                    <div key={i} className="flex gap-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
-                      <div className="mt-1 h-2 w-2 rounded-full bg-purple-500 shrink-0" />
-                      <p className="text-zinc-200 leading-relaxed">{tip}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button variant="ghost" onClick={() => setTipsOpen(false)}>Close</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <RicksTipsModal open={tipsOpen} onOpenChange={setTipsOpen} />
         </div>
       </main>
       <ChemicalStepModal

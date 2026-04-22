@@ -132,7 +132,7 @@ export const getMenuGroups = (counts: {
                 { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package, helpTopicId: 'chemical-cards' },
                 { title: "Dilution Ratio Chart", url: "/inventory-control?chart=reference", key: "dilution-chart-reference", icon: Printer, helpTopicId: 'dilution-chart-reference' },
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker, helpTopicId: 'chemical-workflow' },
-                { title: "Rick's Chemical Tips", url: "/chemical-training?tips=open", key: "ricks-tips", icon: Zap, helpTopicId: 'ricks-chemical-tips' },
+                { title: "Rick's Tips", url: "/chemical-training?tips=open", key: "ricks-tips", icon: Zap, helpTopicId: 'ricks-tips' },
                 { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
             ]
         },

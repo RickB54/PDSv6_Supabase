@@ -79,8 +79,8 @@ export const PhotoGalleryLightbox = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-zinc-800">
-                <div className="relative w-full h-[90vh] flex flex-col">
+            <DialogContent className="max-w-[95vw] max-h-[85vh] top-[55%] p-0 bg-black/95 border-zinc-800">
+                <div className="relative w-full h-[85vh] flex flex-col">
                     {/* Header */}
                     <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4 flex items-center justify-between">
                         <div className="text-white font-semibold">

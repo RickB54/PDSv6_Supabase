@@ -149,7 +149,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     try {
       await contentService.upsertServiceMeta({
         key: RICK_TIPS_KEY,
-        title: "Rick's Chemical Tips & Descriptions",
+        title: "Rick's Tips & Descriptions",
         meta: { tips: newTips, descriptions: newDescs, prepList: newPrep }
       });
     } catch (err) {
@@ -318,7 +318,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     const header = document.createElement('div');
     header.innerHTML = `
       <div style="border-bottom: 2px solid #2d3748; margin-bottom: 30px; padding-bottom: 20px;">
-        <h1 style="color: #c084fc; font-size: 28px; font-family: sans-serif; font-style: italic; font-weight: 900; margin: 0;">Rick's Chemical Command Center</h1>
+        <h1 style="color: #c084fc; font-size: 28px; font-family: sans-serif; font-style: italic; font-weight: 900; margin: 0;">Rick's Command Center</h1>
         <p style="color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px;">Professional Auto Detailing - Generated ${new Date().toLocaleDateString()}</p>
       </div>
     `;
@@ -357,7 +357,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         <body>
           <div class="header">
             <h1>${title}</h1>
-            <div class="meta">Rick's Chemical Tips • Professional Reference • Printed: ${new Date().toLocaleString()}</div>
+            <div class="meta">Rick's Tips • Professional Reference • Printed: ${new Date().toLocaleString()}</div>
           </div>
           ${content}
         </body>
@@ -559,7 +559,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     
     wrapper.innerHTML = `
       <div style="border-bottom: 3px solid #2d3748; margin-bottom: 40px; padding-bottom: 25px;">
-        <h1 style="color: #c084fc; font-size: 32px; font-style: italic; font-weight: 900; margin: 0; text-transform: uppercase;">Rick's Chemical Master ${type === 'packages' ? 'Matrix' : 'Catalog'}</h1>
+        <h1 style="color: #c084fc; font-size: 32px; font-style: italic; font-weight: 900; margin: 0; text-transform: uppercase;">Rick's Master ${type === 'packages' ? 'Matrix' : 'Catalog'}</h1>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
           <p style="color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">Professional Auto Detailing Reference</p>
           <p style="color: #94a3b8; font-size: 10px;">Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
@@ -603,7 +603,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
               </div>
               <div>
                 <DialogTitle className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 text-left">
-                  Rick's Chemical Tips
+                  Rick's Tips
                 </DialogTitle>
                 <DialogDescription className="text-slate-400 text-[10px] md:text-sm text-left">
                   {activeTab === 'package' 

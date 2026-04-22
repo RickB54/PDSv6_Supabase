@@ -332,23 +332,81 @@ const SearchCustomer = () => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string }[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
+  const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
+  const [photoToDelete, setPhotoToDelete] = useState<{ index: number; customer: Customer } | null>(null);
 
   const openGallery = (customer: Customer, startIndex = 0) => {
     const photos: { url: string; label?: string }[] = [];
+    const meta: any[] = [];
+
     // Customer-level photos
-    customer.generalPhotos?.forEach((url) => photos.push({ url, label: "General" }));
-    customer.beforePhotos?.forEach((url) => photos.push({ url, label: "Before" }));
-    customer.afterPhotos?.forEach((url) => photos.push({ url, label: "After" }));
+    customer.generalPhotos?.forEach((url, idx) => {
+      photos.push({ url, label: "General" });
+      meta.push({ type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id });
+    });
+    customer.beforePhotos?.forEach((url, idx) => {
+      photos.push({ url, label: "Before" });
+      meta.push({ type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id });
+    });
+    customer.afterPhotos?.forEach((url, idx) => {
+      photos.push({ url, label: "After" });
+      meta.push({ type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id });
+    });
+
     // Per-vehicle photos
-    for (const v of customer.vehicles || []) {
+    (customer.vehicles || []).forEach((v, vIdx) => {
       const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
-      v.generalPhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · General` }));
-      v.beforePhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · Before` }));
-      v.afterPhotos?.forEach((url) => photos.push({ url, label: `${vLabel} · After` }));
-    }
+      v.generalPhotos?.forEach((url, idx) => {
+        photos.push({ url, label: `${vLabel} · General` });
+        meta.push({ type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+      });
+      v.beforePhotos?.forEach((url, idx) => {
+        photos.push({ url, label: `${vLabel} · Before` });
+        meta.push({ type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+      });
+      v.afterPhotos?.forEach((url, idx) => {
+        photos.push({ url, label: `${vLabel} · After` });
+        meta.push({ type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+      });
+    });
+
     setGalleryPhotos(photos);
+    setGalleryMetadata(meta);
     setGalleryInitialIndex(Math.min(startIndex, Math.max(0, photos.length - 1)));
     setGalleryOpen(true);
+  };
+
+  const confirmDeletePhoto = async () => {
+    if (!photoToDelete) return;
+    const { index, customer } = photoToDelete;
+    const m = galleryMetadata[index];
+    if (!m) return;
+
+    try {
+      const updatedCustomer = { ...customer };
+      if (m.type === 'customer') {
+        const arr = [...(updatedCustomer[m.field as keyof Customer] as string[])];
+        arr.splice(m.arrayIndex, 1);
+        (updatedCustomer as any)[m.field] = arr;
+      } else if (m.type === 'vehicle') {
+        const vehicles = [...(updatedCustomer.vehicles || [])];
+        const v = { ...vehicles[m.vehicleIndex] };
+        const arr = [...(v[m.field as keyof typeof v] as string[])];
+        arr.splice(m.arrayIndex, 1);
+        (v as any)[m.field] = arr;
+        vehicles[m.vehicleIndex] = v;
+        updatedCustomer.vehicles = vehicles;
+      }
+
+      await upsertSupabaseCustomer(updatedCustomer);
+      toast({ title: "Deleted", description: "Photo removed from archive." });
+      setGalleryOpen(false);
+      refresh();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to delete photo.", variant: "destructive" });
+    } finally {
+      setPhotoToDelete(null);
+    }
   };
 
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
@@ -805,7 +863,33 @@ const SearchCustomer = () => {
         initialIndex={galleryInitialIndex}
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
+        isAdmin={isAdmin}
+        onDelete={(idx) => {
+          const m = galleryMetadata[idx];
+          if (!m) return;
+          const customer = customers.find(c => c.id === m.customerId);
+          if (customer) {
+            setPhotoToDelete({ index: idx, customer });
+          }
+        }}
       />
+
+      <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this photo from the archive? This will also remove it from the vehicle gallery.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletePhoto} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Photo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <CustomerModal 
         open={modalOpen} 

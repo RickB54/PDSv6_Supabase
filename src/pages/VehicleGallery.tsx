@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
     Search, Image as ImageIcon, Video, X, Car, Loader2,
-    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight
+    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -13,6 +13,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
@@ -27,42 +37,50 @@ interface MediaItem {
     category: "general" | "before" | "after" | "video";
     customerName: string;
     vehicleLabel: string;
+    customerId?: string;
+    source?: {
+        type: 'customer' | 'vehicle';
+        field: string;
+        vehicleIndex?: number;
+        arrayIndex: number;
+    };
 }
 
 function buildMediaForCustomer(customer: Customer): MediaItem[] {
     const items: MediaItem[] = [];
     const customerName = customer.name || "Unknown";
+    const customerId = customer.id;
 
     // Customer-level photos (no specific vehicle)
-    (customer.generalPhotos || []).forEach(url =>
-        items.push({ url, type: "image", category: "general", customerName, vehicleLabel: "Profile" })
+    (customer.generalPhotos || []).forEach((url, idx) =>
+        items.push({ url, type: "image", category: "general", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'generalPhotos', arrayIndex: idx } })
     );
-    (customer.beforePhotos || []).forEach(url =>
-        items.push({ url, type: "image", category: "before", customerName, vehicleLabel: "Profile" })
+    (customer.beforePhotos || []).forEach((url, idx) =>
+        items.push({ url, type: "image", category: "before", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'beforePhotos', arrayIndex: idx } })
     );
-    (customer.afterPhotos || []).forEach(url =>
-        items.push({ url, type: "image", category: "after", customerName, vehicleLabel: "Profile" })
+    (customer.afterPhotos || []).forEach((url, idx) =>
+        items.push({ url, type: "image", category: "after", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'afterPhotos', arrayIndex: idx } })
     );
     if ((customer as any).videoUrl) {
-        items.push({ url: (customer as any).videoUrl, type: "video", category: "video", customerName, vehicleLabel: "Profile" });
+        items.push({ url: (customer as any).videoUrl, type: "video", category: "video", customerName, vehicleLabel: "Profile", customerId });
     }
 
     // Per-vehicle photos
-    for (const v of customer.vehicles || []) {
+    (customer.vehicles || []).forEach((v, vIdx) => {
         const vehicleLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
-        (v.generalPhotos || []).forEach(url =>
-            items.push({ url, type: "image", category: "general", customerName, vehicleLabel })
+        (v.generalPhotos || []).forEach((url, idx) =>
+            items.push({ url, type: "image", category: "general", customerName, vehicleLabel, customerId, source: { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx } })
         );
-        (v.beforePhotos || []).forEach(url =>
-            items.push({ url, type: "image", category: "before", customerName, vehicleLabel })
+        (v.beforePhotos || []).forEach((url, idx) =>
+            items.push({ url, type: "image", category: "before", customerName, vehicleLabel, customerId, source: { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx } })
         );
-        (v.afterPhotos || []).forEach(url =>
-            items.push({ url, type: "image", category: "after", customerName, vehicleLabel })
+        (v.afterPhotos || []).forEach((url, idx) =>
+            items.push({ url, type: "image", category: "after", customerName, vehicleLabel, customerId, source: { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx } })
         );
         (v.videoUrls || []).forEach(url =>
-            items.push({ url, type: "video", category: "video", customerName, vehicleLabel })
+            items.push({ url, type: "video", category: "video", customerName, vehicleLabel, customerId })
         );
-    }
+    });
 
     return items;
 }
@@ -75,7 +93,19 @@ const categoryColors: Record<string, string> = {
 };
 
 // ─── lightbox ─────────────────────────────────────────────────────────────────
-function Lightbox({ items, startIndex, onClose }: { items: MediaItem[]; startIndex: number; onClose: () => void }) {
+function Lightbox({ 
+    items, 
+    startIndex, 
+    onClose, 
+    isAdmin = false,
+    onDelete 
+}: { 
+    items: MediaItem[]; 
+    startIndex: number; 
+    onClose: () => void;
+    isAdmin?: boolean;
+    onDelete?: (idx: number) => void;
+}) {
     const [idx, setIdx] = useState(startIndex);
 
     useEffect(() => {
@@ -105,6 +135,19 @@ function Lightbox({ items, startIndex, onClose }: { items: MediaItem[]; startInd
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-zinc-400 text-xs">{idx + 1} / {items.length}</span>
+                            
+                            {isAdmin && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onDelete?.(idx)}
+                                    className="text-white hover:bg-red-600/50 h-8 w-8"
+                                    title="Delete Image"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
+
                             <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20 h-8 w-8">
                                 <X className="h-5 w-5" />
                             </Button>
@@ -337,6 +380,9 @@ export default function VehicleGallery() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [modalTab, setModalTab] = useState("media");
+    const [photoToDelete, setPhotoToDelete] = useState<{ item: MediaItem } | null>(null);
+
+    const isAdmin = user?.role === 'admin' || isDemoMode;
 
     const refreshData = async () => {
         setLoading(true);
@@ -347,6 +393,43 @@ export default function VehicleGallery() {
             toast({ title: "Error", description: "Failed to reload media.", variant: "destructive" });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const confirmDeletePhoto = async () => {
+        if (!photoToDelete) return;
+        const { item } = photoToDelete;
+        if (!item.customerId || !item.source) return;
+
+        try {
+            const customer = customers.find(c => c.id === item.customerId);
+            if (!customer) return;
+
+            const updatedCustomer = { ...customer };
+            const m = item.source;
+
+            if (m.type === 'customer') {
+                const arr = [...(updatedCustomer[m.field as keyof Customer] as string[])];
+                arr.splice(m.arrayIndex, 1);
+                (updatedCustomer as any)[m.field] = arr;
+            } else if (m.type === 'vehicle') {
+                const vehicles = [...(updatedCustomer.vehicles || [])];
+                const v = { ...vehicles[m.vehicleIndex!] };
+                const arr = [...(v[m.field as keyof typeof v] as string[])];
+                arr.splice(m.arrayIndex, 1);
+                (v as any)[m.field] = arr;
+                vehicles[m.vehicleIndex!] = v;
+                updatedCustomer.vehicles = vehicles;
+            }
+
+            await upsertSupabaseCustomer(updatedCustomer);
+            toast({ title: "Deleted", description: "Photo removed from gallery." });
+            setLightboxItems(null);
+            await refreshData();
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to delete photo.", variant: "destructive" });
+        } finally {
+            setPhotoToDelete(null);
         }
     };
 
@@ -535,8 +618,30 @@ export default function VehicleGallery() {
                     items={lightboxItems}
                     startIndex={lightboxIdx}
                     onClose={() => setLightboxItems(null)}
+                    isAdmin={isAdmin}
+                    onDelete={(idx) => {
+                        const item = lightboxItems[idx];
+                        if (item) setPhotoToDelete({ item });
+                    }}
                 />
             )}
+
+            <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove this photo? This will delete it from both the customer profile and this gallery.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeletePhoto} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete Photo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <CustomerModal 
                 open={modalOpen} 

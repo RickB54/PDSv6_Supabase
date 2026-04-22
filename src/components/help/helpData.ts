@@ -105,8 +105,8 @@ export const checklistToolsGuide: HelpTopic = {
 };
 
 export const ricksTipsTopic: HelpTopic = {
-  id: 'ricks-chemical-tips',
-  title: "Rick's Chemical Tips v3",
+  id: 'ricks-tips',
+  title: "Rick's Tips v3",
   summary: "Expert advice on chemical selections based on active job packages with dual-style export support.",
   content: [
     "**Rick's Expertise (v3)**: This specialized system maps professional chemical recommendations to your live business packages, now with upgraded stability and export options.",

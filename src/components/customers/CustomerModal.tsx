@@ -386,7 +386,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-foreground p-0 overflow-hidden flex flex-col h-[90vh]">
+      <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-foreground p-0 overflow-hidden flex flex-col h-[85vh] top-[55%]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Users className="h-5 w-5 text-blue-500" />
