@@ -33,10 +33,6 @@
       "addon:ceramic-trim-coat:midsize": "75",
       "addon:ceramic-trim-coat:truck": "95",
       "addon:ceramic-trim-coat:luxury": "125",
-      "addon:clay-bar:compact": "80",
-      "addon:clay-bar:midsize": "90",
-      "addon:clay-bar:truck": "100",
-      "addon:clay-bar:luxury": "120",
       "addon:clay-bar-decon:compact": "65",
       "addon:clay-bar-decon:midsize": "80",
       "addon:clay-bar-decon:truck": "95",
@@ -109,7 +105,14 @@
       "addon:wheel-cleaning:midsize": "25",
       "addon:wheel-cleaning:truck": "30",
       "addon:wheel-cleaning:luxury": "40",
-      "package:prime-elite-exterior:compact": "0"
+      "addon:clay-bar:compact": "80",
+      "addon:clay-bar:midsize": "90",
+      "addon:clay-bar:truck": "100",
+      "addon:clay-bar:luxury": "120",
+      "package:prime-elite-exterior:compact": "0",
+      "package:prime-elite-interior:compact": "0",
+      "package:prime-elite-full:compact": "0",
+      "package:prime-essential-exterior:compact": "0"
     },
     "packageMeta": {
       "basic-exterior": {
@@ -163,6 +166,10 @@
       "prime-elite-exterior": {
         "id": "prime-elite-exterior",
         "visible": false
+      },
+      "prime-essential-exterior": {
+        "id": "prime-essential-exterior",
+        "visible": true
       }
     },
     "addOnMeta": {
@@ -173,11 +180,6 @@
       },
       "ceramic-trim-coat": {
         "id": "ceramic-trim-coat",
-        "visible": true,
-        "deleted": false
-      },
-      "clay-bar": {
-        "id": "clay-bar",
         "visible": true,
         "deleted": false
       },
@@ -203,7 +205,7 @@
       },
       "engine-detail": {
         "id": "engine-detail",
-        "visible": true,
+        "visible": false,
         "deleted": false
       },
       "headlight-restoration": {
@@ -270,11 +272,16 @@
         "id": "wheel-cleaning",
         "visible": true,
         "deleted": false
+      },
+      "clay-bar": {
+        "id": "clay-bar",
+        "visible": true,
+        "deleted": false
       }
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1776718040047
+    "version": 1776828590921
   },
   "vehicleTypesLive": [
     {

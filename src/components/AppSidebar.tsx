@@ -92,17 +92,17 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     })();
   }, []);
 
-  const topOffset = useMemo(() => {
+  const bannerOffset = useMemo(() => {
     let offset = 0;
     if (isDemoMode) offset += 40;
     if (isViewingAsCustomer || isViewingAsEmployee) offset += 40;
     if (businessStatus?.isTopBannerActive) {
-      offset += 36; // Matching Navbar sm:top-[36px]
+      offset += 40; 
     }
-    // Add Navbar height (64px) to ensure the sidebar starts exactly BELOW it
-    offset += 64; 
-    return `${offset}px`;
+    return offset;
   }, [isDemoMode, businessStatus, isViewingAsCustomer, isViewingAsEmployee]);
+
+  const topOffset = `${bannerOffset}px`;
 
   // Helper to get correct URL for demo mode
   const getUrl = (url: string) => {
@@ -473,7 +473,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
       collapsible="icon"
       style={{ top: topOffset }}
     >
-      <div className={cn("flex flex-col border-b border-white/5", isDemoMode ? "pt-0" : "pt-0")}>
+      <div 
+        className={cn("flex flex-col border-b border-white/5")}
+        style={{ paddingTop: '64px' }}
+      >
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
           <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
             <img src={logo} alt="Prime Auto Detail" className="h-9 w-9 aspect-square object-contain" />

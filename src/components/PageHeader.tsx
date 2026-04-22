@@ -60,16 +60,24 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   const showBackButton = location.pathname !== '/';
 
   const hasBanner = !!(businessStatus && businessStatus.isTopBannerActive);
-  const headerTop = isDemoMode 
-    ? (hasBanner ? 'top-[80px] sm:top-[84px]' : 'top-[40px]')
-    : (hasBanner ? 'top-[40px] sm:top-[44px]' : 'top-0');
+  
+  // Account for "View As" / Perspective mode banner
+  const isViewingAsCustomer = (user?.role === 'admin' && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
+  const isViewingAsEmployee = (user?.role === 'admin' && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
+  const isPerspectiveMode = user?.role === 'admin' && (isViewingAsCustomer || isViewingAsEmployee);
+
+  // Calculate total offset for the fixed header
+  // Demo Bar: 40px
+  // Business Banner: 40px
+  // Perspective Banner: 40px
+  const bannerOffset = (isDemoMode ? 40 : 0) + (hasBanner ? 40 : 0) + (isPerspectiveMode ? 40 : 0);
 
   return (
     <>
       {hasBanner && (
-        <div className={`fixed left-0 right-0 z-[150] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
-          isDemoMode ? 'top-[40px]' : 'top-0'
-        } ${
+        <div 
+          style={{ top: isDemoMode ? '40px' : '0' }}
+          className={`fixed left-0 right-0 z-[150] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
           businessStatus.mode === 'spring-prep' ? 'bg-emerald-600' :
           businessStatus.mode === 'emergency' ? 'bg-red-600' :
@@ -83,7 +91,10 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         </div>
       )}
 
-      <header className={`fixed ${headerTop} z-[140] left-0 right-0 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300 h-[64px]`}>
+      <header 
+        style={{ top: `${bannerOffset}px` }}
+        className={`fixed z-[140] left-0 right-0 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300 h-[64px]`}
+      >
         <div className="relative flex items-center justify-between gap-4 px-6 h-full">
           <div className="flex items-center gap-1.5 sm:gap-4 flex-nowrap min-w-0">
             {user && (
@@ -221,13 +232,6 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
       </header>
       {/* Spacer to prevent fixed header from cutting off content */}
       {/* Dynamic spacer to prevent fixed header/banner from cutting off content */}
-      <div className={cn(
-        "w-full transition-all duration-300",
-        hasBanner 
-          ? (isDemoMode ? 'h-[148px] sm:h-[152px]' : 'h-[104px] sm:h-[108px]')
-          : (isDemoMode ? 'h-[104px] sm:h-[108px]' : 'h-[64px]')
-      )} />
-
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </>
   );

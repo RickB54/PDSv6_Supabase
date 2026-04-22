@@ -96,13 +96,13 @@ export const Navbar = () => {
     const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
     const isPerspectiveMode = isAdmin && (isViewingAsCustomer || isViewingAsEmployee);
 
-    const bannerTop = isDemoMode ? 40 : 0;
+    const navOffset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? 40 : 0) + (isPerspectiveMode ? 40 : 0);
 
     return (
     <>
       {businessStatus && !!businessStatus.isTopBannerActive && (
         <div 
-          style={{ top: `${bannerTop}px` }}
+          style={{ top: isDemoMode ? '40px' : '0' }}
           className={`fixed left-0 right-0 z-[60] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
           businessStatus.mode === 'pre-launch' ? 'bg-red-600' : 'bg-primary'
@@ -116,7 +116,7 @@ export const Navbar = () => {
         </div>
       )}
       <nav 
-        style={{ top: `${bannerTop + (businessStatus?.isTopBannerActive ? (isMobile ? 36 : 40) : 0) + (isPerspectiveMode ? 40 : 0)}px` }}
+        style={{ top: `${navOffset}px` }}
         className={`fixed left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-300`}
       >
         <div className="container mx-auto px-4">
@@ -314,6 +314,11 @@ export const Navbar = () => {
           )}
         </div>
       </nav>
+      {/* Dynamic spacer to prevent fixed header/banner from cutting off content */}
+      <div 
+        style={{ height: `${navOffset + 64}px` }}
+        className="w-full transition-all duration-300"
+      />
     </>
   );
 };

@@ -292,12 +292,12 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   if (isBusinessBanner) totalBanners++;
 
   const ptMap: Record<number, string> = {
-    0: 'pt-0',
-    1: 'pt-10',
-    2: 'pt-20',
-    3: 'pt-[120px]'
+    0: 'pt-[64px]',
+    1: 'pt-[104px]',
+    2: 'pt-[144px]',
+    3: 'pt-[184px]'
   };
-  const paddingClass = ptMap[totalBanners] || 'pt-0';
+  const paddingClass = ptMap[totalBanners] || 'pt-[64px]';
 
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   return (
