@@ -11,6 +11,12 @@ const blockDemo = (action: string) => {
   return false;
 };
 
+let serviceMetaCache: Record<string, any> = {};
+try {
+  const cached = localStorage.getItem('service_meta_cache');
+  if (cached) serviceMetaCache = JSON.parse(cached);
+} catch {}
+
 /**
  * Service to manage Website Content via Supabase
  * Tables: content_vehicle_types, content_faqs, content_testimonials, content_about, content_contact, content_services_meta
@@ -169,17 +175,32 @@ export const contentService = {
     // SERVICES META (Disclaimer, etc)
     getServiceMeta: async (key: string): Promise<SupaServiceMeta | null> => {
         const { data } = await supabase.from('content_services_meta').select('*').eq('key', key).single();
-        return data;
+        if (data) {
+            serviceMetaCache[key] = data;
+            localStorage.setItem('service_meta_cache', JSON.stringify(serviceMetaCache));
+        }
+        return data || serviceMetaCache[key] || null;
+    },
+    getServiceMetaSync: (key: string): SupaServiceMeta | null => {
+        return serviceMetaCache[key] || null;
     },
     upsertServiceMeta: async (m: SupaServiceMeta) => {
         if (blockDemo('service settings update')) return null;
         const { data, error } = await supabase.from('content_services_meta').upsert(m).select().single();
         if (error) throw error;
+        if (data) {
+            serviceMetaCache[m.key] = data;
+            localStorage.setItem('service_meta_cache', JSON.stringify(serviceMetaCache));
+        }
         return data;
     },
     getAllServiceMeta: async (): Promise<SupaServiceMeta[]> => {
         const { data, error } = await supabase.from('content_services_meta').select('*');
         if (error) return [];
+        if (data) {
+            data.forEach(m => { serviceMetaCache[m.key] = m; });
+            localStorage.setItem('service_meta_cache', JSON.stringify(serviceMetaCache));
+        }
         return data || [];
     }
 };

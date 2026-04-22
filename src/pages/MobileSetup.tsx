@@ -13,6 +13,8 @@ import {
   Image as ImageIcon,
   Trash2,
   ChevronRight,
+  ChevronDown,
+  ChevronsUp,
   Info,
   FolderOpen,
   Pencil,
@@ -106,10 +108,30 @@ const MobileSetup = () => {
   const [editingCat, setEditingCat] = useState<SetupCategory | null>(null);
   const [newCatName, setNewCatName] = useState("");
   const [savingCats, setSavingCats] = useState(false);
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   // Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+
+  const toggleCatCollapse = (catId: string) => {
+    setCollapsedCats(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
+      return next;
+    });
+  };
+
+  const moveCatToTop = async (idx: number) => {
+    if (idx <= 0) return;
+    const updated = [...categories];
+    const [cat] = updated.splice(idx, 1);
+    updated.unshift(cat);
+    const reordered = updated.map((c, i) => ({ ...c, order: i }));
+    setCategories(reordered);
+    await saveSetupCategories(reordered);
+  };
 
   // ─── Load ─────────────────────────────────────────────
   const loadData = async () => {
@@ -331,15 +353,22 @@ const MobileSetup = () => {
   const getMediaForCat = (catId: string) => media.filter((m) => m.category === catId);
 
   const displayCategories = useMemo(() => {
-    if (!selectedCategoryForUpload || selectedCategoryForUpload === 'all') return categories;
-    if (selectedCategoryForUpload === 'none') return categories;
+    // Basic list of categories
+    let list = [...categories];
     
-    const selected = categories.find(c => c.id === selectedCategoryForUpload);
-    if (!selected) return categories;
+    // Add "Uncategorized" to the list if there are any uncategorized items
+    if (uncategorized.length > 0) {
+      list.push({ id: 'none', name: 'General Area', order: 999 });
+    }
+
+    if (!selectedCategoryForUpload || selectedCategoryForUpload === 'all') return list;
     
-    const others = categories.filter(c => c.id !== selectedCategoryForUpload);
+    const selected = list.find(c => c.id === selectedCategoryForUpload);
+    if (!selected) return list;
+    
+    const others = list.filter(c => c.id !== selectedCategoryForUpload);
     return [selected, ...others];
-  }, [categories, selectedCategoryForUpload]);
+  }, [categories, selectedCategoryForUpload, uncategorized.length]);
 
   // ─────────────────────────────────────────────────────
   return (
@@ -468,18 +497,39 @@ const MobileSetup = () => {
 
             {/* Category rows mapped to vertical grid */}
             {displayCategories.map((cat) => {
-              const catMedia = getMediaForCat(cat.id);
-              const catIdx = categories.findIndex(c => c.id === cat.id);
+              const isUncategorized = cat.id === 'none';
+              const catMedia = isUncategorized ? uncategorized : getMediaForCat(cat.id);
+              const catIdx = isUncategorized ? -1 : categories.findIndex(c => c.id === cat.id);
               return (
                 <section key={cat.id} className="space-y-4">
                   {/* Category Header - Indigo Theme to match Equipment Pool */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                    <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />
-                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">{cat.name}</h2>
-                    <span className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${isUncategorized ? 'bg-zinc-800/50 border-zinc-700/50' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-indigo-400 hover:text-white"
+                      onClick={() => toggleCatCollapse(cat.id)}
+                    >
+                      {collapsedCats.has(cat.id) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                    {isUncategorized ? <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" /> : <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />}
+                    <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-indigo-200">
+                      {isUncategorized ? 'General Area' : cat.name}
+                    </h2>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${isUncategorized ? 'text-zinc-600 bg-zinc-800' : 'text-indigo-500/60 bg-indigo-500/10'}`}>
                       {catMedia.length}
                     </span>
                     <div className="ml-auto flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                        title="Move To Top"
+                        onClick={() => moveCatToTop(catIdx)}
+                        disabled={catIdx === 0}
+                      >
+                        <ChevronsUp className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -504,31 +554,39 @@ const MobileSetup = () => {
                   </div>
 
                   {/* Vertical Grid for Photos */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                  <div className={collapsedCats.has(cat.id) 
+                    ? "flex overflow-x-auto pb-2 gap-3 custom-scrollbar" 
+                    : "grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3"
+                  }>
                     {catMedia.map((item) => {
                       const globalIndex = media.findIndex(m => m.id === item.id);
                       return (
-                        <MediaCard
-                          key={item.id}
-                          item={item}
-                          categories={categories}
-                          onDelete={removeMedia}
-                          onReassign={handleReassign}
-                          onOpenGallery={() => openLightbox(globalIndex)}
-                        />
+                        <div key={item.id} className={collapsedCats.has(cat.id) ? "min-w-[120px] max-w-[120px] sm:min-w-[150px] sm:max-w-[150px]" : ""}>
+                          <MediaCard
+                            item={item}
+                            categories={categories}
+                            onDelete={removeMedia}
+                            onReassign={handleReassign}
+                            onOpenGallery={() => openLightbox(globalIndex)}
+                          />
+                        </div>
                       );
                     })}
                     {/* Add-to-this-category slot */}
-                    <button
-                      onClick={() => {
-                        setSelectedCategoryForUpload(cat.id);
-                        fileInputRef.current?.click();
-                      }}
-                      className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
-                    >
-                      <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
-                    </button>
+                    {!isUncategorized && (
+                      <button
+                        onClick={() => {
+                          setSelectedCategoryForUpload(cat.id);
+                          fileInputRef.current?.click();
+                        }}
+                        className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group ${
+                          collapsedCats.has(cat.id) ? "min-w-[120px] h-[90px] sm:min-w-[150px] sm:h-[112px]" : "aspect-[4/3]"
+                        }`}
+                      >
+                        <Plus className="h-4 w-4 text-zinc-700 group-hover:text-indigo-400" />
+                        <span className="text-[8px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
+                      </button>
+                    )}
                   </div>
                 </section>
               );
@@ -674,6 +732,7 @@ const MobileSetup = () => {
                 <div className="flex items-center justify-between sm:justify-end gap-2 border-t sm:border-t-0 border-zinc-800 pt-3 sm:pt-0">
                   <span className="text-[10px] text-zinc-600 font-bold shrink-0">{getMediaForCat(cat.id).length} photos</span>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-indigo-400/50 hover:text-white" onClick={() => moveCatToTop(idx)} disabled={idx === 0} title="Move to Top"><ChevronsUp className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-600 hover:text-white" onClick={() => moveCat(idx, -1)} disabled={idx === 0}><ArrowUp className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-600 hover:text-white" onClick={() => moveCat(idx, 1)} disabled={idx === categories.length - 1}><ArrowDown className="h-4 w-4" /></Button>
 
@@ -777,7 +836,7 @@ const MobileSetup = () => {
               onClick={() => {
                 const link = document.createElement('a');
                 link.href = media[currentMediaIndex].url;
-                link.download = `setup-view-${currentMediaIndex + 1}.jpg`;
+                link.download = `mobile-view-${currentMediaIndex + 1}.jpg`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -801,7 +860,7 @@ const MobileSetup = () => {
               </button>
 
               <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
-                <div className="relative max-w-full max-h-[80vh] flex items-center justify-center group">
+                <div className="relative max-w-full max-h-[70vh] flex items-center justify-center group">
                   {media[currentMediaIndex].type === 'video' ? (
                     <video 
                       src={media[currentMediaIndex].url} 
@@ -817,22 +876,58 @@ const MobileSetup = () => {
                     />
                   )}
                   
-                  {/* Meta tag */}
-                  <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
-                      {categories.find(c => c.id === media[currentMediaIndex].category)?.name || 'General Setup'}
-                    </span>
+                  {/* Floating Controls Overlay */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white gap-2">
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          {categories.find(c => c.id === media[currentMediaIndex].category)?.name || 'General Area'}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white text-xs">
+                        {categories.map(cat => (
+                          <DropdownMenuItem key={cat.id} onClick={() => onReassign(media[currentMediaIndex].id, cat.id)} className="font-bold">
+                            {cat.name}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuItem onClick={() => onReassign(media[currentMediaIndex].id, 'none')} className="text-zinc-500">
+                          — Uncategorized
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="w-px h-4 bg-white/10" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      onClick={() => {
+                        if (confirm('Delete this photo?')) {
+                          removeMedia(media[currentMediaIndex].id);
+                          setLightboxOpen(false);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="text-center max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <h2 className="text-white font-black italic uppercase tracking-tighter text-xl md:text-3xl mb-2">
-                    {media[currentMediaIndex].caption || 'Visual Setup View'}
-                  </h2>
+                <div className="text-center max-w-xl w-full px-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <Input
+                    value={media[currentMediaIndex].caption || ''}
+                    onChange={(e) => {
+                      const newMedia = [...media];
+                      newMedia[currentMediaIndex].caption = e.target.value;
+                      setMedia(newMedia);
+                    }}
+                    placeholder="Add a caption..."
+                    className="bg-transparent border-none text-white text-center font-black italic uppercase tracking-tighter text-xl md:text-3xl mb-2 focus-visible:ring-0 placeholder:text-zinc-700"
+                  />
                   <div className="flex items-center justify-center gap-4 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
                     <span>{currentMediaIndex + 1} / {media.length}</span>
                     <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                    <span>Synced to Supabase</span>
+                    <span>Mobile Rig Sync: Active</span>
                   </div>
                 </div>
               </div>
@@ -903,12 +998,12 @@ function MediaCard({
       )}
 
       {/* Overlay controls */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-4 h-24 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">
-        <span className="text-[9px] font-black uppercase tracking-widest text-white/50 truncate max-w-[60%]">
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-2 h-20 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">
+        <span className="text-[8px] font-black uppercase tracking-widest text-white/50 truncate max-w-[80%] mb-1">
           {categories.find((c) => c.id === item.category)?.name || "Uncategorized"}
         </span>
 
-        <div className="flex gap-1 shrink-0">
+        <div className="flex gap-0.5 shrink-0">
           {/* Move to category menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

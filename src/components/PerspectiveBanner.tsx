@@ -12,13 +12,16 @@ export const PerspectiveBanner = () => {
     const user = getCurrentUser();
     const realUser = getRealUser();
     const { isDemoMode } = useDemoMode();
-    const [businessStatus, setBusinessStatus] = React.useState<any>(null);
+    const [businessStatus, setBusinessStatus] = React.useState<any>(() => {
+        const cached = contentService.getServiceMetaSync("global_settings");
+        return cached?.meta?.businessStatus || null;
+    });
     
     React.useEffect(() => {
         (async () => {
             try {
                 const meta = await contentService.getServiceMeta("global_settings");
-                if (meta && meta.meta && meta.meta.businessStatus) {
+                if (meta?.meta?.businessStatus) {
                     setBusinessStatus(meta.meta.businessStatus);
                 }
             } catch {}
@@ -38,10 +41,10 @@ export const PerspectiveBanner = () => {
     const isCustomer = isViewingAsCustomer;
     // Force a re-calculation and use a higher z-index to be absolute
     // Using a slightly larger offset (42px) for the business status banner to ensure the shadow and border don't overlap
-    const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? (window.innerWidth < 640 ? 36 : 42) : 0);
+    const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? 40 : 0);
     const topStyle = { 
         top: `${offset}px`,
-        zIndex: 99999,
+        zIndex: 9999,
         borderTop: '1px solid rgba(255,255,255,0.1)'
     };
     

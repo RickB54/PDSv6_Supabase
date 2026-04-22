@@ -51,7 +51,7 @@ export type MenuItem = {
   helpTopicId?: string;
 };
 
-export function AppSidebar({ user: userProp }: { user?: any }) {
+export function AppSidebar({ user: userProp, businessStatus: businessStatusProp }: { user?: any, businessStatus?: any }) {
 
   const { open, openMobile, setOpenMobile, setOpen, isMobile } = useSidebar();
   const location = useLocation();
@@ -60,7 +60,11 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   const { items: allBookings } = useBookingsStore();
   const { isDemoMode, isAdminPreview, setAdminPreview, canAccess, visibleSections } = useDemoMode();
   const [searchQuery, setSearchQuery] = useState("");
-  const [businessStatus, setBusinessStatus] = useState<any>(null);
+  const [businessStatus, setBusinessStatus] = useState<any>(() => {
+    if (businessStatusProp) return businessStatusProp;
+    const cached = contentService.getServiceMetaSync("global_settings");
+    return cached?.meta?.businessStatus || null;
+  });
 
   const isAdmin = user?.role === 'admin';
   const isEmployee = user?.role === 'employee';
@@ -82,6 +86,10 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
   }, [location.pathname, isAdmin]);
 
   useEffect(() => {
+    if (businessStatusProp) {
+      setBusinessStatus(businessStatusProp);
+      return;
+    }
     (async () => {
       try {
         const meta = await contentService.getServiceMeta("global_settings");
@@ -90,7 +98,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
         }
       } catch {}
     })();
-  }, []);
+  }, [businessStatusProp]);
 
   const bannerOffset = useMemo(() => {
     let offset = 0;
@@ -102,7 +110,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     return offset;
   }, [isDemoMode, businessStatus, isViewingAsCustomer, isViewingAsEmployee]);
 
-  const topOffset = `${bannerOffset}px`;
+  const topOffset = isMobile ? '0px' : `${bannerOffset}px`;
 
   // Helper to get correct URL for demo mode
   const getUrl = (url: string) => {
@@ -475,7 +483,7 @@ export function AppSidebar({ user: userProp }: { user?: any }) {
     >
       <div 
         className={cn("flex flex-col border-b border-white/5")}
-        style={{ paddingTop: '64px' }}
+        style={{ paddingTop: isMobile ? `${bannerOffset + 64}px` : '64px' }}
       >
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
           <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>

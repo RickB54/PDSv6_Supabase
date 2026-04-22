@@ -13,6 +13,8 @@ import {
   Image as ImageIcon,
   Trash2,
   ChevronRight,
+  ChevronDown,
+  ChevronsUp,
   Info,
   FolderOpen,
   Pencil,
@@ -112,10 +114,30 @@ const ShopSetup = () => {
   const [editingCat, setEditingCat] = useState<SetupCategory | null>(null);
   const [newCatName, setNewCatName] = useState("");
   const [savingCats, setSavingCats] = useState(false);
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   // Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+
+  const toggleCatCollapse = (catId: string) => {
+    setCollapsedCats(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
+      return next;
+    });
+  };
+
+  const moveCatToTop = async (idx: number) => {
+    if (idx <= 0) return;
+    const updated = [...categories];
+    const [cat] = updated.splice(idx, 1);
+    updated.unshift(cat);
+    const reordered = updated.map((c, i) => ({ ...c, order: i }));
+    setCategories(reordered);
+    await saveSetupCategories(reordered);
+  };
   const [activeTab, setActiveTab] = useState("gallery");
 
   // Business Documents (formerly Paperwork)
@@ -547,7 +569,6 @@ const ShopSetup = () => {
               </Card>
             )}
 
-            {/* Category rows - MATCHING MOBILE SETUP GRID PERFECTLY */}
             {displayCategories.map((cat) => {
               const isUncategorized = cat.id === 'none';
               const catMedia = isUncategorized ? uncategorized : getMediaForCat(cat.id);
@@ -557,8 +578,16 @@ const ShopSetup = () => {
                 <section key={cat.id} className="space-y-4">
                   {/* Category Header - Indigo Theme matched to Inventory */}
                   <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${isUncategorized ? 'bg-zinc-800/50 border-zinc-700/50' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-indigo-400 hover:text-white"
+                      onClick={() => toggleCatCollapse(cat.id)}
+                    >
+                      {collapsedCats.has(cat.id) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
                     {isUncategorized ? <ImageIcon className="h-5 w-5 text-zinc-500 shrink-0" /> : <FolderOpen className="h-5 w-5 text-indigo-400 shrink-0" />}
-                    <h2 className={`text-sm font-black uppercase tracking-[0.2em] ${isUncategorized ? 'text-zinc-400' : 'text-indigo-200'}`}>
+                    <h2 className={`text-xs sm:text-sm font-black uppercase tracking-[0.2em] ${isUncategorized ? 'text-zinc-400' : 'text-indigo-200'}`}>
                       {isUncategorized ? 'General Area' : cat.name}
                     </h2>
                     <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${isUncategorized ? 'text-zinc-600 bg-zinc-800' : 'text-indigo-500/60 bg-indigo-500/10'}`}>
@@ -566,6 +595,16 @@ const ShopSetup = () => {
                     </span>
                     {!isUncategorized && (
                       <div className="ml-auto flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-indigo-400/50 hover:text-white"
+                          title="Move To Top"
+                          onClick={() => moveCatToTop(catIdx)}
+                          disabled={catIdx === 0}
+                        >
+                          <ChevronsUp className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -591,19 +630,23 @@ const ShopSetup = () => {
                   </div>
 
                   {/* Grid layout instead of horizontal scroll for mobile stability */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                  <div className={collapsedCats.has(cat.id) 
+                    ? "flex overflow-x-auto pb-2 gap-3 custom-scrollbar" 
+                    : "grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3"
+                  }>
                     {catMedia.map((item) => {
                       const globalIndex = media.findIndex(m => m.id === item.id);
                       return (
-                        <MediaCard
-                          key={item.id}
-                          item={item}
-                          categories={categories}
-                          onDelete={removeMedia}
-                          onReassign={handleReassign}
-                          onOpenGallery={() => openLightbox(globalIndex)}
-                          setViewingDoc={setViewingDoc}
-                        />
+                        <div key={item.id} className={collapsedCats.has(cat.id) ? "min-w-[120px] max-w-[120px] sm:min-w-[150px] sm:max-w-[150px]" : ""}>
+                          <MediaCard
+                            item={item}
+                            categories={categories}
+                            onDelete={removeMedia}
+                            onReassign={handleReassign}
+                            onOpenGallery={() => openLightbox(globalIndex)}
+                            setViewingDoc={setViewingDoc}
+                          />
+                        </div>
                       );
                     })}
                     {/* Add-to-this-category slot */}
@@ -613,19 +656,18 @@ const ShopSetup = () => {
                           setSelectedCategoryForUpload(cat.id);
                           fileInputRef.current?.click();
                         }}
-                        className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group"
+                        className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group ${
+                          collapsedCats.has(cat.id) ? "min-w-[120px] h-[90px] sm:min-w-[150px] sm:h-[112px]" : "aspect-[4/3]"
+                        }`}
                       >
-                        <Plus className="h-5 w-5 text-zinc-700 group-hover:text-indigo-400" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
+                        <Plus className="h-4 w-4 text-zinc-700 group-hover:text-indigo-400" />
+                        <span className="text-[8px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Add View</span>
                       </button>
                     )}
                   </div>
                 </section>
               );
-            })}
-
-
-          </TabsContent>
+            })}          </TabsContent>
 
           {/* ── INVENTORY TAB ──────────────────────────── */}
           <TabsContent value="inventory" className="mt-0">
@@ -863,6 +905,7 @@ const ShopSetup = () => {
                 <div className="flex items-center justify-between sm:justify-end gap-2 border-t sm:border-t-0 border-zinc-800 pt-3 sm:pt-0">
                   <span className="text-[10px] text-zinc-600 font-bold shrink-0">{getMediaForCat(cat.id).length} photos</span>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-indigo-400/50 hover:text-white" onClick={() => moveCatToTop(idx)} disabled={idx === 0} title="Move to Top"><ChevronsUp className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-600 hover:text-white" onClick={() => moveCat(idx, -1)} disabled={idx === 0}><ArrowUp className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-600 hover:text-white" onClick={() => moveCat(idx, 1)} disabled={idx === categories.length - 1}><ArrowDown className="h-4 w-4" /></Button>
 
@@ -923,25 +966,140 @@ const ShopSetup = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── LIGHTBOX ───────────────────────────────────── */}
+      {/* ── FULL SCREEN LIGHTBOX ────────────────────────── */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[100vw] h-[100vh] p-0 bg-black/95 border-none flex flex-col justify-center items-center">
+        <DialogContent className="max-w-[100vw] h-[100vh] p-0 bg-black/95 border-none flex flex-col justify-center items-center gap-0">
           <div className="absolute top-4 right-4 z-50 flex gap-2">
-            <Button variant="ghost" size="icon" className="text-white" onClick={() => {
-              const link = document.createElement('a'); link.href = media[currentMediaIndex].url; link.download = 'shop-view.jpg'; link.click();
-            }}><Download className="h-6 w-6" /></Button>
-            <Button variant="ghost" size="icon" className="text-white" onClick={() => setLightboxOpen(false)}><X className="h-6 w-6" /></Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/10" 
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = media[currentMediaIndex].url;
+                link.download = `shop-view-${currentMediaIndex + 1}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+            >
+              <Download className="h-6 w-6" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => setLightboxOpen(false)}>
+              <X className="h-6 w-6" />
+            </Button>
           </div>
+
           {media.length > 0 && (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <button onClick={prevMedia} className="absolute left-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white"><ChevronLeft className="h-8 w-8" /></button>
-              <div className="flex flex-col items-center gap-6">
-                 {media[currentMediaIndex].type === 'video' ? <video src={media[currentMediaIndex].url} autoPlay controls className="max-h-[70vh]" /> : <img src={media[currentMediaIndex].url} className="max-h-[70vh] object-contain" />}
-                 <h2 className="text-2xl font-black uppercase text-white">{media[currentMediaIndex].caption}</h2>
+            <div className="relative w-full h-full flex items-center justify-center p-4 md:p-12">
+              {/* Prev Button */}
+              <button 
+                onClick={prevMedia}
+                className="absolute left-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white hover:bg-zinc-900 transition-all"
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </button>
+
+              <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
+                <div className="relative max-w-full max-h-[70vh] flex items-center justify-center group">
+                  {media[currentMediaIndex].type === 'video' ? (
+                    <video 
+                      src={media[currentMediaIndex].url} 
+                      className="max-w-full max-h-full rounded-xl shadow-2xl"
+                      controls
+                      autoPlay
+                    />
+                  ) : (
+                    <img 
+                      src={media[currentMediaIndex].url} 
+                      alt="" 
+                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-300"
+                    />
+                  )}
+                  
+                  {/* Floating Controls Overlay */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white gap-2">
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          {categories.find(c => c.id === media[currentMediaIndex].category)?.name || 'General Area'}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white text-xs">
+                        {categories.map(cat => (
+                          <DropdownMenuItem key={cat.id} onClick={() => handleReassign(media[currentMediaIndex].id, cat.id)} className="font-bold">
+                            {cat.name}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuItem onClick={() => handleReassign(media[currentMediaIndex].id, 'none')} className="text-zinc-500">
+                          — Uncategorized
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="w-px h-4 bg-white/10" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      onClick={() => {
+                        if (confirm('Delete this photo?')) {
+                          removeMedia(media[currentMediaIndex].id);
+                          setLightboxOpen(false);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="text-center max-w-xl w-full px-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <Input
+                    value={media[currentMediaIndex].caption || ''}
+                    onChange={(e) => {
+                      const newMedia = [...media];
+                      newMedia[currentMediaIndex].caption = e.target.value;
+                      setMedia(newMedia);
+                      // In a real app, you'd debounce save to DB here
+                    }}
+                    placeholder="Add a caption..."
+                    className="bg-transparent border-none text-white text-center font-black italic uppercase tracking-tighter text-xl md:text-3xl mb-2 focus-visible:ring-0 placeholder:text-zinc-700"
+                  />
+                  <div className="flex items-center justify-center gap-4 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                    <span>{currentMediaIndex + 1} / {media.length}</span>
+                    <span className="w-1 h-1 rounded-full bg-zinc-800" />
+                    <span>Shop Facility Sync: Active</span>
+                  </div>
+                </div>
               </div>
-              <button onClick={nextMedia} className="absolute right-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white"><ChevronRight className="h-8 w-8" /></button>
+
+              {/* Next Button */}
+              <button 
+                onClick={nextMedia}
+                className="absolute right-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white hover:bg-zinc-900 transition-all"
+              >
+                <ChevronRight className="h-8 w-8" />
+              </button>
             </div>
           )}
+
+          {/* Thumbnails strip */}
+          <div className="absolute bottom-6 left-0 right-0 p-4 overflow-x-auto">
+            <div className="flex justify-center gap-2 min-w-max mx-auto px-10">
+              {media.map((m, idx) => (
+                <button
+                  key={m.id}
+                  onClick={() => setCurrentMediaIndex(idx)}
+                  className={`w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
+                    idx === currentMediaIndex ? 'border-indigo-500 scale-110 shadow-lg shadow-indigo-500/20' : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <img src={m.url} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1184,12 +1342,12 @@ function MediaCard({ item, categories, onDelete, onReassign, onOpenGallery, setV
       )}
 
       {/* Overlay controls */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-4 h-24 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">
-        <span className="text-[9px] font-black uppercase tracking-widest text-white/50 truncate max-w-[60%]">
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-2 h-20 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">
+        <span className="text-[8px] font-black uppercase tracking-widest text-white/50 truncate max-w-[80%] mb-1">
           {categories.find((c: any) => c.id === item.category)?.name || "General Area"}
         </span>
 
-        <div className="flex gap-1 shrink-0">
+        <div className="flex gap-0.5 shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => { e.stopPropagation(); }}>
               <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10">

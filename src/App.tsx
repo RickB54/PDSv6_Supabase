@@ -172,13 +172,16 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const { isDemoMode, mockUser, isLoading } = useDemoMode();
   const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
-  const [businessStatus, setBusinessStatus] = useState<any>(null);
+  const [businessStatus, setBusinessStatus] = useState<any>(() => {
+    const cached = contentService.getServiceMetaSync("global_settings");
+    return cached?.meta?.businessStatus || null;
+  });
 
   useEffect(() => {
     (async () => {
       try {
         const meta = await contentService.getServiceMeta("global_settings");
-        if (meta && meta.meta && meta.meta.businessStatus) {
+        if (meta?.meta?.businessStatus) {
            setBusinessStatus(meta.meta.businessStatus);
         }
       } catch {}
@@ -238,7 +241,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
         <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white flex border-none">
           {effectiveUser && (effectiveUser.role === 'admin' || effectiveUser.role === 'employee') && (
             <div className="dark-theme">
-              <AppSidebar key={effectiveUser.id} user={effectiveUser} />
+              <AppSidebar key={effectiveUser.id} user={effectiveUser} businessStatus={businessStatus} />
             </div>
           )}
           <div className="flex-1 flex flex-col min-w-0">
@@ -303,7 +306,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   return (
     <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className={`dark-theme min-h-screen ${paddingClass}`}>
-        <AppSidebar key={effectiveUser.id} user={effectiveUser} />
+        <AppSidebar key={effectiveUser.id} user={effectiveUser} businessStatus={businessStatus} />
       </div>
       <div className={`flex-1 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>

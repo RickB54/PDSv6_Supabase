@@ -29,15 +29,17 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   const location = useLocation();
   const [showAbout, setShowAbout] = useState(false);
   const { isFullScreen, toggleFullScreen } = useFullScreen();
-  const [businessStatus, setBusinessStatus] = useState<any>(null);
+  const [businessStatus, setBusinessStatus] = useState<any>(() => {
+    const cached = contentService.getServiceMetaSync("global_settings");
+    return cached?.meta?.businessStatus || null;
+  });
 
   useEffect(() => {
     const loadStatus = async () => {
       try {
-        const allMeta = await contentService.getAllServiceMeta();
-        const gs = allMeta.find(m => m.key === 'global_settings');
-        if (gs?.meta?.businessStatus) {
-           setBusinessStatus(gs.meta.businessStatus);
+        const meta = await contentService.getServiceMeta("global_settings");
+        if (meta?.meta?.businessStatus) {
+           setBusinessStatus(meta.meta.businessStatus);
         }
       } catch (err) {}
     };

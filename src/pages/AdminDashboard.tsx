@@ -668,12 +668,11 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="p-4 sm:p-8 space-y-8">
-        <PageHeader
-          title="Prime Central Hub"
-          subtitle="Owner-focused business management & operations"
-        />
-
+      <PageHeader
+        title="Prime Central Hub"
+        subtitle="Owner-focused business management & operations"
+      />
+      <main className="p-4 sm:p-8 space-y-8">
         <PrimeCentralHub
           onQuickAction={(action) => {
             if (action.startsWith('modal:')) {
@@ -689,7 +688,7 @@ export default function AdminDashboard() {
             }
           }}
         />
-      </div>
+      </main>
 
       {/* Add Customer Popup */}
       <CustomerModal
