@@ -93,6 +93,7 @@ export interface Tool {
     notes: string;
     price: number;
     quantity?: number;
+    lowThreshold?: number;
     imageUrl?: string;
     createdAt?: string;
     updatedAt?: string;

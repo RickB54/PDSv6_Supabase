@@ -133,6 +133,48 @@ const InventoryControl = () => {
   const [isRatiosOnlyModalOpen, setIsRatiosOnlyModalOpen] = useState(false);
   const [gallonSize, setGallonSize] = useState<number>(128);
 
+  // Expanded state for sections
+  const [expandedSections, setExpandedSections] = useState({
+    chemicals: false,
+    materials: false,
+    tools: false,
+  });
+
+  // AUTO-SCROLL LOGIC: Ensure section top is visible when expanded or filtered
+  const scrollToSection = (id: string) => {
+    // Small timeout to allow React to render the new list state before scrolling
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // Scroll the element into view, ensuring it's at the top of its scrollable container
+      // This is more robust than window.scrollTo because it handles inner-div scrolling
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // After the initial scroll, we might need a slight adjustment for the sticky app header
+      // but usually scrollIntoView with block: 'start' puts it at the very top of the container.
+      // If the container itself has padding/offset (like our paddingClass), it works perfectly.
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (expandedSections.chemicals) {
+      scrollToSection('section-chemicals');
+    }
+  }, [expandedSections.chemicals, chemicalSort]);
+
+  useEffect(() => {
+    if (expandedSections.materials) {
+      scrollToSection('section-materials');
+    }
+  }, [expandedSections.materials, supplySort]);
+
+  useEffect(() => {
+    if (expandedSections.tools) {
+      scrollToSection('section-equipment');
+    }
+  }, [expandedSections.tools, equipmentSort]);
+
   // Chemical Card View State
   const [viewCardId, setViewCardId] = useState<string | null>(null);
   const [viewChemical, setViewChemical] = useState<LibraryChemical | null>(null);
@@ -428,12 +470,14 @@ const InventoryControl = () => {
       (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase())))
     );
 
-    // If a specific brand is selected, filter by it (exclude special sort modes)
-    if (!["brand", "alphabetical", "low_stock", "no_cost", "updated_at"].includes(chemicalSort)) {
+    // BRAND FILTER: If a specific brand is selected from the Jump-to list
+    const specialModes = ["brand", "alphabetical", "low_stock", "no_cost", "updated_at", "where_purchased"];
+    if (!specialModes.includes(chemicalSort)) {
       baseFiltered = baseFiltered.filter(c => (c.brand || "Other / No Brand") === chemicalSort);
     }
 
-    if (chemicalSort === "brand" || (!["alphabetical", "low_stock", "no_cost", "updated_at"].includes(chemicalSort))) {
+    // MODES that use the Grouped-by-Brand view
+    if (chemicalSort === "brand") {
       return [...baseFiltered].sort((a, b) => {
         const brandA = (a.brand || "Z - No Brand").toLowerCase();
         const brandB = (b.brand || "Z - No Brand").toLowerCase();
@@ -441,14 +485,12 @@ const InventoryControl = () => {
         return a.name.localeCompare(b.name);
       });
     }
+
+    // MODES that use the Flat List view
     if (chemicalSort === "low_stock") {
-      return [...baseFiltered].sort((a, b) => {
-        const aLow = a.currentStock < a.threshold;
-        const bLow = b.currentStock < b.threshold;
-        if (aLow && !bLow) return -1;
-        if (!aLow && bLow) return 1;
-        return a.name.localeCompare(b.name);
-      });
+      return [...baseFiltered]
+        .filter(c => c.currentStock < c.threshold)
+        .sort((a, b) => a.name.localeCompare(b.name));
     }
     if (chemicalSort === "no_cost") {
       return [...baseFiltered]
@@ -459,15 +501,20 @@ const InventoryControl = () => {
       return [...baseFiltered].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
+        if (dateA !== dateB) return dateB - dateA; // Descending
+        return a.name.localeCompare(b.name);
       });
     }
     if (chemicalSort === "where_purchased") {
       return [...baseFiltered].sort((a, b) => {
-        const valA = (a.wherePurchased || "Z").toLowerCase();
-        const valB = (b.wherePurchased || "Z").toLowerCase();
-        return valA.localeCompare(valB);
+        const valA = (a.wherePurchased || "ZZZZ").toLowerCase();
+        const valB = (b.wherePurchased || "ZZZZ").toLowerCase();
+        if (valA !== valB) return valA.localeCompare(valB);
+        return a.name.localeCompare(b.name);
       });
+    }
+    if (chemicalSort === "alphabetical") {
+      return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
     }
     return [...baseFiltered].sort((a, b) => a.name.localeCompare(b.name));
   };
@@ -486,25 +533,23 @@ const InventoryControl = () => {
     if (supplySort === "no_cost") {
       filtered = filtered.filter(s => !s.costPerItem || s.costPerItem === 0);
     }
+
+    if (supplySort === "low_stock") {
+      filtered = filtered.filter(s => typeof s.lowThreshold === 'number' && s.quantity < (s.lowThreshold || 0));
+    }
     
     return [...filtered].sort((a, b) => {
-      if (supplySort === "low_stock") {
-        const aLow = typeof a.lowThreshold === 'number' && a.quantity < (a.lowThreshold || 0);
-        const bLow = typeof b.lowThreshold === 'number' && b.quantity < (b.lowThreshold || 0);
-        if (aLow && !bLow) return -1;
-        if (!aLow && bLow) return 1;
-      }
       if (supplySort === "updated_at") {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
+        if (dateA !== dateB) return dateB - dateA;
       }
       if (supplySort === "category") {
         if (a.category !== b.category) return a.category.localeCompare(b.category);
       }
       if (supplySort === "where_purchased") {
-        const valA = (a.wherePurchased || "Z").toLowerCase();
-        const valB = (b.wherePurchased || "Z").toLowerCase();
+        const valA = (a.wherePurchased || "ZZZZ").toLowerCase();
+        const valB = (b.wherePurchased || "ZZZZ").toLowerCase();
         if (valA !== valB) return valA.localeCompare(valB);
       }
       return a.name.localeCompare(b.name);
@@ -525,23 +570,24 @@ const InventoryControl = () => {
       filtered = filtered.filter(e => !e.price || e.price === 0);
     }
 
+    if (equipmentSort === "low_stock") {
+      filtered = filtered.filter(e => typeof e.lowThreshold === 'number' && (e.quantity || 0) < e.lowThreshold);
+    }
+
     return [...filtered].sort((a, b) => {
-      if (equipmentSort === "low_stock") {
-        return a.name.localeCompare(b.name);
-      }
       if (equipmentSort === "purchaseDate") {
         const dateA = a.purchaseDate ? new Date(a.purchaseDate).getTime() : 0;
         const dateB = b.purchaseDate ? new Date(b.purchaseDate).getTime() : 0;
-        return dateB - dateA;
+        if (dateA !== dateB) return dateB - dateA;
       }
       if (equipmentSort === "updated_at") {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
+        if (dateA !== dateB) return dateB - dateA;
       }
       if (equipmentSort === "where_purchased") {
-        const valA = (a.wherePurchased || "Z").toLowerCase();
-        const valB = (b.wherePurchased || "Z").toLowerCase();
+        const valA = (a.wherePurchased || "ZZZZ").toLowerCase();
+        const valB = (b.wherePurchased || "ZZZZ").toLowerCase();
         if (valA !== valB) return valA.localeCompare(valB);
       }
       return a.name.localeCompare(b.name);
@@ -1387,11 +1433,6 @@ const InventoryControl = () => {
 
   // Push admin alert when low inventory changes (dedup by hash incl. quantities)
   // Expanded state for sections
-  const [expandedSections, setExpandedSections] = useState({
-    chemicals: false,
-    materials: false,
-    tools: false,
-  });
 
   const toggleSection = (sec: 'chemicals' | 'materials' | 'tools') => {
     setExpandedSections(prev => ({ ...prev, [sec]: !prev[sec] }));
@@ -1403,7 +1444,8 @@ const InventoryControl = () => {
   // Metrics
   const totalItems = chemicals.length + materials.length + tools.length;
   const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
-    materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length;
+    materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length +
+    tools.filter(t => (t as any).lowThreshold && (t.quantity || 0) < (t as any).lowThreshold).length;
   // Approximating value if cost exists
   const totalValue =
     chemicals.reduce((acc, c) => acc + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0) +
@@ -1676,6 +1718,7 @@ const InventoryControl = () => {
         {/* Chemicals Section (Yellow) */}
         <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
           <div
+            id="section-chemicals"
             className="p-4 bg-zinc-950 sticky z-50 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('chemicals')}
@@ -1780,7 +1823,7 @@ const InventoryControl = () => {
                 </div>
               </div>
               <div className="space-y-8">
-                {(chemicalSort === "brand" || (!["alphabetical", "low_stock", "no_cost", "updated_at"].includes(chemicalSort) && !allAvailableBrands.includes(chemicalSort))) ? (
+                {chemicalSort === "brand" ? (
                   sortedBrands.map(brand => (
                     <div key={brand} className="space-y-2">
                       <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-yellow-500">
@@ -1832,6 +1875,7 @@ const InventoryControl = () => {
         {/* Supplies Section (Blue) - Renamed from Materials */}
         <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
           <div
+            id="section-materials"
             className="p-4 bg-zinc-950 sticky z-50 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('materials')}
@@ -2044,6 +2088,7 @@ const InventoryControl = () => {
         {/* Equipment Section (Purple) - Renamed from Tools */}
         <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
           <div
+            id="section-equipment"
             className="p-4 bg-zinc-950 sticky z-50 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('tools')}
