@@ -142,6 +142,8 @@ const CompanyBudget = () => {
     const [editCategoryOpen, setEditCategoryOpen] = useState(false);
     const [editCategoryName, setEditCategoryName] = useState("");
     const [editingCategory, setEditingCategory] = useState<{ name: string; type: 'income' | 'expense'; isDefault: boolean } | null>(null);
+    const [ledgerSortBy, setLedgerSortBy] = useState<"date" | "amount" | "category" | "updated">("date");
+    const [ledgerSearch, setLedgerSearch] = useState("");
 
     // Use local date for default values to prevent "tomorrow" bug
     const getLocalDateStr = () => {
@@ -249,6 +251,8 @@ const CompanyBudget = () => {
             return d >= weekAgo;
         } else if (dateFilter === 'monthly') {
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        } else if (dateFilter === 'yearly') {
+            return d.getFullYear() === now.getFullYear();
         }
 
         // Custom range
@@ -794,6 +798,7 @@ const CompanyBudget = () => {
                                     <SelectItem value="daily">Today</SelectItem>
                                     <SelectItem value="weekly">This Week</SelectItem>
                                     <SelectItem value="monthly">This Month</SelectItem>
+                                    <SelectItem value="yearly">This Year</SelectItem>
                                 </SelectContent>
                             </Select>
                             <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="budget-range" />
@@ -1000,6 +1005,32 @@ const CompanyBudget = () => {
                                 <h2 className="text-xl font-bold mb-4">Transaction Ledger</h2>
                                 <p className="text-sm text-muted-foreground mb-6">View all your individual income and expense records. "Manual" income entries can be deleted here if they duplicate your Invoices.</p>
 
+                                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                                    <div className="relative flex-1">
+                                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            placeholder="Search transactions..." 
+                                            className="pl-9"
+                                            value={ledgerSearch}
+                                            onChange={(e) => setLedgerSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 items-center">
+                                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort By:</Label>
+                                        <Select value={ledgerSortBy} onValueChange={(v: any) => setLedgerSortBy(v)}>
+                                            <SelectTrigger className="w-[140px] h-9">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="date">Date (Newest)</SelectItem>
+                                                <SelectItem value="amount">Amount (Highest)</SelectItem>
+                                                <SelectItem value="category">Category</SelectItem>
+                                                <SelectItem value="updated">Last Updated</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-8">
                                     {/* Income List */}
                                     {/* Income List */}
@@ -1018,15 +1049,23 @@ const CompanyBudget = () => {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {(() => {
-                                                        // Group income by category
                                                         const incomeByCategory = new Map<string, any[]>();
+                                                        const search = ledgerSearch.toLowerCase();
 
                                                         // Add paid invoices
                                                         invoiceList.filter(inv => {
                                                             const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                                                                 : 0;
-                                                            return amt > 0 && filterByDate(inv.createdAt || inv.date);
+                                                            if (amt <= 0 || !filterByDate(inv.createdAt || inv.date)) return false;
+                                                            
+                                                            if (search) {
+                                                                const matches = (inv.invoiceNumber || '').toLowerCase().includes(search) || 
+                                                                                String(amt).includes(search) || 
+                                                                                "invoice".includes(search);
+                                                                if (!matches) return false;
+                                                            }
+                                                            return true;
                                                         }).forEach(inv => {
                                                             const category = 'Invoice';
                                                             if (!incomeByCategory.has(category)) incomeByCategory.set(category, []);
@@ -1034,13 +1073,45 @@ const CompanyBudget = () => {
                                                         });
 
                                                         // Add manual income
-                                                        incomeList.filter(i => filterByDate(i.date || i.createdAt || '')).forEach(inc => {
+                                                        incomeList.filter(inc => {
+                                                            if (!filterByDate(inc.date || inc.createdAt || '')) return false;
+                                                            if (search) {
+                                                                const matches = (inc.description || '').toLowerCase().includes(search) || 
+                                                                                (inc.category || '').toLowerCase().includes(search) ||
+                                                                                String(inc.amount).includes(search);
+                                                                if (!matches) return false;
+                                                            }
+                                                            return true;
+                                                        }).forEach(inc => {
                                                             const category = inc.category || 'Manual';
                                                             if (!incomeByCategory.has(category)) incomeByCategory.set(category, []);
                                                             incomeByCategory.get(category)!.push({ type: 'income', data: inc });
                                                         });
 
-                                                        // Sort categories alphabetically
+                                                        // Sort items within categories
+                                                        incomeByCategory.forEach((items, cat) => {
+                                                            items.sort((a, b) => {
+                                                                const getVal = (item: any) => {
+                                                                    if (item.type === 'invoice') return { 
+                                                                        date: new Date(item.data.createdAt).getTime(),
+                                                                        amount: item.data.total,
+                                                                        updated: new Date(item.data.createdAt).getTime()
+                                                                    };
+                                                                    return {
+                                                                        date: new Date(item.data.date || item.data.createdAt).getTime(),
+                                                                        amount: item.data.amount,
+                                                                        updated: new Date(item.data.createdAt || item.data.date).getTime()
+                                                                    };
+                                                                };
+                                                                const va = getVal(a);
+                                                                const vb = getVal(b);
+                                                                
+                                                                if (ledgerSortBy === 'amount') return vb.amount - va.amount;
+                                                                if (ledgerSortBy === 'updated') return vb.updated - va.updated;
+                                                                return vb.date - va.date;
+                                                            });
+                                                        });
+
                                                         const sortedCategories = Array.from(incomeByCategory.keys()).sort();
 
                                                         return sortedCategories.map(category => {
@@ -1131,16 +1202,33 @@ const CompanyBudget = () => {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {(() => {
-                                                        // Group expenses by category
                                                         const expenseByCategory = new Map<string, any[]>();
+                                                        const search = ledgerSearch.toLowerCase();
 
-                                                        expenseList.filter(e => filterByDate(e.createdAt)).forEach(exp => {
+                                                        expenseList.filter(exp => {
+                                                            if (!filterByDate(exp.createdAt)) return false;
+                                                            if (search) {
+                                                                const matches = (exp.description || '').toLowerCase().includes(search) || 
+                                                                                (exp.category || '').toLowerCase().includes(search) ||
+                                                                                String(exp.amount).includes(search);
+                                                                if (!matches) return false;
+                                                            }
+                                                            return true;
+                                                        }).forEach(exp => {
                                                             const category = exp.category || 'General';
                                                             if (!expenseByCategory.has(category)) expenseByCategory.set(category, []);
                                                             expenseByCategory.get(category)!.push(exp);
                                                         });
 
-                                                        // Sort categories alphabetically
+                                                        // Sort items within categories
+                                                        expenseByCategory.forEach((items, cat) => {
+                                                            items.sort((a, b) => {
+                                                                if (ledgerSortBy === 'amount') return b.amount - a.amount;
+                                                                if (ledgerSortBy === 'updated') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                                                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                                                            });
+                                                        });
+
                                                         const sortedCategories = Array.from(expenseByCategory.keys()).sort();
 
                                                         return sortedCategories.map(category => {
@@ -1688,7 +1776,6 @@ const CompanyBudget = () => {
                                 )}
                             </Card>
 
-                            {/* Filter */}
                             <Card className="p-4">
                                 <div className="flex items-center gap-4">
                                     <Filter className="h-5 w-5 text-muted-foreground" />

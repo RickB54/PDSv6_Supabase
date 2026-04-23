@@ -97,6 +97,8 @@ const Accounting = () => {
   const [expenseList, setExpenseList] = useState<Expense[]>([]);
   const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
   const [incomeList, setIncomeList] = useState<Receivable[]>([]);
+  const [ledgerSortBy, setLedgerSortBy] = useState<"date" | "amount" | "category" | "updated">("date");
+  const [ledgerSearch, setLedgerSearch] = useState("");
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [categoryColors, setCategoryColors] = useState<Record<string, string>>({});
 
@@ -160,6 +162,16 @@ const Accounting = () => {
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
         totalRev += amt;
       });
+
+      const yearly = incomes.filter(inc => {
+        const d = new Date(inc.date || inc.createdAt);
+        return d.getFullYear() === now.getFullYear();
+      }).reduce((sum, inc) => sum + (inc.amount || 0), 0) + 
+      invoices.filter(inv => {
+        const d = new Date(inv.createdAt);
+        const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
+        return isPaid && d.getFullYear() === now.getFullYear();
+      }).reduce((sum, inv) => sum + (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)), 0);
 
       setDailyRevenue(daily);
       setWeeklyRevenue(weekly);
@@ -377,6 +389,114 @@ const Accounting = () => {
 
   const profit = calculateProfit();
 
+  const filteredAndSortedInvoices = useMemo(() => {
+    return invoiceList
+      .filter(inv => {
+        const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
+        if (!isPaid) return false;
+        
+        const d = new Date(inv.createdAt);
+        const now = new Date();
+        const today = now.toDateString();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        let show = true;
+        if (dateFilter === 'daily') show = d.toDateString() === today;
+        else if (dateFilter === 'weekly') show = d >= weekAgo;
+        else if (dateFilter === 'monthly') show = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        else if (dateFilter === 'yearly') show = d.getFullYear() === now.getFullYear();
+        
+        if (dateRange.from && d < new Date(dateRange.from.setHours(0,0,0,0))) show = false;
+        if (dateRange.to && d > new Date(dateRange.to.setHours(23,59,59,999))) show = false;
+        
+        if (ledgerSearch) {
+          const search = ledgerSearch.toLowerCase();
+          const matches = (inv.invoiceNumber || '').toLowerCase().includes(search) || 
+                          String(inv.total).includes(search);
+          if (!matches) show = false;
+        }
+        
+        return show;
+      })
+      .sort((a, b) => {
+        if (ledgerSortBy === 'amount') return b.total - a.total;
+        if (ledgerSortBy === 'category') return ("Invoice").localeCompare("Invoice");
+        if (ledgerSortBy === 'updated') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [invoiceList, dateFilter, dateRange, ledgerSearch, ledgerSortBy]);
+
+  const filteredAndSortedIncomes = useMemo(() => {
+    return incomeList
+      .filter(inc => {
+        const d = new Date(inc.date || inc.createdAt);
+        const now = new Date();
+        const today = now.toDateString();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        let show = true;
+        if (dateFilter === 'daily') show = d.toDateString() === today;
+        else if (dateFilter === 'weekly') show = d >= weekAgo;
+        else if (dateFilter === 'monthly') show = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        else if (dateFilter === 'yearly') show = d.getFullYear() === now.getFullYear();
+        
+        if (dateRange.from && d < new Date(dateRange.from.setHours(0,0,0,0))) show = false;
+        if (dateRange.to && d > new Date(dateRange.to.setHours(23,59,59,999))) show = false;
+        
+        if (ledgerSearch) {
+          const search = ledgerSearch.toLowerCase();
+          const matches = (inc.description || '').toLowerCase().includes(search) || 
+                          (inc.category || '').toLowerCase().includes(search) ||
+                          (inc.customerName || '').toLowerCase().includes(search) ||
+                          String(inc.amount).includes(search);
+          if (!matches) show = false;
+        }
+        
+        return show;
+      })
+      .sort((a, b) => {
+        if (ledgerSortBy === 'amount') return (b.amount || 0) - (a.amount || 0);
+        if (ledgerSortBy === 'category') return (a.category || "").localeCompare(b.category || "");
+        if (ledgerSortBy === 'updated') return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
+        return new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime();
+      });
+  }, [incomeList, dateFilter, dateRange, ledgerSearch, ledgerSortBy]);
+
+  const filteredAndSortedExpenses = useMemo(() => {
+    return expenseList
+      .filter(exp => {
+        const d = new Date(exp.createdAt);
+        const now = new Date();
+        const today = now.toDateString();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        let show = true;
+        if (dateFilter === 'daily') show = d.toDateString() === today;
+        else if (dateFilter === 'weekly') show = d >= weekAgo;
+        else if (dateFilter === 'monthly') show = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        else if (dateFilter === 'yearly') show = d.getFullYear() === now.getFullYear();
+        
+        if (dateRange.from && d < new Date(dateRange.from.setHours(0,0,0,0))) show = false;
+        if (dateRange.to && d > new Date(dateRange.to.setHours(23,59,59,999))) show = false;
+        
+        if (ledgerSearch) {
+          const search = ledgerSearch.toLowerCase();
+          const matches = (exp.description || '').toLowerCase().includes(search) || 
+                          (exp.category || '').toLowerCase().includes(search) ||
+                          String(exp.amount).includes(search);
+          if (!matches) show = false;
+        }
+        
+        return show;
+      })
+      .sort((a, b) => {
+        if (ledgerSortBy === 'amount') return b.amount - a.amount;
+        if (ledgerSortBy === 'category') return (a.category || "").localeCompare(b.category || "");
+        if (ledgerSortBy === 'updated') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [expenseList, dateFilter, dateRange, ledgerSearch, ledgerSortBy]);
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full">
       <PageHeader title="Accounting" />
@@ -393,6 +513,7 @@ const Accounting = () => {
                   <SelectItem value="daily">Today</SelectItem>
                   <SelectItem value="weekly">This Week</SelectItem>
                   <SelectItem value="monthly">This Month</SelectItem>
+                  <SelectItem value="yearly">This Year</SelectItem>
                 </SelectContent>
               </Select>
               <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
@@ -666,13 +787,36 @@ const Accounting = () => {
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
                   <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row gap-4 mb-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          placeholder="Search transactions..." 
+                          className="pl-9"
+                          value={ledgerSearch}
+                          onChange={(e) => setLedgerSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort By:</Label>
+                        <Select value={ledgerSortBy} onValueChange={(v: any) => setLedgerSortBy(v)}>
+                          <SelectTrigger className="w-[140px] h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="date">Date (Newest)</SelectItem>
+                            <SelectItem value="amount">Amount (Highest)</SelectItem>
+                            <SelectItem value="category">Category</SelectItem>
+                            <SelectItem value="updated">Last Updated</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div>
                       <h3 className="text-lg font-semibold text-green-600 mb-3">Credits (Income)</h3>
                       <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                        {invoiceList.filter(inv => {
-                          const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
-                          return isPaid;
-                        }).map(inv => (
+                        {filteredAndSortedInvoices.map(inv => (
                           <div key={`inv-${inv.id}`} className="p-3 border rounded-lg bg-blue-50/50 flex justify-between items-center">
                             <div>
                               <p className="font-semibold text-blue-700">+${(inv.paidAmount || inv.total).toFixed(2)}</p>
@@ -681,7 +825,7 @@ const Accounting = () => {
                             </div>
                           </div>
                         ))}
-                        {incomeList.map(income => (
+                        {filteredAndSortedIncomes.map(income => (
                           <div key={income.id} className="p-3 border rounded-lg bg-green-50/50 flex justify-between items-center">
                             <div>
                               <p className="font-semibold text-green-700">+${(income.amount || 0).toFixed(2)}</p>
@@ -700,7 +844,7 @@ const Accounting = () => {
                     <div>
                       <h3 className="text-lg font-semibold text-red-600 mb-3">Debits (Expenses)</h3>
                       <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                        {expenseList.map(expense => (
+                        {filteredAndSortedExpenses.map(expense => (
                           <div key={expense.id} className="p-3 border rounded-lg bg-red-50/50 flex justify-between items-center">
                             <div>
                               <p className="font-semibold text-red-700">-${(expense.amount || 0).toFixed(2)}</p>
