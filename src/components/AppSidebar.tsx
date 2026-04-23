@@ -483,7 +483,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     >
       <div 
         className={cn("flex flex-col border-b border-white/5")}
-        style={{ paddingTop: isMobile ? `${bannerOffset + 64}px` : '64px' }}
+        style={{ paddingTop: `${bannerOffset + 64}px` }}
       >
         <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
           <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
