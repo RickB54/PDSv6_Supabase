@@ -947,60 +947,6 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 mb-8">
-                <div className="p-6 bg-red-500/5 rounded-xl border border-red-500/10">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-bold text-red-400 flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" /> Customers with Outstanding Balance
-                    </h4>
-                  </div>
-                  <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
-                    <Table>
-                      <TableHeader className="bg-zinc-900">
-                        <TableRow className="border-zinc-800">
-                          <TableHead className="text-zinc-400">Customer</TableHead>
-                          <TableHead className="text-zinc-400">Total Spent</TableHead>
-                          <TableHead className="text-zinc-400">Balance Due</TableHead>
-                          <TableHead className="text-zinc-400 text-right">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(() => {
-                          const debtors = Array.from(new Map(
-                            customers
-                              .filter(c => (c.type || '').toLowerCase() !== 'prospect')
-                              .map(c => [c.id || c.name, c])
-                          ).values()).map(cust => {
-                            const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
-                            const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-                            const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
-                            return { ...cust, totalSpent, totalOwed };
-                          }).filter(d => d.totalOwed > 0.01);
-
-                          if (debtors.length === 0) {
-                            return (
-                              <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8 text-zinc-500 italic">No outstanding balances found</TableCell>
-                              </TableRow>
-                            );
-                          }
-
-                          return debtors.map(d => (
-                            <TableRow key={d.id || d.name} className="border-zinc-800 hover:bg-zinc-900/50">
-                              <TableCell className="font-medium text-zinc-200">{d.name}</TableCell>
-                              <TableCell className="text-zinc-400">${d.totalSpent.toFixed(2)}</TableCell>
-                              <TableCell className="text-red-400 font-bold">${d.totalOwed.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(d.id || d.name)} className="text-zinc-400 hover:text-white">View Details</Button>
-                              </TableCell>
-                            </TableRow>
-                          ));
-                        })()}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
 
               <div className="pt-6 border-t border-zinc-800">
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Detailed Customer Report</label>
@@ -1048,6 +994,135 @@ const Reports = () => {
                     </div>
                   )
                 })()}
+              </div>
+
+              <div className="mt-8 p-6 bg-red-500/5 rounded-xl border border-red-500/10">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-bold text-red-400 flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" /> Customers with Outstanding Balance
+                  </h4>
+                </div>
+                <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+                  <Table>
+                    <TableHeader className="bg-zinc-900">
+                      <TableRow className="border-zinc-800">
+                        <TableHead className="text-zinc-400">Customer</TableHead>
+                        <TableHead className="text-zinc-400">Total Spent</TableHead>
+                        <TableHead className="text-zinc-400">Balance Due</TableHead>
+                        <TableHead className="text-zinc-400 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const debtors = Array.from(new Map(
+                          customers
+                            .filter(c => (c.type || '').toLowerCase() !== 'prospect')
+                            .map(c => [c.id || c.name, c])
+                        ).values()).map(cust => {
+                          const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
+                          const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+                          const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
+                          return { ...cust, totalSpent, totalOwed };
+                        }).filter(d => d.totalOwed > 0.01);
+
+                        if (debtors.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-8 text-zinc-500 italic">No outstanding balances found</TableCell>
+                            </TableRow>
+                          );
+                        }
+
+                        return debtors.map(d => (
+                          <TableRow key={d.id || d.name} className="border-zinc-800 hover:bg-zinc-900/50">
+                            <TableCell className="font-medium text-zinc-200">{d.name}</TableCell>
+                            <TableCell className="text-zinc-400">${d.totalSpent.toFixed(2)}</TableCell>
+                            <TableCell className="text-red-400 font-bold">${d.totalOwed.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(d.id || d.name)} className="text-zinc-400 hover:text-white">View Details</Button>
+                            </TableCell>
+                          </TableRow>
+                        ));
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="p-6 bg-zinc-950 border-zinc-800">
+                  <h4 className="text-lg font-bold text-zinc-200 mb-4 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-emerald-400" /> Top Customers by Lifetime Value
+                  </h4>
+                  <div className="space-y-4">
+                    {(() => {
+                      const ltvData = Array.from(new Map(
+                        customers
+                          .filter(c => (c.type || '').toLowerCase() !== 'prospect')
+                          .map(c => [c.id || c.name, c])
+                      ).values()).map(cust => {
+                        const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
+                        const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+                        return { ...cust, totalSpent };
+                      })
+                      .sort((a, b) => b.totalSpent - a.totalSpent)
+                      .slice(0, 5);
+
+                      if (ltvData.length === 0) return <p className="text-zinc-500 italic text-sm text-center py-4">No data available</p>;
+
+                      return ltvData.map((d, i) => (
+                        <div key={d.id || d.name} className="flex justify-between items-center p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                          <div className="flex items-center gap-3">
+                            <span className="text-zinc-500 font-mono text-xs w-4">#{i+1}</span>
+                            <div>
+                              <p className="text-sm font-bold text-zinc-200">{d.name}</p>
+                              <p className="text-xs text-zinc-500">{d.vehicle} {d.model}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-emerald-400">${d.totalSpent.toLocaleString()}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase">Total Revenue</p>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-zinc-950 border-zinc-800">
+                  <h4 className="text-lg font-bold text-zinc-200 mb-4 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-400" /> Customer Retention & Frequency
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {(() => {
+                      const customerStats = customers.filter(c => (c.type || '').toLowerCase() !== 'prospect').map(cust => {
+                        const count = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name).length;
+                        return count;
+                      });
+                      const repeatCustomers = customerStats.filter(c => c > 1).length;
+                      const averageServices = customerStats.length > 0 ? (customerStats.reduce((a, b) => a + b, 0) / customerStats.length).toFixed(1) : 0;
+                      
+                      return (
+                        <>
+                          <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-center">
+                            <p className="text-2xl font-bold text-white">{repeatCustomers}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase mt-1">Repeat Clients</p>
+                          </div>
+                          <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-center">
+                            <p className="text-2xl font-bold text-white">{averageServices}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase mt-1">Avg Services/Cust</p>
+                          </div>
+                          <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-center col-span-2">
+                            <p className="text-2xl font-bold text-blue-400">
+                              {customerStats.length > 0 ? ((repeatCustomers / customerStats.length) * 100).toFixed(0) : 0}%
+                            </p>
+                            <p className="text-[10px] text-zinc-500 uppercase mt-1">Retention Rate</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </Card>
               </div>
             </Card>
           </TabsContent>
@@ -1103,6 +1178,81 @@ const Reports = () => {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="p-6 bg-zinc-950 border-zinc-800">
+                  <h4 className="text-lg font-bold text-zinc-200 mb-4 flex items-center gap-2">
+                    <PieChart className="h-5 w-5 text-orange-400" /> Lead Acquisition Sources
+                  </h4>
+                  <div className="space-y-3">
+                    {(() => {
+                      const prospectsList = customers.filter(c => (c.type || '').toLowerCase() === 'prospect');
+                      const sources: Record<string, number> = {};
+                      prospectsList.forEach(p => {
+                        const s = p.howFound || 'Unknown';
+                        sources[s] = (sources[s] || 0) + 1;
+                      });
+                      
+                      const sortedSources = Object.entries(sources).sort((a, b) => b[1] - a[1]);
+                      
+                      if (sortedSources.length === 0) return <p className="text-zinc-500 italic text-sm text-center py-4">No source data available</p>;
+
+                      return sortedSources.map(([source, count]) => (
+                        <div key={source} className="flex justify-between items-center">
+                          <span className="text-sm text-zinc-400">{source}</span>
+                          <div className="flex items-center gap-3 flex-1 px-4">
+                            <div className="h-2 bg-zinc-800 rounded-full flex-1 overflow-hidden">
+                              <div 
+                                className="h-full bg-orange-500/50" 
+                                style={{ width: `${(count / (prospectsList.length || 1)) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-mono text-zinc-500 w-8 text-right">{count}</span>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-zinc-950 border-zinc-800">
+                  <h4 className="text-lg font-bold text-zinc-200 mb-4 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" /> Stale Leads (No Bookings &gt; 30 Days)
+                  </h4>
+                  <div className="space-y-4">
+                    {(() => {
+                      const thirtyDaysAgo = new Date();
+                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                      
+                      const staleLeads = customers
+                        .filter(c => (c.type || '').toLowerCase() === 'prospect')
+                        .filter(p => new Date(p.created_at || 0) < thirtyDaysAgo)
+                        .slice(0, 5);
+
+                      if (staleLeads.length === 0) return (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-500 mb-2">
+                            <TrendingUp className="h-6 w-6" />
+                          </div>
+                          <p className="text-sm text-zinc-400 font-medium">All leads are fresh!</p>
+                        </div>
+                      );
+
+                      return staleLeads.map((p) => (
+                        <div key={p.id || p.name} className="flex justify-between items-center p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                          <div>
+                            <p className="text-sm font-bold text-zinc-200">{p.name}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase">Created {new Date(p.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <Button variant="ghost" size="sm" className="text-orange-400 hover:text-orange-300 h-7 text-xs" onClick={() => window.location.href = `/prospects?search=${encodeURIComponent(p.name)}`}>
+                            Follow Up
+                          </Button>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </Card>
               </div>
             </Card>
           </TabsContent>
