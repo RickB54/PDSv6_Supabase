@@ -1,12 +1,25 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Dialog, DialogContent, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Star, Trash2 } from "lucide-react";
+import { 
+    X, 
+    ChevronLeft, 
+    ChevronRight, 
+    ZoomIn, 
+    ZoomOut, 
+    Download, 
+    Star, 
+    Trash2, 
+    Maximize, 
+    Minimize,
+    Play
+} from "lucide-react";
 
 interface PhotoGalleryProps {
     photos: {
         url: string;
         label?: string;
+        type?: "image" | "video";
     }[];
     initialIndex?: number;
     open: boolean;
@@ -27,6 +40,9 @@ export const PhotoGalleryLightbox = ({
 }: PhotoGalleryProps) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [zoom, setZoom] = useState(1);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const lightboxRef = useRef<HTMLDivElement>(null);
+    const touchStartX = useRef<number | null>(null);
 
     // Sync current index when opened with a specific photo
     useEffect(() => {
@@ -36,184 +52,242 @@ export const PhotoGalleryLightbox = ({
         }
     }, [open, initialIndex]);
 
-    const handlePrevious = (e?: React.MouseEvent) => {
+    const handlePrevious = useCallback((e?: React.MouseEvent | KeyboardEvent) => {
         e?.stopPropagation();
         if (photos.length === 0) return;
         setCurrentIndex((prev) => (prev <= 0 ? photos.length - 1 : prev - 1));
         setZoom(1);
-    };
+    }, [photos.length]);
 
-    const handleNext = (e?: React.MouseEvent) => {
+    const handleNext = useCallback((e?: React.MouseEvent | KeyboardEvent) => {
         e?.stopPropagation();
         if (photos.length === 0) return;
         setCurrentIndex((prev) => (prev >= photos.length - 1 ? 0 : prev + 1));
         setZoom(1);
+    }, [photos.length]);
+
+    // Keyboard Navigation
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "ArrowLeft") handlePrevious(e);
+            else if (e.key === "ArrowRight") handleNext(e);
+            else if (e.key === "Escape") onOpenChange(false);
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [open, handlePrevious, handleNext, onOpenChange]);
+
+    // Touch Support
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
     };
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchStartX.current - touchEndX;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0) handleNext();
+            else handlePrevious();
+        }
+        touchStartX.current = null;
+    };
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            lightboxRef.current?.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+            setIsFullscreen(true);
+        } else {
+            document.exitFullscreen();
+            setIsFullscreen(false);
+        }
+    };
+
+    useEffect(() => {
+        const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener("fullscreenchange", handleFsChange);
+        return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    }, []);
 
     const handleDownload = async () => {
         const photo = photos[currentIndex];
         if (!photo?.url) return;
-        
         try {
             const response = await fetch(photo.url);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `photo-${currentIndex + 1}.jpg`;
+            link.download = `media-${currentIndex + 1}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Download failed:", error);
-            // Fallback for CORS issues
             window.open(photo.url, "_blank");
         }
     };
-
-    const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
-    const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
 
     if (photos.length === 0) return null;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[95vw] max-h-[85vh] top-[55%] p-0 bg-black/95 border-zinc-800">
-                <div className="relative w-full h-[85vh] flex flex-col">
-                    {/* Header */}
-                    <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4 flex items-center justify-between">
-                        <div className="text-white font-semibold">
-                            {photos[currentIndex]?.label || `Photo ${currentIndex + 1} of ${photos.length}`}
+            <DialogPortal>
+                <DialogOverlay className="bg-black/98 backdrop-blur-2xl z-[9999]" />
+                <DialogContent 
+                    ref={lightboxRef}
+                    className="fixed inset-0 w-screen h-screen max-w-none m-0 p-0 bg-black border-none shadow-none z-[10000] overflow-hidden outline-none flex flex-col translate-x-0 translate-y-0 left-0 top-0"
+                >
+                    {/* Header Controls - Premium Glassmorphism */}
+                    <div className="absolute top-0 left-0 right-0 z-[10001] p-4 flex items-center justify-between bg-gradient-to-b from-black/90 via-black/40 to-transparent pointer-events-none">
+                        <div className="pointer-events-auto pl-2">
+                            <h2 className="text-white font-black italic uppercase tracking-tighter text-sm md:text-xl drop-shadow-lg">
+                                {photos[currentIndex]?.label || `View ${currentIndex + 1} / ${photos.length}`}
+                            </h2>
                         </div>
-                        <div className="flex items-center gap-2">
+                        
+                        <div className="flex items-center gap-1.5 md:gap-3 pointer-events-auto pr-2">
+                            <div className="hidden sm:flex items-center bg-white/10 rounded-full px-2 py-1 backdrop-blur-md border border-white/10 mr-2">
+                                <Button variant="ghost" size="icon" onClick={() => setZoom(z => Math.max(z - 0.25, 0.5))} className="h-8 w-8 text-white hover:bg-white/10 rounded-full"><ZoomOut className="h-4 w-4" /></Button>
+                                <span className="text-[10px] font-black text-white w-10 text-center">{Math.round(zoom * 100)}%</span>
+                                <Button variant="ghost" size="icon" onClick={() => setZoom(z => Math.min(z + 0.25, 3))} className="h-8 w-8 text-white hover:bg-white/10 rounded-full"><ZoomIn className="h-4 w-4" /></Button>
+                            </div>
+
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={handleZoomOut}
-                                className="text-white hover:bg-white/20"
-                                title="Zoom Out"
+                                onClick={toggleFullscreen}
+                                className="text-white hover:bg-white/10 bg-white/5 backdrop-blur-md rounded-full h-9 w-9 border border-white/10"
                             >
-                                <ZoomOut className="h-5 w-5" />
+                                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                             </Button>
-                            <span className="text-white text-sm min-w-[50px] text-center">{Math.round(zoom * 100)}%</span>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleZoomIn}
-                                className="text-white hover:bg-white/20"
-                                title="Zoom In"
-                            >
-                                <ZoomIn className="h-5 w-5" />
-                            </Button>
+
                             {isAdmin && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => onSetPrimary?.(currentIndex)}
-                                    className="text-white hover:bg-purple-600/50"
-                                    title="Set as Primary"
+                                    className={`text-white hover:bg-indigo-500/50 bg-white/5 backdrop-blur-md rounded-full h-9 w-9 border border-white/10 ${photos[currentIndex]?.label === "Primary" ? "text-indigo-400 bg-indigo-500/20" : ""}`}
                                 >
-                                    <Star className={`h-5 w-5 ${photos[currentIndex]?.label === "Primary" ? "fill-purple-500 text-purple-500" : ""}`} />
+                                    <Star className={`h-4 w-4 ${photos[currentIndex]?.label === "Primary" ? "fill-indigo-400" : ""}`} />
                                 </Button>
                             )}
+
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={handleDownload}
-                                className="text-white hover:bg-white/20"
-                                title="Download"
+                                className="text-white hover:bg-white/10 bg-white/5 backdrop-blur-md rounded-full h-9 w-9 border border-white/10"
                             >
-                                <Download className="h-5 w-5" />
+                                <Download className="h-4 w-4" />
                             </Button>
+
                             {isAdmin && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => onDelete?.(currentIndex)}
-                                    className="text-white hover:bg-red-600/50"
-                                    title="Delete Image"
+                                    onClick={() => { if(confirm('Delete this media?')) onDelete?.(currentIndex); }}
+                                    className="text-red-400 hover:bg-red-500/20 bg-red-500/5 backdrop-blur-md rounded-full h-9 w-9 border border-red-500/20"
                                 >
-                                    <Trash2 className="h-5 w-5" />
+                                    <Trash2 className="h-4 w-4" />
                                 </Button>
                             )}
+
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onOpenChange(false)}
-                                className="text-white hover:bg-white/20"
+                                className="text-white hover:bg-white/20 bg-black/40 backdrop-blur-md rounded-full h-9 w-9 border border-white/20 ml-2"
                             >
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
 
-                    {/* Main Image */}
-                    <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
-                        {photos[currentIndex] ? (
-                            <img
-                                src={photos[currentIndex].url}
-                                alt={photos[currentIndex].label || `Photo ${currentIndex + 1}`}
-                                className="max-w-full max-h-full object-contain transition-transform duration-200"
+                    {/* Main Stage */}
+                    <div 
+                        className="flex-1 relative flex items-center justify-center select-none touch-none bg-black overflow-hidden"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) onOpenChange(false);
+                        }}
+                    >
+                        {photos.length > 1 && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handlePrevious}
+                                className="absolute left-6 z-[10002] h-12 w-12 rounded-full bg-black/40 text-white hover:bg-indigo-600/60 backdrop-blur-md border border-white/10 hidden md:flex items-center justify-center"
+                            >
+                                <ChevronLeft className="h-6 w-6" />
+                            </Button>
+                        )}
+
+                        <div 
+                            className="w-full h-full flex items-center justify-center p-2 md:p-12"
+                        >
+                            <div 
+                                className="max-w-full max-h-full transition-transform duration-300 ease-out"
                                 style={{ transform: `scale(${zoom})` }}
-                            />
-                        ) : (
-                            <div className="text-zinc-500">Image not available</div>
+                            >
+                                {photos[currentIndex]?.type === "video" || photos[currentIndex]?.url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                                    <video
+                                        src={photos[currentIndex].url}
+                                        controls
+                                        autoPlay
+                                        className="max-w-full max-h-full rounded-xl shadow-2xl border border-white/5"
+                                    />
+                                ) : (
+                                    <img
+                                        src={photos[currentIndex].url}
+                                        alt={photos[currentIndex].label || "Gallery Image"}
+                                        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl pointer-events-none"
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {photos.length > 1 && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleNext}
+                                className="absolute right-6 z-[10002] h-12 w-12 rounded-full bg-black/40 text-white hover:bg-indigo-600/60 backdrop-blur-md border border-white/10 hidden md:flex items-center justify-center"
+                            >
+                                <ChevronRight className="h-6 w-6" />
+                            </Button>
                         )}
                     </div>
 
-                    {/* Navigation Arrows */}
-                    {photos.length > 1 && (
-                        <>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); handlePrevious(e); }}
-                                className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm z-50"
-                            >
-                                <ChevronLeft className="h-8 w-8" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); handleNext(e); }}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm z-50"
-                            >
-                                <ChevronRight className="h-8 w-8" />
-                            </Button>
-                        </>
-                    )}
-
-                    {/* Thumbnail Strip */}
-                    {photos.length > 1 && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                            <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4">
-                                {photos.map((photo, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => { setCurrentIndex(index); setZoom(1); }}
-                                        className={`flex-shrink-0 h-16 w-16 rounded overflow-hidden border-2 transition-all ${index === currentIndex
-                                                ? "border-purple-500 scale-110"
-                                                : "border-zinc-700 opacity-60 hover:opacity-100"
-                                            }`}
-                                    >
-                                        <img
-                                            src={photo.url}
-                                            alt={`Thumbnail ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </button>
-                                ))}
-                            </div>
+                    {/* Thumbnail Strip - Horizontal Scroll */}
+                    <div className="bg-gradient-to-t from-black via-black/80 to-transparent p-4 md:p-6 pb-8 z-[10001]">
+                        <div className="flex gap-2 md:gap-3 justify-center items-center overflow-x-auto custom-scrollbar px-4 max-w-5xl mx-auto py-2">
+                            {photos.map((photo, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => { setCurrentIndex(index); setZoom(1); }}
+                                    className={`flex-shrink-0 h-12 w-16 md:h-20 md:w-28 rounded-lg overflow-hidden border-2 transition-all duration-300 ${index === currentIndex
+                                            ? "border-indigo-500 scale-110 shadow-lg shadow-indigo-500/20"
+                                            : "border-white/5 opacity-40 hover:opacity-100 scale-95"
+                                        }`}
+                                >
+                                    {photo.type === "video" || photo.url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                                        <div className="w-full h-full relative">
+                                            <video src={photo.url} className="w-full h-full object-cover" muted />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20"><Play className="h-3 w-3 text-white fill-white" /></div>
+                                        </div>
+                                    ) : (
+                                        <img src={photo.url} className="w-full h-full object-cover" />
+                                    )}
+                                </button>
+                            ))}
                         </div>
-                    )}
-
-                    {/* Counter */}
-                    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
-                        {currentIndex + 1} / {photos.length}
                     </div>
-                </div>
-            </DialogContent>
+                </DialogContent>
+            </DialogPortal>
         </Dialog>
     );
 };

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import {
   Truck,
   Package,
@@ -29,6 +30,7 @@ import {
   ZoomIn,
   Download,
   ArrowLeft,
+  FileText,
   Warehouse,
 } from "lucide-react";
 import {
@@ -113,6 +115,27 @@ const MobileSetup = () => {
   // Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+
+  // Derived: visual media in display order (exclude PDFs for the photo lightbox)
+  const visualMedia = useMemo(() => {
+    const result: SetupMedia[] = [];
+    const sortedCats = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    // 1. Items in sorted categories
+    sortedCats.forEach(cat => {
+      const catMedia = media.filter(m => m.category === cat.id && m.type !== 'pdf');
+      result.push(...catMedia);
+    });
+    
+    // 2. Uncategorized items (no category, 'none', or missing category)
+    const uncategorizedItems = media.filter(m => 
+      m.type !== 'pdf' && 
+      (!m.category || m.category === 'none' || !categories.find(c => c.id === m.category))
+    );
+    result.push(...uncategorizedItems);
+    
+    return result;
+  }, [media, categories]);
 
   const toggleCatCollapse = (catId: string) => {
     setCollapsedCats(prev => {
@@ -240,13 +263,16 @@ const MobileSetup = () => {
     }
   };
 
-  const openLightbox = (index: number) => {
-    setCurrentMediaIndex(index);
-    setLightboxOpen(true);
+  const openLightbox = (id: string) => {
+    const index = visualMedia.findIndex(m => m.id === id);
+    if (index !== -1) {
+      setCurrentMediaIndex(index);
+      setLightboxOpen(true);
+    }
   };
 
-  const nextMedia = () => setCurrentMediaIndex((prev) => (prev + 1) % media.length);
-  const prevMedia = () => setCurrentMediaIndex((prev) => (prev - 1 + media.length) % media.length);
+  const nextMedia = () => setCurrentMediaIndex((prev) => (prev + 1) % visualMedia.length);
+  const prevMedia = () => setCurrentMediaIndex((prev) => (prev - 1 + visualMedia.length) % visualMedia.length);
 
   // ─── Category CRUD ────────────────────────────────────
   const handleAddCategory = async () => {
@@ -347,10 +373,12 @@ const MobileSetup = () => {
     }
   };
 
-  // ─── Derived: media grouped by category ──────────────
-  const uncategorized = media.filter((m) => !m.category || !categories.find((c) => c.id === m.category));
+  // ─── Derived: media grouped by category (Excluding PDFs for Visual Gallery) ──────────────
+  const uncategorized = media.filter((m) => 
+    m.type !== 'pdf' && (!m.category || !categories.find((c) => c.id === m.category))
+  );
 
-  const getMediaForCat = (catId: string) => media.filter((m) => m.category === catId);
+  const getMediaForCat = (catId: string) => media.filter((m) => m.category === catId && m.type !== 'pdf');
 
   const displayCategories = useMemo(() => {
     // Basic list of categories
@@ -567,7 +595,7 @@ const MobileSetup = () => {
                             categories={categories}
                             onDelete={removeMedia}
                             onReassign={handleReassign}
-                            onOpenGallery={() => openLightbox(globalIndex)}
+                            onOpenGallery={() => openLightbox(item.id)}
                           />
                         </div>
                       );
@@ -825,141 +853,20 @@ const MobileSetup = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── FULL SCREEN LIGHTBOX ────────────────────────── */}
-      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[100vw] h-[100vh] p-0 bg-black/95 border-none flex flex-col justify-center items-center gap-0">
-          <div className="absolute top-4 right-4 z-50 flex gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-white hover:bg-white/10" 
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = media[currentMediaIndex].url;
-                link.download = `mobile-view-${currentMediaIndex + 1}.jpg`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-            >
-              <Download className="h-6 w-6" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => setLightboxOpen(false)}>
-              <X className="h-6 w-6" />
-            </Button>
-          </div>
-
-          {media.length > 0 && (
-            <div className="relative w-full h-full flex items-center justify-center p-4 md:p-12">
-              {/* Prev Button */}
-              <button 
-                onClick={prevMedia}
-                className="absolute left-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white hover:bg-zinc-900 transition-all"
-              >
-                <ChevronLeft className="h-8 w-8" />
-              </button>
-
-              <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
-                <div className="relative max-w-full max-h-[70vh] flex items-center justify-center group">
-                  {media[currentMediaIndex].type === 'video' ? (
-                    <video 
-                      src={media[currentMediaIndex].url} 
-                      className="max-w-full max-h-full rounded-xl shadow-2xl"
-                      controls
-                      autoPlay
-                    />
-                  ) : (
-                    <img 
-                      src={media[currentMediaIndex].url} 
-                      alt="" 
-                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-300"
-                    />
-                  )}
-                  
-                  {/* Floating Controls Overlay */}
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white gap-2">
-                          <FolderOpen className="h-3.5 w-3.5" />
-                          {categories.find(c => c.id === media[currentMediaIndex].category)?.name || 'General Area'}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white text-xs">
-                        {categories.map(cat => (
-                          <DropdownMenuItem key={cat.id} onClick={() => onReassign(media[currentMediaIndex].id, cat.id)} className="font-bold">
-                            {cat.name}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuItem onClick={() => onReassign(media[currentMediaIndex].id, 'none')} className="text-zinc-500">
-                          — Uncategorized
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <span className="w-px h-4 bg-white/10" />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                      onClick={() => {
-                        if (confirm('Delete this photo?')) {
-                          removeMedia(media[currentMediaIndex].id);
-                          setLightboxOpen(false);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="text-center max-w-xl w-full px-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <Input
-                    value={media[currentMediaIndex].caption || ''}
-                    onChange={(e) => {
-                      const newMedia = [...media];
-                      newMedia[currentMediaIndex].caption = e.target.value;
-                      setMedia(newMedia);
-                    }}
-                    placeholder="Add a caption..."
-                    className="bg-transparent border-none text-white text-center font-black italic uppercase tracking-tighter text-xl md:text-3xl mb-2 focus-visible:ring-0 placeholder:text-zinc-700"
-                  />
-                  <div className="flex items-center justify-center gap-4 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-                    <span>{currentMediaIndex + 1} / {media.length}</span>
-                    <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                    <span>Mobile Rig Sync: Active</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Next Button */}
-              <button 
-                onClick={nextMedia}
-                className="absolute right-4 z-50 p-3 rounded-full bg-zinc-900/50 text-white hover:bg-zinc-900 transition-all"
-              >
-                <ChevronRight className="h-8 w-8" />
-              </button>
-            </div>
-          )}
-
-          {/* Thumbnails strip for Quick Navigation */}
-          <div className="absolute bottom-6 left-0 right-0 p-4 overflow-x-auto">
-            <div className="flex justify-center gap-2 min-w-max mx-auto px-10">
-              {media.map((m, idx) => (
-                <button
-                  key={m.id}
-                  onClick={() => setCurrentMediaIndex(idx)}
-                  className={`w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                    idx === currentMediaIndex ? 'border-indigo-500 scale-110 shadow-lg shadow-indigo-500/20' : 'border-transparent opacity-50 hover:opacity-100'
-                  }`}
-                >
-                  <img src={m.url} className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PhotoGalleryLightbox
+        photos={visualMedia.map(m => ({ url: m.url, label: m.caption, type: m.type }))}
+        initialIndex={currentMediaIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+        isAdmin={true}
+        onDelete={(idx) => {
+          const item = visualMedia[idx];
+          if (item && confirm('Delete this photo?')) {
+            removeMedia(item.id);
+            setLightboxOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };
@@ -984,26 +891,43 @@ function MediaCard({
     <div className="relative group rounded-2xl overflow-hidden border-2 border-zinc-800 bg-zinc-900 aspect-[4/3] shadow-lg hover:border-indigo-500/40 hover:shadow-indigo-500/20 transition-all duration-300">
       <div 
         className="absolute inset-0 z-10 cursor-pointer" 
-        onClick={onOpenGallery}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (item.type === 'pdf') {
+            window.open(item.url, '_blank');
+          } else {
+            onOpenGallery();
+          }
+        }}
       >
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-lg p-1.5 backdrop-blur-sm border border-white/10">
           <Maximize2 className="h-4 w-4 text-white" />
         </div>
       </div>
 
-      {item.type === "video" ? (
+      {item.type === "pdf" ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-950 gap-4 p-8">
+          <div className="h-16 w-16 bg-red-600/20 rounded-2xl flex items-center justify-center border border-red-500/30">
+            <FileText className="h-8 w-8 text-red-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-100 truncate max-w-[120px]">{item.caption || "Document"}</p>
+            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-tight">PDF • View Source</span>
+          </div>
+        </div>
+      ) : item.type === "video" ? (
         <video src={item.url} className="w-full h-full object-cover pointer-events-none" />
       ) : (
         <img src={item.url} alt={item.caption || "Setup photo"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
       )}
 
-      {/* Overlay controls */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-2 h-20 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20">
+      {/* Overlay controls - Using pointer-events-none to let clicks pass through to the gallery trigger below, except for the buttons */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black flex flex-col justify-end p-2 h-20 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all z-20 pointer-events-none">
         <span className="text-[8px] font-black uppercase tracking-widest text-white/50 truncate max-w-[80%] mb-1">
           {categories.find((c) => c.id === item.category)?.name || "Uncategorized"}
         </span>
 
-        <div className="flex gap-0.5 shrink-0">
+        <div className="flex gap-0.5 shrink-0 pointer-events-auto">
           {/* Move to category menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
