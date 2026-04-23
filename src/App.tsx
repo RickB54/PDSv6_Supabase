@@ -399,7 +399,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
         <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
       </div>
       {effectiveUser?.role !== 'customer' && (
-        <div className={`dark-theme min-h-screen ${isDemoMode || isPerspectiveMode ? 'pt-10' : 'pt-0'}`}>
+        <div className="dark-theme min-h-screen">
           <GlobalRightSidebar />
         </div>
       )}

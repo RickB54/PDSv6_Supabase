@@ -238,10 +238,28 @@ export function GlobalRightSidebar() {
         );
     }
 
+    // Calculate dynamic top offset based on active banners
+    const isPerspectiveMode = user?.role === 'admin' && (
+        localStorage.getItem('view_as_mode') === 'customer' ||
+        localStorage.getItem('view_as_mode') === 'employee' ||
+        location.pathname.startsWith('/customer-dashboard') || 
+        location.pathname.startsWith('/portal') || 
+        location.pathname.startsWith('/dashboard/employee')
+    );
+
+    // Header (64) + Demo Banner (40) + Perspective Banner (40)
+    let dynamicTop = 64;
+    if (isDemoMode) dynamicTop += 40;
+    if (isPerspectiveMode) dynamicTop += 40;
+
     return (
         <div 
-          className={`sticky top-0 h-screen border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
-          style={{ marginTop: isDemoMode ? '104px' : '64px' }}
+          className={`sticky border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
+          style={{ 
+            top: `${dynamicTop}px`,
+            height: `calc(100vh - ${dynamicTop}px)`,
+            marginTop: `${dynamicTop}px`
+          }}
         >
             {/* Toggle */}
             <Button
