@@ -36,6 +36,7 @@ export interface EvaluationService {
     getPrice: (vehicleType?: VehicleType) => { price: number; priceRange?: string };
     description: string;
     category: string;
+    isLive: boolean; // Toggle visibility
 }
 
 // Helper to get price from your ACTUAL pricing system
@@ -77,7 +78,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "prime-essential-interior",
         getPrice: (vt) => getPriceForService("prime-essential-interior", vt),
         description: "Standard interior refresh and vacuum",
-        category: "Interior"
+        category: "Interior",
+        isLive: true
     },
     {
         id: "essential-full",
@@ -85,7 +87,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "prime-essential-full",
         getPrice: (vt) => getPriceForService("prime-essential-full", vt),
         description: "Complete maintenance interior and exterior",
-        category: "Package"
+        category: "Package",
+        isLive: true
     },
     {
         id: "elite-interior",
@@ -93,7 +96,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "prime-elite-interior",
         getPrice: (vt) => getPriceForService("prime-elite-interior", vt),
         description: "Deep steam cleaning and extraction",
-        category: "Interior"
+        category: "Interior",
+        isLive: false
     },
     {
         id: "elite-full",
@@ -101,7 +105,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "prime-elite-full",
         getPrice: (vt) => getPriceForService("prime-elite-full", vt),
         description: "The ultimate showroom restoration",
-        category: "Package"
+        category: "Package",
+        isLive: false
     },
     {
         id: "pet-hair-removal",
@@ -109,7 +114,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "pet-hair",
         getPrice: (vt) => getPriceForService("pet-hair", vt),
         description: "Specialized pet hair extraction",
-        category: "Interior"
+        category: "Interior",
+        isLive: true
     },
     {
         id: "odor-treatment",
@@ -117,7 +123,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "odor-treatment",
         getPrice: (vt) => getPriceForService("odor-treatment", vt),
         description: "Professional odor neutralization",
-        category: "Interior"
+        category: "Interior",
+        isLive: true
     },
     {
         id: "headlight-restoration",
@@ -125,7 +132,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "headlight-restoration",
         getPrice: (vt) => getPriceForService("headlight-restoration", vt),
         description: "Clear foggy headlights",
-        category: "Exterior"
+        category: "Exterior",
+        isLive: true
     },
     {
         id: "engine-bay",
@@ -133,7 +141,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "engine-detail",
         getPrice: (vt) => getPriceForService("engine-detail", vt),
         description: "Degrease and dress engine compartment",
-        category: "Engine"
+        category: "Engine",
+        isLive: true
     },
     {
         id: "essential-exterior",
@@ -141,7 +150,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "prime-essential-exterior",
         getPrice: (vt) => getPriceForService("prime-essential-exterior", vt),
         description: "Professional foam bath and hand dry",
-        category: "Exterior"
+        category: "Exterior",
+        isLive: true
     },
     {
         id: "elite-exterior",
@@ -149,7 +159,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "prime-elite-exterior",
         getPrice: (vt) => getPriceForService("prime-elite-exterior", vt),
         description: "Clay bar decontamination and advanced protection",
-        category: "Exterior"
+        category: "Exterior",
+        isLive: false
     },
     {
         id: "paint-correction",
@@ -157,7 +168,8 @@ export const EVALUATION_SERVICES: EvaluationService[] = [
         packageId: "paint-correction",
         getPrice: (vt) => getPriceForService("paint-correction", vt),
         description: "Remove swirls and restore clarity",
-        category: "Exterior"
+        category: "Exterior",
+        isLive: true
     }
 ];
 
@@ -188,14 +200,14 @@ export function generateEvaluationRecommendations(
                 break;
             case "Scratches":
             case "Dull or Faded Paint":
-                recommendations.add("elite-exterior");
+                recommendations.add("essential-exterior");
                 break;
             case "Pet Hair":
                 recommendations.add("pet-hair-removal");
                 recommendations.add("essential-interior");
                 break;
             case "Water Spots":
-                recommendations.add("elite-exterior");
+                recommendations.add("essential-exterior");
                 break;
         }
     });
@@ -208,16 +220,16 @@ export function generateEvaluationRecommendations(
                 recommendations.add("essential-full");
                 break;
             case "Deep Interior Cleaning":
-                recommendations.add("elite-interior");
+                recommendations.add("essential-interior");
                 recommendations.add("odor-treatment");
                 break;
             case "Maximum Shine":
             case "Long-Term Protection":
-                recommendations.add("elite-exterior");
+                recommendations.add("essential-exterior");
                 break;
             case "Odor Removal":
                 recommendations.add("odor-treatment");
-                recommendations.add("elite-interior");
+                recommendations.add("essential-interior");
                 break;
             case "Pet Hair Removal":
                 recommendations.add("pet-hair-removal");
@@ -226,8 +238,9 @@ export function generateEvaluationRecommendations(
             case "Restoration-Level Detail":
             case "Best Possible Outcome":
             case "Premium Detail / High-End Finish":
-                recommendations.add("elite-full");
+                recommendations.add("essential-full"); 
                 recommendations.add("engine-bay");
+                recommendations.add("paint-correction");
                 break;
         }
     });
@@ -236,19 +249,58 @@ export function generateEvaluationRecommendations(
     const customText = `${customComplaint || ""} ${customGoal || ""}`.toLowerCase();
     if (customText.includes("scratch") || customText.includes("swirl")) {
         recommendations.add("paint-correction");
-        recommendations.add("elite-exterior");
+        recommendations.add("essential-exterior");
     }
     if (customText.includes("smell") || customText.includes("odor")) {
         recommendations.add("odor-treatment");
     }
     if (customText.includes("stain")) {
-        recommendations.add("elite-interior");
+        recommendations.add("essential-interior");
     }
     if (customText.includes("pet") || customText.includes("hair")) {
         recommendations.add("pet-hair-removal");
     }
 
-    return Array.from(recommendations);
+    // --- CONSOLIDATION & MUTUAL EXCLUSIVITY LOGIC ---
+
+    // 1. Tier Exclusivity: Never mix Elite and Essential services
+    // If any Elite service is present, remove all Essential services
+    const hasElite = recommendations.has("elite-full") || recommendations.has("elite-interior") || recommendations.has("elite-exterior");
+    if (hasElite) {
+        recommendations.delete("essential-full");
+        recommendations.delete("essential-interior");
+        recommendations.delete("essential-exterior");
+    }
+
+    // 2. Package Consolidation: Interior + Exterior = Full Detail
+    if (recommendations.has("elite-interior") && recommendations.has("elite-exterior")) {
+        recommendations.add("elite-full");
+        recommendations.delete("elite-interior");
+        recommendations.delete("elite-exterior");
+    }
+    if (recommendations.has("essential-interior") && recommendations.has("essential-exterior")) {
+        recommendations.add("essential-full");
+        recommendations.delete("essential-interior");
+        recommendations.delete("essential-exterior");
+    }
+
+    // 3. Final Redundancy Check
+    if (recommendations.has("elite-full")) {
+        recommendations.delete("essential-full");
+        recommendations.delete("elite-interior");
+        recommendations.delete("essential-interior");
+        recommendations.delete("elite-exterior");
+        recommendations.delete("essential-exterior");
+    } else if (recommendations.has("essential-full")) {
+        recommendations.delete("elite-interior");
+        recommendations.delete("essential-interior");
+        recommendations.delete("elite-exterior");
+        recommendations.delete("essential-exterior");
+    }
+
+    // FINAL SAFETY: Filter out non-live services and return
+    const liveServiceIds = EVALUATION_SERVICES.filter(s => s.isLive).map(s => s.id);
+    return Array.from(recommendations).filter(id => liveServiceIds.includes(id));
 }
 
 // Generate evaluation script WITH ACCURATE PRICING

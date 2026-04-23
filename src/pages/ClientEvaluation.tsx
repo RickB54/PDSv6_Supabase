@@ -228,11 +228,47 @@ export default function ClientEvaluation() {
     };
 
     const handleUpsellToggle = (upsellId: string) => {
-        setSelectedUpsells(prev =>
-            prev.includes(upsellId)
-                ? prev.filter(u => u !== upsellId)
-                : [...prev, upsellId]
-        );
+        setSelectedUpsells(prev => {
+            const isAdding = !prev.includes(upsellId);
+            let next = isAdding ? [...prev, upsellId] : prev.filter(u => u !== upsellId);
+
+            if (isAdding) {
+                const ELITE_IDS = ["elite-full", "elite-interior", "elite-exterior"];
+                const ESSENTIAL_IDS = ["essential-full", "essential-interior", "essential-exterior"];
+
+                // 1. Global Tier Exclusivity (Elite vs Essential)
+                if (ELITE_IDS.includes(upsellId)) {
+                    next = next.filter(u => !ESSENTIAL_IDS.includes(u));
+                } else if (ESSENTIAL_IDS.includes(upsellId)) {
+                    next = next.filter(u => !ELITE_IDS.includes(u));
+                }
+
+                // 2. Package Consolidation (Automatic bundle when both parts are selected)
+                const hasEliteInt = next.includes("elite-interior");
+                const hasEliteExt = next.includes("elite-exterior");
+                const hasEssInt = next.includes("essential-interior");
+                const hasEssExt = next.includes("essential-exterior");
+
+                if (upsellId === "elite-full" || (hasEliteInt && hasEliteExt)) {
+                    next = ["elite-full", ...next.filter(u => !["elite-interior", "elite-exterior", "essential-full"].includes(u))];
+                } else if (upsellId === "essential-full" || (hasEssInt && hasEssExt)) {
+                    next = ["essential-full", ...next.filter(u => !["essential-interior", "essential-exterior", "elite-full"].includes(u))];
+                }
+
+                // 3. Mutual Exclusivity between components and their packages
+                if (["elite-interior", "elite-exterior"].includes(upsellId)) {
+                    if (next.includes("elite-full") && !(hasEliteInt && hasEliteExt)) {
+                         next = next.filter(u => u !== "elite-full");
+                    }
+                }
+                if (["essential-interior", "essential-exterior"].includes(upsellId)) {
+                    if (next.includes("essential-full") && !(hasEssInt && hasEssExt)) {
+                         next = next.filter(u => u !== "essential-full");
+                    }
+                }
+            }
+            return Array.from(new Set(next));
+        });
     };
 
     const handleSave = async () => {
@@ -435,7 +471,11 @@ export default function ClientEvaluation() {
         setCustomComplaint(item.custom_complaint || "");
         setGoals(item.goals);
         setCustomGoal(item.custom_goal || "");
-        setSelectedUpsells(item.selected_upsells);
+        // Filter out any non-live services when loading history
+        const liveOnly = item.selected_upsells.filter(id => 
+            EVALUATION_SERVICES.find(s => s.id === id)?.isLive
+        );
+        setSelectedUpsells(liveOnly);
         setScript(item.script);
     };
 
@@ -614,7 +654,7 @@ export default function ClientEvaluation() {
                             <Card className="p-6 bg-zinc-900 border-zinc-800">
                                 <h3 className="text-lg font-bold text-white mb-4">Recommended Services</h3>
                                 <div className="space-y-3">
-                                    {EVALUATION_SERVICES.filter(s => recommendedUpsells.includes(s.id)).map(service => {
+                                    {EVALUATION_SERVICES.filter(s => s.isLive && recommendedUpsells.includes(s.id)).map(service => {
                                         const priceInfo = service.getPrice(vehicleType);
                                         const displayPrice = priceInfo.priceRange || `$${priceInfo.price}`;
 
@@ -646,14 +686,14 @@ export default function ClientEvaluation() {
                                                 <>
                                                     <span>Total Investment:</span>
                                                     <span className="text-xl text-white">
-                                                        ${EVALUATION_SERVICES.filter(s => selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.getPrice(vehicleType).price, 0)}
+                                                        ${EVALUATION_SERVICES.filter(s => s.isLive && selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.getPrice(vehicleType).price, 0)}
                                                     </span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <span>Estimated Total:</span>
                                                     <span className="text-lg text-white">
-                                                        ${EVALUATION_SERVICES.filter(s => selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.getPrice(undefined).price, 0)}+
+                                                        ${EVALUATION_SERVICES.filter(s => s.isLive && selectedUpsells.includes(s.id)).reduce((sum, s) => sum + s.getPrice(undefined).price, 0)}+
                                                     </span>
                                                     <span className="text-xs font-normal text-cyan-300 opacity-70 ml-2">(Select vehicle size for exact total)</span>
                                                 </>

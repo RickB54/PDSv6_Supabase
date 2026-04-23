@@ -87,6 +87,7 @@ const BRANDED_PACKAGES = [
         name: "Prime Essential Interior",
         actualId: "prime-essential-interior",
         description: "Standard Interior Refresh",
+        isLive: true,
         includes: servicePackages.find(p => p.id === "prime-essential-interior")?.steps.map(s => s.name) || [],
         script: "Our Prime Essential Interior is perfect for a professional refresh. We perform a thorough vacuuming and a detailed wipe-down of all surfaces to bring back that clean, tidy feel."
     },
@@ -95,6 +96,7 @@ const BRANDED_PACKAGES = [
         name: "Prime Essential Exterior",
         actualId: "prime-essential-exterior",
         description: "Hand Wash & Protection",
+        isLive: true,
         includes: servicePackages.find(p => p.id === "prime-essential-exterior")?.steps.map(s => s.name) || [],
         script: "The Prime Essential Exterior focuses on a safe, high-quality wash. We use a foam bath and two-bucket hand wash, finishing with a premium spray wax for shine and protection."
     },
@@ -103,6 +105,7 @@ const BRANDED_PACKAGES = [
         name: "Prime Essential Full",
         actualId: "prime-essential-full",
         description: "Complete Maintenance Detail",
+        isLive: true,
         includes: servicePackages.find(p => p.id === "prime-essential-full")?.steps.map(s => s.name) || [],
         script: "Our Prime Essential Full Detail is the best of both worlds—it combines our Essential Interior and Exterior services for a complete, professional refresh of your entire vehicle."
     },
@@ -111,6 +114,7 @@ const BRANDED_PACKAGES = [
         name: "Prime Elite Interior",
         actualId: "prime-elite-interior",
         description: "Deep Interior Restoration",
+        isLive: false,
         includes: servicePackages.find(p => p.id === "prime-elite-interior")?.steps.map(s => s.name) || [],
         script: "The Prime Elite Interior is our deep-clean restoration. We use steam cleaning and extraction on carpets and seats to remove deep stains and odors, finishing with leather conditioning."
     },
@@ -119,6 +123,7 @@ const BRANDED_PACKAGES = [
         name: "Prime Elite Exterior",
         actualId: "prime-elite-exterior",
         description: "Advanced Paint Protection",
+        isLive: false,
         includes: servicePackages.find(p => p.id === "prime-elite-exterior")?.steps.map(s => s.name) || [],
         script: "Our Prime Elite Exterior is designed for ultimate protection. We include clay bar decontamination to smooth the paint and apply a premium sealant for long-lasting gloss and UV protection."
     },
@@ -127,6 +132,7 @@ const BRANDED_PACKAGES = [
         name: "Prime Elite Full",
         actualId: "prime-elite-full",
         description: "The Ultimate Restoration",
+        isLive: false,
         includes: servicePackages.find(p => p.id === "prime-elite-full")?.steps.map(s => s.name) || [],
         script: "The Prime Elite Full Detail is our flagship showroom package. It combines our deepest interior restoration with our most advanced exterior protection for the ultimate results."
     },
@@ -169,9 +175,9 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
             paintCondition: "good",
             mainGoal: "full",
             scenarios: [
-                { id: `s1-${vid}`, label: "Scenario A", packageId: "prime-essential-full", addOnIds: [] },
-                { id: `s2-${vid}`, label: "Scenario B", packageId: "prime-elite-full", addOnIds: [] },
-                { id: `s3-${vid}`, label: "Scenario C Undecided", packageId: "prime-essential-full", addOnIds: [] }
+                { id: `s1-${vid}`, label: "Scenario A: Full Detail", packageId: "prime-essential-full", addOnIds: [] },
+                { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: ["pet-hair"] },
+                { id: `s3-${vid}`, label: "Scenario C: Exterior Only", packageId: "prime-essential-exterior", addOnIds: [] }
             ],
             selectedScenarioId: null
         };
@@ -633,7 +639,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                                         <div>
                                                             <Label className="text-[10px] font-black uppercase text-muted-foreground mb-3 block tracking-widest">Select Package</Label>
                                                             <div className="grid grid-cols-1 gap-1.5">
-                                                                {BRANDED_PACKAGES.map(pkg => (
+                                                                {BRANDED_PACKAGES.filter(p => p.isLive).map(pkg => (
                                                                     <div
                                                                         key={pkg.id}
                                                                         onClick={() => updateScenario(activeVehicleId, scenario.id, { packageId: pkg.id })}
