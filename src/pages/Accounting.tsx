@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,20 +54,20 @@ import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
 import { useDemoMode } from "@/contexts/DemoContext";
 
 interface Invoice {
-  id?: string;
+  id: string;
   total: number;
   createdAt: string;
-  paymentStatus?: "unpaid" | "partially-paid" | "paid";
-  paidAmount?: number;
   invoiceNumber?: string;
+  paidAmount?: number;
+  paymentStatus?: "unpaid" | "partially-paid" | "paid";
 }
 
 interface Expense {
-  id?: string;
+  id: string;
   amount: number;
   description: string;
-  createdAt: string;
   category?: string;
+  createdAt: string;
 }
 
 const DEFAULT_CATEGORIES = {
