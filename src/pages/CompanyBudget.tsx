@@ -1040,11 +1040,11 @@ const CompanyBudget = () => {
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead>Source</TableHead>
+                                                        <TableHead className="w-[100px]">Date</TableHead>
+                                                        <TableHead className="hidden sm:table-cell">Source</TableHead>
                                                         <TableHead>Description</TableHead>
                                                         <TableHead>Amount</TableHead>
-                                                        <TableHead className="w-[50px]"></TableHead>
+                                                        <TableHead className="w-[40px]"></TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
@@ -1134,9 +1134,9 @@ const CompanyBudget = () => {
                                                                             const inv = item.data;
                                                                             return (
                                                                                 <TableRow key={`inv-${inv.id}`}>
-                                                                                    <TableCell>{(inv.createdAt || inv.date || '').slice(0, 10)}</TableCell>
-                                                                                    <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
-                                                                                    <TableCell>Paid Invoice</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">{(inv.createdAt || inv.date || '').slice(0, 10)}</TableCell>
+                                                                                    <TableCell className="hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">Paid Invoice</TableCell>
                                                                                     <TableCell>${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
                                                                                     <TableCell>
                                                                                         {/* Invoices are read-only here */}
@@ -1147,9 +1147,9 @@ const CompanyBudget = () => {
                                                                             const inc = item.data;
                                                                             return (
                                                                                 <TableRow key={`inc-${inc.id}`}>
-                                                                                    <TableCell>{(inc.date || inc.createdAt || '').slice(0, 10)}</TableCell>
-                                                                                    <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{inc.category || 'Manual'}</span></TableCell>
-                                                                                    <TableCell>{inc.description || inc.customerName || '-'}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">{(inc.date || inc.createdAt || '').slice(0, 10)}</TableCell>
+                                                                                    <TableCell className="hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{inc.category || 'Manual'}</span></TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">{inc.description || inc.customerName || '-'}</TableCell>
                                                                                     <TableCell>${(inc.amount || 0).toFixed(2)}</TableCell>
                                                                                     <TableCell>
                                                                                         <Button
@@ -1193,11 +1193,11 @@ const CompanyBudget = () => {
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead>Category</TableHead>
+                                                        <TableHead className="w-[100px]">Date</TableHead>
+                                                        <TableHead className="hidden sm:table-cell">Category</TableHead>
                                                         <TableHead>Description</TableHead>
                                                         <TableHead>Amount</TableHead>
-                                                        <TableHead className="w-[50px]"></TableHead>
+                                                        <TableHead className="w-[40px]"></TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
@@ -1874,15 +1874,15 @@ const CompanyBudget = () => {
                                 </div>
 
                                 <div className="rounded-md border overflow-x-auto w-full">
-                                    <Table className="min-w-[600px]">
+                                    <Table className="w-full">
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Category</TableHead>
-                                                <TableHead>Type</TableHead>
-                                                <TableHead>Budget Target</TableHead>
+                                                <TableHead className="hidden sm:table-cell">Type</TableHead>
+                                                <TableHead>Target</TableHead>
                                                 <TableHead>Actual</TableHead>
-                                                <TableHead>Variance</TableHead>
-                                                <TableHead>Status</TableHead>
+                                                <TableHead className="hidden md:table-cell">Variance</TableHead>
+                                                <TableHead className="hidden lg:table-cell">Status</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -1923,8 +1923,8 @@ const CompanyBudget = () => {
 
                                                 return (
                                                     <TableRow key={`inc-${cat}`}>
-                                                        <TableCell className="font-medium">{cat}</TableCell>
-                                                        <TableCell className="text-green-600">Income</TableCell>
+                                                        <TableCell className="font-medium text-xs sm:text-sm">{cat}</TableCell>
+                                                        <TableCell className="text-green-600 hidden sm:table-cell">Income</TableCell>
                                                         <TableCell>
                                                             <div className="relative max-w-[120px]">
                                                                 <span className="absolute left-2 top-2.5 text-muted-foreground">$</span>
@@ -1945,11 +1945,11 @@ const CompanyBudget = () => {
                                                                 />
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>${actual.toFixed(2)}</TableCell>
-                                                        <TableCell className={`font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        <TableCell className="text-xs sm:text-sm">${actual.toFixed(2)}</TableCell>
+                                                        <TableCell className={`font-bold text-xs sm:text-sm hidden md:table-cell ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                             {variance >= 0 ? '+' : ''}{variance.toFixed(2)}
                                                         </TableCell>
-                                                        <TableCell>
+                                                        <TableCell className="hidden lg:table-cell">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                                                                     <div className={`h-full ${variance >= 0 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min(percent, 100)}%` }} />
@@ -1977,8 +1977,8 @@ const CompanyBudget = () => {
 
                                                 return (
                                                     <TableRow key={`exp-${cat}`}>
-                                                        <TableCell className="font-medium">{cat}</TableCell>
-                                                        <TableCell className="text-red-600">Expense</TableCell>
+                                                        <TableCell className="font-medium text-xs sm:text-sm">{cat}</TableCell>
+                                                        <TableCell className="text-red-600 hidden sm:table-cell">Expense</TableCell>
                                                         <TableCell>
                                                             <div className="relative max-w-[120px]">
                                                                 <span className="absolute left-2 top-2.5 text-muted-foreground">$</span>
@@ -1999,11 +1999,11 @@ const CompanyBudget = () => {
                                                                 />
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>${actual.toFixed(2)}</TableCell>
-                                                        <TableCell className={`font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        <TableCell className="text-xs sm:text-sm">${actual.toFixed(2)}</TableCell>
+                                                        <TableCell className={`font-bold text-xs sm:text-sm hidden md:table-cell ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                             {variance >= 0 ? '+' : ''}{variance.toFixed(2)}
                                                         </TableCell>
-                                                        <TableCell>
+                                                        <TableCell className="hidden lg:table-cell">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                                                                     <div className={`h-full ${isOverBudget ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${Math.min(percent, 100)}%` }} />
