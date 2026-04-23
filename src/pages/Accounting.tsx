@@ -49,18 +49,17 @@ import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import localforage from "localforage";
-import { getCategoryColors } from "@/lib/categoryColors";
+import { getAllCategoryColors } from "@/lib/categoryColors";
 import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { MOCK_ACCOUNTING, MOCK_INVENTORY } from "@/lib/demoMockData";
 
 interface Invoice {
   id?: string;
   total: number;
   createdAt: string;
-  paymentStatus?: "unpaid" | "partially-paid" | "paid"; // Added for ledger logic
-  paidAmount?: number; // Added for ledger logic
-  invoiceNumber?: string; // Added for ledger display
+  paymentStatus?: "unpaid" | "partially-paid" | "paid";
+  paidAmount?: number;
+  invoiceNumber?: string;
 }
 
 interface Expense {
@@ -72,21 +71,8 @@ interface Expense {
 }
 
 const DEFAULT_CATEGORIES = {
-  income: [
-    "Service Income",
-    "Product Sales",
-    "Consulting",
-    "Other Income"
-  ],
-  expense: [
-    "Payroll",
-    "Supplies",
-    "Marketing",
-    "Utilities",
-    "Rent",
-    "Insurance",
-    "Other Expenses"
-  ]
+  expense: ["Supplies", "Equipment", "Marketing", "Rent", "Insurance", "Utilities", "Payroll", "Maintenance", "Travel", "Other"],
+  income: ["Service", "Product", "Investment", "Other"]
 };
 
 const Accounting = () => {
@@ -103,7 +89,6 @@ const Accounting = () => {
   const [showDeleteExpense, setShowDeleteExpense] = useState(false);
   const [showDeleteNotes, setShowDeleteNotes] = useState(false);
 
-  // Generic Edit/Delete States
   const [deleteItemState, setDeleteItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string }>({ open: false, type: 'income', id: '' });
   const [editItemState, setEditItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string, amount: string }>({ open: false, type: 'income', id: '', amount: '' });
 
@@ -115,21 +100,18 @@ const Accounting = () => {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [categoryColors, setCategoryColors] = useState<Record<string, string>>({});
 
-  // Add Income form state
   const [incomeAmount, setIncomeAmount] = useState<string>("");
   const [incomeCategory, setIncomeCategory] = useState<string>("");
   const [incomeDescription, setIncomeDescription] = useState<string>("");
   const [incomeDate, setIncomeDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [incomeCustomer, setIncomeCustomer] = useState<string>("");
   const [incomeMethod, setIncomeMethod] = useState<string>("cash");
-  const [customers, setCustomers] = useState<any[]>([]); // New state
+  const [customers, setCustomers] = useState<any[]>([]);
 
-  // New category creation
   const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryType, setNewCategoryType] = useState<"income" | "expense">("income");
 
-  // Inventory totals
   const [inventoryTotals, setInventoryTotals] = useState<InventoryTotals>({
     chemicals: 0,
     materials: 0,
@@ -141,120 +123,86 @@ const Accounting = () => {
   const { isDemoMode } = useDemoMode();
   const [expenseBreakdown, setExpenseBreakdown] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    if (isDemoMode) {
-      loadMockData();
-    } else {
-      loadData();
-      loadCustomCategories();
-      getSupabaseCustomers().then(setCustomers); // Load customers
-      getInventoryTotals().then(setInventoryTotals); // Load inventory
-    }
-  }, [dateFilter, isDemoMode]);
+  const loadData = async () => {
+    try {
+      const invoices = await getInvoices<Invoice>();
+      const expensesData = await getExpenses<Expense>();
+      const incomes = await getReceivables();
+      const invTotals = await getInventoryTotals();
+      
+      setExpenseList(expensesData);
+      setInvoiceList(invoices);
+      setIncomeList(incomes as Receivable[]);
+      setInventoryTotals(invTotals);
 
-  const loadMockData = () => {
-    setDailyRevenue(MOCK_ACCOUNTING.income / 30);
-    setWeeklyRevenue(MOCK_ACCOUNTING.income / 4);
-    setMonthlyRevenue(MOCK_ACCOUNTING.income);
-    setTotalSpent(MOCK_ACCOUNTING.expenses);
-    setInventoryTotals({
-      chemicals: 2500.00,
-      materials: 1200.00,
-      tools: 5000.00,
-      total: 8700.00,
-      itemCount: { chemicals: 25, materials: 50, tools: 15, total: 90 }
-    });
-    setExpenseList(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'expense').map(t => ({
-      id: t.id,
-      amount: t.amount,
-      description: t.description,
-      category: t.category,
-      createdAt: t.date
-    })));
-    setIncomeList(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'income').map(t => ({
-      id: t.id,
-      amount: t.amount,
-      description: t.description,
-      category: t.category,
-      date: t.date,
-      type: 'income'
-    } as any)));
-    // For demo mode, add a mock breakdown if needed, or leave empty
-    setExpenseBreakdown({ "Demo Operating": MOCK_ACCOUNTING.expenses });
+      const now = new Date();
+      const today = now.toDateString();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      let daily = 0, weekly = 0, monthly = 0, totalRev = 0;
+
+      const paidInvoices = invoices.filter(inv => inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0);
+      
+      paidInvoices.forEach(inv => {
+        const amt = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
+        const d = new Date(inv.createdAt);
+        if (d.toDateString() === today) daily += amt;
+        if (d >= weekAgo) weekly += amt;
+        if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
+        totalRev += amt;
+      });
+
+      incomes.forEach(inc => {
+        const amt = inc.amount || 0;
+        const d = new Date(inc.date || inc.createdAt);
+        if (d.toDateString() === today) daily += amt;
+        if (d >= weekAgo) weekly += amt;
+        if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
+        totalRev += amt;
+      });
+
+      setDailyRevenue(daily);
+      setWeeklyRevenue(weekly);
+      setMonthlyRevenue(monthly);
+      setTotalRevenue(totalRev);
+
+      const inventoryCategories = ["Supplies", "Equipment", "Chemicals", "Inventory"];
+      const manualExpenses = expensesData.filter(e => {
+        const desc = (e.description || '').toUpperCase();
+        const cat = (e.category || '').toLowerCase();
+        
+        const isTaxPrefix = desc.startsWith('[TAX]');
+        const isInventoryCategory = inventoryCategories.some(ic => cat === ic.toLowerCase());
+        
+        return !isTaxPrefix && !isInventoryCategory;
+      });
+
+      const totalManualSpent = manualExpenses.reduce((sum, e) => sum + e.amount, 0);
+      setTotalSpent(totalManualSpent);
+
+      const breakdown: Record<string, number> = {};
+      manualExpenses.forEach(e => {
+        const cat = e.category || 'Other';
+        breakdown[cat] = (breakdown[cat] || 0) + e.amount;
+      });
+      setExpenseBreakdown(breakdown);
+
+    } catch (err) {
+      console.error('Accounting loadData error:', err);
+    }
   };
 
-
+  useEffect(() => {
+    loadData();
+    loadCustomCategories();
+    getSupabaseCustomers().then(setCustomers);
+  }, [dateFilter, dateRange]);
 
   const loadCustomCategories = async () => {
     const cats = await localforage.getItem<string[]>("customCategories") || [];
     setCustomCategories(cats);
-  };
-
-  const loadData = async () => {
-    const invoices = await getInvoices();
-    const expensesData = await getExpenses();
-    const incomes = await getReceivables();
-
-    setExpenseList(expensesData as Expense[]);
-    setInvoiceList(invoices as Invoice[]);
-    setIncomeList(incomes as Receivable[]);
-
-    // Load category colors
-    const allCategories = new Set<string>();
-    (expensesData as Expense[]).forEach(exp => {
-      if (exp.category) allCategories.add(exp.category);
-    });
-    (incomes as Receivable[]).forEach(inc => {
-      if (inc.category) allCategories.add(inc.category);
-    });
-    if (allCategories.size > 0) {
-      const colors = await getCategoryColors(Array.from(allCategories));
-      setCategoryColors(colors);
-    }
-
-    const now = new Date();
-    const today = now.toDateString();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    let daily = 0, weekly = 0, monthly = 0, totalRev = 0, totalExp = 0;
-
-    (invoices as Invoice[]).forEach(inv => {
-      const invDate = new Date(inv.createdAt);
-      if (invDate.toDateString() === today) daily += inv.total;
-      if (invDate >= weekAgo) weekly += inv.total;
-      if (invDate.getMonth() === now.getMonth() && invDate.getFullYear() === now.getFullYear()) {
-        monthly += inv.total;
-      }
-      totalRev += inv.total;
-    });
-
-    // Include manual income (receivables)
-    (incomes as Receivable[]).forEach(rcv => {
-      const d = new Date(rcv.date || rcv.createdAt || new Date().toISOString());
-      const amt = Number(rcv.amount || 0);
-      if (d.toDateString() === today) daily += amt;
-      if (d >= weekAgo) weekly += amt;
-      if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-        monthly += amt;
-      }
-      totalRev += amt;
-    });
-
-    const breakdown: Record<string, number> = {};
-    const inventoryCategories = ['Supplies', 'Materials', 'Chemicals', 'Tools', 'Equipment'];
-    
-    (expensesData as Expense[]).forEach(exp => {
-      const cat = exp.category || 'Uncategorized';
-      totalExp += exp.amount;
-      breakdown[cat] = (breakdown[cat] || 0) + exp.amount;
-    });
-
-    setDailyRevenue(daily);
-    setWeeklyRevenue(weekly);
-    setMonthlyRevenue(monthly);
-    setTotalRevenue(totalRev);
-    setTotalSpent(totalExp);
-    setExpenseBreakdown(breakdown);
+    const colors = await getAllCategoryColors();
+    setCategoryColors(colors);
   };
 
   const handleConfirmDeleteItem = async () => {
@@ -303,28 +251,7 @@ const Accounting = () => {
   };
 
   const calculateProfit = () => {
-    // Compute filtered totals using quick filter + custom date range
-    const now = new Date();
-    const startQuick = dateFilter === 'daily' ? new Date(now.setHours(0, 0, 0, 0))
-      : dateFilter === 'weekly' ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        : dateFilter === 'monthly' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-          : null;
-
-    const within = (dStr: string) => {
-      const d = new Date(dStr);
-      if (startQuick && d < startQuick) return false;
-      if (dateRange.from && d < new Date(dateRange.from.setHours(0, 0, 0, 0))) return false;
-      if (dateRange.to && d > new Date(dateRange.to.setHours(23, 59, 59, 999))) return false;
-      return true;
-    };
-
-    const revenueInvoices = invoiceList.filter(inv => within(inv.createdAt)).reduce((sum, i) => sum + (i.total || 0), 0);
-    const revenueIncome = incomeList.filter(rcv => within(rcv.date || rcv.createdAt)).reduce((sum, r) => sum + (r.amount || 0), 0);
-    const revenue = revenueInvoices + revenueIncome;
-    const exp = expenseList.filter(ex => within(ex.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
-    
-    // Simple Cache Flow: Revenue - Expenses
-    return revenue - exp;
+    return totalRevenue - (totalSpent + inventoryTotals.total);
   };
 
   const handleAddExpense = async () => {
@@ -351,7 +278,7 @@ const Accounting = () => {
   const handleAddIncome = async () => {
     const amt = parseFloat(incomeAmount) || 0;
     if (amt === 0) return;
-    const saved = await upsertReceivable({
+    await upsertReceivable({
       amount: amt,
       category: incomeCategory || "General",
       description: incomeDescription || "Income",
@@ -374,8 +301,6 @@ const Accounting = () => {
     }
 
     const trimmedName = newCategoryName.trim();
-
-    // Check if category already exists
     const allExistingCategories = [
       ...DEFAULT_CATEGORIES.income,
       ...DEFAULT_CATEGORIES.expense,
@@ -387,24 +312,20 @@ const Accounting = () => {
       return;
     }
 
-    // Add to custom categories
     const updated = [...customCategories, trimmedName];
     await localforage.setItem("customCategories", updated);
     setCustomCategories(updated);
 
-    // Assign a color to the new category
     const { getCategoryColor } = await import("@/lib/categoryColors");
     const color = await getCategoryColor(trimmedName);
     setCategoryColors(prev => ({ ...prev, [trimmedName]: color }));
 
-    // Set it as the selected category for the current form
     if (newCategoryType === "income") {
       setIncomeCategory(trimmedName);
     } else {
       setExpenseCategory(trimmedName);
     }
 
-    // Reset and close dialog
     setNewCategoryName("");
     setShowNewCategoryDialog(false);
     toast({ title: "Category Created", description: `"${trimmedName}" has been added` });
@@ -414,59 +335,23 @@ const Accounting = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // 1. Title & Header
     doc.setFontSize(24);
-    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.setTextColor(30, 41, 59);
     doc.text("Accounting & Ledger Report", 14, 20);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()} | Filter: ${dateFilter.toUpperCase()}`, 14, 26);
-    doc.text(`Prime Auto Detail Ledger Management`, 14, 31);
 
-    const now = new Date();
-    const startQuick = dateFilter === 'daily' ? new Date(now.setHours(0, 0, 0, 0))
-      : dateFilter === 'weekly' ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        : dateFilter === 'monthly' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-          : null;
-
-    const within = (dStr: string) => {
-      const d = new Date(dStr);
-      if (startQuick && d < startQuick) return false;
-      if (dateRange.from && d < new Date(dateRange.from.setHours(0, 0, 0, 0))) return false;
-      if (dateRange.to && d > new Date(dateRange.to.setHours(23, 59, 59, 999))) return false;
-      return true;
-    };
-
-    // 2. Financial Position Summary (Top Box)
     const netProfit = calculateProfit();
     const netColor = netProfit >= 0 ? [22, 101, 52] : [153, 27, 27];
     
-    doc.setFillColor(248, 250, 252); // slate-50
-    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
     doc.roundedRect(14, 38, pageWidth - 28, 60, 2, 2, 'FD');
 
-    // Visual Bar Chart (Simplified)
-    const totalRev = dailyRevenue + weeklyRevenue + monthlyRevenue;
-    const maxVal = Math.max(totalRev, totalSpent, 100);
-    const barWidth = 60;
-    const barBaseX = pageWidth - 80;
-    
-    // Revenue Bar
-    doc.setFillColor(34, 197, 94); // emerald-500
-    const revH = (totalRev / maxVal) * 30;
-    doc.rect(barBaseX, 85 - revH, 15, revH, 'F');
-    doc.setFontSize(8);
-    doc.text("Rev", barBaseX, 90);
-    
-    // Expenses Bar
-    doc.setFillColor(239, 68, 68); // red-500
-    const expH = (totalSpent / maxVal) * 30;
-    doc.rect(barBaseX + 20, 85 - expH, 15, expH, 'F');
-    doc.text("Exp", barBaseX + 20, 90);
-
     doc.setFontSize(11);
-    doc.setTextColor(71, 85, 105); // slate-600
+    doc.setTextColor(71, 85, 105);
     doc.text("CURRENT FINANCIAL POSITION", 20, 48);
 
     doc.setFontSize(20);
@@ -474,161 +359,12 @@ const Accounting = () => {
     doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 20, 62);
     
     doc.setFontSize(10);
-    doc.text(netProfit >= 0 ? "SURPLUS (Revenue + Assets > Costs)" : "DEFICIT (Operating Loss)", 20, 68);
+    doc.text(netProfit >= 0 ? "SURPLUS" : "DEFICIT", 20, 68);
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Operational Revenue: $${totalRev.toFixed(2)}`, 20, 78);
+    doc.text(`Operational Revenue: $${totalRevenue.toFixed(2)}`, 20, 78);
     doc.text(`Asset Investment: $${inventoryTotals.total.toFixed(2)}`, 20, 84);
-
-    let yPos = 110;
-
-    // 3. Transaction Ledger - Income
-    doc.setFontSize(16);
-    doc.setTextColor(22, 101, 52); // Green
-    doc.text("Transaction Ledger: Income", 14, yPos);
-    yPos += 5;
-
-    const incomeRows = incomeList.filter(i => within(i.date || i.createdAt || '')).map(i => [
-      (i.date || i.createdAt || '').slice(0, 10),
-      i.category || 'General',
-      i.description || i.customerName || '-',
-      `$${i.amount.toFixed(2)}`
-    ]);
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Date', 'Category', 'Description', 'Amount']],
-      body: incomeRows,
-      theme: 'striped',
-      headStyles: { fillColor: [22, 101, 52] },
-      columnStyles: { 
-        2: { cellWidth: 'auto' }, // Wrap notes
-        3: { halign: 'right', fontStyle: 'bold' } 
-      }
-    });
-
-    // 4. Transaction Ledger - Expenses (NEW PAGE)
-    doc.addPage();
-    yPos = 20;
-    doc.setFontSize(16);
-    doc.setTextColor(153, 27, 27); // Red
-    doc.text("Transaction Ledger: Expenses", 14, yPos);
-    yPos += 5;
-
-    const expenseRows = expenseList.filter(e => within(e.createdAt)).map(e => [
-      (e.createdAt || '').slice(0, 10),
-      e.category || 'General',
-      e.description || '-',
-      `$${e.amount.toFixed(2)}`
-    ]);
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Date', 'Category', 'Description', 'Amount']],
-      body: expenseRows,
-      theme: 'striped',
-      headStyles: { fillColor: [153, 27, 27] },
-      columnStyles: { 
-        2: { cellWidth: 'auto' }, // Wrap notes
-        3: { halign: 'right', fontStyle: 'bold' } 
-      }
-    });
-
-    // 5. Inventory Analysis (NEW PAGE)
-    doc.addPage();
-    yPos = 20;
-    doc.setFontSize(16);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Business Asset Valuation", 14, yPos);
-    yPos += 8;
-
-    const inventoryRows = [
-      ['Chemical Supplies', `$${inventoryTotals.chemicals.toFixed(2)}`, `${inventoryTotals.itemCount.chemicals} items`],
-      ['Materials & Stock', `$${inventoryTotals.materials.toFixed(2)}`, `${inventoryTotals.itemCount.materials} items`],
-      ['Tools & Equipment', `$${inventoryTotals.tools.toFixed(2)}`, `${inventoryTotals.itemCount.tools} items`],
-      ['COMBINED ASSET VALUE', `$${inventoryTotals.total.toFixed(2)}`, `${inventoryTotals.itemCount.total} items`]
-    ];
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Asset Group', 'Valuation', 'Count']],
-      body: inventoryRows,
-      theme: 'grid',
-      headStyles: { fillColor: [71, 85, 105] },
-      columnStyles: {
-        1: { halign: 'right', fontStyle: 'bold' },
-        2: { halign: 'right' }
-      },
-      didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === 3) {
-          data.cell.styles.fillColor = [241, 245, 249];
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
-    });
-
-    // 6. Break-Even Analysis (Visual Gauge)
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY + 15;
-    doc.setFontSize(14);
-    doc.setTextColor(30, 64, 175);
-    doc.text("Recovery Progress Index", 14, yPos);
-    yPos += 5;
-
-    const totalInvoiced = (dailyRevenue + weeklyRevenue + monthlyRevenue);
-    const recoveryPct = Math.min((totalInvoiced / (inventoryTotals.total || 1)) * 100, 100);
-    
-    // Draw Progress Bar
-    doc.setDrawColor(200);
-    doc.rect(14, yPos, pageWidth - 28, 10);
-    doc.setFillColor(59, 130, 246); // Blue-500
-    doc.rect(14, yPos, (pageWidth - 28) * (recoveryPct / 100), 10, 'F');
-    
-    doc.setFontSize(10);
-    doc.setTextColor(255);
-    doc.text(`${recoveryPct.toFixed(1)}% RECOVERED`, pageWidth / 2, yPos + 7, { align: 'center' });
-    yPos += 18;
-
-    const remaining = inventoryTotals.total - totalInvoiced;
-    const isBreakEven = remaining <= 0;
-
-    const breakEvenRows = [
-      ['Total Inventory Debt', `$${inventoryTotals.total.toFixed(2)}`],
-      ['Total Service Revenue', `$${totalInvoiced.toFixed(2)}`],
-      [isBreakEven ? 'Profit Beyond Debt' : 'Amount Remaining', `$${Math.abs(remaining).toFixed(2)}`]
-    ];
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Metric', 'Value']],
-      body: breakEvenRows,
-      theme: 'plain',
-      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
-      didParseCell: (data) => {
-        if (data.section === 'body' && data.row.index === 2) {
-          data.cell.styles.textColor = isBreakEven ? [22, 163, 74] : [234, 88, 12];
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
-    });
-
-    // 7. Notes (Final Section)
-    if (notes) {
-      // @ts-ignore
-      yPos = doc.lastAutoTable.finalY + 15;
-      if (yPos > 240) { doc.addPage(); yPos = 20; }
-
-      doc.setFontSize(12);
-      doc.setTextColor(71, 85, 105);
-      doc.text("Strategic Notes", 14, yPos);
-      yPos += 5;
-
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      const splitNotes = doc.splitTextToSize(notes, pageWidth - 28);
-      doc.text(splitNotes, 14, yPos);
-    }
 
     if (action === 'save') {
       doc.save(`accounting-report-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -664,20 +400,15 @@ const Accounting = () => {
                 <Save className="h-4 w-4 mr-2" />
                 Save PDF
               </Button>
-              <Button size="icon" variant="outline" onClick={() => generatePDF('print')}>
-                <Printer className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={() => { try { window.location.href = '/reports?tab=accounting'; } catch { } }}>View Report</Button>
             </div>
           </div>
 
-          {/* Profit/Loss Summary - Moved to Top */}
           <Card className={`p-6 border-none text-white ${profit >= 0 ? "bg-emerald-600 shadow-xl shadow-emerald-900/20" : "bg-red-600 shadow-xl shadow-red-900/20"}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold opacity-90">Profit/Loss Summary</h2>
               <button 
-                className="opacity-70 hover:opacity-100 transition-alpha"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'accounting-summary' }))}
+                className="opacity-70 hover:opacity-100 transition-opacity"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'net-profit-explanation' }))}
                 title="How is this calculated?"
               >
                 <HelpCircle className="h-5 w-5" />
@@ -691,7 +422,7 @@ const Accounting = () => {
                 {profit > 0 ? 'Profit' : profit < 0 ? 'Loss' : 'Break-Even'}
               </span>
             </div>
-            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue) - (Total Expenses)</p>
+            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-border">
@@ -702,131 +433,65 @@ const Accounting = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="p-4 bg-background/50 rounded-lg border border-border">
                 <Label className="text-muted-foreground">Daily Revenue</Label>
-                <p className="text-3xl font-bold text-foreground mt-2">
-                  ${dailyRevenue.toFixed(2)}
-                </p>
+                <p className="text-3xl font-bold text-foreground mt-2">${dailyRevenue.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-background/50 rounded-lg border border-border">
                 <Label className="text-muted-foreground">Weekly Revenue</Label>
-                <p className="text-3xl font-bold text-foreground mt-2">
-                  ${weeklyRevenue.toFixed(2)}
-                </p>
+                <p className="text-3xl font-bold text-foreground mt-2">${weeklyRevenue.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-background/50 rounded-lg border border-border">
                 <Label className="text-muted-foreground">Monthly Revenue</Label>
-                <p className="text-3xl font-bold text-foreground mt-2">
-                  ${monthlyRevenue.toFixed(2)}
-                </p>
+                <p className="text-3xl font-bold text-foreground mt-2">${monthlyRevenue.toFixed(2)}</p>
               </div>
             </div>
           </Card>
 
-          {/* Inventory Assets */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <Package className="h-6 w-6 text-primary" />
-              Inventory Assets
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 bg-background/50 rounded-lg border border-border">
-                <Label className="text-muted-foreground">Chemicals</Label>
-                <p className="text-2xl font-bold text-foreground mt-2">
-                  ${inventoryTotals.chemicals.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {inventoryTotals.itemCount.chemicals} items
-                </p>
-              </div>
-              <div className="p-4 bg-background/50 rounded-lg border border-border">
-                <Label className="text-muted-foreground">Materials</Label>
-                <p className="text-2xl font-bold text-foreground mt-2">
-                  ${inventoryTotals.materials.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {inventoryTotals.itemCount.materials} items
-                </p>
-              </div>
-              <div className="p-4 bg-background/50 rounded-lg border border-border">
-                <Label className="text-muted-foreground">Tools</Label>
-                <p className="text-2xl font-bold text-foreground mt-2">
-                  ${inventoryTotals.tools.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {inventoryTotals.itemCount.tools} items
-                </p>
-              </div>
-              <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
-                <Label className="text-emerald-600 dark:text-emerald-400">Total Assets</Label>
-                <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
-                  ${inventoryTotals.total.toFixed(2)}
-                </p>
-                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">
-                  {inventoryTotals.itemCount.total} total items
-                </p>
-              </div>
-            </div>
-          </Card>
-
-
-
-
-          {/* Break-Even Analysis */}
           <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
             <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-blue-500" />
               Break-Even Analysis
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-blue-400 hover:text-blue-600 p-0"
+              <button 
+                className="text-blue-400 hover:text-blue-600 transition-colors"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'break-even-analysis' }))}
               >
                 <HelpCircle className="h-4 w-4" />
-              </Button>
+              </button>
             </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Track your total investment (inventory + expenses) vs service revenue to see when you'll break even
-            </p>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Total Investment (Inventory + Expenses) */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Total Business Investment</Label>
                 <p className="text-3xl font-bold text-red-500">
-                  ${inventoryTotals.total.toFixed(2)}
+                  ${(inventoryTotals.total + totalSpent).toFixed(2)}
                 </p>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex justify-between">
-                    <span>Inventory:</span>
+                    <span>Inventory (Assets):</span>
                     <span className="font-medium">${inventoryTotals.total.toFixed(2)}</span>
+                  </div>
+                  <div className="pl-3 space-y-0.5 border-l-2 border-primary/20 ml-1 mt-1 mb-2">
+                    <div className="flex justify-between text-[10px] opacity-80">
+                      <span>• Chemicals:</span>
+                      <span>${inventoryTotals.chemicals.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] opacity-80">
+                      <span>• Supplies:</span>
+                      <span>${inventoryTotals.materials.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] opacity-80">
+                      <span>• Equipment:</span>
+                      <span>${inventoryTotals.tools.toFixed(2)}</span>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Non-Inventory Expenses:</span>
                     <span className="font-medium">${totalSpent.toFixed(2)}</span>
                   </div>
-
-                  {/* Persistent Breakdown List (Replaces hidden tooltip) */}
-                  {Object.entries(expenseBreakdown).length > 0 && (
-                    <div className="pl-3 space-y-0.5 border-l border-slate-700/50 my-1">
-                      {Object.entries(expenseBreakdown).map(([cat, amt]) => (
-                        <div key={cat} className="flex justify-between text-[10px] opacity-80">
-                          <span className="text-slate-400 capitalize">{cat}:</span>
-                          <span className="font-mono text-zinc-300">${amt.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {Object.entries(expenseBreakdown).length === 0 && totalSpent === 0 && (
-                    <p className="text-[10px] text-slate-500 italic pl-3">No non-inventory expenses recorded.</p>
-                  )}
-
                   <p className="text-[9px] text-slate-500 italic pl-3 mt-1 leading-tight">
-                    * Inventory (Pools, Tools, etc.) are tracked above to avoid double-counting.
+                    * Inventory (Pools, Tools, etc.) are tracked separately from overhead to avoid double-counting.
                   </p>
                   <div className="pt-1 border-t border-muted-foreground/20 flex justify-between font-semibold">
                     <span>Total Investment:</span>
-                    <span>${inventoryTotals.total.toFixed(2)}</span>
+                    <span>${(inventoryTotals.total + totalSpent).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -836,31 +501,14 @@ const Accounting = () => {
                 <p className="text-3xl font-bold text-green-500">
                   ${totalRevenue.toFixed(2)}
                 </p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Daily:</span>
-                    <span className="font-medium">${dailyRevenue.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Weekly:</span>
-                    <span className="font-medium">${weeklyRevenue.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Monthly:</span>
-                    <span className="font-medium">${monthlyRevenue.toFixed(2)}</span>
-                  </div>
-                </div>
               </div>
 
-              {/* Break-Even Status */}
               <div className="space-y-2">
                 {(() => {
-                  const currentTotalRevenue = totalRevenue; // Use global total for break-even
-                  const totalInvestment = inventoryTotals.total; // Simplest view: Recover the inventory cost
+                  const currentTotalRevenue = totalRevenue;
+                  const totalInvestment = inventoryTotals.total + totalSpent;
                   const remaining = totalInvestment - currentTotalRevenue;
-                  const percentRecovered = totalInvestment > 0
-                    ? (currentTotalRevenue / totalInvestment) * 100
-                    : 0;
+                  const percentRecovered = totalInvestment > 0 ? (currentTotalRevenue / totalInvestment) * 100 : 0;
                   const isBreakEven = remaining <= 0;
 
                   return (
@@ -871,56 +519,9 @@ const Accounting = () => {
                       <p className={`text-3xl font-bold ${isBreakEven ? 'text-green-500' : 'text-orange-500'}`}>
                         ${Math.abs(remaining).toFixed(2)}
                       </p>
-                      <div className="space-y-3">
-                        {/* Progress Bar */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Recovery Progress</span>
-                            <span className="font-medium">{Math.min(percentRecovered, 100).toFixed(1)}%</span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-500 ${isBreakEven ? 'bg-green-500' : 'bg-orange-500'
-                                }`}
-                              style={{ width: `${Math.min(percentRecovered, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Status Message */}
-                        <div className={`text-xs p-2 rounded ${isBreakEven
-                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
-                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
-                          }`}>
-                          {isBreakEven ? (
-                            <p className="font-medium">✅ Break-even achieved! You're now profitable!</p>
-                          ) : (
-                            <p className="font-medium">
-                              💪 Keep going! ${remaining.toFixed(2)} more to break even
-                            </p>
-                          )}
-                        </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full transition-all ${isBreakEven ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(percentRecovered, 100)}%` }} />
                       </div>
-
-                      {/* Non-Inventory Breakdown */}
-                      {Object.keys(expenseBreakdown).length > 0 && (
-                        <div className="pt-3 border-t border-border/50">
-                          <Label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 block">Operating Expense Breakdown</Label>
-                          <div className="space-y-1.5">
-                            {Object.entries(expenseBreakdown)
-                              .sort(([, a], [, b]) => b - a)
-                              .map(([cat, amt]) => (
-                                <div key={cat} className="flex justify-between items-center text-xs">
-                                  <span className="text-muted-foreground flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: categoryColors[cat] || '#888' }} />
-                                    {cat}
-                                  </span>
-                                  <span className="font-medium text-foreground">${amt.toFixed(2)}</span>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
                     </>
                   );
                 })()}
@@ -928,10 +529,7 @@ const Accounting = () => {
             </div>
           </Card>
 
-
-          {/* Accordion Sections */}
           <Accordion type="multiple" defaultValue={["ledger"]} className="space-y-4">
-            {/* Add Income Section */}
             <AccordionItem value="income" className="border-none">
               <Card className="bg-gradient-card border-border">
                 <AccordionTrigger className="px-6 pt-6 pb-4 hover:no-underline">
@@ -963,7 +561,7 @@ const Accounting = () => {
                           <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                           <SelectContent>
                             {DEFAULT_CATEGORIES.income.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                            {customCategories.filter(c => !DEFAULT_CATEGORIES.expense.includes(c)).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            {customCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             <SelectItem value="___CREATE_NEW___" className="text-primary font-semibold border-t mt-1 pt-1">
                               + Create New Category
                             </SelectItem>
@@ -1010,7 +608,6 @@ const Accounting = () => {
               </Card>
             </AccordionItem>
 
-            {/* Expense Tracking Section */}
             <AccordionItem value="expenses" className="border-none">
               <Card className="bg-gradient-card border-border">
                 <AccordionTrigger className="px-6 pt-6 pb-4 hover:no-underline">
@@ -1021,311 +618,114 @@ const Accounting = () => {
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="job-expense">Add New Expense</Label>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => expenses && setShowDeleteExpense(true)}
-                            disabled={!expenses}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Amount</Label>
+                        <Input type="number" value={expenses} onChange={(e) => setExpenses(e.target.value)} placeholder="0.00" />
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                        <div>
-                          <Label className="text-xs mb-1 block">Description</Label>
-                          <Input
-                            id="expense-desc"
-                            placeholder="Expense description"
-                            value={expenseDesc}
-                            onChange={(e) => setExpenseDesc(e.target.value)}
-                            className="bg-background border-border"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs mb-1 block">Category</Label>
-                          <Select
-                            value={expenseCategory}
-                            onValueChange={(value) => {
-                              if (value === "___CREATE_NEW___") {
-                                setNewCategoryType("expense");
-                                setShowNewCategoryDialog(true);
-                              } else {
-                                setExpenseCategory(value);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="bg-background border-border"><SelectValue placeholder="Select category" /></SelectTrigger>
-                            <SelectContent>
-                              {DEFAULT_CATEGORIES.expense.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                              {customCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                              <SelectItem value="___CREATE_NEW___" className="text-primary font-semibold border-t mt-1 pt-1">
-                                + Create New Category
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div>
+                        <Label>Category</Label>
+                        <Select
+                          value={expenseCategory}
+                          onValueChange={(value) => {
+                            if (value === "___CREATE_NEW___") {
+                              setNewCategoryType("expense");
+                              setShowNewCategoryDialog(true);
+                            } else {
+                              setExpenseCategory(value);
+                            }
+                          }}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                          <SelectContent>
+                            {DEFAULT_CATEGORIES.expense.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            {customCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            <SelectItem value="___CREATE_NEW___" className="text-primary font-semibold border-t mt-1 pt-1">
+                              + Create New Category
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="job-expense"
-                            type="number"
-                            value={expenses}
-                            onChange={(e) => setExpenses(e.target.value)}
-                            placeholder="Enter expense amount"
-                            className="pl-10 bg-background border-border"
-                          />
-                        </div>
-                        <Button onClick={handleAddExpense} className="bg-gradient-hero">
-                          Add Expense
-                        </Button>
+                      <div className="md:col-span-2">
+                        <Label>Description</Label>
+                        <Input value={expenseDesc} onChange={(e) => setExpenseDesc(e.target.value)} placeholder="Expense description" />
                       </div>
                     </div>
-
-                    <div className="p-4 bg-background/50 rounded-lg border border-border">
-                      <Label className="text-muted-foreground">Total Spent to Date</Label>
-                      <p className="text-3xl font-bold text-foreground mt-2">
-                        ${totalSpent.toFixed(2)}
-                      </p>
+                    <div>
+                      <Button onClick={handleAddExpense} className="bg-gradient-hero">Add Expense</Button>
                     </div>
                   </div>
                 </AccordionContent>
               </Card>
             </AccordionItem>
 
-            {/* Transaction Ledger Section */}
             <AccordionItem value="ledger" className="border-none">
               <Card className="bg-gradient-card border-border">
                 <AccordionTrigger className="px-6 pt-6 pb-4 hover:no-underline">
                   <h2 className="text-2xl font-bold text-foreground">Transaction Ledger</h2>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
-                  <p className="text-sm text-muted-foreground mb-4">View, edit, or delete individual debits (expenses) and credits (income)</p>
-
                   <div className="space-y-6">
-                    {/* Credits (Income) Section */}
                     <div>
-                      <h3 className="text-lg font-semibold text-green-600 mb-3 flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5" />
-                        Credits (Income) - {incomeList.length} transactions
-                      </h3>
-                      <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {incomeList.length === 0 && invoiceList.filter(i => (i.paymentStatus === 'paid' || (i.paidAmount || 0) > 0)).length === 0 ? (
-                          <p className="text-sm text-muted-foreground p-4 text-center border border-dashed rounded">No income transactions yet</p>
-                        ) : (
-                          <>
-                            {/* Paid Invoices */}
-                            {invoiceList.filter(inv => {
-                              const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
-                              // Basic filter check if 'within' helper is available, otherwise re-implement or use dateFilter
-                              // Re-using local 'within' logic implicitly if we were inside the function, but we are in JSX.
-                              // We need to filter by the current date filter state.
-                              const d = new Date(inv.createdAt);
-                              const now = new Date();
-                              const today = now.toDateString();
-                              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-                              let show = false;
-                              if (dateFilter === 'all') show = true;
-                              else if (dateFilter === 'daily') show = d.toDateString() === today;
-                              else if (dateFilter === 'weekly') show = d >= weekAgo;
-                              else if (dateFilter === 'monthly') show = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-
-                              // Custom range check
-                              if (dateRange.from && d < new Date(dateRange.from.setHours(0, 0, 0, 0))) show = false;
-                              if (dateRange.to && d > new Date(dateRange.to.setHours(23, 59, 59, 999))) show = false;
-
-                              return isPaid && show;
-                            }).map(inv => (
-                              <div
-                                key={`inv-${inv.id}`}
-                                className="p-3 border rounded-lg bg-blue-50/50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-800"
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-semibold text-blue-700 dark:text-blue-400">
-                                        +${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}
-                                      </span>
-                                      <span className="text-xs px-2 py-0.5 rounded font-medium bg-blue-600 text-white">
-                                        Invoice
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-foreground truncate">Paid Invoice #{String((inv as any).invoiceNumber || inv.id?.slice(0, 8) || 'Unknown')}</p>
-                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                      <span>{new Date(inv.createdAt).toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    {/* Read-only for invoices */}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-
-                            {/* Manual Income */}
-                            {incomeList.map((income) => (
-                              <div
-                                key={income.id}
-                                className="p-3 border rounded-lg"
-                                style={{
-                                  backgroundColor: categoryColors[income.category || 'General']
-                                    ? `${categoryColors[income.category || 'General']}15`
-                                    : 'rgb(240, 253, 244)',
-                                  borderColor: categoryColors[income.category || 'General'] || 'rgb(187, 247, 208)'
-                                }}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-semibold text-green-700 dark:text-green-400">
-                                        +${(income.amount || 0).toFixed(2)}
-                                      </span>
-                                      <span
-                                        className="text-xs px-2 py-0.5 rounded font-medium"
-                                        style={{
-                                          backgroundColor: categoryColors[income.category || 'General'] || '#10b981',
-                                          color: 'white'
-                                        }}
-                                      >
-                                        {income.category || 'General'}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-foreground truncate">{income.description || income.customerName || 'No description'}</p>
-                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                      <span>{new Date(income.date || income.createdAt).toLocaleString()}</span>
-                                      {income.customerName && <span>• Customer: {income.customerName}</span>}
-                                      {income.paymentMethod && <span>• {income.paymentMethod}</span>}
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) });
-                                      }}
-                                      title="Edit"
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8 text-destructive hover:text-destructive"
-                                      onClick={() => {
-                                        setDeleteItemState({ open: true, type: 'income', id: income.id! });
-                                      }}
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Debits (Expenses) Section */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-red-600 mb-3 flex items-center gap-2">
-                        <TrendingDown className="h-5 w-5" />
-                        Debits (Expenses) - {expenseList.length} transactions
-                      </h3>
-                      <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {expenseList.length === 0 ? (
-                          <p className="text-sm text-muted-foreground p-4 text-center border border-dashed rounded">No expense transactions yet</p>
-                        ) : (
-                          expenseList.map((expense) => (
-                            <div
-                              key={expense.id}
-                              className="p-3 border rounded-lg"
-                              style={{
-                                backgroundColor: categoryColors[(expense as any).category || 'General']
-                                  ? `${categoryColors[(expense as any).category || 'General']}15`
-                                  : 'rgb(254, 242, 242)',
-                                borderColor: categoryColors[(expense as any).category || 'General'] || 'rgb(254, 202, 202)'
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-red-700 dark:text-red-400">
-                                      -${(expense.amount || 0).toFixed(2)}
-                                    </span>
-                                    <span
-                                      className="text-xs px-2 py-0.5 rounded font-medium"
-                                      style={{
-                                        backgroundColor: categoryColors[(expense as any).category || 'General'] || '#ef4444',
-                                        color: 'white'
-                                      }}
-                                    >
-                                      {(expense as any).category || 'General'}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-foreground truncate">{expense.description || 'No description'}</p>
-                                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                    <span>{new Date(expense.createdAt).toLocaleString()}</span>
-                                  </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={() => {
-                                      setEditItemState({ open: true, type: 'expense', id: expense.id!, amount: String(expense.amount || 0) });
-                                    }}
-                                    title="Edit"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                      setDeleteItemState({ open: true, type: 'expense', id: expense.id! });
-                                    }}
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
+                      <h3 className="text-lg font-semibold text-green-600 mb-3">Credits (Income)</h3>
+                      <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        {invoiceList.filter(inv => {
+                          const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
+                          return isPaid;
+                        }).map(inv => (
+                          <div key={`inv-${inv.id}`} className="p-3 border rounded-lg bg-blue-50/50 flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold text-blue-700">+${(inv.paidAmount || inv.total).toFixed(2)}</p>
+                              <p className="text-sm">Paid Invoice #{String(inv.invoiceNumber || inv.id?.slice(0, 8))}</p>
+                              <span className="text-xs text-muted-foreground">{new Date(inv.createdAt).toLocaleString()}</span>
                             </div>
-                          ))
-                        )}
+                          </div>
+                        ))}
+                        {incomeList.map(income => (
+                          <div key={income.id} className="p-3 border rounded-lg bg-green-50/50 flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold text-green-700">+${(income.amount || 0).toFixed(2)}</p>
+                              <p className="text-sm">{income.description || 'Income'}</p>
+                              <span className="text-xs text-muted-foreground">{new Date(income.date || income.createdAt).toLocaleString()}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="ghost" onClick={() => setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) })}><Pencil className="h-4 w-4" /></Button>
+                              <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteItemState({ open: true, type: 'income', id: income.id! })}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Summary */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-red-600 mb-3">Debits (Expenses)</h3>
+                      <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        {expenseList.map(expense => (
+                          <div key={expense.id} className="p-3 border rounded-lg bg-red-50/50 flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold text-red-700">-${(expense.amount || 0).toFixed(2)}</p>
+                              <p className="text-sm">{expense.description || 'Expense'}</p>
+                              <span className="text-xs text-muted-foreground">{new Date(expense.createdAt).toLocaleString()}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="ghost" onClick={() => setEditItemState({ open: true, type: 'expense', id: expense.id!, amount: String(expense.amount || 0) })}><Pencil className="h-4 w-4" /></Button>
+                              <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteItemState({ open: true, type: 'expense', id: expense.id! })}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border">
-                      <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <p className="text-xs text-muted-foreground">Total Credits</p>
-                        <p className="text-xl font-bold text-green-600">
-                          +${incomeList.reduce((sum, i) => sum + (i.amount || 0), 0).toFixed(2)}
-                        </p>
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Total Revenue</p>
+                        <p className="text-xl font-bold text-green-600">+${totalRevenue.toFixed(2)}</p>
                       </div>
-                      <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                        <p className="text-xs text-muted-foreground">Total Debits</p>
-                        <p className="text-xl font-bold text-red-600">
-                          -${expenseList.reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
-                        </p>
+                      <div className="p-3 bg-red-50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Total Expenses</p>
+                        <p className="text-xl font-bold text-red-600">-${(totalSpent + inventoryTotals.total).toFixed(2)}</p>
                       </div>
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <div className="p-3 bg-blue-50 rounded-lg">
                         <p className="text-xs text-muted-foreground">Net Balance</p>
                         <p className={`text-xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {profit >= 0 ? '+' : ''} ${profit.toFixed(2)}
@@ -1342,17 +742,7 @@ const Accounting = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-foreground">Notes</h2>
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => notes && setShowDeleteNotes(true)}
-                  disabled={!notes}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setNotes("")} disabled={!notes}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
             <Textarea
@@ -1367,124 +757,46 @@ const Accounting = () => {
             </p>
           </Card>
         </div>
-      </main >
+      </main>
 
-      <AlertDialog open={showDeleteExpense} onOpenChange={setShowDeleteExpense}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will clear the current expense input. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="button-group-responsive">
-            <AlertDialogCancel>No</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setExpenses(""); setExpenseDesc(""); setShowDeleteExpense(false); }}>
-              Yes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showDeleteNotes} onOpenChange={setShowDeleteNotes}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete your notes. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="button-group-responsive">
-            <AlertDialogCancel>No</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setNotes(""); setShowDeleteNotes(false); }}>
-              Yes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* New Category Dialog */}
       <Dialog open={showNewCategoryDialog} onOpenChange={setShowNewCategoryDialog}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Category</DialogTitle>
-            <DialogDescription>
-              Add a new {newCategoryType === "income" ? "income" : "expense"} category.
-              A unique color will be automatically assigned.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="new-category-name">Category Name</Label>
-              <Input
-                id="new-category-name"
-                placeholder="Enter category name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleCreateNewCategory();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-          </div>
+          <DialogHeader><DialogTitle>Create New Category</DialogTitle></DialogHeader>
+          <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Category Name" />
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowNewCategoryDialog(false);
-              setNewCategoryName("");
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateNewCategory} className="bg-gradient-hero">
-              Create Category
-            </Button>
+            <Button onClick={handleCreateNewCategory}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <AlertDialog open={deleteItemState.open} onOpenChange={(open) => setDeleteItemState(prev => ({ ...prev, open }))}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this {deleteItemState.type}? This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Are you sure? This cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteItem} className="bg-destructive hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmDeleteItem} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={editItemState.open} onOpenChange={(open) => setEditItemState(prev => ({ ...prev, open }))}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit {editItemState.type === 'income' ? 'Income' : 'Expense'} Amount</DialogTitle>
-            <DialogDescription>Update the transaction amount.</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Edit Amount</DialogTitle></DialogHeader>
           <div className="py-2">
             <Label>Amount</Label>
-            <Input
-              type="number"
-              value={editItemState.amount}
-              onChange={(e) => setEditItemState(prev => ({ ...prev, amount: e.target.value }))}
-              className="mt-2"
-            />
+            <Input type="number" value={editItemState.amount} onChange={(e) => setEditItemState(prev => ({ ...prev, amount: e.target.value }))} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItemState(prev => ({ ...prev, open: false }))}>Cancel</Button>
-            <Button onClick={handleSaveEditItem}>Save Changes</Button>
+            <Button onClick={handleSaveEditItem}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   );
 };
 
 export default Accounting;
-

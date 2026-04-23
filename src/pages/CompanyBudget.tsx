@@ -38,7 +38,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Download, PieChart as PieChartIcon, BarChart3, TrendingUp, Plus, Filter, ChevronDown, Trash2, Pencil, Printer, FileText } from "lucide-react";
+import { Download, PieChart as PieChartIcon, BarChart3, TrendingUp, Plus, Filter, ChevronDown, Trash2, Pencil, Printer, FileText, HelpCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getReceivables, Receivable, upsertReceivable, deleteReceivable } from "@/lib/receivables";
 import { getExpenses, upsertExpense, getInvoices, deleteExpense } from "@/lib/db";
@@ -50,6 +50,7 @@ import { autoTable } from "jspdf-autotable";
 import { getSupabaseTaxExpenses } from "@/lib/supa-data";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_BUDGET, MOCK_ACCOUNTING } from "@/lib/demoMockData";
+import { getInventoryTotals } from "@/lib/inventory-totals";
 
 interface Expense {
     id: string;
@@ -205,23 +206,22 @@ const CompanyBudget = () => {
         const incomes = await getReceivables();
         const expenses = await getExpenses<Expense>();
         const invoices = await getInvoices() as Invoice[];
+        const invTotals = await getInventoryTotals();
 
-        // Fetch Tax Expenses and map to budget Expense type
-        const taxExpenses = await getSupabaseTaxExpenses();
-        const mappedTaxExpenses: Expense[] = taxExpenses.map(te => ({
-            id: te.id!,
-            amount: te.amount,
-            category: te.category,
-            description: `[TAX] ${te.vendor || ''} ${te.notes || ''}`.trim(),
-            createdAt: te.date
-        }));
-
-        const combinedExpenses = [...expenses, ...mappedTaxExpenses];
+        // Filter out [TAX] items and inventory-category items because we are adding the live inventory total separately
+        const inventoryCategories = ["Supplies", "Equipment", "Chemicals", "Inventory"];
+        const manualExpenses = (expenses as Expense[]).filter(e => {
+            const desc = (e.description || '').toUpperCase();
+            const cat = (e.category || '').toLowerCase();
+            const isTaxPrefix = desc.startsWith('[TAX]');
+            const isInventoryCategory = inventoryCategories.some(ic => cat === ic.toLowerCase());
+            return !isTaxPrefix && !isInventoryCategory;
+        });
 
         setIncomeList(incomes as Receivable[]);
-        setExpenseList(combinedExpenses);
+        setExpenseList(expenses); // Keep full list for visibility if needed
         setInvoiceList(invoices);
-        processCategoryData(incomes, combinedExpenses, invoices);
+        processCategoryData(incomes as Receivable[], manualExpenses, invoices, invTotals);
     };
 
     const loadCustomCategories = async () => {
@@ -316,18 +316,16 @@ const CompanyBudget = () => {
         return map;
     }, [incomeList, expenseList, invoiceList, dateFilter, dateRange]);
 
-    const processCategoryData = (incomes: Receivable[], expenses: Expense[], invoices: Invoice[] = []) => {
+    const processCategoryData = (incomes: Receivable[], expenses: Expense[], invoices: Invoice[] = [], invTotals?: any) => {
         const categoryMap = new Map<string, { amount: number; type: 'income' | 'expense' }>();
 
         // Process invoices (paid only)
         invoices.forEach(inv => {
-            // Use explicit paidAmount if available, otherwise total if paid
             const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                 : 0;
 
             if (amt <= 0) return;
-            // Check date of invoice (using createdAt or date)
             if (!filterByDate(inv.createdAt || inv.date)) return;
 
             const cat = "Service Income";
@@ -343,13 +341,27 @@ const CompanyBudget = () => {
             categoryMap.set(cat, { amount: current.amount + (income.amount || 0), type: 'income' });
         });
 
-        // Process expenses
+        // Process manual expenses
         expenses.forEach(expense => {
             if (!filterByDate(expense.createdAt)) return;
             const cat = (expense.category || "Other Expenses");
-            const current = categoryMap.get(cat) || { amount: 0, type: 'expense' as const };
-            categoryMap.set(cat, { amount: current.amount + (expense.amount || 0), type: 'expense' });
+            const displayCat = cat === 'Materials' ? 'Supplies' : (cat === 'Tools' ? 'Equipment' : cat);
+            const current = categoryMap.get(displayCat) || { amount: 0, type: 'expense' as const };
+            categoryMap.set(displayCat, { amount: current.amount + (expense.amount || 0), type: 'expense' });
         });
+
+        // Add Inventory valuation to the graph (if not filtered by specific date range that would exclude "Current Stock")
+        // Note: Inventory is a current asset, so we always show it in the budget summary as the "Investment"
+        if (invTotals) {
+            const currentChems = categoryMap.get('Chemicals') || { amount: 0, type: 'expense' as const };
+            categoryMap.set('Chemicals', { amount: currentChems.amount + invTotals.chemicals, type: 'expense' });
+
+            const currentSupplies = categoryMap.get('Supplies') || { amount: 0, type: 'expense' as const };
+            categoryMap.set('Supplies', { amount: currentSupplies.amount + invTotals.materials, type: 'expense' });
+
+            const currentEquip = categoryMap.get('Equipment') || { amount: 0, type: 'expense' as const };
+            categoryMap.set('Equipment', { amount: currentEquip.amount + invTotals.tools, type: 'expense' });
+        }
 
         // Convert to array and assign colors
         const data: CategoryData[] = [];
@@ -915,11 +927,21 @@ const CompanyBudget = () => {
 
                         {/* Net Profit Card */}
                         <Card className={`p-6 ${netProfit > 0 ? 'bg-green-600' : netProfit < 0 ? 'bg-red-600' : 'bg-blue-600'}`}>
-                            <Label className="text-sm text-white/80">Net Profit/Loss</Label>
+                            <div className="flex justify-between items-start mb-1">
+                                <Label className="text-sm text-white/80">Net Profit/Loss</Label>
+                                <button 
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'net-profit-explanation' }))}
+                                    className="text-white/60 hover:text-white transition-colors"
+                                    title="How is this calculated?"
+                                >
+                                    <HelpCircle className="h-4 w-4" />
+                                </button>
+                            </div>
                             <p className="text-3xl font-bold mt-2 text-white">
                                 ${Math.abs(netProfit).toFixed(2)}
                             </p>
                             <p className="text-sm text-white/80 mt-1">{netProfit > 0 ? 'Profit' : netProfit < 0 ? 'Loss' : 'Break-Even'}</p>
+                            <p className="text-[10px] text-white/60 mt-2 italic">Calculated as: (Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
                         </Card>
                     </div>
 
@@ -927,7 +949,7 @@ const CompanyBudget = () => {
                     {/* Tax-Deductible Inventory Section */}
                     {(() => {
                         const taxInventoryExpenses = expenseList.filter(e =>
-                            e.description?.startsWith('[TAX]') && e.category && ['Equipment', 'Supplies'].includes(e.category)
+                            e.description?.startsWith('[TAX]') && e.category && ['Equipment', 'Supplies', 'Chemicals', 'Tools', 'Materials'].includes(e.category)
                         );
                         const totalTaxInventory = taxInventoryExpenses.reduce((sum, e) => sum + e.amount, 0);
 

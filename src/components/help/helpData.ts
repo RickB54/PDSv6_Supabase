@@ -214,8 +214,32 @@ export const mobileSetupTopic: HelpTopic = {
   section: 'menu',
 };
 
+export const netProfitExplanationTopic: HelpTopic = {
+  id: 'net-profit-explanation',
+  title: 'Net Profit & Valuation Breakdown',
+  summary: 'Understand how your profit, expenses, and asset valuation are calculated.',
+  content: [
+    '**The Financial Formula**: Your business uses a "Valuation-Based" profit model to track overall health.',
+    '',
+    '💰 **1. Total Revenue**',
+    'This is the sum of all **Paid Invoices** and **Manual Income** entries recorded in the system.',
+    '',
+    '💸 **2. Total Expenses (The Cost Basis)**',
+    'To accurately reflect your investment, the system combines two cost types:',
+    '• **Manual Expenses**: Overhead costs like Rent, Insurance, and Payroll.',
+    '• **Inventory Valuation**: The current dollar value of your entire shop inventory (Chemicals, Supplies, and Equipment). This ensures that items you already own aren\'t "double-counted" when you mark them for tax purposes.',
+    '',
+    '⚖️ **3. The Calculation**',
+    '• **Formula**: `Net Profit = Total Revenue - (Operating Expenses + Inventory Value)`',
+    '',
+    '💡 **Why include Inventory?**: By treating your inventory as an investment, the system shows you exactly how much revenue is needed to recover the cost of your tools and chemicals before you are in the green.',
+  ],
+  section: 'menu',
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
+  netProfitExplanationTopic,
   demoModeHelpTopic,
   masterSourceOfTruthItem,
   inventoryCleanupTopic,
