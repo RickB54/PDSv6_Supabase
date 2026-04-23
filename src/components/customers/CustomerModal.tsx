@@ -450,6 +450,22 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       className="data-[state=checked]:bg-blue-600 scale-90"
                      />
                   </div>
+
+                  <div className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-lg border border-zinc-800/50">
+                     <div className="flex items-center gap-2">
+                        <Users className={cn("h-4 w-4", isProspect ? "text-orange-500" : "text-purple-500")} />
+                        <span className="text-xs font-bold uppercase tracking-tight text-zinc-300">Relationship Type</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <span className={cn("text-[10px] font-bold uppercase", !isProspect ? "text-purple-400" : "text-zinc-600")}>Customer</span>
+                        <Switch 
+                          checked={isProspect}
+                          onCheckedChange={(checked) => setForm(prev => ({ ...prev, type: checked ? 'prospect' : 'customer' }))}
+                          className="data-[state=checked]:bg-orange-600 scale-90"
+                        />
+                        <span className={cn("text-[10px] font-bold uppercase", isProspect ? "text-orange-400" : "text-zinc-600")}>Prospect</span>
+                     </div>
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       placeholder="Address"

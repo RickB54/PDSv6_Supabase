@@ -578,7 +578,17 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         if (existing) finalId = existing.id;
     }
 
-    if (finalId) upsertData.id = finalId;
+    if (finalId) {
+        upsertData.id = finalId;
+        // Optimization: Try to get current type to avoid overwriting it if not provided
+        if (!customer.type) {
+            const { data: current } = await supabase.from('customers').select('type').eq('id', finalId).maybeSingle();
+            if (current?.type) upsertData.type = current.type;
+        }
+    } else {
+        // Only default to 'customer' for BRAND NEW records
+        if (!upsertData.type) upsertData.type = 'customer';
+    }
 
     const { data: upserted, error: upsertError } = await supabase
         .from('customers')

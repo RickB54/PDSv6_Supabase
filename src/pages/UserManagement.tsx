@@ -132,27 +132,41 @@ export default function UserManagement() {
       if (authError) throw authError;
 
       // 3. Merge Strategies
-      // We prioritize CRM data because it has more fields (phone, type, etc).
-      // We use Email as the unique key.
+      // We prioritize CRM data.
+      // Unique key: Email (if exists), otherwise Name + Phone.
       const mergedMap = new Map();
 
       // Add CRM data first
       (crmData || []).forEach((c: any) => {
-        const key = c.email ? c.email.toLowerCase().trim() : `no-email-${c.id}`;
-        mergedMap.set(key, c);
+        const email = (c.email || '').toLowerCase().trim();
+        const phone = (c.phone || '').replace(/\D/g, '');
+        const name = (c.full_name || '').toLowerCase().trim();
+        
+        let key = email;
+        if (!key) {
+          key = `name:${name}_phone:${phone || c.id}`;
+        }
+        
+        // If we already have this person, merge them (prefer newer or more complete info)
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key);
+          mergedMap.set(key, { ...existing, ...c });
+        } else {
+          mergedMap.set(key, c);
+        }
       });
 
       // Add Auth data if not already present
       (authData || []).forEach((u: any) => {
-        const key = u.email ? u.email.toLowerCase().trim() : null;
-        if (key && !mergedMap.has(key)) {
-          mergedMap.set(key, {
+        const email = (u.email || '').toLowerCase().trim();
+        if (email && !mergedMap.has(email)) {
+          mergedMap.set(email, {
             id: u.id,
             full_name: u.name || "Unknown",
             email: u.email,
             phone: "—",
-            type: "customer", // Default type
-            created_at: u.updated_at, // Use updated_at as proxy for created_at
+            type: "customer", // Auth users default to customer
+            created_at: u.updated_at,
             isAuthOnly: true
           });
         }
@@ -421,13 +435,17 @@ export default function UserManagement() {
   const filteredCustomers = customers.filter((u) => {
     const q = custSearch.trim().toLowerCase();
     const combo = `${u.full_name || ""} ${u.email || ""}`.toLowerCase();
-    return (!q || combo.includes(q)) && u.type !== 'prospect';
+    const type = (u.type || '').toLowerCase();
+    // A customer is anyone NOT explicitly marked as a prospect
+    return (!q || combo.includes(q)) && type !== 'prospect';
   });
 
   const filteredProspects = customers.filter((u) => {
     const q = custSearch.trim().toLowerCase();
     const combo = `${u.full_name || ""} ${u.email || ""}`.toLowerCase();
-    return (!q || combo.includes(q)) && u.type === 'prospect';
+    const type = (u.type || '').toLowerCase();
+    // A prospect MUST be explicitly marked as one
+    return (!q || combo.includes(q)) && type === 'prospect';
   });
 
   const filteredAdmins = admins.filter((a) => {

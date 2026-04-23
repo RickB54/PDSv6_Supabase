@@ -88,10 +88,10 @@ const SearchCustomer = () => {
       const list = await getSupabaseCustomers();
       console.log('🔍 All Supabase customers in Customer Profiles:', list);
 
-      // Filter for customers only (same logic as Users & Roles)
+      // Filter for customers only (anyone NOT explicitly a prospect)
       const customersOnly = list.filter(c => {
         const customerType = (c.type || '').toLowerCase();
-        return customerType === 'customer';
+        return customerType !== 'prospect';
       });
 
       console.log('🔍 Filtered customers:', customersOnly);
