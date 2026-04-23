@@ -208,10 +208,26 @@ const CompanyEmployees = () => {
     const empToDelete = employees.find(e => e.email === employeeToDelete);
     if (!empToDelete) return;
 
+    // SAFETY CHECK: Prevent self-deletion
+    if (user?.email?.toLowerCase() === empToDelete.email.toLowerCase()) {
+      toast({ 
+        title: "Action Blocked", 
+        description: "You cannot delete your own account while logged in.", 
+        variant: "destructive" 
+      });
+      setDeleteConfirmOpen(false);
+      setEmployeeToDelete(null);
+      return;
+    }
+
     const updated = employees.filter(e => e.email !== employeeToDelete);
     await saveEmployees(updated);
+    
+    // Also cleanup from app_users if possible
+    try {
+      await supabase.from('app_users').delete().eq('email', employeeToDelete);
+    } catch { }
 
-    // Cleanup logic (simplified for brevity but assumed present)
     toast({ title: "Deleted", description: `${empToDelete.name} has been removed.` });
     setDeleteConfirmOpen(false);
     setEmployeeToDelete(null);
@@ -517,8 +533,14 @@ const CompanyEmployees = () => {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Employee?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">This will remove the employee and their history. This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogTitle>
+              {employees.find(e => e.email === employeeToDelete)?.role === 'Admin' ? 'Delete Admin Account?' : 'Delete Employee?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              {employees.find(e => e.email === employeeToDelete)?.role === 'Admin' 
+                ? 'CAUTION: You are about to delete an ADMINISTRATOR account. This will remove their system-wide access and management privileges.'
+                : 'This will remove the employee and their history. This action cannot be undone.'}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>

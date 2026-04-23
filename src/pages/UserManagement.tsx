@@ -24,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { MOCK_EMPLOYEES, MOCK_CUSTOMERS, MOCK_PROSPECTS } from "@/lib/demoMockData";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function UserManagement() {
   const { toast } = useToast();
@@ -381,6 +382,18 @@ export default function UserManagement() {
     }
     const { id, type } = deleteConfirm;
     if (!id || !type) return;
+
+    // SAFETY CHECK: Prevent self-deletion
+    const currentUser = getCurrentUser();
+    if (currentUser?.id === id) {
+      toast({ 
+        title: "Action Blocked", 
+        description: "You cannot delete your own account while you are logged in.", 
+        variant: "destructive" 
+      });
+      setDeleteConfirm({ open: false, type: null, id: null });
+      return;
+    }
 
     try {
       if (type === 'employee') {
