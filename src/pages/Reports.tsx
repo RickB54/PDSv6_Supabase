@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText, HelpCircle } from "lucide-react";
+import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText, HelpCircle, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -1339,14 +1339,29 @@ const Reports = () => {
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
-                  <p className="text-2xl font-bold text-red-400 mt-1">${expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-red-400 mt-1">
+                    ${(() => {
+                      const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
+                      const filtered = expenses.filter(e => {
+                        const passDate = filterByDate([e]).length > 0;
+                        const cat = (e.category || '').toLowerCase();
+                        return passDate && !inventoryCategories.includes(cat);
+                      });
+                      return filtered.reduce((s, e) => s + (e.amount || 0), 0).toFixed(2);
+                    })()}
+                  </p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
                   <p className="text-2xl font-bold text-white mt-1">
                     {(() => {
                       const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
-                      const exp = expenses.filter(e => filterByDate([e]).length).reduce((s, e) => s + (e.amount || 0), 0);
+                      const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
+                      const exp = expenses.filter(e => {
+                        const passDate = filterByDate([e]).length > 0;
+                        const cat = (e.category || '').toLowerCase();
+                        return passDate && !inventoryCategories.includes(cat);
+                      }).reduce((s, e) => s + (e.amount || 0), 0);
                       const p = inc - exp;
                       return `${p < 0 ? '-' : ''}$${Math.abs(p).toFixed(2)}`;
                     })()}
@@ -1381,7 +1396,12 @@ const Reports = () => {
                 <Table>
                   <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {expenses.filter(e => filterByDate([e]).length).map((e, idx) => (
+                    {expenses.filter(e => {
+                      const passDate = filterByDate([e]).length > 0;
+                      const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
+                      const cat = (e.category || '').toLowerCase();
+                      return passDate && !inventoryCategories.includes(cat);
+                    }).map((e, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
                         <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
@@ -1389,7 +1409,12 @@ const Reports = () => {
                         <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
                       </TableRow>
                     ))}
-                    {expenses.filter(e => filterByDate([e]).length).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No expense records.</TableCell></TableRow>}
+                    {expenses.filter(e => {
+                      const passDate = filterByDate([e]).length > 0;
+                      const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
+                      const cat = (e.category || '').toLowerCase();
+                      return passDate && !inventoryCategories.includes(cat);
+                    }).length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-zinc-500 py-4">No non-inventory expense records.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </div>
