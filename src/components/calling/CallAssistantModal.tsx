@@ -68,6 +68,14 @@ interface Vehicle {
         both: boolean;
     };
     notes: string;
+    garaged: string;
+    mileage: string;
+    reasonForDetail: string;
+    detailHistory: string;
+    interiorCondition: string;
+    seatMaterial: string;
+    paintCondition: string;
+    mainGoal: string;
     scenarios: Scenario[];
     selectedScenarioId: string | null;
 }
@@ -152,6 +160,14 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
             dailyDriver: true,
             needs: { interior: false, exterior: false, both: true },
             notes: "",
+            garaged: "",
+            mileage: "",
+            reasonForDetail: "",
+            detailHistory: "",
+            interiorCondition: "normal",
+            seatMaterial: "leather",
+            paintCondition: "good",
+            mainGoal: "full",
             scenarios: [
                 { id: `s1-${vid}`, label: "Scenario A", packageId: "prime-essential-full", addOnIds: [] },
                 { id: `s2-${vid}`, label: "Scenario B", packageId: "prime-elite-full", addOnIds: [] },
@@ -294,22 +310,248 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                         </DialogClose>
                     </div>
                 </div>
-
                 <div className="flex-1 overflow-y-auto p-0 custom-scrollbar bg-zinc-950/20">
-                    <Accordion type="single" collapsible defaultValue="caller-info" className="w-full">
-                        {/* SECTION 0: CALLER IDENTITY */}
+                    <Accordion type="single" collapsible defaultValue="pre-qual" className="w-full">
+                        {/* SECTION 1: VEHICLE CONTEXT & EVALUATION */}
+                        <AccordionItem value="pre-qual" className="border-b border-border bg-blue-950/10">
+                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-blue-900/10 transition-colors">
+                                <div className="flex items-center gap-3 w-full text-left">
+                                    <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                                        1
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-black uppercase tracking-tight text-white">
+                                            Vehicle Context & Evaluation
+                                        </div>
+                                        <div className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">
+                                            Capture details for accurate pricing
+                                        </div>
+                                    </div>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-5 pb-6 pt-2">
+                                <div className="space-y-6">
+                                    {/* Evaluation Guide Logic moved here */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-blue-500/10">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-blue-300 flex items-center gap-2">
+                                                <Car className="w-3 h-3" /> Vehicle Class
+                                            </Label>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {[
+                                                    { id: 'compact', label: 'Compact (Sedan)' },
+                                                    { id: 'midsize', label: 'Midsize (SUV)' },
+                                                    { id: 'truck', label: 'Truck (Lrg SUV)' },
+                                                    { id: 'luxury', label: 'Luxury (XL)' }
+                                                ].map((t) => (
+                                                    <Button
+                                                        key={t.id}
+                                                        variant={activeVehicle.type === t.id ? "default" : "outline"}
+                                                        onClick={() => updateVehicle(activeVehicleId, { type: t.id as any })}
+                                                        className={`h-9 text-[9px] font-black uppercase px-1 ${activeVehicle.type === t.id ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] border-blue-400' : 'border-zinc-700 text-zinc-400'}`}
+                                                    >
+                                                        {t.label}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-blue-300 flex items-center gap-2">
+                                                <Info className="w-3 h-3" /> Dirt Level
+                                            </Label>
+                                            <div className="flex gap-1">
+                                                {[
+                                                    { id: 'light', label: 'Light' },
+                                                    { id: 'moderate', label: 'Mod' },
+                                                    { id: 'heavy', label: 'Heavy' }
+                                                ].map((c) => (
+                                                    <Button
+                                                        key={c.id}
+                                                        variant={activeVehicle.condition === c.id ? "default" : "outline"}
+                                                        onClick={() => updateVehicle(activeVehicleId, { condition: c.id as any })}
+                                                        className={`flex-1 h-8 text-[9px] font-black uppercase ${activeVehicle.condition === c.id ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700'}`}
+                                                    >
+                                                        {c.label}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-blue-300 flex items-center gap-2">
+                                                <User className="w-3 h-3" /> Usage
+                                            </Label>
+                                            <div className="flex gap-1">
+                                                <Button 
+                                                    variant={activeVehicle.dailyDriver ? "default" : "outline"}
+                                                    className={`flex-1 h-8 text-[9px] font-black uppercase ${activeVehicle.dailyDriver ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700'}`}
+                                                    onClick={() => updateVehicle(activeVehicleId, { dailyDriver: true })}
+                                                >
+                                                    Daily
+                                                </Button>
+                                                <Button 
+                                                    variant={!activeVehicle.dailyDriver ? "default" : "outline"}
+                                                    className={`flex-1 h-8 text-[9px] font-black uppercase ${!activeVehicle.dailyDriver ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700'}`}
+                                                    onClick={() => updateVehicle(activeVehicleId, { dailyDriver: false })}
+                                                >
+                                                    Weekend
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Year/Make/Model Section */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Year / Make / Model</Label>
+                                            <div className="flex gap-2">
+                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold" />
+                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold" />
+                                                <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Reason for Detail</Label>
+                                            <Select value={activeVehicle.reasonForDetail} onValueChange={(v) => updateVehicle(activeVehicleId, { reasonForDetail: v })}>
+                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold">
+                                                    <SelectValue placeholder="MOTIVATION" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                                                    <SelectItem value="selling">Selling</SelectItem>
+                                                    <SelectItem value="purchase">Just Purchased</SelectItem>
+                                                    <SelectItem value="protection">Protection</SelectItem>
+                                                    <SelectItem value="restoration">Restoration</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* INTERIOR & PAINT */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800">
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase text-white">Interior Condition & Material</Label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {[
+                                                    { id: 'normal', label: 'Normal' },
+                                                    { id: 'pethair', label: 'Pet Hair' },
+                                                    { id: 'stains', label: 'Stains/Odors' },
+                                                    { id: 'kids', label: 'Child Seats' },
+                                                    { id: 'neglected', label: 'Very Dirty' }
+                                                ].map((i) => (
+                                                    <Button
+                                                        key={i.id}
+                                                        variant={activeVehicle.interiorCondition === i.id ? "secondary" : "outline"}
+                                                        onClick={() => updateVehicle(activeVehicleId, { interiorCondition: i.id })}
+                                                        className={`h-7 text-[9px] font-bold uppercase px-2 ${activeVehicle.interiorCondition === i.id ? 'bg-blue-600/20 text-blue-300 border-blue-500/50' : 'border-zinc-700'}`}
+                                                    >
+                                                        {i.label}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2 pt-1 border-t border-zinc-800">
+                                                {[
+                                                    { id: 'cloth', label: 'Cloth' },
+                                                    { id: 'leather', label: 'Leather' },
+                                                    { id: 'synthetic', label: 'Synthetic' }
+                                                ].map((m) => (
+                                                    <Button
+                                                        key={m.id}
+                                                        variant={activeVehicle.seatMaterial === m.id ? "secondary" : "ghost"}
+                                                        onClick={() => updateVehicle(activeVehicleId, { seatMaterial: m.id })}
+                                                        className={`flex-1 h-7 text-[9px] font-bold uppercase ${activeVehicle.seatMaterial === m.id ? 'bg-emerald-500/20 text-emerald-300' : 'text-muted-foreground'}`}
+                                                    >
+                                                        {m.label}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase text-white">Paint Condition & Goals</Label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {[
+                                                    { id: 'good', label: 'Good' },
+                                                    { id: 'swirls', label: 'Swirls/Scratches' },
+                                                    { id: 'oxidized', label: 'Oxidized/Faded' }
+                                                ].map((p) => (
+                                                    <Button
+                                                        key={p.id}
+                                                        variant={activeVehicle.paintCondition === p.id ? "secondary" : "outline"}
+                                                        onClick={() => updateVehicle(activeVehicleId, { paintCondition: p.id })}
+                                                        className={`h-7 text-[9px] font-bold uppercase px-2 ${activeVehicle.paintCondition === p.id ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'border-zinc-700'}`}
+                                                    >
+                                                        {p.label}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                            <Select value={activeVehicle.mainGoal} onValueChange={(v) => updateVehicle(activeVehicleId, { mainGoal: v })}>
+                                                <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase">
+                                                    <SelectValue placeholder="MAIN CUSTOMER GOAL" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="basic">Basic Clean</SelectItem>
+                                                    <SelectItem value="interior">Deep Interior Clean</SelectItem>
+                                                    <SelectItem value="exterior">Exterior Shine/Protection</SelectItem>
+                                                    <SelectItem value="odor">Odor Removal</SelectItem>
+                                                    <SelectItem value="full">Full Professional Detail</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* LOGISTICS */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[9px] font-black uppercase text-white/70">Storage</Label>
+                                            <Select value={activeVehicle.garaged} onValueChange={(v) => updateVehicle(activeVehicleId, { garaged: v })}>
+                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-white">
+                                                    <SelectValue placeholder="STORAGE" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="garaged">Always Garaged</SelectItem>
+                                                    <SelectItem value="outdoors">Kept Outdoors</SelectItem>
+                                                    <SelectItem value="partial">Mix of Both</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[9px] font-black uppercase text-white/70">Mileage</Label>
+                                            <Input placeholder="e.g. 45k" value={activeVehicle.mileage} onChange={(e) => updateVehicle(activeVehicleId, { mileage: e.target.value })} className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-white placeholder:text-zinc-600" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[9px] font-black uppercase text-white/70">History</Label>
+                                            <Select value={activeVehicle.detailHistory} onValueChange={(v) => updateVehicle(activeVehicleId, { detailHistory: v })}>
+                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-white">
+                                                    <SelectValue placeholder="HISTORY" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="never">Never Detailed</SelectItem>
+                                                    <SelectItem value="recent">Within 6 Mo</SelectItem>
+                                                    <SelectItem value="year">~1 Year Ago</SelectItem>
+                                                    <SelectItem value="multi-year">2+ Years Ago</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+
+                        {/* SECTION 2: CALLER IDENTITY */}
                         <AccordionItem value="caller-info" className="border-b border-border bg-zinc-900/40">
                             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
-                                <div className="flex items-center gap-3 w-full">
-                                    <div className="bg-primary/10 text-primary w-7 h-7 rounded-full flex items-center justify-center text-xs font-black">
-                                        <User className="w-3.5 h-3.5" />
+                                <div className="flex items-center gap-3 w-full text-left">
+                                    <div className="bg-zinc-800 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ring-1 ring-zinc-700">
+                                        2
                                     </div>
-                                    <div className="text-left">
-                                        <div className="text-sm font-black uppercase tracking-tight text-foreground">
-                                            1. Caller Identity
+                                    <div>
+                                        <div className="text-sm font-black uppercase tracking-tight text-white">
+                                            Caller Identity
                                         </div>
                                         {callerName && (
-                                            <div className="text-[10px] font-bold text-primary uppercase">
+                                            <div className="text-[10px] font-bold text-blue-400 uppercase">
                                                 {callerName} {callerPhone ? `• ${callerPhone}` : ''}
                                             </div>
                                         )}
@@ -344,159 +586,6 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                             onChange={(e) => setCallerEmail(e.target.value)}
                                             className="h-9 bg-background border-zinc-700 font-bold"
                                         />
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-
-                        {/* SECTION 1: PRE-QUALIFICATION */}
-                        <AccordionItem value="pre-qual" className="border-b border-border">
-                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
-                                <div className="flex items-center gap-3">
-                                    <span className="bg-primary/10 text-primary w-7 h-7 rounded-full flex items-center justify-center text-xs font-black">2</span>
-                                    <div className="text-left">
-                                        <div className="text-sm font-black uppercase tracking-tight text-foreground">Vehicle Context</div>
-                                        {activeVehicle.make && <div className="text-[10px] font-bold text-primary uppercase">{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</div>}
-                                    </div>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-5 pb-6 pt-0">
-                                {/* Vehicle Browser Taps */}
-                                {vehicles.length > 1 && (
-                                    <div className="flex flex-wrap gap-2 mb-4 border-b border-zinc-800 pb-2">
-                                        {vehicles.map((v, idx) => (
-                                            <button
-                                                key={v.id}
-                                                onClick={() => setActiveVehicleId(v.id)}
-                                                className={`px-3 py-1.5 text-[10px] font-black uppercase border rounded transition-all flex items-center gap-2
-                                                    ${activeVehicleId === v.id ? "bg-primary/10 text-primary border-primary" : "text-muted-foreground border-zinc-800 hover:bg-muted/50"}
-                                                `}
-                                            >
-                                                <Car className="w-3.5 h-3.5" />
-                                                {v.make || `V${idx + 1}`}
-                                                <Trash2 className="w-3 h-3 ml-1 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeVehicle(v.id); }} />
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="space-y-5">
-                                    <div className="p-3 bg-primary/5 border-l-4 border-primary rounded-r-lg italic text-xs sm:text-sm text-foreground">
-                                        "To give you an accurate price, tell me about your {activeVehicle.make || 'vehicle'}..."
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Year / Make / Model</Label>
-                                            <div className="flex gap-2">
-                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-20" />
-                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1" />
-                                            </div>
-                                            <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Vehicle Size</Label>
-                                                <button onClick={() => setShowAutoClassify(true)} className="text-[9px] font-black uppercase text-primary hover:underline">Auto Classify</button>
-                                            </div>
-                                            <Select value={activeVehicle.type} onValueChange={(v) => updateVehicle(activeVehicleId, { type: v as VehicleType })}>
-                                                <SelectTrigger className="w-full h-10"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="compact">Sedan / Compact</SelectItem>
-                                                    <SelectItem value="midsize">Mid-Size / SUV</SelectItem>
-                                                    <SelectItem value="truck">Truck / Large SUV</SelectItem>
-                                                    <SelectItem value="luxury">Luxury / Oversized</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Overall Condition</Label>
-                                            <div className="flex gap-1">
-                                                {["light", "moderate", "heavy"].map((c) => (
-                                                    <Button
-                                                        key={c}
-                                                        variant={activeVehicle.condition === c ? "default" : "outline"}
-                                                        onClick={() => updateVehicle(activeVehicleId, { condition: c as any })}
-                                                        className="flex-1 capitalize text-[10px] font-bold h-10 px-0"
-                                                    >
-                                                        {c}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1 mb-2 block">Client Needs</Label>
-                                            <div className="grid grid-cols-2 gap-3 bg-zinc-950/30 p-3 rounded-lg border border-zinc-800">
-                                                <div className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id="int"
-                                                        checked={activeVehicle.needs.interior}
-                                                        onCheckedChange={(c) => {
-                                                            const isChecked = !!c;
-                                                            updateVehicle(activeVehicleId, {
-                                                                needs: {
-                                                                    ...activeVehicle.needs,
-                                                                    interior: isChecked,
-                                                                    both: false // Choosing specific clears 'both'
-                                                                }
-                                                            });
-                                                        }}
-                                                    />
-                                                    <Label htmlFor="int" className="text-xs font-bold cursor-pointer">Interior Detail</Label>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id="ext"
-                                                        checked={activeVehicle.needs.exterior}
-                                                        onCheckedChange={(c) => {
-                                                            const isChecked = !!c;
-                                                            updateVehicle(activeVehicleId, {
-                                                                needs: {
-                                                                    ...activeVehicle.needs,
-                                                                    exterior: isChecked,
-                                                                    both: false // Choosing specific clears 'both'
-                                                                }
-                                                            });
-                                                        }}
-                                                    />
-                                                    <Label htmlFor="ext" className="text-xs font-bold cursor-pointer">Exterior Detail</Label>
-                                                </div>
-                                                <div className="flex items-center space-x-2 col-span-2 pt-1 border-t border-zinc-800">
-                                                    <Checkbox
-                                                        id="both"
-                                                        checked={activeVehicle.needs.both}
-                                                        onCheckedChange={(c) => {
-                                                            const isChecked = !!c;
-                                                            updateVehicle(activeVehicleId, {
-                                                                needs: {
-                                                                    ...activeVehicle.needs,
-                                                                    both: isChecked,
-                                                                    // Choosing 'both' clears specific ones
-                                                                    interior: isChecked ? false : activeVehicle.needs.interior,
-                                                                    exterior: isChecked ? false : activeVehicle.needs.exterior
-                                                                }
-                                                            });
-                                                        }}
-                                                    />
-                                                    <Label htmlFor="both" className="text-xs font-black cursor-pointer text-emerald-400">Total Full Detail</Label>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1 flex items-center gap-1">Notes / Specifics</Label>
-                                            <Textarea
-                                                placeholder="Pet hair, smoke, stains, child car seats..."
-                                                className="min-h-[80px] bg-muted/20 border-zinc-800 text-sm"
-                                                value={activeVehicle.notes}
-                                                onChange={(e) => updateVehicle(activeVehicleId, { notes: e.target.value })}
-                                            />
-                                        </div>
                                     </div>
                                 </div>
                             </AccordionContent>

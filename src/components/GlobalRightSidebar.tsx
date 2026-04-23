@@ -217,7 +217,7 @@ export function GlobalRightSidebar() {
                     />
                 )}
                 <div 
-                    className={`fixed right-0 top-0 h-screen w-48 bg-zinc-950 border-l border-zinc-800 z-[100] transition-transform duration-300 transform flex flex-col items-start px-2 pt-4 pb-24 gap-3 overflow-y-auto no-scrollbar ${
+                    className={`fixed right-0 top-0 h-screen w-48 bg-zinc-950 border-l border-zinc-800 z-[100] transition-transform duration-300 transform flex flex-col items-start px-2 pt-16 pb-24 gap-3 overflow-y-auto no-scrollbar ${
                         openMobile ? 'translate-x-0' : 'translate-x-full'
                     }`}
                 >

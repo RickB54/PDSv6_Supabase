@@ -854,7 +854,7 @@ const MobileSetup = () => {
       </Dialog>
 
       <PhotoGalleryLightbox
-        photos={visualMedia.map(m => ({ url: m.url, label: m.caption, type: m.type }))}
+        photos={visualMedia.map(m => ({ url: m.url, label: m.caption, type: m.type as "image" | "video" }))}
         initialIndex={currentMediaIndex}
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
