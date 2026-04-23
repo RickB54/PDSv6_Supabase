@@ -263,16 +263,11 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
         }
 
         // 3. Merge Strategies
-        const uniqueCustomers: Customer[] = [];
-        const seenEmails = new Set<string>();
+        // Unique key: Email (if exists), otherwise Name + Phone.
+        const mergedMap = new Map<string, Customer>();
 
         // Helper to process CRM record
         const processCrmRecord = (c: any) => {
-            const safeEmail = (c.email || '').toLowerCase().trim();
-            const key = safeEmail || `no-email-${c.id}`;
-
-            if (safeEmail) seenEmails.add(safeEmail);
-
             const allVehsRaw = (c.vehicles || []).map((v: any) => ({
                 id: v.id,
                 make: v.make || '',
@@ -299,7 +294,6 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 return true;
             });
 
-            // Fallback strategy: First vehicle from table, then legacy vehicle_info JSONB
             const v = allVehs[0] || {};
             const vi = c.vehicle_info || {};
 
@@ -309,8 +303,6 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 email: c.email,
                 phone: c.phone,
                 address: c.address,
-                // These top-level properties are key for UI display
-                // Fallback chain: vehicles table → vehicle_info JSONB → direct customer columns
                 vehicle: v.make || vi.make || c.vehicle || '',
                 model: v.model || vi.model || c.model || '',
                 year: v.year ? String(v.year) : (vi.year ? String(vi.year) : (c.year ? String(c.year) : '')),
@@ -343,20 +335,33 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             } as Customer;
         };
 
-        // processCrmRecord helper is already defined above
         // Add CRM Data
         (crmData || []).forEach((c: any) => {
             const customer = processCrmRecord(c);
-            // Normalize type to lowercase
             customer.type = (customer.type || 'customer').toLowerCase() as any;
-            uniqueCustomers.push(customer);
+
+            const email = (customer.email || '').toLowerCase().trim();
+            const phone = (customer.phone || '').replace(/\D/g, '');
+            const name = (customer.name || '').toLowerCase().trim();
+
+            let key = email;
+            if (!key) {
+                key = `name:${name}_phone:${phone || c.id}`;
+            }
+
+            if (mergedMap.has(key)) {
+                const existing = mergedMap.get(key)!;
+                mergedMap.set(key, { ...existing, ...customer });
+            } else {
+                mergedMap.set(key, customer);
+            }
         });
 
         // Add Auth Data (if not duplicate)
         (authData || []).forEach((u: any) => {
             const safeEmail = (u.email || '').toLowerCase().trim();
-            if (safeEmail && !seenEmails.has(safeEmail)) {
-                uniqueCustomers.push({
+            if (safeEmail && !mergedMap.has(safeEmail)) {
+                mergedMap.set(safeEmail, {
                     id: u.id,
                     name: u.name || u.email || 'Unknown',
                     email: u.email,
@@ -371,12 +376,13 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                     vehicle_info: {},
                     notes: 'Registered Account (No CRM Profile)',
                     created_at: u.updated_at || new Date().toISOString(),
-                    type: 'customer', // Auth users are always customers unless changed in CRM
+                    type: 'customer',
                     is_archived: false
                 });
-                seenEmails.add(safeEmail);
             }
         });
+
+        const uniqueCustomers = Array.from(mergedMap.values());
 
         // 4. Merge Local Mocks (Safe Testing)
         try {
@@ -384,10 +390,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             localCust.forEach(c => {
                 if (!c.isStaticMock) return;
                 const safeEmail = (c.email || '').toLowerCase().trim();
-                const safePhone = (c.phone || '').replace(/\D/g, '');
-
-                // Only skip if exact match from Supabase already exists
-                if (safeEmail && seenEmails.has(safeEmail)) return;
+                if (safeEmail && mergedMap.has(safeEmail)) return;
 
                 uniqueCustomers.push({
                     ...c,

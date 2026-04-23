@@ -22,9 +22,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
-import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport } from "@/lib/supa-data";
+import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport, getSupabaseCustomers } from "@/lib/supa-data";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTIMATES, MOCK_ACCOUNTING } from "@/lib/demoMockData";
+import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTIMATES, MOCK_ACCOUNTING, MOCK_PROSPECTS } from "@/lib/demoMockData";
 
 const Reports = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -84,7 +84,14 @@ const Reports = () => {
       setTaxHistory([]);
       return;
     }
-    const cust = (await localforage.getItem<any[]>("customers")) || [];
+    const cust = await getSupabaseCustomers();
+    // Load Estimates from Supabase
+    const estimatesData = await getSupabaseEstimates();
+    const incomeData = await getReceivables();
+    const expenseData = await getExpenses();
+    const payrollData = (await localforage.getItem<any[]>("payroll-history")) || [];
+    const taxReportsData = await getSupabaseTaxReports();
+
     const inv = (await localforage.getItem<any[]>("invoices")) || [];
     // Load Inventory from Supabase
     const chems = await getChemicals();
@@ -99,13 +106,6 @@ const Reports = () => {
         jobsData = [];
       }
     }
-    // Load Estimates from Supabase
-    const estimatesData = await getSupabaseEstimates();
-    const incomeData = await getReceivables();
-    const expenseData = await getExpenses();
-    const payrollData = (await localforage.getItem<any[]>("payroll-history")) || [];
-    const taxReportsData = await getSupabaseTaxReports();
-
     setCustomers(cust);
     setInvoices(inv);
     setChemicals(chems);
@@ -141,29 +141,76 @@ const Reports = () => {
   const generateCustomerReport = (download = false) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("Customer Report", 105, 20, { align: "center" });
+    doc.text("Customer Database Report", 105, 20, { align: "center" });
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
 
     let y = 40;
-    // Customers don't have dates, so show all customers
-    const filteredCustomers = customers;
+    // Only Active Customers (not prospects)
+    const filteredCustomers = customers.filter(c => (c.type || '').toLowerCase() !== 'prospect');
 
     filteredCustomers.forEach((cust) => {
       if (y > 270) { doc.addPage(); y = 20; }
       doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
       doc.text(`${cust.name}`, 20, y);
       y += 6;
       doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
       doc.text(`Vehicle: ${cust.year || ''} ${cust.vehicle || ''} ${cust.model || ''} | Type: ${cust.vehicleType || 'N/A'}`, 20, y);
       y += 5;
       doc.text(`Email: ${cust.email || 'N/A'} | Phone: ${cust.phone || 'N/A'}`, 20, y);
       y += 5;
       doc.text(`Address: ${cust.address || 'N/A'}`, 20, y);
       y += 8;
+      doc.line(20, y, 190, y);
+      y += 10;
     });
 
     if (download) doc.save(`CustomerReport_${new Date().toISOString().split('T')[0]}.pdf`);
+    else window.open(doc.output('bloburl'), '_blank');
+  };
+
+  const generateProspectReport = (download = false) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.setTextColor(234, 88, 12); // Orange for prospects
+    doc.text("Prospects & Leads Report", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+
+    let y = 40;
+    // Only Prospects
+    const filteredProspects = customers.filter(c => (c.type || '').toLowerCase() === 'prospect');
+
+    filteredProspects.forEach((prospect) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${prospect.name}`, 20, y);
+      y += 6;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Interest: ${prospect.vehicle || ''} ${prospect.model || ''} | How Found: ${prospect.howFound || 'N/A'}`, 20, y);
+      y += 5;
+      doc.text(`Email: ${prospect.email || 'N/A'} | Phone: ${prospect.phone || 'N/A'}`, 20, y);
+      y += 5;
+      doc.text(`Address: ${prospect.address || 'N/A'}`, 20, y);
+      y += 5;
+      if (prospect.notes) {
+        const splitNotes = doc.splitTextToSize(`Notes: ${prospect.notes}`, 170);
+        doc.text(splitNotes, 20, y);
+        y += (splitNotes.length * 5);
+      }
+      y += 8;
+      doc.setDrawColor(234, 88, 12);
+      doc.line(20, y, 190, y);
+      y += 10;
+    });
+
+    if (download) doc.save(`ProspectReport_${new Date().toISOString().split('T')[0]}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
   };
 
@@ -809,6 +856,7 @@ const Reports = () => {
 
   const tabList = [
     { id: 'customers', label: 'Customers' },
+    { id: 'prospects', label: 'Prospects' },
     { id: 'invoices', label: 'Invoices' },
     { id: 'inventory', label: 'Inventory' },
     { id: 'employee', label: 'Employee' },
@@ -891,7 +939,7 @@ const Reports = () => {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Customer Overview</h3>
-                  <p className="text-zinc-500 text-sm">Total Customers: <span className="text-white font-mono">{customers.length}</span></p>
+                  <p className="text-zinc-500 text-sm">Total Customers: <span className="text-white font-mono">{customers.filter(c => (c.type || '').toLowerCase() !== 'prospect').length}</span></p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -918,7 +966,11 @@ const Reports = () => {
                       </TableHeader>
                       <TableBody>
                         {(() => {
-                          const debtors = Array.from(new Map(customers.map(c => [c.id || c.name, c])).values()).map(cust => {
+                          const debtors = Array.from(new Map(
+                            customers
+                              .filter(c => (c.type || '').toLowerCase() !== 'prospect')
+                              .map(c => [c.id || c.name, c])
+                          ).values()).map(cust => {
                             const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
                             const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
                             const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
@@ -996,6 +1048,61 @@ const Reports = () => {
                     </div>
                   )
                 })()}
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="prospects" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-200">Prospects & Leads</h3>
+                  <p className="text-zinc-500 text-sm">Potential clients from the Prospects database</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateProspectReport(false)} className="border-orange-500/30 text-orange-400 hover:bg-orange-600/10"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateProspectReport(true)} className="border-orange-500/30 text-orange-400 hover:bg-orange-600/10"><Save className="h-4 w-4 mr-2" /> PDF</Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+                <Table>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800">
+                      <TableHead className="text-zinc-400">Lead Name</TableHead>
+                      <TableHead className="text-zinc-400">Contact</TableHead>
+                      <TableHead className="text-zinc-400">Vehicle of Interest</TableHead>
+                      <TableHead className="text-zinc-400">Acquisition</TableHead>
+                      <TableHead className="text-zinc-400 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customers
+                      .filter(c => (c.type || '').toLowerCase() === 'prospect')
+                      .map((p, i) => (
+                        <TableRow key={i} className="border-zinc-800 hover:bg-zinc-900/50">
+                          <TableCell className="font-bold text-zinc-200">{p.name}</TableCell>
+                          <TableCell className="text-zinc-400 text-xs">
+                            {p.email}<br/>{p.phone}
+                          </TableCell>
+                          <TableCell className="text-zinc-400 text-xs">
+                            {p.year} {p.vehicle} {p.model}
+                          </TableCell>
+                          <TableCell className="text-zinc-500 text-xs italic">
+                            {p.howFound || 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" className="text-orange-400 h-8" onClick={() => window.location.href = `/prospects?search=${encodeURIComponent(p.name)}`}>
+                              Manage Lead
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    {customers.filter(c => (c.type || '').toLowerCase() === 'prospect').length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-zinc-500">No prospects found.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </Card>
           </TabsContent>
