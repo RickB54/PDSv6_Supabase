@@ -161,7 +161,7 @@ const Invoicing = () => {
         total: calculateTotal(),
         date: new Date().toLocaleDateString(),
         createdAt: new Date().toISOString(),
-        paymentStatus: "unpaid",
+        paymentStatus: calculateTotal() === 0 ? "paid" : "unpaid",
         paidAmount: 0,
       };
 
@@ -524,10 +524,10 @@ const Invoicing = () => {
 
                     <div className="text-right min-w-[100px]">
                       <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Status</div>
-                      <div className={`font-medium ${invoice.paymentStatus === 'paid' ? 'text-emerald-400' :
+                      <div className={`font-medium ${ (invoice.paymentStatus === 'paid' || invoice.total === 0) ? 'text-emerald-400' :
                         invoice.paymentStatus === 'partially-paid' ? 'text-amber-400' : 'text-red-400'
                         }`}>
-                        {(invoice.paymentStatus || 'unpaid').toUpperCase()}
+                        {(invoice.total === 0 ? 'paid' : (invoice.paymentStatus || 'unpaid')).toUpperCase()}
                       </div>
                     </div>
 
@@ -608,8 +608,8 @@ const Invoicing = () => {
                 <div className="text-right">
                   <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Details</Label>
                   <div className="mt-1 text-zinc-300">Date: {selectedInvoice.date}</div>
-                  <div className={`mt-1 font-bold ${(selectedInvoice.paymentStatus || 'unpaid') === 'paid' ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {(selectedInvoice.paymentStatus || 'unpaid').toUpperCase()}
+                  <div className={`mt-1 font-bold ${((selectedInvoice.paymentStatus || 'unpaid') === 'paid' || selectedInvoice.total === 0) ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {(selectedInvoice.total === 0 ? 'paid' : (selectedInvoice.paymentStatus || 'unpaid')).toUpperCase()}
                   </div>
                 </div>
               </div>
@@ -666,7 +666,7 @@ const Invoicing = () => {
                 <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedInvoice, false)}>
                   <Printer className="h-4 w-4 mr-2" /> Print
                 </Button>
-                {(selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && (
+                {(selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && selectedInvoice.total > 0 && (
                   <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setPaymentAmount((selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
                     <CreditCard className="h-4 w-4 mr-2" /> Record Payment
                   </Button>

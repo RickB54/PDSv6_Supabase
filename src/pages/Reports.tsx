@@ -899,6 +899,57 @@ const Reports = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 gap-6 mb-8">
+                <div className="p-6 bg-red-500/5 rounded-xl border border-red-500/10">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-bold text-red-400 flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" /> Customers with Outstanding Balance
+                    </h4>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+                    <Table>
+                      <TableHeader className="bg-zinc-900">
+                        <TableRow className="border-zinc-800">
+                          <TableHead className="text-zinc-400">Customer</TableHead>
+                          <TableHead className="text-zinc-400">Total Spent</TableHead>
+                          <TableHead className="text-zinc-400">Balance Due</TableHead>
+                          <TableHead className="text-zinc-400 text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const debtors = Array.from(new Map(customers.map(c => [c.id || c.name, c])).values()).map(cust => {
+                            const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
+                            const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+                            const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
+                            return { ...cust, totalSpent, totalOwed };
+                          }).filter(d => d.totalOwed > 0.01);
+
+                          if (debtors.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8 text-zinc-500 italic">No outstanding balances found</TableCell>
+                              </TableRow>
+                            );
+                          }
+
+                          return debtors.map(d => (
+                            <TableRow key={d.id || d.name} className="border-zinc-800 hover:bg-zinc-900/50">
+                              <TableCell className="font-medium text-zinc-200">{d.name}</TableCell>
+                              <TableCell className="text-zinc-400">${d.totalSpent.toFixed(2)}</TableCell>
+                              <TableCell className="text-red-400 font-bold">${d.totalOwed.toFixed(2)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(d.id || d.name)} className="text-zinc-400 hover:text-white">View Details</Button>
+                              </TableCell>
+                            </TableRow>
+                          ));
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-6 border-t border-zinc-800">
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Detailed Customer Report</label>
                 <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
@@ -906,7 +957,9 @@ const Reports = () => {
                     <SelectValue placeholder="Select a customer..." />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
-                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {Array.from(new Map(customers.map(c => [c.id || c.name, c])).values()).map(c => (
+                      <SelectItem key={c.id || c.name} value={c.id || c.name}>{c.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 

@@ -75,6 +75,7 @@ interface BudgetTarget {
 
 interface Invoice {
     id: string;
+    invoiceNumber?: number;
     total: number;
     paymentStatus?: "unpaid" | "partially-paid" | "paid";
     paidAmount?: number;
@@ -1060,7 +1061,7 @@ const CompanyBudget = () => {
                                                             if (amt <= 0 || !filterByDate(inv.createdAt || inv.date)) return false;
                                                             
                                                             if (search) {
-                                                                const matches = (inv.invoiceNumber || '').toLowerCase().includes(search) || 
+                                                                const matches = String(inv.invoiceNumber || '').toLowerCase().includes(search) || 
                                                                                 String(amt).includes(search) || 
                                                                                 "invoice".includes(search);
                                                                 if (!matches) return false;
