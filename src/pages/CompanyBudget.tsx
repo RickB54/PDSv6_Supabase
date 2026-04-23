@@ -1134,10 +1134,10 @@ const CompanyBudget = () => {
                                                                             const inv = item.data;
                                                                             return (
                                                                                 <TableRow key={`inv-${inv.id}`}>
-                                                                                    <TableCell className="text-xs sm:text-sm">{(inv.createdAt || inv.date || '').slice(0, 10)}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">{(inv.createdAt || inv.date || '').slice(5, 10)}</TableCell>
                                                                                     <TableCell className="hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
-                                                                                    <TableCell className="text-xs sm:text-sm">Paid Invoice</TableCell>
-                                                                                    <TableCell>${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">Paid Invoice</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
                                                                                     <TableCell>
                                                                                         {/* Invoices are read-only here */}
                                                                                     </TableCell>
@@ -1147,10 +1147,10 @@ const CompanyBudget = () => {
                                                                             const inc = item.data;
                                                                             return (
                                                                                 <TableRow key={`inc-${inc.id}`}>
-                                                                                    <TableCell className="text-xs sm:text-sm">{(inc.date || inc.createdAt || '').slice(0, 10)}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">{(inc.date || inc.createdAt || '').slice(5, 10)}</TableCell>
                                                                                     <TableCell className="hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{inc.category || 'Manual'}</span></TableCell>
-                                                                                    <TableCell className="text-xs sm:text-sm">{inc.description || inc.customerName || '-'}</TableCell>
-                                                                                    <TableCell>${(inc.amount || 0).toFixed(2)}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{inc.description || inc.customerName || '-'}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">${(inc.amount || 0).toFixed(2)}</TableCell>
                                                                                     <TableCell>
                                                                                         <Button
                                                                                             variant="ghost"
@@ -1173,8 +1173,8 @@ const CompanyBudget = () => {
                                                                     })}
                                                                     {/* Category Subtotal Row */}
                                                                     <TableRow className="bg-green-50 dark:bg-green-950/20 font-semibold">
-                                                                        <TableCell colSpan={3} className="text-right">{category} Subtotal:</TableCell>
-                                                                        <TableCell className="text-green-600">${subtotal.toFixed(2)}</TableCell>
+                                                                        <TableCell colSpan={2} className="text-right sm:col-span-3">{category} Subtotal:</TableCell>
+                                                                        <TableCell className="text-green-600 text-xs sm:text-sm">${subtotal.toFixed(2)}</TableCell>
                                                                         <TableCell></TableCell>
                                                                     </TableRow>
                                                                 </>
@@ -1239,10 +1239,10 @@ const CompanyBudget = () => {
                                                                 <>
                                                                     {items.map(exp => (
                                                                         <TableRow key={`exp-${exp.id}`}>
-                                                                            <TableCell>{(exp.createdAt || '').slice(0, 10)}</TableCell>
-                                                                            <TableCell><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{exp.category || 'General'}</span></TableCell>
-                                                                            <TableCell>{exp.description || '-'}</TableCell>
-                                                                            <TableCell>${(exp.amount || 0).toFixed(2)}</TableCell>
+                                                                            <TableCell className="text-xs sm:text-sm">{(exp.createdAt || '').slice(5, 10)}</TableCell>
+                                                                            <TableCell className="hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{exp.category || 'General'}</span></TableCell>
+                                                                            <TableCell className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{exp.description || '-'}</TableCell>
+                                                                            <TableCell className="text-xs sm:text-sm">${(exp.amount || 0).toFixed(2)}</TableCell>
                                                                             <TableCell>
                                                                                 <Button
                                                                                     variant="ghost"
@@ -1263,8 +1263,8 @@ const CompanyBudget = () => {
                                                                     ))}
                                                                     {/* Category Subtotal Row */}
                                                                     <TableRow className="bg-red-50 dark:bg-red-950/20 font-semibold">
-                                                                        <TableCell colSpan={3} className="text-right">{category} Subtotal:</TableCell>
-                                                                        <TableCell className="text-red-600">${subtotal.toFixed(2)}</TableCell>
+                                                                        <TableCell colSpan={2} className="text-right sm:col-span-3">{category} Subtotal:</TableCell>
+                                                                        <TableCell className="text-red-600 text-xs sm:text-sm">${subtotal.toFixed(2)}</TableCell>
                                                                         <TableCell></TableCell>
                                                                     </TableRow>
                                                                 </>
