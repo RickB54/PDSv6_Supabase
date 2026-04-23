@@ -147,31 +147,51 @@ const InventoryControl = () => {
       const el = document.getElementById(id);
       if (!el) return;
 
-      // Scroll the element into view, ensuring it's at the top of its scrollable container
-      // This is more robust than window.scrollTo because it handles inner-div scrolling
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Find the main scrollable container (the flex-1 overflow-auto from App.tsx)
+      const scrollContainer = el.closest('.overflow-auto');
+      
+      const offset = isDemoMode ? 112 : 72; // Align with the sticky header 'top' values
 
-      // After the initial scroll, we might need a slight adjustment for the sticky app header
-      // but usually scrollIntoView with block: 'start' puts it at the very top of the container.
-      // If the container itself has padding/offset (like our paddingClass), it works perfectly.
-    }, 100);
+      if (scrollContainer) {
+        // Calculate offset relative to the scroll container
+        let actualTop = 0;
+        let curr: HTMLElement | null = el;
+        while (curr && curr !== scrollContainer) {
+          actualTop += curr.offsetTop;
+          curr = curr.offsetParent as HTMLElement;
+        }
+        
+        scrollContainer.scrollTo({
+          top: actualTop - offset,
+          behavior: 'smooth'
+        });
+      } else {
+        // Fallback to window scroll
+        const rect = el.getBoundingClientRect();
+        const absoluteTop = rect.top + window.pageYOffset;
+        window.scrollTo({
+          top: absoluteTop - offset,
+          behavior: 'smooth'
+        });
+      }
+    }, 150); // Slightly longer timeout to ensure full list re-flow
   };
 
   useEffect(() => {
     if (expandedSections.chemicals) {
-      scrollToSection('section-chemicals');
+      scrollToSection('container-chemicals');
     }
   }, [expandedSections.chemicals, chemicalSort]);
 
   useEffect(() => {
     if (expandedSections.materials) {
-      scrollToSection('section-materials');
+      scrollToSection('container-materials');
     }
   }, [expandedSections.materials, supplySort]);
 
   useEffect(() => {
     if (expandedSections.tools) {
-      scrollToSection('section-equipment');
+      scrollToSection('container-equipment');
     }
   }, [expandedSections.tools, equipmentSort]);
 
@@ -1716,7 +1736,7 @@ const InventoryControl = () => {
         </div>
 
         {/* Chemicals Section (Yellow) */}
-        <div className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
+        <div id="container-chemicals" className="border border-yellow-500/30 rounded-xl bg-zinc-900/50">
           <div
             id="section-chemicals"
             className="p-4 bg-zinc-950 sticky z-50 border-b border-yellow-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
@@ -1873,7 +1893,7 @@ const InventoryControl = () => {
         </div>
 
         {/* Supplies Section (Blue) - Renamed from Materials */}
-        <div className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
+        <div id="container-materials" className="border border-blue-500/30 rounded-xl bg-zinc-900/50">
           <div
             id="section-materials"
             className="p-4 bg-zinc-950 sticky z-50 border-b border-blue-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
@@ -2086,7 +2106,7 @@ const InventoryControl = () => {
         </div>
 
         {/* Equipment Section (Purple) - Renamed from Tools */}
-        <div className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
+        <div id="container-equipment" className="border border-purple-500/30 rounded-xl bg-zinc-900/50">
           <div
             id="section-equipment"
             className="p-4 bg-zinc-950 sticky z-50 border-b border-purple-500/20 flex flex-wrap items-center justify-between cursor-pointer hover:bg-zinc-950 transition-colors shadow-lg rounded-t-xl gap-3"
