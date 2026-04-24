@@ -257,7 +257,7 @@ export default function PackagePricing() {
       // 2. Supabase Strict Sync
       if (isSupabaseEnabled()) {
 
-        const allPkgs = [...servicePackages, ...getCustomPackages()];
+        const allPkgs = [...builtInPackages, ...getCustomPackages()];
         const pkgRows = allPkgs
           .filter(p => !getPackageMeta(p.id)?.deleted)
           .map(p => ({

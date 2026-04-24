@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { servicePackages } from '@/lib/services';
+import * as supaPkgs from '@/services/supabase/packages';
 import { getCombinedSelectableProducts } from '@/lib/chemicals';
 import { toast } from 'sonner';
 import { contentService } from '@/lib/content';
@@ -35,10 +36,11 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   const [tips, setTips] = useState<TipMapping[]>([]);
   const [descriptions, setDescriptions] = useState<ChemicalDescription[]>([]);
   const [prepList, setPrepList] = useState<string[]>([]);
-  const [selectedPackageId, setSelectedPackageId] = useState<string>(servicePackages[0]?.id || '');
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [selectedChemicalId, setSelectedChemicalId] = useState<string>('');
   const [availableChemicals, setAvailableChemicals] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activePackages, setActivePackages] = useState<any[]>(servicePackages);
   const [loading, setLoading] = useState(false);
   const dataInitialized = useRef(false);
 
@@ -67,14 +69,34 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
 
         const chems = await getCombinedSelectableProducts();
         setAvailableChemicals(chems);
+
+        // Fetch active packages from Supabase
+        try {
+          const allPkgs = await supaPkgs.getAll();
+          const filtered = (allPkgs || []).filter(p => p.is_active !== false);
+          
+          const finalPkgs = filtered.length > 0 ? filtered : servicePackages;
+          setActivePackages(finalPkgs);
+          
+          if (finalPkgs.length > 0 && !selectedPackageId) {
+            setSelectedPackageId(finalPkgs[0].id);
+          }
+        } catch (pkgError) {
+          console.error("Failed to fetch packages from Supabase", pkgError);
+          setActivePackages(servicePackages);
+          if (servicePackages.length > 0 && !selectedPackageId) {
+             setSelectedPackageId(servicePackages[0].id);
+          }
+        }
         
-        // Auto-seed descriptions & prep list strictly from chart if new
-        const { seededDescs, seededPrep, changed } = seedChemicalData(chems, loadedDescs, loadedPrepItems);
+        // Auto-seed descriptions, prep list & package tips strictly from chart if new
+        const { seededDescs, seededPrep, seededTips, changed } = seedChemicalData(chems, loadedDescs, loadedPrepItems, loadedTips);
         
         if (changed) {
            loadedDescs = seededDescs;
            loadedPrepItems = seededPrep;
-           await saveToSupabase(loadedTips, seededDescs, seededPrep);
+           loadedTips = seededTips;
+           await saveToSupabase(seededTips, seededDescs, seededPrep);
         }
 
         setTips(loadedTips);
@@ -83,7 +105,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         dataInitialized.current = true;
 
         if (chems.length > 0 && !selectedChemicalId) {
-          setSelectedChemicalId(chems[0].id);
+          setSelectedChemicalId(String(chems[0].id));
         }
       } catch (e) {
         console.error("Failed to load Rick's tips", e);
@@ -94,7 +116,20 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     loadAll();
   }, [open]);
 
-  const seedChemicalData = (chems: any[], currentDescs: ChemicalDescription[], currentPrep: string[]): { seededDescs: ChemicalDescription[], seededPrep: string[], changed: boolean } => {
+  // Auto-select first package/chemical when they load if none selected
+  useEffect(() => {
+    if (activePackages.length > 0 && !selectedPackageId) {
+      setSelectedPackageId(String(activePackages[0].id));
+    }
+  }, [activePackages, selectedPackageId]);
+
+  useEffect(() => {
+    if (availableChemicals.length > 0 && !selectedChemicalId) {
+      setSelectedChemicalId(String(availableChemicals[0].id));
+    }
+  }, [availableChemicals, selectedChemicalId]);
+
+  const seedChemicalData = (chems: any[], currentDescs: ChemicalDescription[], currentPrep: string[], currentTips: TipMapping[]): { seededDescs: ChemicalDescription[], seededPrep: string[], seededTips: TipMapping[], changed: boolean } => {
     const chartData = [
       { name: "Pink Perfection", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "10:1", "4:1"], purpose: "High-performance all-purpose cleaner and degreaser for interior and exterior pre-treat." },
       { name: "Dirt Buster", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "10:1", "4:1"], purpose: "General purpose cleaning for interior plastics and vinyl." },
@@ -111,9 +146,28 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       { name: "Meguiar's APC", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "4:1", "4:1"], purpose: "Heavy-duty all-purpose cleaner for engines, wheel wells, and stubborn grease." }
     ];
 
+    const packageAdvice = [
+      { id: 'prime-essential-exterior', notes: "Essential Exterior Guide:\n- Inspect for heavy mud/bugs; pre-treat these areas.\n- Foam dwell time 3-5 mins; do not let dry.\n- Top-down wash with grit guards.\n- Hand dry with plush microfiber." },
+      { id: 'prime-essential-interior', notes: "Essential Interior Guide:\n- Remove all trash and loose items first.\n- Vacuum in sections (driver -> passenger -> rear).\n- Wipe dash/console with safe APC.\n- Glass cleaning is the final touch for clarity." },
+      { id: 'prime-essential-full', notes: "Essential Full Detail Guide:\n- Balance time between inside and out.\n- Wash exterior first to allow drying during interior work.\n- Wipe door jambs last to prevent drips.\n- Final walk-around with client for satisfaction." },
+      { id: 'prime-elite-exterior', notes: "Elite Exterior Guide:\n- Decon wash to strip old waxes.\n- Clay bar until surface feels glass-smooth.\n- Deep clean wheel wells and inner rim barrels.\n- Apply UV trim protectant; buff off excess." },
+      { id: 'prime-elite-interior', notes: "Elite Interior Guide:\n- Steam clean vents to kill bacteria/odors.\n- Hot water extraction for deep stain removal.\n- PH-balanced leather conditioning (matte finish).\n- Clean inside of trunk and storage cubbies." },
+      { id: 'prime-elite-full', notes: "Elite Full Detail Guide:\n- Master restoration: Decon + Clay + Protection.\n- Ceramic sealant requires clean, cool surface.\n- Full steam and extraction interior master class.\n- Double-check every button, crevice, and jamb." }
+    ];
+
     const seededDescs = [...currentDescs];
     const seededPrep = [...currentPrep];
+    const seededTips = [...currentTips];
     let changed = false;
+
+    // Seed Package Advice (Tips)
+    packageAdvice.forEach(advice => {
+      const existing = seededTips.find(t => t.packageId === advice.id);
+      if (!existing) {
+        seededTips.push({ packageId: advice.id, chemicalIds: [], notes: advice.notes });
+        changed = true;
+      }
+    });
 
     chartData.forEach(item => {
       // Find all matches for this specific name (e.g. "Xpress" might match "P&S Xpress" and "Xpress Interior")
@@ -142,7 +196,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       });
     });
 
-    return { seededDescs, seededPrep, changed };
+    return { seededDescs, seededPrep, seededTips, changed };
   };
 
   const saveToSupabase = async (newTips: TipMapping[], newDescs: ChemicalDescription[], newPrep: string[]) => {
@@ -662,8 +716,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                       <SelectValue placeholder="Select a Service Package" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
-                      {servicePackages.map(pkg => (
-                        <SelectItem key={pkg.id} value={pkg.id} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
+                      {activePackages.map(pkg => (
+                        <SelectItem key={String(pkg.id)} value={String(pkg.id)} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
                           <div className="flex flex-col gap-1 items-start">
                             <span className="font-semibold">{pkg.name}</span>
                             <span className="text-[10px] text-slate-400">
@@ -686,7 +740,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                       <MessageSquare className="w-5 h-5 text-blue-400" />
                       Professional Advice
                       <div className="flex items-center gap-1 ml-2 no-print">
-                        <button onClick={() => handlePrint()} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Print Selection">
+                        <button onClick={() => handlePrint('single-package')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Print Selection">
                           <Printer className="w-4 h-4 text-emerald-400" />
                         </button>
                         <button onClick={() => handleSavePDF()} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Save PDF File">
@@ -822,7 +876,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                    <div className="flex items-center justify-between px-1">
                       <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Describe Individual Chemical</label>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => handlePrint('full-chemical-catalog')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Chemical Catalog">
+                        <button onClick={() => handlePrint('master-chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Chemical Catalog">
                           <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">All Chemicals</span>
                           <Printer className="w-4 h-4 text-emerald-400" />
                         </button>
@@ -837,7 +891,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
                       {availableChemicals.map(chem => (
-                        <SelectItem key={chem.id} value={chem.id} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
+                        <SelectItem key={String(chem.id)} value={String(chem.id)} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
                           <div className="flex items-center gap-3">
                              <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
                                 {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
@@ -863,7 +917,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                         <Droplets className="w-4 h-4 text-sky-400" />
                         Chemical Properties & Purpose
                         <div className="flex items-center gap-1 ml-2 no-print">
-                          <button onClick={() => handlePrint()} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Print Selection">
+                          <button onClick={() => handlePrint('single-chemical')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Print Selection">
                             <Printer className="w-4 h-4 text-emerald-400" />
                           </button>
                           <button onClick={() => handleSavePDF()} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Save PDF File">
@@ -959,7 +1013,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   <div className="flex items-center justify-between px-1">
                     <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Manage Job Setup Checklist</label>
                     <div className="flex items-center gap-1">
-                       <button onClick={() => handlePrint('full-job-prep')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 group" title="Print FULL Setup Chart">
+                       <button onClick={() => handlePrint('master-packages')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 group" title="Print FULL Setup Chart">
                           <Printer className="w-4 h-4 text-emerald-400" />
                        </button>
                        <button onClick={() => handleSavePDF('full-job-prep')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 group" title="SAVE FULL PDF File">
