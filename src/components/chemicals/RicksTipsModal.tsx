@@ -290,18 +290,58 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     let newTips = [...tips];
 
     if (existingIndex > -1) {
-      const chemIds = newTips[existingIndex].chemicalIds.map(id => String(id));
+      const targetTip = newTips[existingIndex];
+      // Create a shallow copy of the tip and its chemicalIds array for immutability
+      const updatedTip = { 
+        ...targetTip, 
+        chemicalIds: [...targetTip.chemicalIds] 
+      };
+      
+      const chemIds = updatedTip.chemicalIds.map(id => String(id));
       const chemIndex = chemIds.indexOf(chemId);
       
       if (chemIndex > -1) {
-        newTips[existingIndex].chemicalIds.splice(chemIndex, 1);
+        updatedTip.chemicalIds.splice(chemIndex, 1);
       } else {
-        newTips[existingIndex].chemicalIds.push(chemId);
+        updatedTip.chemicalIds.push(chemId);
       }
+      newTips[existingIndex] = updatedTip;
     } else {
       newTips.push({ packageId: selectedPackageId, chemicalIds: [chemId], notes: '' });
     }
     updateTips(newTips);
+  };
+
+  const resetToDefaults = async () => {
+    setLoading(true);
+    try {
+      const chems = await getCombinedSelectableProducts();
+      // Force seed by passing empty arrays
+      const { seededDescs, seededPrep, seededTips } = seedChemicalData(chems, [], [], []);
+      setTips(seededTips);
+      setDescriptions(seededDescs);
+      setPrepList(seededPrep);
+      await saveToSupabase(seededTips, seededDescs, seededPrep);
+      toast.success("Restored Rick's Professional Defaults!");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to reset defaults");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshInventory = async () => {
+    setLoading(true);
+    try {
+      const chems = await getCombinedSelectableProducts();
+      setAvailableChemicals(chems);
+      toast.success("Inventory Updated");
+    } catch (e) {
+      toast.error("Refresh Failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateNotes = (notes: string) => {
@@ -747,8 +787,16 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   <div className="flex items-center justify-between px-1">
                     <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Selected Service Package</label>
                     <div className="flex items-center gap-1">
+                      <button onClick={resetToDefaults} className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Reset to Rick's Defaults">
+                         <span className="text-[9px] font-black uppercase text-red-400 hidden group-hover:inline">Reset Defaults</span>
+                         <Zap className="w-4 h-4 text-red-400" />
+                      </button>
+                      <button onClick={refreshInventory} className="p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Sync from Inventory">
+                         <span className="text-[9px] font-black uppercase text-purple-400 hidden group-hover:inline">Sync Inventory</span>
+                         <Search className="w-4 h-4 text-purple-400" />
+                      </button>
                       <button onClick={() => handlePrint('master-packages')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Matrix">
-                        <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">All Packages</span>
+                        <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">Full Matrix</span>
                         <Printer className="w-4 h-4 text-emerald-400" />
                       </button>
                       <button onClick={() => saveMasterCatalog('packages')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Save Master PDF">
@@ -876,7 +924,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                               )}
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent sideOffset={8} className="w-64 bg-slate-900 border-slate-700 outline-none shadow-2xl p-4 flex flex-col gap-4 rounded-xl z-[100]">
+                          <PopoverContent sideOffset={8} className="w-64 bg-slate-900 border-slate-700 outline-none shadow-2xl p-4 flex flex-col gap-4 rounded-xl z-[300]">
                              <div className="flex gap-3 items-start">
                                  <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-800 flex items-center justify-center border border-slate-700">
                                     {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-6 h-6 text-slate-500" />}
