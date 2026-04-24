@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText } from 'lucide-react';
+import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText, RefreshCw } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { servicePackages } from '@/lib/services';
 import * as supaPkgs from '@/services/supabase/packages';
@@ -809,9 +809,9 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                              <span className="text-[9px] font-black uppercase text-red-400 hidden group-hover:inline">Reset Defaults</span>
                              <Zap className="w-4 h-4 text-red-400" />
                           </button>
-                          <button onClick={refreshInventory} className="p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Sync from Inventory">
-                             <span className="text-[9px] font-black uppercase text-purple-400 hidden group-hover:inline">Sync Inventory</span>
-                             <Search className="w-4 h-4 text-purple-400" />
+                          <button onClick={refreshInventory} className="p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Refresh & Sync Inventory">
+                             <span className="text-[9px] font-black uppercase text-purple-400 hidden group-hover:inline">Refresh Inventory</span>
+                             <RefreshCw className={`w-4 h-4 text-purple-400 ${loading ? 'animate-spin' : ''}`} />
                           </button>
                         </>
                       )}
