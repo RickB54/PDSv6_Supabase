@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText, RefreshCw } from 'lucide-react';
+import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText, RefreshCw, HelpCircle } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { servicePackages } from '@/lib/services';
 import * as supaPkgs from '@/services/supabase/packages';
@@ -757,8 +757,19 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                 <FlaskConical className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <DialogTitle className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 text-left">
+                <DialogTitle className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 text-left flex items-center gap-2">
                   Rick's Tips
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'ricks-tips' } }));
+                    }}
+                    className="p-1 hover:bg-white/10 rounded-full transition-colors inline-flex items-center justify-center no-print"
+                    title="Open Help Guide"
+                  >
+                    <HelpCircle className="w-4 h-4 text-purple-400/60 hover:text-purple-400" />
+                  </button>
                 </DialogTitle>
                 <DialogDescription className="text-slate-400 text-[10px] md:text-sm text-left">
                   {activeTab === 'package' 
