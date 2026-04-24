@@ -15,6 +15,8 @@ import { contentService } from '@/lib/content';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { getCurrentUser } from '@/lib/auth';
+import { Lock } from 'lucide-react';
 
 interface TipMapping {
   packageId: string;
@@ -43,6 +45,9 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   const [activePackages, setActivePackages] = useState<any[]>(servicePackages);
   const [loading, setLoading] = useState(false);
   const dataInitialized = useRef(false);
+  
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin';
 
   const DEFAULT_SCENARIOS = useMemo(() => [
     { scenario: "Maintenance / Light", ratio: "" },
@@ -275,16 +280,25 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   }, [descriptions, selectedChemicalId, DEFAULT_SCENARIOS]);
 
   const updateTips = (newTips: TipMapping[]) => {
+    if (!isAdmin) {
+      toast.error("Access Denied: Admins only");
+      return;
+    }
     setTips(newTips);
     saveToSupabase(newTips, descriptions, prepList);
   };
 
   const updateDescriptions = (newDescs: ChemicalDescription[]) => {
+    if (!isAdmin) return;
     setDescriptions(newDescs);
     saveToSupabase(tips, newDescs, prepList);
   };
 
   const toggleChemical = (inputChemId: string | number) => {
+    if (!isAdmin) {
+       toast.error("Read Only: Contact admin to change mappings");
+       return;
+    }
     const chemId = String(inputChemId);
     const existingIndex = tips.findIndex(t => String(t.packageId) === String(selectedPackageId));
     let newTips = [...tips];
@@ -313,6 +327,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   };
 
   const resetToDefaults = async () => {
+    if (!isAdmin) return;
     setLoading(true);
     try {
       const chems = await getCombinedSelectableProducts();
@@ -345,7 +360,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   };
 
   const updateNotes = (notes: string) => {
-    const existingIndex = tips.findIndex(t => t.packageId === selectedPackageId);
+    if (!isAdmin) return;
+    const existingIndex = tips.findIndex(t => String(t.packageId) === String(selectedPackageId));
     let newTips = [...tips];
     if (existingIndex > -1) {
       newTips[existingIndex].notes = notes;
@@ -787,14 +803,24 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   <div className="flex items-center justify-between px-1">
                     <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Selected Service Package</label>
                     <div className="flex items-center gap-1">
-                      <button onClick={resetToDefaults} className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Reset to Rick's Defaults">
-                         <span className="text-[9px] font-black uppercase text-red-400 hidden group-hover:inline">Reset Defaults</span>
-                         <Zap className="w-4 h-4 text-red-400" />
-                      </button>
-                      <button onClick={refreshInventory} className="p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Sync from Inventory">
-                         <span className="text-[9px] font-black uppercase text-purple-400 hidden group-hover:inline">Sync Inventory</span>
-                         <Search className="w-4 h-4 text-purple-400" />
-                      </button>
+                      {isAdmin && (
+                        <>
+                          <button onClick={resetToDefaults} className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Reset to Rick's Defaults">
+                             <span className="text-[9px] font-black uppercase text-red-400 hidden group-hover:inline">Reset Defaults</span>
+                             <Zap className="w-4 h-4 text-red-400" />
+                          </button>
+                          <button onClick={refreshInventory} className="p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors flex items-center gap-1 group" title="Sync from Inventory">
+                             <span className="text-[9px] font-black uppercase text-purple-400 hidden group-hover:inline">Sync Inventory</span>
+                             <Search className="w-4 h-4 text-purple-400" />
+                          </button>
+                        </>
+                      )}
+                      {!isAdmin && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/50 rounded-full border border-slate-700 mr-2">
+                           <Lock className="w-3 h-3 text-amber-500" />
+                           <span className="text-[10px] font-bold text-amber-500 uppercase tracking-tighter">Read Only</span>
+                        </div>
+                      )}
                       <button onClick={() => handlePrint('master-packages')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Matrix">
                         <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">Full Matrix</span>
                         <Printer className="w-4 h-4 text-emerald-400" />
@@ -848,8 +874,9 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   <textarea
                     value={currentTip.notes}
                     onChange={(e) => updateNotes(e.target.value)}
-                    placeholder="Enter job-specific chemical advice here... (e.g., 'Use high alkaline soap if organic debris is heavy')"
-                    className="w-full h-28 md:h-32 bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all placeholder:text-slate-600 resize-none text-base md:text-lg leading-relaxed shadow-inner"
+                    readOnly={!isAdmin}
+                    placeholder={isAdmin ? "Enter job-specific chemical advice here... (e.g., 'Use high alkaline soap if organic debris is heavy')" : "View only: Detailing advice is managed by administrators."}
+                    className={`w-full h-28 md:h-32 bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all placeholder:text-slate-600 resize-none text-base md:text-lg leading-relaxed shadow-inner ${!isAdmin ? 'cursor-not-allowed opacity-80' : ''}`}
                   />
                 </section>
 
@@ -894,6 +921,17 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                       ))}
                     </div>
                   )}
+
+                  {/* Chemical Picker Header with Count */}
+                  <div className="flex items-center justify-between mb-4 mt-8">
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                       Inventory Database
+                       <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20 px-2 py-0 h-5 text-[9px] font-black">
+                         {availableChemicals.length} Products
+                       </Badge>
+                    </h4>
+                    <div className="h-[1px] flex-1 bg-slate-800/50 mx-4" />
+                  </div>
 
                   {/* Chemical Picker Grid - Compact Squares */}
                   <div className="grid grid-cols-4 min-[400px]:grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3 md:gap-4">
