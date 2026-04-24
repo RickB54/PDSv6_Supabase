@@ -890,7 +890,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                     onChange={(e) => updateNotes(e.target.value)}
                     readOnly={!isAdmin}
                     placeholder={isAdmin ? "Enter job-specific chemical advice here... (e.g., 'Use high alkaline soap if organic debris is heavy')" : "View only: Detailing advice is managed by administrators."}
-                    className={`w-full h-28 md:h-32 bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all placeholder:text-slate-600 resize-none text-base md:text-lg leading-relaxed shadow-inner ${!isAdmin ? 'cursor-not-allowed opacity-80' : ''}`}
+                    className={`w-full h-64 md:h-96 bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all placeholder:text-slate-600 resize-y text-base md:text-lg leading-relaxed shadow-inner ${!isAdmin ? 'cursor-not-allowed opacity-80' : ''}`}
                   />
                 </section>
 
