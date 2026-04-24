@@ -176,7 +176,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
             mainGoal: "full",
             scenarios: [
                 { id: `s1-${vid}`, label: "Scenario A: Full Detail", packageId: "prime-essential-full", addOnIds: [] },
-                { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: ["pet-hair"] },
+                { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: [] },
                 { id: `s3-${vid}`, label: "Scenario C: Exterior Only", packageId: "prime-essential-exterior", addOnIds: [] }
             ],
             selectedScenarioId: null
