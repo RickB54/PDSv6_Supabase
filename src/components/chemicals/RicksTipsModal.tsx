@@ -130,6 +130,51 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   }, [availableChemicals, selectedChemicalId]);
 
   const seedChemicalData = (chems: any[], currentDescs: ChemicalDescription[], currentPrep: string[], currentTips: TipMapping[]): { seededDescs: ChemicalDescription[], seededPrep: string[], seededTips: TipMapping[], changed: boolean } => {
+    // Helper to find chemical ID by name
+    const findChemId = (name: string) => {
+      const match = chems.find(c => c.name.toLowerCase().includes(name.toLowerCase()));
+      return match ? String(match.id) : null;
+    };
+
+    const interiorChemNames = ["Pink Perfection", "Carpet Bomber", "Xpress", "Terminator", "Dirt Buster"];
+    const exteriorChemNames = ["Dark Fury", "Road Warrior", "Formula 4", "Spray Wax", "Aqua Gloss", "Dirt Buster", "Meguiar's APC"];
+
+    const interiorIds = interiorChemNames.map(n => findChemId(n)).filter(Boolean) as string[];
+    const exteriorIds = exteriorChemNames.map(n => findChemId(n)).filter(Boolean) as string[];
+
+    const packageAdvice = [
+      { 
+        id: 'prime-essential-exterior', 
+        chemIds: exteriorIds,
+        notes: "Essential Exterior Guide:\n- Inspect for heavy mud/bugs; pre-treat these areas.\n- Foam dwell time 3-5 mins; do not let dry.\n- Top-down wash with grit guards.\n- Hand dry with plush microfiber.\n\nEXTERIOR CADDY SETUP:\n1. Dark Fury (7:1) - Standard Wheels\n2. Dark Fury (4:1) - Heavy Wheels\n3. Road Warrior (4:1) - Heavy Bug Pre-Treat\n4. Formula 4 (20:1) - Drying Aid\n5. Spray Wax (RTU) - Shine & Protection\n6. Aqua Gloss (4:1) - Tire Dressing\n7. Dirt Buster (7:1) - Gen. Exterior Cleaner\n8. Meguiar's APC (4:1) - Heavy Degreaser" 
+      },
+      { 
+        id: 'prime-essential-interior', 
+        chemIds: interiorIds,
+        notes: "Essential Interior Guide:\n- Remove all trash and loose items first.\n- Vacuum in sections (driver -> passenger -> rear).\n- Wipe dash/console with safe APC.\n- Glass cleaning is the final touch for clarity.\n\nINTERIOR CADDY SETUP:\n1. Pink Perfection (10:1) - Std. Plastics/Vinyl\n2. Pink Perfection (4:1) - Heavy Cleaner/Degreaser\n3. Carpet Bomber (7:1) - Std. Fabric/Seats\n4. Carpet Bomber (5:1) - Heavy Fabric\n5. P&S Xpress (3:1) - Light Satin Finish\n6. P&S Xpress (1:1) - Strong Satin Finish\n7. Terminator (RTU) - Odors & Stains\n8. Dirt Buster (10:1) - General Interior Backup" 
+      },
+      { 
+        id: 'prime-essential-full', 
+        chemIds: Array.from(new Set([...interiorIds, ...exteriorIds])),
+        notes: "Essential Full Detail Guide:\n- Balance time between inside and out.\n- Wash exterior first to allow drying during interior work.\n- Wipe door jambs last to prevent drips.\n- Final walk-around with client for satisfaction.\n\nDUAL CADDY DEPLOYMENT:\nBring both Interior & Exterior caddies. Prioritize Pink Perfection (10:1) for dash and Dark Fury (7:1) for wheels." 
+      },
+      { 
+        id: 'prime-elite-exterior', 
+        chemIds: exteriorIds,
+        notes: "Elite Exterior Guide:\n- Decon wash to strip old waxes.\n- Clay bar until surface feels glass-smooth.\n- Deep clean wheel wells and inner rim barrels.\n- Apply UV trim protectant; buff off excess.\n\nEXTERIOR CADDY SETUP:\n1. Dark Fury (7:1) - Standard Wheels\n2. Dark Fury (4:1) - Heavy Wheels\n3. Road Warrior (4:1) - Heavy Bug Pre-Treat\n4. Formula 4 (20:1) - Drying Aid\n5. Spray Wax (RTU) - Shine & Protection\n6. Aqua Gloss (4:1) - Tire Dressing\n7. Dirt Buster (7:1) - Gen. Exterior Cleaner\n8. Meguiar's APC (4:1) - Heavy Degreaser" 
+      },
+      { 
+        id: 'prime-elite-interior', 
+        chemIds: interiorIds,
+        notes: "Elite Interior Guide:\n- Steam clean vents to kill bacteria/odors.\n- Hot water extraction for deep stain removal.\n- PH-balanced leather conditioning (matte finish).\n- Clean inside of trunk and storage cubbies.\n\nINTERIOR CADDY SETUP:\n1. Pink Perfection (10:1) - Std. Plastics/Vinyl\n2. Pink Perfection (4:1) - Heavy Cleaner/Degreaser\n3. Carpet Bomber (7:1) - Std. Fabric/Seats\n4. Carpet Bomber (5:1) - Heavy Fabric\n5. P&S Xpress (3:1) - Light Satin Finish\n6. P&S Xpress (1:1) - Strong Satin Finish\n7. Terminator (RTU) - Odors & Stains\n8. Dirt Buster (10:1) - General Interior Backup" 
+      },
+      { 
+        id: 'prime-elite-full', 
+        chemIds: Array.from(new Set([...interiorIds, ...exteriorIds])),
+        notes: "Elite Full Detail Guide:\n- Master restoration: Decon + Clay + Protection.\n- Ceramic sealant requires clean, cool surface.\n- Full steam and extraction interior master class.\n- Double-check every button, crevice, and jamb.\n\nFULL MOBILE UNIT LOAD:\nDeploy all caddies. Ensure specific dilutions for heavy extraction (Carpet Bomber 5:1) and decontamination (Dark Fury 4:1) are ready." 
+      }
+    ];
+
     const chartData = [
       { name: "Pink Perfection", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "10:1", "4:1"], purpose: "High-performance all-purpose cleaner and degreaser for interior and exterior pre-treat." },
       { name: "Dirt Buster", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "10:1", "4:1"], purpose: "General purpose cleaning for interior plastics and vinyl." },
@@ -146,15 +191,6 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       { name: "Meguiar's APC", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "4:1", "4:1"], purpose: "Heavy-duty all-purpose cleaner for engines, wheel wells, and stubborn grease." }
     ];
 
-    const packageAdvice = [
-      { id: 'prime-essential-exterior', notes: "Essential Exterior Guide:\n- Inspect for heavy mud/bugs; pre-treat these areas.\n- Foam dwell time 3-5 mins; do not let dry.\n- Top-down wash with grit guards.\n- Hand dry with plush microfiber." },
-      { id: 'prime-essential-interior', notes: "Essential Interior Guide:\n- Remove all trash and loose items first.\n- Vacuum in sections (driver -> passenger -> rear).\n- Wipe dash/console with safe APC.\n- Glass cleaning is the final touch for clarity." },
-      { id: 'prime-essential-full', notes: "Essential Full Detail Guide:\n- Balance time between inside and out.\n- Wash exterior first to allow drying during interior work.\n- Wipe door jambs last to prevent drips.\n- Final walk-around with client for satisfaction." },
-      { id: 'prime-elite-exterior', notes: "Elite Exterior Guide:\n- Decon wash to strip old waxes.\n- Clay bar until surface feels glass-smooth.\n- Deep clean wheel wells and inner rim barrels.\n- Apply UV trim protectant; buff off excess." },
-      { id: 'prime-elite-interior', notes: "Elite Interior Guide:\n- Steam clean vents to kill bacteria/odors.\n- Hot water extraction for deep stain removal.\n- PH-balanced leather conditioning (matte finish).\n- Clean inside of trunk and storage cubbies." },
-      { id: 'prime-elite-full', notes: "Elite Full Detail Guide:\n- Master restoration: Decon + Clay + Protection.\n- Ceramic sealant requires clean, cool surface.\n- Full steam and extraction interior master class.\n- Double-check every button, crevice, and jamb." }
-    ];
-
     const seededDescs = [...currentDescs];
     const seededPrep = [...currentPrep];
     const seededTips = [...currentTips];
@@ -162,10 +198,16 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
 
     // Seed Package Advice (Tips)
     packageAdvice.forEach(advice => {
-      const existing = seededTips.find(t => t.packageId === advice.id);
-      if (!existing) {
-        seededTips.push({ packageId: advice.id, chemicalIds: [], notes: advice.notes });
+      const existingIdx = seededTips.findIndex(t => t.packageId === advice.id);
+      if (existingIdx === -1) {
+        seededTips.push({ packageId: advice.id, chemicalIds: advice.chemIds, notes: advice.notes });
         changed = true;
+      } else {
+        // If it's already there but empty or has old placeholder notes, update it
+        if (seededTips[existingIdx].notes.includes("Rick's Pro Tip") || seededTips[existingIdx].notes === "" || seededTips[existingIdx].chemicalIds.length === 0) {
+          seededTips[existingIdx] = { ...seededTips[existingIdx], notes: advice.notes, chemicalIds: advice.chemIds };
+          changed = true;
+        }
       }
     });
 
