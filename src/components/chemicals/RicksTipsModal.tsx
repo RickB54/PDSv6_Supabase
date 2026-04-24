@@ -284,12 +284,15 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     saveToSupabase(tips, newDescs, prepList);
   };
 
-  const toggleChemical = (chemId: string) => {
-    const existingIndex = tips.findIndex(t => t.packageId === selectedPackageId);
+  const toggleChemical = (inputChemId: string | number) => {
+    const chemId = String(inputChemId);
+    const existingIndex = tips.findIndex(t => String(t.packageId) === String(selectedPackageId));
     let newTips = [...tips];
 
     if (existingIndex > -1) {
-      const chemIndex = newTips[existingIndex].chemicalIds.indexOf(chemId);
+      const chemIds = newTips[existingIndex].chemicalIds.map(id => String(id));
+      const chemIndex = chemIds.indexOf(chemId);
+      
       if (chemIndex > -1) {
         newTips[existingIndex].chemicalIds.splice(chemIndex, 1);
       } else {
@@ -344,7 +347,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     (c.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedChemicals = availableChemicals.filter(c => currentTip.chemicalIds.includes(c.id));
+  const selectedChemicals = availableChemicals.filter(c => currentTip.chemicalIds.map(id => String(id)).includes(String(c.id)));
 
   const handleSelectAll = (checked: boolean | "indeterminate") => {
     const isChecked = checked === true;
@@ -846,8 +849,9 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
 
                   {/* Chemical Picker Grid - Compact Squares */}
                   <div className="grid grid-cols-4 min-[400px]:grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3 md:gap-4">
-                    {filteredChemicals.map(chem => {
-                      const isSelected = currentTip.chemicalIds.includes(chem.id);
+                      {filteredChemicals.map(chem => {
+                        const chemId = String(chem.id);
+                        const isSelected = currentTip.chemicalIds.map(id => String(id)).includes(chemId);
                       return (
                         <Popover key={chem.id}>
                           <PopoverTrigger asChild>
@@ -897,8 +901,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                   </>
                                 ) : (
                                   <>
-                                    <CheckSquare className="w-4 h-4" />
-                                    Select Component
+                                    <Plus className="w-4 h-4" />
+                                    Add to Package
                                   </>
                                 )}
                              </button>
