@@ -403,7 +403,10 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     (c.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedChemicals = availableChemicals.filter(c => currentTip.chemicalIds.map(id => String(id)).includes(String(c.id)));
+  const selectedChemicals = availableChemicals.filter(c => {
+    const chemIds = currentTip.chemicalIds.map(id => String(id));
+    return chemIds.includes(String(c.id)) || (c.chemical_library_id && chemIds.includes(String(c.chemical_library_id)));
+  });
 
   const handleSelectAll = (checked: boolean | "indeterminate") => {
     const isChecked = checked === true;
@@ -948,7 +951,11 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   <div className="grid grid-cols-4 min-[400px]:grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3 md:gap-4">
                       {filteredChemicals.map(chem => {
                         const chemId = String(chem.id);
-                        const isSelected = currentTip.chemicalIds.map(id => String(id)).includes(chemId);
+                        const libId = chem.chemical_library_id ? String(chem.chemical_library_id) : null;
+                        const isSelected = currentTip.chemicalIds.some(id => {
+                          const sId = String(id);
+                          return sId === chemId || (libId && sId === libId);
+                        });
                       return (
                         <Popover key={chem.id}>
                           <PopoverTrigger asChild>
