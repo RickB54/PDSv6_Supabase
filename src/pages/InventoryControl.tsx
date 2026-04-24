@@ -1519,10 +1519,16 @@ const InventoryControl = () => {
         </div>
       </TableCell>
       <TableCell>
-        <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
-          {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-          {c.currentStock} remaining
-        </span>
+        {chemicalSort === 'updated_at' ? (
+          <span className="text-xs text-zinc-400 font-mono">
+            {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Never'}
+          </span>
+        ) : (
+          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+            {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+            {c.currentStock} remaining
+          </span>
+        )}
       </TableCell>
       <TableCell className="py-1">
         <span className="text-[11px] text-zinc-400 font-bold italic">{c.wherePurchased || '-'}</span>
@@ -1588,8 +1594,16 @@ const InventoryControl = () => {
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
           </div>
           <div className="text-sm text-zinc-300">
-            {c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)} 
-            <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)})</span>
+            {chemicalSort === 'updated_at' ? (
+              <span className="text-xs text-yellow-400 font-bold italic">
+                Last Updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Never'}
+              </span>
+            ) : (
+              <>
+                {c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)} 
+                <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)})</span>
+              </>
+            )}
           </div>
           {c.wherePurchased && <div className="text-[10px] text-zinc-400 mt-1 italic">Purchased at: {c.wherePurchased}</div>}
           {(() => {
@@ -1871,7 +1885,7 @@ const InventoryControl = () => {
                             <TableHead>Name</TableHead>
                             <TableHead>Size</TableHead>
                             <TableHead>Cost/Unit</TableHead>
-                            <TableHead>Stock Level</TableHead>
+                            <TableHead>{chemicalSort === 'updated_at' ? 'Last Updated' : 'Stock Level'}</TableHead>
                             <TableHead>Purchased From</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
@@ -1997,7 +2011,7 @@ const InventoryControl = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Cost/Item</TableHead>
-                      <TableHead>Quantity</TableHead>
+                      <TableHead>{supplySort === 'updated_at' ? 'Last Updated' : 'Quantity'}</TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -2026,10 +2040,16 @@ const InventoryControl = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                            {typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-                            {m.quantity} units
-                          </span>
+                          {supplySort === 'updated_at' ? (
+                            <span className="text-xs text-zinc-400 font-mono">
+                              {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
+                            </span>
+                          ) : (
+                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                              {typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+                              {m.quantity} units
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="py-1">
                           <span className="text-[11px] text-zinc-400 font-bold italic">{m.wherePurchased || '-'}</span>
@@ -2072,7 +2092,13 @@ const InventoryControl = () => {
                           {m.name}
                         </div>
                         <div className={`text-sm font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)} (Total: $${(m.costPerItem * m.quantity).toFixed(2)})`}
+                          {supplySort === 'updated_at' ? (
+                            <span className="text-xs text-blue-400 font-bold italic">
+                              Last Updated: {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
+                            </span>
+                          ) : (
+                            <>{m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)} (Total: $${(m.costPerItem * m.quantity).toFixed(2)})`}</>
+                          )}
                         </div>
                         {m.wherePurchased && <div className="text-[10px] text-zinc-400 italic">Purchased at: {m.wherePurchased}</div>}
                       </div>
@@ -2203,7 +2229,7 @@ const InventoryControl = () => {
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-purple-500/20">
                       <TableHead>Name</TableHead>
-                      <TableHead>Purchase Date</TableHead>
+                      <TableHead>{equipmentSort === 'updated_at' ? 'Last Updated' : 'Purchase Date'}</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Source / Vendor</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -2221,7 +2247,13 @@ const InventoryControl = () => {
                           {t.name}
                         </TableCell>
                         <TableCell className="text-zinc-300">
-                          {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
+                          {equipmentSort === 'updated_at' ? (
+                            <div className="font-mono text-xs text-purple-400">
+                              {t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Never'}
+                            </div>
+                          ) : (
+                            <div>{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
+                          )}
                           {t.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {t.wherePurchased}</div>}
                         </TableCell>
                         <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
@@ -2269,7 +2301,13 @@ const InventoryControl = () => {
                           {t.name}
                         </div>
                         <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}
+                          {equipmentSort === 'updated_at' ? (
+                            <span className="text-xs text-purple-400 font-bold italic">
+                              Last Updated: {t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Never'}
+                            </span>
+                          ) : (
+                            <>{!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</>
+                          )}
                         </div>
                         {t.wherePurchased && <div className="text-sm text-purple-400 font-bold italic">Purchased at: {t.wherePurchased}</div>}
                       </div>
