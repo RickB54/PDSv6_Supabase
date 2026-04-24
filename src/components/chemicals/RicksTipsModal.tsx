@@ -447,6 +447,15 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   };
 
   const printRef = useRef<HTMLDivElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize professional advice textarea to fit content perfectly
+  useEffect(() => {
+    if (notesRef.current) {
+      notesRef.current.style.height = 'auto';
+      notesRef.current.style.height = `${notesRef.current.scrollHeight}px`;
+    }
+  }, [currentTip.notes, activeTab, selectedPackageId]);
 
 
   const handleSavePDF = (targetId?: string) => {
@@ -886,11 +895,12 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                     </Badge>
                   </div>
                   <textarea
+                    ref={notesRef}
                     value={currentTip.notes}
                     onChange={(e) => updateNotes(e.target.value)}
                     readOnly={!isAdmin}
                     placeholder={isAdmin ? "Enter job-specific chemical advice here... (e.g., 'Use high alkaline soap if organic debris is heavy')" : "View only: Detailing advice is managed by administrators."}
-                    className={`w-full h-64 md:h-96 bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all placeholder:text-slate-600 resize-y text-base md:text-lg leading-relaxed shadow-inner ${!isAdmin ? 'cursor-not-allowed opacity-80' : ''}`}
+                    className={`w-full bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all placeholder:text-slate-600 resize-none text-base md:text-lg leading-relaxed shadow-inner overflow-hidden ${!isAdmin ? 'cursor-not-allowed opacity-80' : ''}`}
                   />
                 </section>
 
