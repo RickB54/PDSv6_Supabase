@@ -85,10 +85,10 @@ export async function getChemicals(): Promise<Chemical[]> {
  */
 export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
     try {
-        // 1. Get Library Chemicals
+        // 1. Get Library Chemicals (The professional database)
         const library = await getChemicals();
         
-        // 2. Get Inventory Chemicals (includes image_url captured from mobile/camera uploads)
+        // 2. Get Inventory Chemicals (The user's actual stock)
         const { data: inventoryData, error } = await supabase
             .from('chemicals')
             .select('*')
@@ -99,51 +99,62 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             return library;
         }
 
-        // 3. Merge: patch library cards with inventory images as fallback, then add unlinked inventory items
-        const result = library.map(libCard => {
-            // If the library card already has a primary image, nothing to do
-            if (libCard.primary_image_url) return libCard;
+        if (!inventoryData || inventoryData.length === 0) {
+            return library;
+        }
 
-            // Look for a linked or name-matched inventory item that has an image
-            const matched = (inventoryData || []).find(inv =>
-                inv.chemical_library_id === libCard.id ||
-                (inv.name.toLowerCase() === libCard.name.toLowerCase() &&
-                 (inv.brand || '').toLowerCase() === (libCard.brand || '').toLowerCase())
+        // 3. Inventory-Centric Merge: 
+        // We want to show EVERY item in the user's inventory.
+        const result: Chemical[] = inventoryData.map(inv => {
+            // Find a professional library card for this inventory item
+            const libMatch = library.find(lib => 
+                lib.id === inv.chemical_library_id ||
+                (lib.name.toLowerCase().trim() === inv.name.toLowerCase().trim() &&
+                 (lib.brand || '').toLowerCase().trim() === (inv.brand || '').toLowerCase().trim())
             );
 
-            if (matched?.image_url) {
-                // Use the inventory image as a fallback – non-destructive, only in memory
-                return { ...libCard, primary_image_url: matched.image_url };
+            if (libMatch) {
+                // Return the library card data but preserve the inventory's specific ID and image
+                return {
+                    ...libMatch,
+                    id: inv.id, // Use inventory ID so it maps correctly to their specific stock
+                    primary_image_url: inv.image_url || inv.imageUrl || libMatch.primary_image_url,
+                    is_inventory_only: false
+                };
             }
-            return libCard;
+
+            // If no library match, return a pseudo-chemical for this inventory item
+            return {
+                id: inv.id,
+                name: inv.name,
+                brand: inv.brand || '',
+                category: 'Exterior',
+                description: `Inventory Item`,
+                used_for: [],
+                dilution_ratios: [],
+                primary_image_url: inv.image_url || inv.imageUrl,
+                gallery_image_urls: [],
+                is_inventory_only: true
+            } as any;
         });
-        
-        if (inventoryData) {
-            inventoryData.forEach(inv => {
-                // Check if this inventory item is already represented by a library card
-                const isLinked = library.some(lib => lib.id === inv.chemical_library_id);
-                const isNamed = library.some(lib => 
-                    lib.name.toLowerCase() === inv.name.toLowerCase() && 
-                    (lib.brand || '').toLowerCase() === (inv.brand || '').toLowerCase()
-                );
-                
-                if (!isLinked && !isNamed) {
-                    // Add a pseudo-chemical for this inventory-only item
-                    result.push({
-                        id: inv.id,
-                        name: inv.name,
-                        brand: inv.brand || '',
-                        category: 'Exterior',
-                        description: `Inventory Item (No library card found)`,
-                        used_for: [],
-                        dilution_ratios: [],
-                        primary_image_url: inv.image_url || inv.imageUrl,
-                        gallery_image_urls: [],
-                        is_inventory_only: true
-                    } as any);
-                }
-            });
-        }
+
+        // 4. (Optional) Add Library items that the user DOES NOT have in inventory yet
+        // This allows them to see what else they could use/add.
+        library.forEach(lib => {
+            const alreadyIncluded = inventoryData.some(inv => 
+                inv.chemical_library_id === lib.id ||
+                (inv.name.toLowerCase().trim() === lib.name.toLowerCase().trim() &&
+                 (inv.brand || '').toLowerCase().trim() === (lib.brand || '').toLowerCase().trim())
+            );
+            
+            if (!alreadyIncluded) {
+                result.push({
+                    ...lib,
+                    is_inventory_only: false,
+                    not_in_stock: true // Tag it so we can show it differently if needed
+                } as any);
+            }
+        });
         
         return result;
     } catch (e) {
