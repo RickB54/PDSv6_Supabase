@@ -41,6 +41,7 @@ import supabase from "@/lib/supabase"; // Realtime import
 import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } from "@/lib/unifiedCalendar";
 import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig } from "@/lib/googleCalendar";
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
+import HelpModal from "@/components/help/HelpModal";
 
 // --- Types ---
 type ViewMode = "day" | "week" | "month" | "year" | "analytics";
@@ -1104,51 +1105,43 @@ export default function BookingsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw] overflow-x-hidden">
       <PageHeader title="Booking Calendar" subtitle="Manage appointments">
-        <div className="flex items-center gap-2 hidden lg:flex">
-          <div className="flex bg-zinc-900/50 rounded-lg p-1 border border-zinc-800">
-            <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-7 text-xs px-2">Day</Button>
-            <Button variant={viewMode === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="h-7 text-xs px-2">Week</Button>
-            <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-7 text-xs px-2">Month</Button>
-            <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-7 text-xs px-2">Year</Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
+            <div className="flex bg-zinc-900/50 rounded-lg p-1 border border-zinc-800">
+              <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-7 text-xs px-2">Day</Button>
+              <Button variant={viewMode === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="h-7 text-xs px-2">Week</Button>
+              <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-7 text-xs px-2">Month</Button>
+              <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-7 text-xs px-2">Year</Button>
+            </div>
 
-          <Button variant="outline" size="icon" onClick={() => refresh()} className="h-8 w-8" title="Refresh">
-            <RotateCcw className="h-3 w-3" />
-          </Button>
-
-          <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} className="h-8 w-8" title="Print All Bookings">
-            <Printer className="h-3 w-3" />
-          </Button>
-
-          <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
-
-          {/* 🗑️ DELETE TEST DATA BUTTON - Only on localhost */}
-          {window.location.hostname === 'localhost' && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteTestBookings}
-              className="h-8 bg-red-600 hover:bg-red-700"
-            >
-              🗑️ Delete Test Data
+            <Button variant="outline" size="icon" onClick={() => refresh()} className="h-8 w-8" title="Refresh">
+              <RotateCcw className="h-3 w-3" />
             </Button>
-          )}
 
-          <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
-            <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>
-            <span className="min-w-[80px] w-auto text-center text-xs font-semibold px-2">
-              {viewMode === 'day' ? format(currentDate, "MMMM d") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
-            </span>
-            <Button variant="ghost" size="icon" onClick={handleNext} className="h-8 w-8"><ChevronRight className="h-3 w-3" /></Button>
+            <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} className="h-8 w-8" title="Print All Bookings">
+              <Printer className="h-3 w-3" />
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
+
+            {/* 🗑️ DELETE TEST DATA BUTTON REMOVED per user request */}
+
+            <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
+              <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>
+              <span className="min-w-[80px] w-auto text-center text-xs font-semibold px-2">
+                {viewMode === 'day' ? format(currentDate, "MMMM d") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => handleNext()} className="h-8 w-8"><ChevronRight className="h-3 w-3" /></Button>
+            </div>
+
+            <Button className="bg-primary hover:bg-primary/90 h-8 text-xs" onClick={() => {
+              setSelectedDate(new Date());
+              setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
+              setIsAddModalOpen(true);
+            }}>
+              <Plus className="h-3 w-3 mr-1" /> New
+            </Button>
           </div>
-
-          <Button className="bg-primary hover:bg-primary/90 h-8 text-xs" onClick={() => {
-            setSelectedDate(new Date());
-            setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
-            setIsAddModalOpen(true);
-          }}>
-            <Plus className="h-3 w-3 mr-1" /> New
-          </Button>
         </div>
       </PageHeader>
 

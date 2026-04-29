@@ -148,7 +148,9 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                             className="text-emerald-500 hover:text-white hover:bg-emerald-600/20 active:scale-90 transition-transform" 
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setShowHelp(true);
+                                window.dispatchEvent(new CustomEvent('open-help', { 
+                                    detail: { topicId: 'prime-dilution-masterclass', role: 'admin' } 
+                                }));
                             }}
                             title="Quick Help"
                         >
@@ -354,12 +356,6 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     Prime Detailing Pro System
                 </div>
             )}
-            <HelpModal 
-                open={showHelp} 
-                onOpenChange={setShowHelp} 
-                role="admin"
-                initialTopicId="prime-dilution-masterclass"
-            />
             <RatiosOnlyChart 
                 open={isRatiosOnlyOpen} 
                 onOpenChange={setIsRatiosOnlyOpen} 

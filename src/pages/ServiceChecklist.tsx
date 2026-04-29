@@ -155,10 +155,6 @@ const ServiceChecklist = () => {
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
 
-  // Help Modal State
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [helpTopicId, setHelpTopicId] = useState<string | undefined>(undefined);
-
   // Rick's Tips State
   const [tipsOpen, setTipsOpen] = useState(false);
 
@@ -1388,6 +1384,7 @@ const ServiceChecklist = () => {
       doc.text(splitNotes, 20, y);
     }
 
+
     doc.save(`service-estimate-${new Date().getTime()}.pdf`);
     toast({ title: "PDF Generated", description: "Service estimate has been downloaded." });
   };
@@ -1396,6 +1393,7 @@ const ServiceChecklist = () => {
     <div className="min-h-screen bg-background">
       <PageHeader 
         title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
+        subtitle="Execute the Prime Standard for every vehicle."
       >
         <div className="flex gap-2">
           <Button 
@@ -1411,7 +1409,7 @@ const ServiceChecklist = () => {
             onClick={() => navigate('/dilution-calculator')} 
             className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold h-9 px-3"
           >
-            <Scale className="w-4 h-4 md:mr-2" /> 
+            <Scale className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Dilution Calc</span>
           </Button>
         </div>
@@ -1422,7 +1420,22 @@ const ServiceChecklist = () => {
         <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
             <div>
-              <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight mb-2">Service Checklist</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">Service Checklist</h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('open-help', { 
+                      detail: { topicId: 'service-checklist', role: getCurrentUser()?.role } 
+                    }));
+                  }}
+                  title="SOP & Procedure Guide"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+              </div>
               <p className="text-zinc-400 text-sm md:text-base max-w-xl">Track job progress, manage materials, and generate estimates.</p>
             </div>
             <div className="flex flex-row items-center gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
@@ -2326,12 +2339,6 @@ const ServiceChecklist = () => {
         open={prepSummaryOpen}
         onOpenChange={setPrepSummaryOpen}
         steps={checklistSteps}
-      />
-      <HelpModal
-        open={helpOpen}
-        onOpenChange={setHelpOpen}
-        role={(getCurrentUser()?.role as any) || 'employee'}
-        initialTopicId={helpTopicId}
       />
       {showTipScreen && finishedJobId && (
         <TipSelectionScreen

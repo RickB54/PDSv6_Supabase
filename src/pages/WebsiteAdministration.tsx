@@ -789,8 +789,8 @@ export default function WebsiteAdministration() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); setHelpId('booking-test-mode'); }}>Booking Mode</p>
-                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-amber-400 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('booking-test-mode'); }} />
+                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-test-mode', role: 'admin' }})); }}>Booking Mode</p>
+                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-amber-400 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-test-mode', role: 'admin' }})); }} />
               </div>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
                 {bookingTestMode ? 'Admin Test' : 'Standard'}
@@ -811,8 +811,8 @@ export default function WebsiteAdministration() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); setHelpId('testimonials-management'); }}>Testimonials</p>
-                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-blue-400 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('testimonials-management'); }} />
+                <p className="text-[10px] uppercase font-black text-zinc-500 tracking-widest group-hover:text-zinc-300 transition-colors cursor-help" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'testimonials-management', role: 'admin' }})); }}>Testimonials</p>
+                <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-blue-400 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'testimonials-management', role: 'admin' }})); }} />
               </div>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
                 {homeData.showTestimonials ? `${testimonials.length} ACTIVE` : 'INACTIVE'}
@@ -863,7 +863,7 @@ export default function WebsiteAdministration() {
                   </div>
                   <span className="font-black text-white tracking-tighter text-xl">Business Launch Manager</span>
                   <div className="ml-2 px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-[8px] font-black text-red-500 uppercase tracking-widest">Master Control</div>
-                  <HelpCircle className="h-4 w-4 text-zinc-700 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('business-launch-manager'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-700 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'business-launch-manager', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-6 space-y-8 bg-black/20">
@@ -984,7 +984,7 @@ export default function WebsiteAdministration() {
                       <div className="space-y-2">
                         <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest flex items-center gap-2">
                           Primary Banner Heading
-                          <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => setHelpId('business-launch-manager')} />
+                          <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'business-launch-manager', role: 'admin' }}))} />
                         </Label>
                         <Input 
                           className="bg-zinc-900 border-zinc-800 text-white font-bold h-12 text-lg" 
@@ -1073,6 +1073,7 @@ export default function WebsiteAdministration() {
                               <DropdownMenuItem 
                                 key={p.id} 
                                 onClick={() => {
+                                  window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prime-dilution-masterclass', role: 'admin' }}));
                                   setBusinessStatus({ 
                                     ...businessStatus, 
                                     bannerText: p.title, 
@@ -1314,7 +1315,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   Booking Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); setHelpId('booking-test-mode'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-test-mode', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
@@ -1326,7 +1327,7 @@ export default function WebsiteAdministration() {
                         variant="ghost" 
                         size="icon" 
                         className="h-5 w-5 text-zinc-600 hover:text-amber-500 transition-colors"
-                        onClick={() => setHelpId('booking-test-mode')}
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-test-mode', role: 'admin' }}))}
                       >
                         <HelpCircle className="h-4 w-4" />
                       </Button>
@@ -1391,14 +1392,14 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500">
                 <div className="flex items-center gap-2">
                   Vehicle Types
-                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); setHelpId('vehicle-types-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'vehicle-types-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-sm uppercase tracking-widest text-zinc-500">Register Vehicle Types</h4>
-                    <HelpCircle className="h-3.5 w-3.5 text-zinc-700 cursor-pointer hover:text-white" onClick={() => setHelpId('vehicle-types-management')} />
+                    <HelpCircle className="h-3.5 w-3.5 text-zinc-700 cursor-pointer hover:text-white" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'vehicle-types-management', role: 'admin' }}))} />
                   </div>
                   <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs font-bold" onClick={() => {
                     if (!ensureNotDemo("addition")) return;
@@ -1449,7 +1450,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   Home Page Content Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('home-content-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'home-content-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
@@ -1557,7 +1558,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-blue-400 [&[data-state=open]]:text-blue-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   About Page Content Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-blue-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('about-content-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-blue-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'about-content-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
@@ -1762,7 +1763,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   FAQs
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('faqs-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'faqs-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4">
@@ -1812,7 +1813,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   Contact Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('contact-control'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'contact-control', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
@@ -1850,7 +1851,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   Learn More & Disclaimer
-                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); setHelpId('services-disclaimer-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'services-disclaimer-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
@@ -1958,7 +1959,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-amber-400 [&[data-state=open]]:text-amber-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   Footer Content Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-amber-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('footer-content-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-amber-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'footer-content-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
@@ -2000,7 +2001,7 @@ export default function WebsiteAdministration() {
               <AccordionTrigger className="hover:no-underline px-4 hover:text-emerald-400 [&[data-state=open]]:text-emerald-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
                   Main Menu / Header Control
-                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-emerald-500 transition-colors" onClick={(e) => { e.stopPropagation(); setHelpId('main-menu-management'); }} />
+                  <HelpCircle className="h-4 w-4 text-zinc-600 hover:text-emerald-500 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'main-menu-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-6">
@@ -2322,12 +2323,7 @@ export default function WebsiteAdministration() {
             </div>
           </DialogContent>
         </Dialog>
-        <HelpModal 
-          open={helpId !== null} 
-          onOpenChange={(open) => !open && setHelpId(null)} 
-          role="admin" 
-          initialTopicId={helpId || undefined} 
-        />
+        <HelpCircle className="hidden" /> {/* Placeholder for logic that might expect this icon */}
       </div>
     </div>
   );

@@ -968,8 +968,9 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                                     variant="ghost" 
                                     size="icon" 
                                     onClick={() => {
-                                        setHelpTopicId('chemical-label-maker');
-                                        setShowHelp(true);
+                                        window.dispatchEvent(new CustomEvent('open-help', { 
+                                            detail: { topicId: 'chemical-label-maker', role: 'admin' } 
+                                        }));
                                     }}
                                     className="h-6 w-6 text-zinc-500 hover:text-purple-400"
                                 >
@@ -1019,12 +1020,6 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                     </div>
                 </DialogHeader>
 
-                <HelpModal 
-                    open={showHelp} 
-                    onOpenChange={setShowHelp} 
-                    role="admin"
-                    initialTopicId={helpTopicId}
-                />
 
                 {/* Mobile Tabs Switcher */}
                 <div className="lg:hidden shrink-0 border-b border-zinc-800 bg-zinc-950 px-6 pt-2">
@@ -1393,8 +1388,9 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                                         isModal={true} 
                                         onBack={() => setViewMode('editor')} 
                                         onHelp={() => {
-                                            setHelpTopicId('prime-dilution-masterclass');
-                                            setShowHelp(true);
+                                            window.dispatchEvent(new CustomEvent('open-help', { 
+                                                detail: { topicId: 'prime-dilution-masterclass', role: 'admin' } 
+                                            }));
                                         }}
                                     />
                                 </div>

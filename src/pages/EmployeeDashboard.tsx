@@ -298,7 +298,6 @@ const EmployeeDashboard = () => {
 
       {/* Rick's Tips Modal */}
       <RicksTipsModal open={tipsOpen} onOpenChange={setTipsOpen} />
-      <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={(user?.role === 'admin') ? 'admin' : 'employee'} />
     </div>
   );
 };

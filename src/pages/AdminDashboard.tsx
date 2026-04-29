@@ -1289,7 +1289,6 @@ export default function AdminDashboard() {
 
       {/* User Management — Employee Rights Modal */}
       {/* Employee Mgmt Dialog Placeholder */}
-      <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={(user?.role === 'admin') ? 'admin' : 'employee'} />
     </>
   );
 }

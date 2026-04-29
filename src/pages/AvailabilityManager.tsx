@@ -52,7 +52,7 @@ import {
     CalendarConfig
 } from '@/lib/googleCalendar';
 import { getAvailabilityStatus } from '@/lib/hybridAvailability';
-import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw, Zap, CalendarCheck } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw, Zap, CalendarCheck, HelpCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
 import { useBookingsStore } from '@/store/bookings';
 import * as bookingsSvc from '@/services/supabase/bookings';
@@ -60,7 +60,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generateBookingPDF, uploadToFileManager } from '@/lib/bookingsSync';
 import api from '@/lib/api';
-import localforage from 'localforage';
+import HelpModal from '@/components/help/HelpModal';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Admin Calendar Manager
@@ -764,7 +765,22 @@ export default function AvailabilityManager() {
                     <div className="flex items-start gap-4">
                         <Shield className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
                         <div className="flex-1">
-                            <p className="font-bold text-purple-300 mb-2">Hybrid Availability System</p>
+                            <div className="flex items-center gap-3 mb-2">
+                                <p className="font-bold text-purple-300">Hybrid Availability System</p>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('open-help', { 
+                                            detail: { topicId: 'availability-manager', role: getCurrentUser()?.role } 
+                                        }));
+                                    }}
+                                    title="System Guide"
+                                >
+                                    <HelpCircle className="h-4 w-4" />
+                                </Button>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                                 <div className="flex items-center gap-2">
                                     {availStatus.googleActive ? (
