@@ -88,7 +88,7 @@ export default function ExamAdmin() {
     if (ok) {
       // Also update localstorage as backup/cache
       try { localStorage.setItem(EXAM_CUSTOM_KEY, JSON.stringify(finalQs)); } catch { }
-      pushAdminAlert('admin_message' as any, 'Exam updated by admin', 'admin', { count: finalQs.length });
+      // pushAdminAlert('admin_message' as any, 'Exam updated by admin', 'admin', { count: finalQs.length });
       toast({ title: "Saved", description: result.skewedCorrectLetters ? "Saved to Supabase and balanced correct answers." : "Exam saved to database." });
     } else {
       toast({ title: "Error", description: "Failed to save to Supabase. Check connection.", variant: "destructive" });
@@ -175,7 +175,7 @@ export default function ExamAdmin() {
       const fileName = `Exam_Cheat_Sheet_${new Date().toLocaleString().replace(/[\/:]/g, '-')}.pdf`;
       savePDFToArchive('Employee Training' as any, 'admin', `exam_cheat_${Date.now()}`, pdfData, { fileName, path: 'Employee Training/' });
       toast({ title: 'Cheat Sheet Saved', description: 'PDF saved to File Manager to match current question order.' });
-      pushAdminAlert('cheat_sheet_generated', 'Exam cheat sheet generated', 'admin', {});
+      // pushAdminAlert('cheat_sheet_generated', 'Exam cheat sheet generated', 'admin', {});
     } catch {
       toast({ title: 'Error', description: 'Failed generating cheat sheet.', variant: 'destructive' });
     }

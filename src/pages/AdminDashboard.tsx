@@ -532,7 +532,7 @@ export default function AdminDashboard() {
         const total = Number(tRes?.total || 0);
         setOverdueCount(count);
         setTotalDue(total);
-        if (count > 0) {
+        if (count > 0 && total > 0.01) {
           toast({ title: `${count} employees overdue — check Payroll`, description: `Total due $${total.toFixed(2)}` });
           // Push per-employee alerts with estimated amounts
           try {
@@ -554,6 +554,8 @@ export default function AdminDashboard() {
               const pendingSum = pendHist.reduce((s: number, h: any) => s + Number(h.amount || 0), 0);
               const adjSum = Number(adj[emp.name] || 0) + Number(adj[emp.email] || 0);
               const owed = Math.max(0, unpaidSum + pendingSum - adjSum);
+              if (owed <= 0.01) return; // Don't notify for $0 or negligible amounts
+
               const msg = `${emp.name} due $${owed.toFixed(2)} — pay now`;
               // Prevent duplicate unread alerts for same employee within 24h
               const already = alertsAll.some(a => a.type === 'payroll_due' && a.message?.includes(emp.name) && !a.read && (now - new Date(a.timestamp).getTime()) < (24 * 60 * 60 * 1000));

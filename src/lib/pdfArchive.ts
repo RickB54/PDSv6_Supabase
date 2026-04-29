@@ -134,13 +134,6 @@ export function savePDFToArchive(
     window.dispatchEvent(new CustomEvent('pdf_archive_updated'));
   } catch { }
 
-  // Push persistent admin alert about the new PDF (unless silent)
-  if (!opts?.silent) {
-    pushAdminAlert(
-      "pdf_saved",
-      `New PDF saved: ${record.fileName}`,
-      "system",
-      { recordType, customerName, recordId, id: record.id }
-    );
-  }
+  // PDF alerts are silenced by default to avoid cluttering the Admin Hub
+  // only use alerts for critical business functions like bookings or specific admin overrides
 }

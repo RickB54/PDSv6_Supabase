@@ -2201,7 +2201,7 @@ const ServiceChecklist = () => {
                       archiveChecklistPDF(false, savedId || checklistId || undefined); 
                       const customer = customers.find(c => c.id === selectedCustomer); 
                       const customerName = customer?.name || 'Unknown'; 
-                      pushAdminAlert('job_progress', `Progress saved for ${customerName}`, 'system', { checklistId: savedId || checklistId, customerId: selectedCustomer }); 
+                      // pushAdminAlert('job_progress', `Progress saved for ${customerName}`, 'system', { checklistId: savedId || checklistId, customerId: selectedCustomer }); 
                     }} 
                     className="bg-black border border-white/10 hover:bg-zinc-900 text-white px-6"
                   >

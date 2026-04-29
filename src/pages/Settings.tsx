@@ -466,7 +466,7 @@ const Settings = () => {
       const fileName = `Failsafe_Pre_${type}_${Date.now()}.pdf`;
       savePDFToArchive('Failsafe' as any, 'System', `failsafe-${Date.now()}`, dataUrl, { fileName, path: 'Failsafe Backups/' });
 
-      pushAdminAlert('pdf_saved', `Failsafe Deletion Backup (${type}) created`, 'system', { fileName });
+      // pushAdminAlert('pdf_saved', `Failsafe Deletion Backup (${type}) created`, 'system', { fileName });
       toast({ title: 'Failsafe Created', description: 'Pre-deletion PDF saved to File Manager.' });
     } catch (e) {
       console.error('Failsafe PDF Error:', e);
