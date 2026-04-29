@@ -18,7 +18,18 @@ type HelpModalProps = {
 export default function HelpModal({ open, onOpenChange, role, initialTopicId }: HelpModalProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const toc = useMemo(() => makeToc(role), [role]);
+  const toc = useMemo(() => {
+    const rawToc = makeToc(role);
+    const seenIds = new Set<string>();
+    const seenTitles = new Set<string>();
+    return rawToc.filter(t => {
+      // Deduplicate by both ID and Title to catch all varieties of duplicates in helpData.ts
+      if (seenIds.has(t.id) || seenTitles.has(t.title)) return false;
+      seenIds.add(t.id);
+      seenTitles.add(t.title);
+      return true;
+    });
+  }, [role]);
   
   // Use ID instead of index for robustness
   const [currentTopicId, setCurrentTopicId] = useState<string | undefined>(initialTopicId);
@@ -62,11 +73,37 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
     }
   }, [open, initialTopicId]);
 
+
+
   const filteredToc = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return toc;
-    return toc.filter(t => (t.title + ' ' + t.summary + ' ' + (t.content ? t.content.join(' ') : '')).toLowerCase().includes(q));
+    
+    // Strict filtering: Only show if Title or Summary matches the query
+    // This addresses the user requirement: "if i put in vehicle i should not see anything but vehicle"
+    return toc.filter(t => {
+      const title = t.title.toLowerCase();
+      const summary = t.summary.toLowerCase();
+      return title.includes(q) || summary.includes(q);
+    }).sort((a, b) => {
+      // Still prioritize Title matches over Summary matches
+      const aTitle = a.title.toLowerCase().includes(q);
+      const bTitle = b.title.toLowerCase().includes(q);
+      if (aTitle && !bTitle) return -1;
+      if (!aTitle && bTitle) return 1;
+      return 0;
+    });
   }, [query, toc]);
+
+  // Auto-switch to first result during search
+  useEffect(() => {
+    if (query.trim() && filteredToc.length > 0) {
+      const isCurrentInResults = filteredToc.some(t => t.id === currentTopicId);
+      if (!isCurrentInResults) {
+        setCurrentTopicId(filteredToc[0].id);
+      }
+    }
+  }, [filteredToc, query, currentTopicId]);
 
   // Derive active topic from ID
   const topic: HelpTopic | undefined = useMemo(() => {
@@ -115,7 +152,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
         <DialogHeader className="px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-800/60 shrink-0 bg-[#0f1629]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 sm:mb-2">
             <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-400 text-lg sm:text-2xl font-bold tracking-tight">
-              Prime Auto Detail — Help Guide
+              Help Center (Strict Search Mode)
             </DialogTitle>
             
             {/* Global Search - Always Visible and prominent */}
@@ -145,15 +182,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
             </div>
          </div>
 
-         {/* Auto-switch to first result during search */}
-         {useEffect(() => {
-           if (query.trim() && filteredToc.length > 0) {
-             const isCurrentInResults = filteredToc.some(t => t.id === currentTopicId);
-             if (!isCurrentInResults) {
-               setCurrentTopicId(filteredToc[0].id);
-             }
-           }
-         }, [filteredToc, query, currentTopicId]) as any}
+
 
           <div className="flex flex-col gap-3">
             {/* Navigation Selector */}
