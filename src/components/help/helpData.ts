@@ -238,8 +238,33 @@ export const netProfitExplanationTopic: HelpTopic = {
     '• **Formula**: `Net Profit = Total Revenue - (Operating Expenses + Inventory Value)`',
     '',
     '💡 **Why include Inventory?**: By treating your inventory as an investment, the system shows you exactly how much revenue is needed to recover the cost of your tools and chemicals before you are in the green.',
+    '',
+    '🚗 **Multi-Vehicle Logic**: To add more vehicles to a customer profile without touching code, go to the **Prospects** or **Customers** page, edit the client, and use the vehicle manager there. In the public booking flow, the "Add Another Vehicle" button allows customers to book multiple cars at once.',
   ],
   section: 'menu',
+};
+
+export const multiVehicleBookingHelpTopic: HelpTopic = {
+  id: 'multi-vehicle-booking',
+  title: 'Multi-Vehicle Bookings',
+  summary: 'How to add multiple cars to a single appointment and manage vehicle details.',
+  content: [
+    '**Booking Multiple Vehicles**: You can now append additional cars to a single appointment request. This is ideal for families or businesses booking several vehicles at once.',
+    '',
+    '🚗 **1. Adding Another Vehicle**',
+    'Click the **"+ Add Another Vehicle to This Appointment"** button located below the first vehicle\'s details. This will create a new section for the second car.',
+    '',
+    '📋 **2. Vehicle Details**',
+    'For each additional vehicle, you must specify the **Year, Make, Model, and Size**. You can also include the **Color and License Plate** to help the detailer identify the vehicle upon arrival.',
+    '',
+    '💎 **3. Package & Add-on Selection**',
+    'Each vehicle can have its own specific **Service Package** and **Add-ons**. The total price at the bottom of the form will automatically update to reflect the combined cost of all vehicles.',
+    '',
+    '🔗 **4. Administration & History**',
+    'All vehicles will be submitted as a single booking request. In the **Admin Dashboard**, the additional vehicle details will be saved in the **Notes** section of the booking.',
+    '• **Pro Tip**: In the **Prospects** or **Customers** view, you can manage a client\'s "Garage" by adding multiple permanent vehicles to their profile. This allows you to quickly select them for future appointments.',
+  ],
+  section: 'system',
 };
 
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
@@ -254,6 +279,7 @@ export const adminMenuTopics: HelpTopic[] = [
   contactMediaUploadTopic,
   mobileSetupTopic,
   chemicalAiTopic,
+  multiVehicleBookingHelpTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',
@@ -2563,6 +2589,7 @@ export const employeeMenuTopics: HelpTopic[] = [
     route: '/employee-dashboard',
     section: 'menu',
   },
+  multiVehicleBookingHelpTopic,
 ];
 
 export const employeeDashboardTopics: HelpTopic[] = [
@@ -2950,6 +2977,7 @@ export const customerTopics: HelpTopic[] = [
     ],
     route: '/user-settings',
   },
+  multiVehicleBookingHelpTopic,
 ];
 
 export function makeToc(role: 'admin' | 'employee' | 'customer', _blockedIds: string[] = []): HelpTopic[] {

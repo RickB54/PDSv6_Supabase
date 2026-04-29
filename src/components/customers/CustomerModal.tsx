@@ -9,7 +9,7 @@ import {
   User, Mail, Phone, MapPin, Car, Calendar, Search, 
   Image as ImageIcon, Video, X, Camera, Trash2, 
   FileBarChart, Plus, ChevronDown, ExternalLink, 
-  Star, ShieldCheck, Zap, Users, Info
+  Star, ShieldCheck, Zap, Users, Info, HelpCircle
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -489,6 +489,12 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <Car className="h-4 w-4" /> Vehicles
+                    <span title="Click to learn how to manage a customer's 'Garage' and add multiple permanent vehicles.">
+                      <HelpCircle 
+                        className="h-3 w-3 text-zinc-600 cursor-pointer hover:text-blue-400 transition-colors" 
+                        onClick={() => { window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'multi-vehicle-booking' } })); }}
+                      />
+                    </span>
                   </h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] bg-zinc-900 border-zinc-700" onClick={addVehicleRow}>
                     <Plus className="h-3 w-3 mr-1" /> Add Row
