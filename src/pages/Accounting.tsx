@@ -458,7 +458,7 @@ const Accounting = () => {
         if (ledgerSortBy === 'amount') return (b.amount || 0) - (a.amount || 0);
         if (ledgerSortBy === 'category') return (a.category || "").localeCompare(b.category || "");
         if (ledgerSortBy === 'updated') return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
-        return new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime();
+        return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
       });
   }, [incomeList, dateFilter, dateRange, ledgerSearch, ledgerSortBy]);
 
@@ -830,7 +830,7 @@ const Accounting = () => {
                             <div>
                               <p className="font-semibold text-green-700">+${(income.amount || 0).toFixed(2)}</p>
                               <p className="text-sm">{income.description || 'Income'}</p>
-                              <span className="text-xs text-muted-foreground">{new Date(income.date || income.createdAt).toLocaleString()}</span>
+                              <span className="text-xs text-muted-foreground">{new Date(income.createdAt || income.date).toLocaleString()}</span>
                             </div>
                             <div className="flex gap-1">
                               <Button size="icon" variant="ghost" onClick={() => setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) })}><Pencil className="h-4 w-4" /></Button>

@@ -267,7 +267,7 @@ export async function getExpenses<T extends GenericWithId>(): Promise<T[]> {
     return (data || []).map(e => ({
       ...e,
       description: e.vendor || e.notes || 'Expense',
-      createdAt: e.date || e.created_at
+      createdAt: e.created_at || e.date
     })) as T[];
   } catch {
     return getArray<T>(KEYS.expenses);
@@ -280,7 +280,7 @@ export async function upsertExpense<T extends Partial<GenericWithId>>(exp: T): P
     const payload = {
       ...exp,
       vendor: (exp as any).description,
-      date: (exp as any).createdAt ? new Date((exp as any).createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      date: (exp as any).createdAt ? new Date((exp as any).createdAt).toISOString() : new Date().toISOString(),
       is_deductible: true
     };
     // Cleanup local fields
