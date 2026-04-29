@@ -218,12 +218,9 @@ const SearchCustomer = () => {
     if (customer.type === 'prospect') return false;
 
     // Archive Filter - treat NULL/undefined as "not archived"
+    // Archive Filter - include archived if showArchived is true, otherwise hide them
     const isArchived = customer.is_archived === true;
-    if (showArchived) {
-      if (!isArchived) return false;
-    } else {
-      if (isArchived) return false;
-    }
+    if (!showArchived && isArchived) return false;
 
     const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.phone || '').includes(searchTerm) ||
@@ -455,8 +452,8 @@ const SearchCustomer = () => {
             <Button variant="ghost" onClick={refresh} className="text-zinc-400 hover:text-white" disabled={isRefreshing}>
               <RotateCcw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
             </Button>
-            <Button variant={showArchived ? "secondary" : "ghost"} onClick={() => setShowArchived(!showArchived)} className="text-zinc-400 hover:text-white">
-              {showArchived ? "Show Active" : "Show Archived"}
+            <Button variant={showArchived ? "secondary" : "ghost"} onClick={() => setShowArchived(!showArchived)} className={cn("text-zinc-400 hover:text-white", showArchived && "bg-amber-600/20 text-amber-500 border-amber-600/30")}>
+              {showArchived ? "Hide Archived" : "Show Archived"}
             </Button>
             <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="customers-range" />
             <Button variant="outline" onClick={() => generatePDF(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-200"><Save className="h-4 w-4 mr-2" /> PDF</Button>
@@ -524,6 +521,12 @@ const SearchCustomer = () => {
                       <div>
                         <div className="flex items-center gap-2">
                            <h3 className="font-bold text-zinc-200 text-lg">{customer.name}</h3>
+                           {customer.is_archived && (
+                             <Badge variant="outline" className="h-5 bg-zinc-500/20 text-zinc-500 border-zinc-500/30 gap-1 px-1.5 ml-2">
+                               <Archive className="h-3 w-3" />
+                               <span className="text-[9px] font-black uppercase tracking-tight">ARCHIVED</span>
+                             </Badge>
+                           )}
                            {customer.has_google_review && (
                              <Badge variant="outline" className="h-5 bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-1.5 ml-2">
                                <Star className="h-3 w-3 fill-amber-500" />
@@ -544,7 +547,7 @@ const SearchCustomer = () => {
                           variant="ghost"
                           size="sm"
                           onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }}
-                          className={cn("h-8 px-2 text-xs gap-1", customer.is_archived ? "text-green-400 hover:text-green-300 hover:bg-green-900/50" : "text-zinc-400 hover:text-amber-400")}
+                          className={cn("h-8 px-2 text-xs gap-1 transition-all", customer.is_archived ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20" : "text-zinc-400 hover:text-amber-400")}
                           title={customer.is_archived ? "Restore" : "Archive"}
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}

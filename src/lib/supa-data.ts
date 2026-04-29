@@ -555,6 +555,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         address: customer.address,
         notes: customer.notes || '',
         type: customer.type || 'customer',
+        is_archived: customer.is_archived || false,
         general_photos: customer.generalPhotos,
         before_photos: customer.beforePhotos,
         after_photos: customer.afterPhotos,

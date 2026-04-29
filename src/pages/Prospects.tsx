@@ -11,6 +11,7 @@ import { RetentionHub } from "@/components/customers/RetentionHub";
 import api from "@/lib/api";
 import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth";
 import { auditEmployeeAction } from "@/lib/audit";
 import { MOCK_PROSPECTS } from "@/lib/demoMockData";
@@ -217,12 +218,8 @@ const Prospects = () => {
   };
 
   const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(customer => {
-    // Archive Filter
-    if (showArchived) {
-      if (!customer.is_archived) return false;
-    } else {
-      if (customer.is_archived) return false;
-    }
+    // Archive Filter - include archived if showArchived is true, otherwise hide them
+    if (!showArchived && customer.is_archived) return false;
 
     const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.phone || '').includes(searchTerm) ||
@@ -459,9 +456,9 @@ const Prospects = () => {
             <Button
               variant={showArchived ? "secondary" : "ghost"}
               onClick={() => setShowArchived(!showArchived)}
-              className="text-zinc-400 hover:text-white"
+              className={cn("text-zinc-400 hover:text-white", showArchived && "bg-amber-600/20 text-amber-500 border-amber-600/30")}
             >
-              {showArchived ? "Show Active" : "Show Archived"}
+              {showArchived ? "Hide Archived" : "Show Archived"}
             </Button>
 
             <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="prospects-range" />
@@ -534,7 +531,15 @@ const Prospects = () => {
                       })()}
 
                       <div>
-                        <h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">{customer.name}</h3>
+                        <h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">
+                          {customer.name}
+                          {customer.is_archived && (
+                            <Badge variant="outline" className="h-5 bg-zinc-500/20 text-zinc-500 border-zinc-500/30 gap-1 px-1.5 ml-1">
+                              <Archive className="h-3 w-3" />
+                              <span className="text-[9px] font-black uppercase tracking-tight">ARCHIVED</span>
+                            </Badge>
+                          )}
+                        </h3>
                         <div className="flex gap-3 text-sm text-zinc-400">
                           <span>{customer.phone || 'No phone'}</span>
                           {(customer.vehicle || customer.model) && (
@@ -550,8 +555,14 @@ const Prospects = () => {
                     </div>
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                       <div className="flex gap-1 mr-4">
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400" title={customer.is_archived ? "Restore" : "Archive"}>
-                          {customer.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }} 
+                          className={cn("h-8 px-2 text-xs gap-1 transition-all", customer.is_archived ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20" : "text-zinc-400 hover:text-amber-400")} 
+                          title={customer.is_archived ? "Restore" : "Archive"}
+                        >
+                          {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                         {isAdmin && (

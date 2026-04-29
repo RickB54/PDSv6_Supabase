@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield } from "lucide-react"; // Added Copy, RotateCcw, Trash2, Printer, Package, Shield
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle } from "lucide-react"; // Added Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -22,15 +22,15 @@ import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseBookings } from "@/lib/supa-data";
+import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
 import { servicePackages, addOns } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
+import { getUnifiedCustomers } from "@/lib/customers";
 import localforage from "localforage";
 import { upsertCustomer } from "@/lib/db";
-import { getUnifiedCustomers } from "@/lib/customers";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_BOOKINGS } from "@/lib/demoMockData";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -2318,12 +2318,12 @@ export default function BookingsPage() {
                 <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
                   <Package className="h-6 w-6 text-red-500" />
                 </div>
-                <div>
+                <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">Booking History</h2>
-                  <p className="text-sm text-zinc-500 font-medium">
-                    Complete customer records and booking logs
-                  </p>
                 </div>
+                <p className="text-sm text-zinc-500 font-medium">
+                  Complete customer records and booking logs
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 p-2 bg-zinc-900/80 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md">
@@ -2407,6 +2407,32 @@ export default function BookingsPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setStatusFilter('done')} className="cursor-pointer flex items-center gap-2">
                       <Package className="h-3 w-3 text-green-500" /> Done
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="w-px h-6 bg-zinc-800 mx-1" />
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn(
+                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border", 
+                        showArchived ? "bg-amber-600/20 text-amber-500 border-amber-600/30" : "text-zinc-400 border-transparent"
+                      )}
+                    >
+                      <Archive className="h-3 w-3 mr-1.5" />
+                      {showArchived ? 'ARCHIVED' : 'ACTIVE'} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-48">
+                    <DropdownMenuItem onClick={() => setShowArchived(false)} className="cursor-pointer flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-zinc-500" /> Show Active Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowArchived(true)} className="cursor-pointer flex items-center gap-2 text-amber-400">
+                      <Archive className="h-3 w-3" /> Show All (Incl. Archived)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -2526,9 +2552,22 @@ export default function BookingsPage() {
                       ])
                     ).map(customerName => {
                       if (!customerName) return null;
+                      
+                      const customerData = customers.find(c => c.name === customerName);
+                      
+                      // ARCHIVE FILTER: If not showing archived, hide archived customers
+                      if (!showArchived && customerData?.is_archived) return null;
+
                       // Aggregate all activity for this customer
                       let customerEvents = [
-                        ...items.filter(b => b.customer === customerName).map(b => ({ ...b, type: 'booking' as const })),
+                        ...items.filter(b => {
+                          const isCustMatch = b.customer === customerName;
+                          // STRICT FILTER: If showArchived is false, ONLY show non-archived bookings
+                          // Handle both potential property names just in case
+                          const isArchived = (b as any).isArchived === true || (b as any).is_archived === true;
+                          const isArchiveVisible = showArchived || !isArchived;
+                          return isCustMatch && isArchiveVisible;
+                        }).map(b => ({ ...b, type: 'booking' as const })),
                         ...unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName && e.type !== 'booking')
                       ];
 
@@ -2567,7 +2606,6 @@ export default function BookingsPage() {
                       );
 
                       const mostRecent = sortedEvents[0];
-                      const fullCustomer = customers.find(c => c.name === customerName);
 
                       return {
                         name: customerName,
@@ -2578,10 +2616,10 @@ export default function BookingsPage() {
                         vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
                           ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
                           : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
-                        address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || fullCustomer?.address || 'N/A') : 'Internal System',
-                        phone: fullCustomer?.phone || 'N/A',
-                        email: fullCustomer?.email || 'N/A',
-                        type: fullCustomer?.type || 'customer',
+                        address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || customerData?.address || 'N/A') : 'Internal System',
+                        phone: customerData?.phone || 'N/A',
+                        email: customerData?.email || 'N/A',
+                        type: customerData?.type || 'customer',
                         events: sortedEvents,
                         isSystem: customerName === 'INTERNAL: System Blocks'
                       };

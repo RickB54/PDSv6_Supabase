@@ -2389,9 +2389,33 @@ export const adminDashboardTopics: HelpTopic[] = [
   },
 ];
 
+const customerManagementFlowTopic: HelpTopic = {
+  id: 'customer-management-flow',
+  title: 'Customer Management & Booking Flow',
+  summary: 'A step-by-step guide on how prospects, customers, and bookings interact.',
+  content: [
+    '### 1. The Prospect Phase',
+    '**Prospects** are potential customers you have manually added or who have made inquiries but haven\'t booked a job yet. Use the **Prospects** page to manage these leads.',
+    '',
+    '### 2. The Booking Phase',
+    'When a job is scheduled (manually by you or via the public website), it creates a **Booking Record**. This record is linked to the person\'s profile in the database.',
+    '',
+    '### 3. The Customer Phase',
+    'Once a prospect has a booking history, the system automatically treats them as an established **Customer**. You can find and edit their full profile on the **Search Customer** page.',
+    '',
+    '### 4. Booking History vs. Database',
+    '• **Booking History**: A timeline of all jobs/activity grouped by person.',
+    '• **Database (Search Customer/Prospects)**: The master record where you edit phone numbers, addresses, and vehicle details.',
+    '',
+    '### 5. Archiving Strategy',
+    '**Archiving** a profile hides them from active search results and lists (to keep things clean) but **preserves all their job history** for your records. You can unarchive a person at any time to re-book them.',
+  ],
+};
+
 export const adminTopics: HelpTopic[] = [
   ...adminMenuTopics,
   ...adminDashboardTopics,
+  customerManagementFlowTopic,
 ];
 
 export const employeeMenuTopics: HelpTopic[] = [
