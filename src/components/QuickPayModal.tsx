@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, ArrowRight, Wallet, User as UserIcon } from 'lucide-react';
+import { X, DollarSign, ArrowRight, Wallet, User as UserIcon, HelpCircle } from 'lucide-react';
 import TipSelectionScreen from './TipSelectionScreen';
 import { getUnifiedCustomers } from '@/lib/customers';
 
@@ -113,7 +113,16 @@ export default function QuickPayModal() {
           <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3">
             <Wallet size={24} />
           </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Quick Pay</h2>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Quick Pay</h2>
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'quick-pay-in-person' } }))}
+              className="p-1 text-gray-400 hover:text-emerald-500 transition-colors"
+              title="Quick Pay Help"
+            >
+              <HelpCircle size={18} />
+            </button>
+          </div>
           <p className="text-gray-500 text-sm mt-1">Receive an in-person payment</p>
         </div>
 

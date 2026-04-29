@@ -10,7 +10,7 @@ import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/su
 import { format } from "date-fns";
 import { RetentionHub } from "@/components/customers/RetentionHub";
 import api from "@/lib/api";
-import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, HelpCircle } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth";
@@ -424,7 +424,16 @@ const Prospects = () => {
                 <Users className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Prospects Overview</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-white">Prospects Overview</h2>
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prospects' } }))}
+                    className="p-1 text-zinc-500 hover:text-purple-400 transition-colors"
+                    title="Prospects Help"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                  </button>
+                </div>
                 <p className="text-zinc-400 text-sm">Track potential clients and leads</p>
               </div>
             </div>

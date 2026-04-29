@@ -283,11 +283,60 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                 ))}
                 
                 {topic.summary && (
-                  <div className="mt-12 p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl relative overflow-hidden group">
+                  <div className="mt-8 p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
                     <p className="text-lg text-emerald-200/90 italic font-medium leading-relaxed">✨ Summary: {topic.summary}</p>
                   </div>
                 )}
+
+                {/* Related Topics Section */}
+                <div className="mt-12 pt-8 border-t border-slate-800/60">
+                  <h3 className="text-sm font-bold text-emerald-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <Zap className="w-4 h-4" /> Related Topics & Next Steps
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(() => {
+                      const keyTopicIds = ['prospects', 'estimates', 'users-roles', 'customers', 'bookings', 'service-checklist'];
+                      
+                      let related = (topic.relatedTopicIds || [])
+                        .map(id => toc.find(t => t.id === id))
+                        .filter(Boolean) as HelpTopic[];
+                      
+                      // Fallback: If fewer than 4 related topics, add from keyTopicIds
+                      if (related.length < 4) {
+                        const keyTopics = keyTopicIds
+                          .map(id => toc.find(t => t.id === id))
+                          .filter(t => t && t.id !== topic.id && !related.some(r => r.id === t.id)) as HelpTopic[];
+                        
+                        related = [...related, ...keyTopics];
+                      }
+
+                      // If still fewer than 4, add from same section
+                      if (related.length < 4) {
+                        const others = toc.filter(t => 
+                          t.section === topic.section && 
+                          t.id !== topic.id && 
+                          !related.some(r => r.id === t.id)
+                        );
+                        related = [...related, ...others];
+                      }
+
+                      return related.slice(0, 4).map((rt) => (
+                        <button
+                          key={rt.id}
+                          onClick={() => handleTopicClick(rt.id)}
+                          className="flex items-center justify-between p-4 bg-slate-900/40 border border-slate-800 rounded-xl hover:bg-slate-800/60 hover:border-emerald-500/50 transition-all group text-left"
+                        >
+                          <div className="space-y-1">
+                            <div className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{rt.title}</div>
+                            <div className="text-[10px] text-slate-500 line-clamp-1">{rt.summary}</div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
