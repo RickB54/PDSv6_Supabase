@@ -2432,7 +2432,7 @@ export default function BookingsPage() {
                       <div className="w-2 h-2 rounded-full bg-zinc-500" /> Show Active Only
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setShowArchived(true)} className="cursor-pointer flex items-center gap-2 text-amber-400">
-                      <Archive className="h-3 w-3" /> Show All (Incl. Archived)
+                      <Archive className="h-3 w-3" /> Show Archived Only
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -2553,10 +2553,13 @@ export default function BookingsPage() {
                     ).map(customerName => {
                       if (!customerName) return null;
                       
-                      const customerData = customers.find(c => c.name === customerName);
-                      
-                      // ARCHIVE FILTER: If not showing archived, hide archived customers
-                      if (!showArchived && customerData?.is_archived) return null;
+                      // ARCHIVE FILTER: Strict Toggle (Show ONLY archived if true, otherwise show ONLY active)
+                      const isCustArchived = customerData?.is_archived === true;
+                      if (showArchived) {
+                        if (!isCustArchived) return null;
+                      } else {
+                        if (isCustArchived) return null;
+                      }
 
                       // Aggregate all activity for this customer
                       let customerEvents = [

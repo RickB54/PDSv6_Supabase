@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import CustomerModal from "@/components/customers/CustomerModal";
+import { Badge } from "@/components/ui/badge";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
 import { format } from "date-fns";
@@ -218,8 +219,12 @@ const Prospects = () => {
   };
 
   const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(customer => {
-    // Archive Filter - include archived if showArchived is true, otherwise hide them
-    if (!showArchived && customer.is_archived) return false;
+    // Archive Filter - Strict Toggle (Show ONLY archived if true, otherwise show ONLY active)
+    if (showArchived) {
+      if (!customer.is_archived) return false;
+    } else {
+      if (customer.is_archived) return false;
+    }
 
     const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.phone || '').includes(searchTerm) ||

@@ -217,10 +217,13 @@ const SearchCustomer = () => {
   const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(customer => {
     if (customer.type === 'prospect') return false;
 
-    // Archive Filter - treat NULL/undefined as "not archived"
-    // Archive Filter - include archived if showArchived is true, otherwise hide them
+    // Archive Filter - Strict Toggle (Show ONLY archived if true, otherwise show ONLY active)
     const isArchived = customer.is_archived === true;
-    if (!showArchived && isArchived) return false;
+    if (showArchived) {
+      if (!isArchived) return false;
+    } else {
+      if (isArchived) return false;
+    }
 
     const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.phone || '').includes(searchTerm) ||
