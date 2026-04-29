@@ -118,6 +118,7 @@ export default function BookingsPage() {
   const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'blocked' | null>(null);
   const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const lastLoadTimeRef = useRef<number>(0);
@@ -2380,6 +2381,38 @@ export default function BookingsPage() {
 
                 <div className="w-px h-6 bg-zinc-800 mx-1" />
 
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className={cn("h-8 text-[11px] px-3 font-bold rounded-lg transition-all", statusFilter ? "bg-emerald-600 text-white" : "text-zinc-400")}>
+                      {statusFilter ? statusFilter.replace('_', ' ').toUpperCase() : 'STATUS'} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56">
+                    <DropdownMenuItem onClick={() => setStatusFilter(null)} className="cursor-pointer">All Statuses</DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuItem onClick={() => setStatusFilter('confirmed')} className="cursor-pointer flex items-center gap-2">
+                      <Check className="h-3 w-3 text-emerald-500" /> Confirmed Booking
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('tentative')} className="cursor-pointer flex items-center gap-2">
+                      <Clock className="h-3 w-3 text-amber-500" /> Tentative (Hold)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('blocked')} className="cursor-pointer flex items-center gap-2">
+                      <Shield className="h-3 w-3 text-red-500" /> Blocked
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('pending')} className="cursor-pointer flex items-center gap-2">
+                      <RotateCcw className="h-3 w-3 text-blue-500" /> Pending
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('in_progress')} className="cursor-pointer flex items-center gap-2">
+                      <Wrench className="h-3 w-3 text-purple-500" /> In Progress
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('done')} className="cursor-pointer flex items-center gap-2">
+                      <Package className="h-3 w-3 text-green-500" /> Done
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="w-px h-6 bg-zinc-800 mx-1" />
+
                 <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (dateFilter.start || dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}>
@@ -2507,6 +2540,14 @@ export default function BookingsPage() {
                         });
                       }
                       
+                      // Apply Status Filter
+                      if (statusFilter) {
+                        customerEvents = customerEvents.filter(e => {
+                          const s = (e as any).status || (e.type === 'blocked' ? 'blocked' : 'pending');
+                          return s === statusFilter;
+                        });
+                      }
+                      
                       if (dateFilter.start) {
                         customerEvents = customerEvents.filter(e => {
                           const d = parseISO(e.date);
@@ -2532,6 +2573,8 @@ export default function BookingsPage() {
                         name: customerName,
                         bookingCount: customerEvents.length,
                         lastBooking: mostRecent.date,
+                        mostRecentStatus: mostRecent.type,
+                        mostRecentStatusValue: mostRecent.type === 'booking' ? (mostRecent.status || 'pending').toUpperCase() : 'BLOCKED',
                         vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
                           ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
                           : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
@@ -2569,12 +2612,25 @@ export default function BookingsPage() {
                                     <User className="h-5 w-5 text-primary" />
                                   )}
                                 </div>
-                                <div className="text-left">
-                                  <div className="font-semibold">{customer.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {customer.bookingCount} record{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
+                                  <div className="text-left">
+                                    <div className="font-semibold">{customer.name}</div>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <div className="text-sm text-muted-foreground">
+                                        {customer.bookingCount} record{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
+                                      </div>
+                                      <Badge 
+                                        variant="outline" 
+                                        className={cn(
+                                          "text-[9px] h-4 px-1.5 uppercase font-black tracking-tight", 
+                                          customer.mostRecentStatus === 'booking' 
+                                            ? getStatusColor(customer.mostRecentStatusValue.toLowerCase() as any) 
+                                            : "text-blue-400 border-blue-900/50 bg-blue-950/20"
+                                        )}
+                                      >
+                                        {customer.mostRecentStatusValue}
+                                      </Badge>
+                                    </div>
                                   </div>
-                                </div>
                               </div>
                               <ChevronDown
                                 className={cn(
