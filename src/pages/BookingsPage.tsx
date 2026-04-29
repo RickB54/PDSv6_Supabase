@@ -2553,6 +2553,8 @@ export default function BookingsPage() {
                     ).map(customerName => {
                       if (!customerName) return null;
                       
+                      const customerData = customers.find(c => c.name === customerName);
+                      
                       // ARCHIVE FILTER: Strict Toggle (Show ONLY archived if true, otherwise show ONLY active)
                       const isCustArchived = customerData?.is_archived === true;
                       if (showArchived) {
