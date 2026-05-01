@@ -2826,12 +2826,24 @@ export default function BookingsPage() {
                                                   onClick={async (e) => {
                                                     e.stopPropagation();
                                                     if (confirm(`Remove this ${v.make} ${v.model} from garage?`)) {
+                                                      // Optimistic UI update
+                                                      setCustomers(prev => prev.map(c => {
+                                                        if (c.id === customer.id) {
+                                                          return { 
+                                                            ...c, 
+                                                            vehicles: (c.vehicles || []).filter((veh: any) => veh.id !== v.id) 
+                                                          };
+                                                        }
+                                                        return c;
+                                                      }));
+
                                                       try {
                                                         await deleteSupabaseVehicle(v.id);
                                                         toast.success("Vehicle removed");
-                                                        fetchCustomers();
-                                                      } catch (err) {
-                                                        toast.error("Failed to remove vehicle");
+                                                        // No need to fetchCustomers() if optimistic worked
+                                                      } catch (err: any) {
+                                                        toast.error(err.message || "Failed to remove vehicle");
+                                                        fetchCustomers(); // Rollback on error
                                                       }
                                                     }
                                                   }}

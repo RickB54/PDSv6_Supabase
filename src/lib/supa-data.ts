@@ -558,7 +558,13 @@ export const deleteSupabaseVehicle = async (id: string) => {
     if (blockDemo('vehicle delete')) return;
     try {
         const { error } = await supabase.from('vehicles').delete().eq('id', id);
-        if (error) throw error;
+        if (error) {
+            // Check for foreign key violation (linked bookings)
+            if (error.code === '23503') {
+                throw new Error("Cannot delete this vehicle because it is linked to a booking. Please edit the booking first to use a different vehicle record.");
+            }
+            throw error;
+        }
         console.log('✅ Vehicle deleted successfully:', id);
     } catch (err) {
         console.error('deleteSupabaseVehicle error:', err);

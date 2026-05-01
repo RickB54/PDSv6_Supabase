@@ -651,12 +651,24 @@ const SearchCustomer = () => {
                                           onClick={async (e) => {
                                             e.stopPropagation();
                                             if (confirm(`Remove this ${v.make} ${v.model} from garage?`)) {
+                                              // Optimistic UI update: Remove from local state immediately
+                                              setCustomers(prev => prev.map(c => {
+                                                if (c.id === customer.id) {
+                                                  return { 
+                                                    ...c, 
+                                                    vehicles: (c.vehicles || []).filter((veh: any) => veh.id !== v.id) 
+                                                  };
+                                                }
+                                                return c;
+                                              }));
+
                                               try {
                                                 await deleteSupabaseVehicle(v.id);
                                                 toast.success("Vehicle removed");
-                                                refresh();
-                                              } catch (err) {
-                                                toast.error("Failed to remove vehicle");
+                                                // refresh(); // Optional: sync with server
+                                              } catch (err: any) {
+                                                toast.error(err.message || "Failed to remove vehicle");
+                                                refresh(); // Rollback to server state on error
                                               }
                                             }
                                           }}
