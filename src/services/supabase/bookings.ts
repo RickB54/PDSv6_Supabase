@@ -37,6 +37,7 @@ export async function create(input: BookingInput) {
           full_name: input.customer_name,
           email: input.email,
           phone: input.phone,
+          type: 'customer',
           notes: 'Created via Book Now'
         }).select('id').single();
         if (cErr) throw cErr;
@@ -47,6 +48,7 @@ export async function create(input: BookingInput) {
       const { data: newCust, error: cErr } = await supabase.from('customers').insert({
         full_name: input.customer_name,
         phone: input.phone || null,
+        type: 'customer',
         notes: 'Created via Book Now (Staff Entry)'
       }).select('id').single();
       if (!cErr && newCust) {
