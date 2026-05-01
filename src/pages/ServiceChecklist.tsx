@@ -369,7 +369,12 @@ const ServiceChecklist = () => {
 
       // Preselect default employee if present and not already set
       // We use currentEmps which holds either cached or fresh data
-      const defaultEmp = currentEmps[0];
+      const defaultEmp = currentEmps.find(e => 
+        e.name.toLowerCase().includes('rick') || 
+        e.email?.toLowerCase().includes('rberube') ||
+        e.name.toLowerCase().includes('rberube54')
+      ) || currentEmps[0];
+
       if (defaultEmp && !employeeAssigned) {
         setEmployeeAssigned(String(defaultEmp.id || defaultEmp.name || ''));
       }

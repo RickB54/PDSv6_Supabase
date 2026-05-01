@@ -181,6 +181,19 @@ export default function BookingsPage() {
       try {
         const emps = await getSupabaseEmployees(); // Use Supabase
         setEmployees(emps);
+        
+        // AUTO-ASSIGN: Default to Rick Berube for new bookings
+        const rick = emps.find(e => 
+          e.name.toLowerCase().includes('rick') || 
+          e.email?.toLowerCase().includes('rberube') ||
+          e.name.toLowerCase().includes('rberube54')
+        );
+        if (rick && !formData.assignedEmployee) {
+          setFormData(prev => ({ 
+            ...prev, 
+            assignedEmployee: rick.id || rick.name 
+          }));
+        }
       } catch (err) {
         console.error('Failed to fetch employees:', err);
       }
@@ -716,10 +729,11 @@ export default function BookingsPage() {
     console.log(">>> handleSave EXECUTION STARTED");
     const saveToast = toast.loading("Saving booking...");
     try {
-      // 1. Sync to Customer Profile (Non-blocking)
-      const resolvedCustomerId = (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId;
+      // 1. Sync to Customer Profile (Blocking for Supabase, non-blocking for Local)
+      let finalCustomerId = (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId;
+      
       const custPayload = {
-        id: resolvedCustomerId,
+        id: finalCustomerId,
         name: formData.customer,
         email: formData.email,
         phone: formData.phone,
@@ -727,9 +741,24 @@ export default function BookingsPage() {
         vehicle: formData.vehicleMake,
         model: formData.vehicleModel,
         year: formData.vehicleYear,
+        type: 'customer', // Force 'customer' type for direct bookings
         updatedAt: new Date().toISOString()
       };
-      upsertCustomer(custPayload).catch(e => console.error('Customer sync failed', e)); 
+
+      if (!isDemoMode) {
+        try {
+          const savedCust = await upsertSupabaseCustomer(custPayload);
+          if (savedCust?.id) {
+            finalCustomerId = savedCust.id;
+            console.log("✅ Customer record verified/created in Supabase:", finalCustomerId);
+          }
+        } catch (e) {
+          console.error('⚠️ Critical: Supabase customer sync failed. Booking will proceed but record might be disconnected.', e);
+        }
+      }
+
+      // Also sync locally for legacy fallback / offline support
+      upsertCustomer({ ...custPayload, id: finalCustomerId }).catch(e => console.error('Local customer sync failed', e)); 
 
       // 2. Prepare Date Objects
       const dateBase = selectedDate || new Date();
@@ -765,7 +794,7 @@ export default function BookingsPage() {
           hasReminder: formData.hasReminder,
           reminderFrequency: parseInt(formData.reminderFrequency) || 0,
           vehicleId: formData.vehicleId,
-          customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
+          customerId: finalCustomerId,
           customerEmail: formData.email,
           customerPhone: formData.phone
         };
@@ -783,7 +812,7 @@ export default function BookingsPage() {
         const newBooking: Booking = {
           id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b-${Date.now()}`,
           customer: formData.customer,
-          customerId: (selectedCustomer?.name === formData.customer) ? selectedCustomer?.id : formData.customerId,
+          customerId: finalCustomerId,
           title: formData.service,
           date: date.toISOString(),
           endTime: endDate.toISOString(),
@@ -2622,6 +2651,9 @@ export default function BookingsPage() {
                         isSystem: customerName === 'INTERNAL: System Blocks'
                       };
                     }).filter(Boolean) as any[];
+                    
+                    // SORT: Latest booking date first by default
+                    uniqueCustomers.sort((a, b) => new Date(b.lastBooking).getTime() - new Date(a.lastBooking).getTime());
 
                     if (uniqueCustomers.length === 0) {
                       return (
