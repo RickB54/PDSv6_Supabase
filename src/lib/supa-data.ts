@@ -517,6 +517,23 @@ export async function upsertSupabaseVehicle(vehicleData: {
             payload.customer_id = null;
         }
 
+        // DUPLICATE CHECK: If no ID provided, check for existing vehicle for this customer
+        if (!payload.id && payload.customer_id) {
+            const { data: existing } = await supabase
+                .from('vehicles')
+                .select('id')
+                .eq('customer_id', payload.customer_id)
+                .eq('make', payload.make)
+                .eq('model', payload.model)
+                .eq('year', payload.year || null)
+                .maybeSingle();
+            
+            if (existing) {
+                console.log('🚗 Duplicate vehicle found, using existing ID:', existing.id);
+                payload.id = existing.id;
+            }
+        }
+
         console.log('🚗 Upserting vehicle with customer_id:', payload.customer_id);
 
         const { data, error } = await supabase
@@ -533,6 +550,18 @@ export async function upsertSupabaseVehicle(vehicleData: {
         return data;
     } catch (err) {
         console.error('Failed to save vehicle to Supabase:', err);
+        throw err;
+    }
+};
+
+export const deleteSupabaseVehicle = async (id: string) => {
+    if (blockDemo('vehicle delete')) return;
+    try {
+        const { error } = await supabase.from('vehicles').delete().eq('id', id);
+        if (error) throw error;
+        console.log('✅ Vehicle deleted successfully:', id);
+    } catch (err) {
+        console.error('deleteSupabaseVehicle error:', err);
         throw err;
     }
 };

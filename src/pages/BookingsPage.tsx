@@ -22,7 +22,7 @@ import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getSupabaseCustomers, Customer, subscribeRealtime } from "@/lib/supa-data";
+import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getSupabaseCustomers, Customer, subscribeRealtime, deleteSupabaseVehicle } from "@/lib/supa-data";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
@@ -2817,7 +2817,28 @@ export default function BookingsPage() {
                                                   <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'Standard'}</div>
                                                 </div>
                                               </div>
-                                              {idx === 0 && <Badge className="bg-blue-500/20 text-blue-400 border-none text-[9px] font-black">ACTIVE PROFILE</Badge>}
+                                              <div className="flex items-center gap-2">
+                                                {idx === 0 && <Badge className="bg-blue-500/20 text-blue-400 border-none text-[9px] font-black">ACTIVE PROFILE</Badge>}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 w-7 p-0 text-zinc-600 hover:text-red-500 transition-colors"
+                                                  onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm(`Remove this ${v.make} ${v.model} from garage?`)) {
+                                                      try {
+                                                        await deleteSupabaseVehicle(v.id);
+                                                        toast.success("Vehicle removed");
+                                                        fetchCustomers();
+                                                      } catch (err) {
+                                                        toast.error("Failed to remove vehicle");
+                                                      }
+                                                    }
+                                                  }}
+                                                >
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </div>
                                             </div>
                                           ))
                                         ) : (

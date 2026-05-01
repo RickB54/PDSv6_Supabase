@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
-import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, Customer, supabase } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, deleteSupabaseVehicle, Customer, supabase } from "@/lib/supa-data";
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
@@ -642,7 +642,28 @@ const SearchCustomer = () => {
                                           <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'Standard'} {v.color ? `• ${v.color}` : ''}</div>
                                         </div>
                                       </div>
-                                      {vIdx === 0 && <Badge variant="outline" className="text-[8px] border-blue-500/30 text-blue-400 bg-blue-500/5">DEFAULT</Badge>}
+                                      <div className="flex items-center gap-2">
+                                        {vIdx === 0 && <Badge variant="outline" className="text-[8px] border-blue-500/30 text-blue-400 bg-blue-500/5">DEFAULT</Badge>}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0 text-zinc-600 hover:text-red-500 transition-colors"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (confirm(`Remove this ${v.make} ${v.model} from garage?`)) {
+                                              try {
+                                                await deleteSupabaseVehicle(v.id);
+                                                toast.success("Vehicle removed");
+                                                refresh();
+                                              } catch (err) {
+                                                toast.error("Failed to remove vehicle");
+                                              }
+                                            }
+                                          }}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   );
                                 });
