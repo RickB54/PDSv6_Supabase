@@ -106,6 +106,8 @@ export async function create(input: BookingInput) {
       }
     };
 
+    console.log('[bookings.ts] SAVING BOOKING PAYLOAD:', JSON.stringify(bookingPayload, null, 2));
+
     const { data, error } = await supabase.from('bookings').insert(bookingPayload).select();
 
     if (error) {

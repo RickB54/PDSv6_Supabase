@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY environment variable not set');
     }
 
-    const { to, subject, html, customerName, customerEmail, service, date, time, price, status = 'TENTATIVE' } = await req.json()
+    const { to, subject, html, customerName, customerEmail, service, date, time, price, status = 'TENTATIVE', notes = '' } = await req.json()
 
     console.log(`📧 Sending email to: ${to}, Subject: ${subject}`);
 
@@ -55,6 +55,13 @@ serve(async (req) => {
               <p style="margin: 10px 0; color: #1f2937;"><strong>🔧 Service:</strong> ${service}</p>
               <p style="margin: 10px 0; color: #10b981; font-size: 20px;"><strong>💰 Total:</strong> $${price}</p>
             </div>
+
+            ${notes ? `
+            <div style="margin-top: 15px; padding: 12px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 6px;">
+              <p style="margin: 0; color: #991b1b; font-size: 14px;"><strong>📝 Special Requests:</strong></p>
+              <p style="margin: 5px 0 0 0; color: #b91c1c; font-size: 15px; line-height: 1.4;">${notes}</p>
+            </div>
+            ` : ''}
             
             <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
               Status: <span style="background-color: ${statusBg}; color: ${statusText}; padding: 4px 12px; border-radius: 4px; font-weight: bold;">${statusLabel}</span>
