@@ -8,6 +8,7 @@ export interface BookingInput {
   customer_name: string;
   phone: string;
   email: string;
+  address: string;
   vehicle_type: string;
   make?: string;   // Added
   model?: string;  // Added

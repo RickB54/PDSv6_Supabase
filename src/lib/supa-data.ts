@@ -1815,7 +1815,10 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
         return (data || []).map((b: any) => {
             // Priority: Columns -> Legacy meta (if migration incomplete)
-            const meta = b.booking_vehicle || {};
+            let meta = b.booking_vehicle || {};
+            if (typeof meta === 'string') {
+                try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
+            }
             const dateStr = b.date || b.scheduled_at || meta.date || new Date().toISOString();
 
             return {

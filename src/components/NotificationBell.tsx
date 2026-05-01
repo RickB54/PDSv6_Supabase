@@ -131,7 +131,10 @@ export default function NotificationBell() {
           const localAlerts = JSON.parse(localStorage.getItem('admin_alerts') || '[]');
           
           data.forEach(b => {
-            const meta = b.booking_vehicle || {};
+            let meta = b.booking_vehicle || {};
+            if (typeof meta === 'string') {
+              try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
+            }
             const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
             const syncId = `sync_book_${b.id}`;
             const alreadyNotified = localAlerts.some((a: any) => 
