@@ -605,6 +605,10 @@ const BookNow = () => {
         notes: finalNotes,
       };
 
+      const durationHours = getServiceDuration(bookingPayload.service || formData.package);
+      const endTimeDate = new Date(submissionDate.getTime() + durationHours * 60 * 60 * 1000);
+      const endTimeIso = endTimeDate.toISOString();
+
       let createdBooking: any = null;
       try {
         if (isSupabaseEnabled()) {
@@ -637,9 +641,6 @@ const BookNow = () => {
       }
 
       const finalId = createdBooking?.id ? String(createdBooking.id) : `booking_${Date.now()}`;
-      const durationHours = getServiceDuration(bookingPayload.service || formData.package);
-      const endTimeDate = new Date(submissionDate.getTime() + durationHours * 60 * 60 * 1000);
-      const endTimeIso = endTimeDate.toISOString();
 
       console.log('✅ BOOKING CREATED:', {
         id: finalId,

@@ -147,6 +147,10 @@ export default function BookingsPage() {
     if (svc) params.set('package', svc.id);
 
     if (formData.vehicle) params.set('vehicleType', formData.vehicle);
+    if (formData.vehicleYear) params.set('vehicleYear', formData.vehicleYear);
+    if (formData.vehicleMake) params.set('vehicleMake', formData.vehicleMake);
+    if (formData.vehicleModel) params.set('vehicleModel', formData.vehicleModel);
+
     if (formData.addons.length > 0) {
       // Map names to IDs
       const aids = formData.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);

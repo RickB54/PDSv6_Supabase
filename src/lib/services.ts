@@ -310,11 +310,9 @@ export function setAddOnPricingOverride(addOnId: string, pricing: AddOn["pricing
 }
 // Helper for estimated duration based on package ID
 export function getServiceDuration(id: string = ''): number {
-  if (id.includes('prime-elite-full')) return 6;
-  if (id.includes('prime-elite-interior')) return 4;
-  if (id.includes('prime-elite-exterior')) return 3;
-  if (id.includes('prime-essential-full')) return 4;
-  if (id.includes('prime-essential-interior')) return 2.5;
-  if (id.includes('prime-essential-exterior')) return 2;
-  return 3;
+  const nid = id.toLowerCase();
+  if (nid.includes('full')) return 2.5;
+  if (nid.includes('interior')) return 1.5;
+  if (nid.includes('exterior')) return 1.0;
+  return 2.0;
 }

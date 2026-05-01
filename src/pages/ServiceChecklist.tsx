@@ -110,6 +110,9 @@ const ServiceChecklist = () => {
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [liveAddOns, setLiveAddOns] = useState<any[]>([]);
   const [estimatedTime, setEstimatedTime] = useState<string>("");
+  const [vYear, setVYear] = useState<string>("");
+  const [vMake, setVMake] = useState<string>("");
+  const [vModel, setVModel] = useState<string>("");
   const [employeeAssigned, setEmployeeAssigned] = useState<string>("");
   const [employees, setEmployees] = useState<any[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
@@ -323,8 +326,28 @@ const ServiceChecklist = () => {
       if (addonsParam) {
         setSelectedAddOns(addonsParam.split(','));
       }
+
+      const year = params.get("vehicleYear");
+      if (year) setVYear(decodeURIComponent(year));
+      const make = params.get("vehicleMake");
+      if (make) setVMake(decodeURIComponent(make));
+      const model = params.get("vehicleModel");
+      if (model) setVModel(decodeURIComponent(model));
     })();
   }, [params]);
+
+  // Auto-fill estimated time when package changes
+  useEffect(() => {
+    if (selectedPackage) {
+      const nid = selectedPackage.toLowerCase();
+      let duration = "2 hours";
+      if (nid.includes('full')) duration = "2.5 hours";
+      else if (nid.includes('interior')) duration = "1.5 hours";
+      else if (nid.includes('exterior')) duration = "1 hour";
+      
+      setEstimatedTime(duration);
+    }
+  }, [selectedPackage]);
 
   useEffect(() => {
     (async () => {
@@ -1530,6 +1553,21 @@ const ServiceChecklist = () => {
                 </p>
               </div>
             )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 border-t border-white/5 pt-4">
+              <div className="space-y-2">
+                <Label>Vehicle Year</Label>
+                <Input placeholder="e.g. 2024" value={vYear} onChange={(e) => setVYear(e.target.value)} className="bg-black" />
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Make</Label>
+                <Input placeholder="e.g. Ford" value={vMake} onChange={(e) => setVMake(e.target.value)} className="bg-black" />
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Model</Label>
+                <Input placeholder="e.g. F-150" value={vModel} onChange={(e) => setVModel(e.target.value)} className="bg-black" />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Package</Label>
