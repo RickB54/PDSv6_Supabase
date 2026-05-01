@@ -69,6 +69,7 @@ const BookNow = () => {
   const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [honey, setHoney] = useState(""); // Honeypot for bot protection
   const { add: addBooking, items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const { refresh: refreshCoupons, items: allCoupons } = useCouponsStore();
   const [testModeActive, setTestModeActive] = useState(false);
@@ -546,6 +547,13 @@ const BookNow = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formEl = e.currentTarget as HTMLFormElement;
+
+    // BOT PROTECTION: If honeypot is filled, silently ignore
+    if (honey) {
+      console.warn("Honeypot triggered - bot suspected");
+      navigate(`/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=09:00 AM&date=Soon`);
+      return;
+    }
 
     if (!validateForm()) {
       toast({
@@ -1234,6 +1242,18 @@ const BookNow = () => {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Honeypot Field (Invisible to humans) */}
+            <div style={{ display: 'none', visibility: 'hidden', opacity: 0, position: 'absolute', zIndex: -1 }}>
+              <input 
+                type="text" 
+                name="website_verification_code" 
+                tabIndex={-1} 
+                autoComplete="off"
+                value={honey}
+                onChange={(e) => setHoney(e.target.value)}
+              />
             </div>
 
             <Button type="submit" className="w-full bg-gradient-hero text-lg py-7 font-black uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-transform" disabled={isSubmitting}>
