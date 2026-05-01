@@ -84,7 +84,6 @@ export async function create(input: BookingInput) {
 
     const bookingPayload = {
       customer_id: customerId,
-      customer_name: input.customer_name, // Direct backup
       vehicle_id: vehicleId,
       service_package: input.package,
       service_price: input.price_total,
