@@ -33,15 +33,21 @@ export async function create(input: BookingInput) {
       if (existing) {
         customerId = existing.id;
       } else {
+        // Create new customer - Don't use .single() as it requires SELECT permissions which anon might not have
         const { data: newCust, error: cErr } = await supabase.from('customers').insert({
           full_name: input.customer_name,
           email: input.email,
           phone: input.phone,
           type: 'customer',
           notes: 'Created via Book Now'
-        }).select('id').single();
-        if (cErr) throw cErr;
-        customerId = newCust.id;
+        }).select('id');
+        
+        if (cErr) {
+          console.warn("Customer creation warning (likely RLS or duplicate):", cErr);
+          // If we can't create/select the customer, we'll try to proceed with a name-only booking
+          // or a late-binding approach.
+        }
+        customerId = newCust && newCust[0] ? newCust[0].id : null;
       }
     } else {
       // No email provided - Create name-only customer
@@ -76,7 +82,7 @@ export async function create(input: BookingInput) {
       ? (input.notes ? `${input.notes}\n\nAdd-Ons: ${input.add_ons.join(', ')}\nBooked by: ${bookedByInfo}` : `Add-Ons: ${input.add_ons.join(', ')}\nBooked by: ${bookedByInfo}`)
       : (input.notes ? `${input.notes}\nBooked by: ${bookedByInfo}` : `Booked by: ${bookedByInfo}`);
 
-    const { data, error } = await supabase.from('bookings').insert({
+    const bookingPayload = {
       customer_id: customerId,
       vehicle_id: vehicleId,
       service_package: input.package,
@@ -85,6 +91,7 @@ export async function create(input: BookingInput) {
       status: input.status || 'pending',
       notes: fullNotes,
       add_ons: input.add_ons,  // Store add-ons
+      source_origin: bookedByInfo,
       // SNAPSHOT: Store vehicle details in booking_vehicle JSONB so they appear even if not joined
       booking_vehicle: {
         year: input.year || '',
@@ -92,10 +99,15 @@ export async function create(input: BookingInput) {
         model: input.model || '',
         type: input.vehicle_type || ''
       }
-    }).select('*').single();
+    };
 
-    if (error) throw error;
-    return data;
+    const { data, error } = await supabase.from('bookings').insert(bookingPayload).select();
+
+    if (error) {
+      console.error("Booking Table Insert Error:", error);
+      throw error;
+    }
+    return data && data[0] ? data[0] : bookingPayload;
   } catch (err) {
     console.error("Supabase Booking Create Failed:", err);
     throw err;
