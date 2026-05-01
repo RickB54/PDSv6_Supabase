@@ -2623,7 +2623,7 @@ export default function BookingsPage() {
                       // Apply Status Filter
                       if (statusFilter) {
                         customerEvents = customerEvents.filter(e => {
-                          const s = (e as any).status || (e.type === 'blocked' ? 'blocked' : 'pending');
+                          const s = (e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending');
                           return s === statusFilter;
                         });
                       }

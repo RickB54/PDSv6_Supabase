@@ -494,12 +494,6 @@ const BookNow = () => {
 
       // Success
       setMatchedCoupon(match);
-      if (!details?.silent && !window.location.pathname.includes('/book')) {
-    toast({
-      title: "File Saved",
-      description: `Inquiry copy saved to File Manager.`,
-    });
-  }
 }
  catch (err) {
       console.error('[BookNow] applyCoupon error', err);

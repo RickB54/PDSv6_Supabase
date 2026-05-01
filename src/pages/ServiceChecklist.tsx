@@ -1710,8 +1710,9 @@ const ServiceChecklist = () => {
                     variant="ghost" 
                     size="icon" 
                     onClick={() => {
-                      setHelpTopicId('checklist-tools-guide');
-                      setHelpOpen(true);
+                      window.dispatchEvent(new CustomEvent('open-help', { 
+                        detail: { topicId: 'checklist-tools-guide', role: getCurrentUser()?.role } 
+                      }));
                     }} 
                     className="h-8 w-8 text-zinc-400 hover:text-white"
                     title="Tools Guide"
