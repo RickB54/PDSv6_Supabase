@@ -134,6 +134,14 @@ export function savePDFToArchive(
     window.dispatchEvent(new CustomEvent('pdf_archive_updated'));
   } catch { }
 
-  // PDF alerts are silenced by default to avoid cluttering the Admin Hub
-  // only use alerts for critical business functions like bookings or specific admin overrides
+  // Only trigger alerts for ESSENTIAL business functions to avoid clutter
+  const essentialTypes: string[] = ['Bookings', 'Job', 'Estimate', 'Invoice', 'Prospects'];
+  if (essentialTypes.includes(recordType) && !opts?.silent) {
+    pushAdminAlert(
+      'pdf_saved',
+      `New ${recordType} for ${customerName}`,
+      'System',
+      { id: record.id, recordId, recordType, customerName }
+    );
+  }
 }

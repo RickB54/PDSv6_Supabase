@@ -109,7 +109,8 @@ export default function NotificationBell() {
   // Compute important unread using full AdminAlert objects, not mapped UI items
   const importantUnreadActual = useMemo(() => {
     if (isEmployee) return 0; // employee notifications are all treated equally for now
-    return (alerts || []).filter(a => !a.read && (a.type === 'exam_reminder' || a.type === 'admin_message')).length;
+    const importantTypes = ['exam_reminder', 'admin_message', 'booking_created', 'pdf_saved'];
+    return (alerts || []).filter(a => !a.read && importantTypes.includes(a.type)).length;
   }, [alerts, isEmployee]);
   const importantUnread = isFileManagerView ? 0 : importantUnreadActual;
   const displayUnreadCount = isFileManagerView ? 0 : (isEmployee ? empUnreadCount : (unreadCount || 0));

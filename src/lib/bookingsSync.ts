@@ -68,9 +68,15 @@ export async function onBookingCreated(booking: Booking) {
     const d = new Date(booking.date);
     const year = d.getFullYear();
     const monthName = d.toLocaleString(undefined, { month: 'long' });
-    const path = `Bookings ${year}/${monthName}/`;
     await uploadToFileManager(pdf, path, booking, { service: booking.title });
-    // removed pushAdminAlert here - uploadToFileManager -> savePDFToArchive already sends a notification
+    
+    // Push an ESSENTIAL admin alert for the new booking
+    pushAdminAlert(
+      'booking_created',
+      `NEW BOOKING: ${booking.customer} - ${booking.title}`,
+      'Customer Web',
+      { id: booking.id, recordId: booking.id, bookingId: booking.id, price: booking.price }
+    );
   } catch (e) {
     console.error('Failed to generate/upload booking PDF', e);
   }
