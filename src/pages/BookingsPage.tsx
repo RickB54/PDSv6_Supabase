@@ -22,7 +22,8 @@ import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer } from "@/lib/supa-data";
+import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getSupabaseCustomers, Customer, subscribeRealtime } from "@/lib/supa-data";
+import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
 import { servicePackages, addOns } from "@/lib/services";
@@ -112,6 +113,21 @@ export default function BookingsPage() {
 
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+
+  const onSaveCustomer = async (data: Customer) => {
+    try {
+      await upsertSupabaseCustomer(data as any);
+      await fetchCustomers(); // Refresh local customer list
+      await refresh(); // Refresh bookings
+      toast.success("Customer record updated");
+    } catch (err) {
+      console.error("Failed to save customer from bookings:", err);
+      toast.error("Failed to update customer record");
+    }
+  };
+
   const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'payment-success' | 'reminder'>('confirmation');
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -2657,12 +2673,14 @@ export default function BookingsPage() {
                         vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
                           ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
                           : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
+                        vehicles: customerData?.vehicles || [],
                         address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || customerData?.address || 'N/A') : 'Internal System',
                         phone: customerData?.phone || 'N/A',
                         email: customerData?.email || 'N/A',
                         type: customerData?.type || 'customer',
                         events: sortedEvents,
-                        isSystem: customerName === 'INTERNAL: System Blocks'
+                        isSystem: customerName === 'INTERNAL: System Blocks',
+                        id: customerData?.id
                       };
                     }).filter(Boolean) as any[];
                     
@@ -2762,17 +2780,53 @@ export default function BookingsPage() {
                                        <div className="text-sm text-zinc-300 font-bold">{customer.address || '—'}</div>
                                     </div>
                                     
-                                    <div className="bg-blue-900/10 p-3 rounded-xl border border-blue-500/20 flex items-center justify-between">
-                                       <div className="flex items-center gap-3">
-                                         <div className="p-2 bg-blue-500/10 rounded-lg">
-                                           <Car className="w-4 h-4 text-blue-400" />
-                                         </div>
-                                         <div>
-                                           <div className="text-[10px] text-blue-400/70 uppercase font-black tracking-widest">Primary Vehicle</div>
-                                           <div className="text-sm font-bold text-zinc-200">{customer.vehicle || 'Not assigned'}</div>
-                                         </div>
-                                       </div>
-                                       <Badge className="bg-blue-500/20 text-blue-400 border-none text-[9px] font-black">ACTIVE PROFILE</Badge>
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <h3 className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Customer Garage ({customer.vehicles?.length || 0})</h3>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
+                                          onClick={() => {
+                                            const cData = customers.find(c => c.id === customer.id || c.name === customer.name);
+                                            if (cData) {
+                                              setCustomerToEdit(cData);
+                                              setIsCustomerModalOpen(true);
+                                            }
+                                          }}
+                                        >
+                                          <Plus className="w-2.5 h-2.5" /> MANAGE VEHICLES
+                                        </Button>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        {(customer.vehicles && customer.vehicles.length > 0) ? (
+                                          customer.vehicles.map((v: any, idx: number) => (
+                                            <div key={idx} className="bg-blue-900/10 p-3 rounded-xl border border-blue-500/20 flex items-center justify-between">
+                                              <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                  <Car className="w-4 h-4 text-blue-400" />
+                                                </div>
+                                                <div>
+                                                  <div className="text-[10px] text-blue-400/70 uppercase font-black tracking-widest">
+                                                    {idx === 0 ? 'Primary Vehicle' : `Vehicle #${idx + 1}`}
+                                                  </div>
+                                                  <div className="text-sm font-bold text-zinc-200">
+                                                    {(v.year && v.year !== '-' && v.year !== '---') ? `${v.year} ` : ''}{v.make} {v.model}
+                                                  </div>
+                                                  <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'Standard'}</div>
+                                                </div>
+                                              </div>
+                                              {idx === 0 && <Badge className="bg-blue-500/20 text-blue-400 border-none text-[9px] font-black">ACTIVE PROFILE</Badge>}
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <div className="bg-zinc-950/50 p-3 rounded-xl border border-dashed border-zinc-800 flex items-center gap-3 text-zinc-500 italic text-xs">
+                                            <Car className="w-4 h-4 opacity-30" />
+                                            No vehicles registered. Click 'Manage' to add one.
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 ) : (
@@ -2808,8 +2862,16 @@ export default function BookingsPage() {
                                         <div className="flex justify-between items-start">
                                           <div>
                                             <div className="font-medium text-sm">{event.title}</div>
-                                            <div className="text-xs text-muted-foreground">
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                                               {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
+                                              {event.type === 'booking' && (event.vehicleYear || event.vehicleMake) && (
+                                                <>
+                                                  <span className="text-zinc-700">•</span>
+                                                  <span className="text-blue-400/80 font-bold uppercase text-[10px]">
+                                                    {(event.vehicleYear && event.vehicleYear !== '-' && event.vehicleYear !== '---') ? `${event.vehicleYear} ` : ''}{event.vehicleMake} {event.vehicleModel}
+                                                  </span>
+                                                </>
+                                              )}
                                             </div>
                                           </div>
                                           <Badge
@@ -2981,6 +3043,13 @@ export default function BookingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CustomerModal
+        open={isCustomerModalOpen}
+        onOpenChange={setIsCustomerModalOpen}
+        initial={customerToEdit}
+        onSave={onSaveCustomer}
+      />
     </div>
   );
 }

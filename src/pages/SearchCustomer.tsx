@@ -598,46 +598,54 @@ const SearchCustomer = () => {
                         {/* LEFT COLUMN: IDENTIFICATION & MARKETING */}
                         <div className="space-y-6">
                           <section>
-                            <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Vehicle Details</h4>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Garage ({customer.vehicles?.length || 0})</h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
+                                onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                              >
+                                <Plus className="w-2.5 h-2.5" /> ADD VEHICLE
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2">
                               {(() => {
-                                // HELPER: Pull vehicle info from Customer OR latest booking
-                                const related = allBookings
-                                  .filter(b => 
-                                    (b.customerId === customer.id) || 
-                                    (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                    (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                  )
-                                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                                
-                                const latestB = related[0];
-                                
-                                const isP = (v: any) => !v || v === '-' || v === '—' || v === 'N/A';
-                                const pri_v: any = (customer.vehicles && customer.vehicles.length > 0) ? customer.vehicles[0] : {};
-                                
-                                const v_year = !isP(pri_v.year) ? pri_v.year : (!isP(customer.year) ? customer.year : (!isP(latestB?.vehicleYear) ? latestB?.vehicleYear : '-'));
-                                const v_make = !isP(pri_v.make) ? pri_v.make : (!isP(customer.vehicle) ? customer.vehicle : (!isP(latestB?.vehicleMake) ? latestB?.vehicleMake : '-'));
-                                const v_model = !isP(pri_v.model) ? pri_v.model : (!isP(customer.model) ? customer.model : (!isP(latestB?.vehicleModel) ? latestB?.vehicleModel : '-'));
-                                const v_type = !isP(pri_v.type) ? pri_v.type : (!isP(customer.vehicleType) ? customer.vehicleType : (!isP(latestB?.vehicle) ? latestB?.vehicle : '-'));
-                                const v_color = !isP(pri_v.color) ? pri_v.color : (!isP(customer.color) ? customer.color : '-');
-                                const v_mileage = !isP(pri_v.mileage) ? pri_v.mileage : (!isP(customer.mileage) ? customer.mileage : '-');
+                                const vehicles = customer.vehicles || [];
+                                if (vehicles.length === 0) {
+                                  // Fallback to legacy fields if no vehicles in garage
+                                  const v_year = (customer.year && customer.year !== '-' && customer.year !== '---') ? customer.year : '';
+                                  const v_make = customer.vehicle || '-';
+                                  const v_model = customer.model || '';
+                                  return (
+                                    <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50 flex items-center justify-between">
+                                      <div>
+                                        <div className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-0.5">Primary Vehicle</div>
+                                        <div className="text-zinc-200 text-sm font-black tracking-tight">{v_year ? `${v_year} ` : ''}{v_make} {v_model}</div>
+                                      </div>
+                                      <Badge variant="ghost" className="text-[8px] text-zinc-600">LEGACY DATA</Badge>
+                                    </div>
+                                  );
+                                }
 
-                                return (
-                                  <>
-                                    <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50">
-                                      <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">Vehicle Identity</div>
-                                      <div className="text-zinc-200 font-black tracking-tight">{v_year} {v_make} {v_model}</div>
+                                return vehicles.map((v: any, vIdx: number) => {
+                                  const vy = (v.year && v.year !== '-' && v.year !== '---') ? v.year : '';
+                                  return (
+                                    <div key={vIdx} className="bg-zinc-950 p-3 rounded border border-zinc-800/50 flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-500/10 rounded-lg">
+                                          <Car className="w-3.5 h-3.5 text-blue-400" />
+                                        </div>
+                                        <div>
+                                          <div className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-0.5">{vIdx === 0 ? 'Primary Vehicle' : `Vehicle #${vIdx+1}`}</div>
+                                          <div className="text-zinc-200 text-sm font-black tracking-tight">{vy ? `${vy} ` : ''}{v.make} {v.model}</div>
+                                          <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'Standard'} {v.color ? `• ${v.color}` : ''}</div>
+                                        </div>
+                                      </div>
+                                      {vIdx === 0 && <Badge variant="outline" className="text-[8px] border-blue-500/30 text-blue-400 bg-blue-500/5">DEFAULT</Badge>}
                                     </div>
-                                    <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50">
-                                      <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">Type / Color</div>
-                                      <div className="text-zinc-200 font-black tracking-tight">{v_type} / {v_color}</div>
-                                    </div>
-                                    <div className="bg-zinc-950 p-3 rounded border border-zinc-800/50 col-span-2">
-                                      <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">Odometer / Mileage Range</div>
-                                      <div className="text-zinc-200 font-black tracking-tight">{v_mileage}</div>
-                                    </div>
-                                  </>
-                                );
+                                  );
+                                });
                               })()}
                             </div>
                           </section>

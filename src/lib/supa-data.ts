@@ -1908,6 +1908,28 @@ export const upsertSupabaseBooking = async (booking: any) => {
             console.error('Upsert booking error:', error);
             throw error;
         }
+
+        // AUTO-SYNC VEHICLE TO CUSTOMER GARAGE
+        // If we have a customer_id and vehicle details, ensure it's in the vehicles table
+        if (payload.customer_id && (payload.booking_vehicle?.make || payload.booking_vehicle?.model)) {
+            try {
+                await upsertSupabaseVehicle({
+                    customer_id: payload.customer_id,
+                    make: payload.booking_vehicle.make || 'Unknown',
+                    model: payload.booking_vehicle.model || 'Vehicle',
+                    year: payload.booking_vehicle.year,
+                    type: payload.booking_vehicle.type || 'Compact/Sedan',
+                    // Don't overwrite existing vehicle with blank year/info if possible, 
+                    // but the upsertSupabaseVehicle handles onConflict: 'id' or logic to find matches could be added here.
+                    // For now, we rely on the fact that if a vehicle exists, we want it in the garage.
+                });
+                console.log('🚗 Booking vehicle synced to customer garage');
+            } catch (vErr) {
+                console.error('Failed to auto-sync vehicle to garage:', vErr);
+                // Non-blocking error
+            }
+        }
+
         return data;
     } catch (err) {
         console.error('upsertSupabaseBooking error:', err);
