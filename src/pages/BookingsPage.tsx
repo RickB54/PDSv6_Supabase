@@ -58,7 +58,7 @@ const getWeekDays = (date: Date) => {
 
 export default function BookingsPage() {
   const navigate = useNavigate();
-  const { items, add, update, remove, refresh } = useBookingsStore();
+  const { items, add, update, remove, refresh, subscribeRealtime } = useBookingsStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -74,10 +74,14 @@ export default function BookingsPage() {
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Sync latest data on mount
+  // Sync latest data on mount and subscribe to realtime updates
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    const unsubscribe = subscribeRealtime();
+    return () => {
+      unsubscribe();
+    };
+  }, [refresh, subscribeRealtime]);
 
   // Form State
   const { isDemoMode } = useDemoMode();

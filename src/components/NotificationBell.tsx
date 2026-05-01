@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/auth";
 import { getEmployeeNotifications, markAllEmployeeNotificationsRead, markEmployeeNotificationRead } from "@/lib/employeeNotifications";
+import supabase from "@/lib/supabase";
+import { notify } from "@/store/alerts";
 
 export default function NotificationBell() {
   const { alerts, latest, unreadCount, markAllRead, markRead, dismissAll, refresh } = useAlertsStore();
@@ -111,6 +113,54 @@ export default function NotificationBell() {
   }, [alerts, isEmployee]);
   const importantUnread = isFileManagerView ? 0 : importantUnreadActual;
   const displayUnreadCount = isFileManagerView ? 0 : (isEmployee ? empUnreadCount : (unreadCount || 0));
+
+  // Background Sync for Online Bookings (ensure Admin is notified of public website activity)
+  useEffect(() => {
+    if (isEmployee || isFileManagerView) return;
+
+    const syncBookings = async () => {
+      try {
+        const { data } = await supabase
+          .from('bookings')
+          .select('id, scheduled_at, customer_name, service_package')
+          .eq('status', 'tentative')
+          .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .limit(10);
+
+        if (data && data.length > 0) {
+          const localAlerts = JSON.parse(localStorage.getItem('admin_alerts') || '[]');
+          let addedAny = false;
+
+          data.forEach(b => {
+            const syncId = `sync_book_${b.id}`;
+            const alreadyNotified = localAlerts.some((a: any) => 
+              (a.type === 'booking_created' && String(a.payload?.recordId || '') === String(b.id)) ||
+              (a.id === syncId)
+            );
+
+            if (!alreadyNotified) {
+              notify(
+                'booking_created',
+                `NEW ONLINE REQUEST: ${b.customer_name} - ${b.service_package}`,
+                'Customer Web',
+                { id: syncId, recordId: b.id, bookingId: b.id }
+              );
+              addedAny = true;
+            }
+          });
+          
+          if (addedAny) refresh();
+        }
+      } catch (err) {
+        console.warn("[AlertSync] Failed to poll bookings:", err);
+      }
+    };
+
+    const interval = setInterval(syncBookings, 30000); // Check every 30s
+    syncBookings(); // Initial check
+    return () => clearInterval(interval);
+  }, [isEmployee, isFileManagerView, refresh]);
+
   // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's screenshot requirement for 'nothing new')
   const bellColorClass = (displayUnreadCount > 0 || importantUnread > 0) ? "text-yellow-400" : "text-red-600";
 

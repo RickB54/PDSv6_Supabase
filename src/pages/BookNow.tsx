@@ -614,9 +614,14 @@ const BookNow = () => {
             status: 'tentative',
             booked_by: 'Customer Web'
           });
+
+          if (!createdBooking) {
+            throw new Error("The booking could not be saved to our database. Please check your internet connection or contact us directly.");
+          }
         }
-      } catch (createError) {
+      } catch (createError: any) {
         console.error("Booking Creation Failed in Supabase:", createError);
+        throw createError; // Rethrow to the main catch block to show the toast
       }
 
       const finalId = createdBooking?.id ? String(createdBooking.id) : `booking_${Date.now()}`;

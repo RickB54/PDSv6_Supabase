@@ -29,7 +29,7 @@ export async function create(input: BookingInput) {
     // 1. Upsert Customer (Match on Email if exists, otherwise create new)
     let customerId: string | null = null;
     if (input.email) {
-      const { data: existing } = await supabase.from('customers').select('id').eq('email', input.email).single();
+      const { data: existing } = await supabase.from('customers').select('id').eq('email', input.email).maybeSingle();
       if (existing) {
         customerId = existing.id;
       } else {
