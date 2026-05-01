@@ -268,20 +268,21 @@ export async function getDayAvailability(
             return false;
         });
 
-        // 2. Check if booked by customer (accounts for duration)
+        // 2. Check if booked by customer (Half-Day Slot Logic)
         const isBooked = existingBookings.some(booking => {
             const bookingDate = new Date(booking.scheduled_at);
             if (format(bookingDate, 'yyyy-MM-dd') !== date) return false;
 
-            const startMins = bookingDate.getHours() * 60 + bookingDate.getMinutes();
-            const durationMins = (booking.estimated_duration || 1) * 60;
-            const endMins = startMins + durationMins;
+            const bookingStartH = bookingDate.getHours();
+            const [slotH] = slot.start.split(':').map(Number);
 
-            const [slotH, slotM] = slot.start.split(':').map(Number);
-            const slotMins = slotH * 60 + slotM;
-
-            // Slot is blocked if it starts within the booking window
-            return slotMins >= startMins && slotMins < endMins;
+            if (bookingStartH < 12) {
+                // MORNING JOB (Before 12PM): Block all slots before 12 PM
+                return slotH < 12;
+            } else {
+                // AFTERNOON JOB (12PM or later): Block all slots from 12 PM onwards
+                return slotH >= 12;
+            }
         });
 
         if (isManuallyBlocked || isBooked) {
