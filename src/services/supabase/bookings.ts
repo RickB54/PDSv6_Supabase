@@ -94,9 +94,10 @@ export async function create(input: BookingInput) {
       source_origin: bookedByInfo,
       // SNAPSHOT: Store vehicle & customer details in booking_vehicle JSONB so they appear even if not joined
       booking_vehicle: {
-        customer_name: input.customer_name,
-        customer_email: input.email,
-        customer_phone: input.phone,
+        name: input.customer_name,
+        email: input.email,
+        phone: input.phone,
+        address: input.address,
         year: input.year || '',
         make: input.make || '',
         model: input.model || '',

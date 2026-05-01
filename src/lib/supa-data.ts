@@ -1848,6 +1848,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
                 hasReminder: b.has_reminder || meta.has_reminder,
                 reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
+                address: b.address || meta.address || '',
                 customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
                 isArchived: b.is_archived || meta.is_archived || false,
                 source: b.source_origin || meta.source_origin || b.source || 'Manual Entry'

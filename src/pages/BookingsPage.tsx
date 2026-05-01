@@ -389,6 +389,7 @@ export default function BookingsPage() {
           vehicleId: booking.vehicleId
         });
         
+        setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
         setIsAddModalOpen(true);
         // Clear param so it doesn't re-open on every render
         window.history.replaceState({}, '', location.pathname);
@@ -592,6 +593,11 @@ export default function BookingsPage() {
       status: booking.status || "confirmed",
       vehicleId: booking.vehicleId
     });
+    
+    if (booking.date) {
+      setSelectedDate(parseISO(booking.date));
+    }
+    
     setIsAddModalOpen(true);
   };
 
