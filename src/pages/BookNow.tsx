@@ -620,6 +620,7 @@ const BookNow = () => {
             package: bookingPayload.service || formData.package,
             add_ons: addOns,
             date: dateIso,
+            end_time: endTimeIso,
             notes: finalNotes,
             price_total: discountedTotal,
             status: 'tentative',

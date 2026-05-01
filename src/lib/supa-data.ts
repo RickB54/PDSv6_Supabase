@@ -1826,10 +1826,10 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 // Map columns first, fallback to meta
                 title: b.service_package || b.title || meta.title || b.service || 'Service',
                 customer: b.customers?.full_name || b.customer_name || meta.customer_name || meta.customer || 'Unknown',
-                customerEmail: b.customers?.email || meta.email || meta.customer_email || '',
-                customerPhone: b.customers?.phone || meta.phone || meta.customer_phone || '',
-                email: b.customers?.email || meta.email || meta.customer_email || '', // Redundant for UI safety
-                phone: b.customers?.phone || meta.phone || meta.customer_phone || '', // Redundant for UI safety
+                customerEmail: b.customers?.email || meta.email || meta.customer_email || meta.customerEmail || b.email || '',
+                customerPhone: b.customers?.phone || meta.phone || meta.customer_phone || meta.customerPhone || b.phone || '',
+                email: b.customers?.email || meta.email || meta.customer_email || meta.customerEmail || b.email || '',
+                phone: b.customers?.phone || meta.phone || meta.customer_phone || meta.customerPhone || b.phone || '',
                 customerId: b.customer_id,
 
                 // CRITICAL: Hybrid Availability expects 'scheduled_at'
@@ -1888,6 +1888,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
               reminder_frequency: booking.reminderFrequency,
               custom_reminder_date: booking.customReminderDate
             },
+            end_time: booking.endTime || booking.end_time || null,
             is_archived: booking.isArchived || false,
             source_origin: booking.source || booking.source_origin || 'Manual Entry',
             created_at: booking.createdAt || new Date().toISOString()
