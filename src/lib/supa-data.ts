@@ -1823,8 +1823,10 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 // Map columns first, fallback to meta
                 title: b.service_package || b.title || meta.title || b.service || 'Service',
                 customer: b.customers?.full_name || b.customer_name || meta.customer_name || meta.customer || 'Unknown',
-                customerEmail: b.customers?.email || meta.email,
-                customerPhone: b.customers?.phone || meta.phone,
+                customerEmail: b.customers?.email || meta.email || meta.customer_email || '',
+                customerPhone: b.customers?.phone || meta.phone || meta.customer_phone || '',
+                email: b.customers?.email || meta.email || meta.customer_email || '', // Redundant for UI safety
+                phone: b.customers?.phone || meta.phone || meta.customer_phone || '', // Redundant for UI safety
                 customerId: b.customer_id,
 
                 // CRITICAL: Hybrid Availability expects 'scheduled_at'

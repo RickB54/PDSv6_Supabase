@@ -122,16 +122,17 @@ export default function NotificationBell() {
       try {
         const { data } = await supabase
           .from('bookings')
-          .select('id, scheduled_at, customer_name, service_package')
+          .select('id, scheduled_at, service_package, booking_vehicle')
           .eq('status', 'tentative')
           .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
           .limit(10);
 
         if (data && data.length > 0) {
           const localAlerts = JSON.parse(localStorage.getItem('admin_alerts') || '[]');
-          let addedAny = false;
-
+          
           data.forEach(b => {
+            const meta = b.booking_vehicle || {};
+            const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
             const syncId = `sync_book_${b.id}`;
             const alreadyNotified = localAlerts.some((a: any) => 
               (a.type === 'booking_created' && String(a.payload?.recordId || '') === String(b.id)) ||
@@ -139,13 +140,18 @@ export default function NotificationBell() {
             );
 
             if (!alreadyNotified) {
+              toast({
+                title: "New Online Booking!",
+                description: `${custName} just booked a ${b.service_package}.`,
+                variant: "default",
+              });
+
               notify(
                 'booking_created',
-                `NEW ONLINE REQUEST: ${b.customer_name} - ${b.service_package}`,
+                `NEW ONLINE REQUEST: ${custName} - ${b.service_package}`,
                 'Customer Web',
                 { id: syncId, recordId: b.id, bookingId: b.id }
               );
-              addedAny = true;
             }
           });
           
