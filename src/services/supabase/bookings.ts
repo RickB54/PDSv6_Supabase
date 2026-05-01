@@ -84,6 +84,7 @@ export async function create(input: BookingInput) {
 
     const bookingPayload = {
       customer_id: customerId,
+      customer_name: input.customer_name, // Direct backup
       vehicle_id: vehicleId,
       service_package: input.package,
       service_price: input.price_total,
@@ -92,8 +93,11 @@ export async function create(input: BookingInput) {
       notes: fullNotes,
       add_ons: input.add_ons,  // Store add-ons
       source_origin: bookedByInfo,
-      // SNAPSHOT: Store vehicle details in booking_vehicle JSONB so they appear even if not joined
+      // SNAPSHOT: Store vehicle & customer details in booking_vehicle JSONB so they appear even if not joined
       booking_vehicle: {
+        customer_name: input.customer_name,
+        customer_email: input.email,
+        customer_phone: input.phone,
         year: input.year || '',
         make: input.make || '',
         model: input.model || '',

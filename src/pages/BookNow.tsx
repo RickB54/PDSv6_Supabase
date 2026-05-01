@@ -494,12 +494,14 @@ const BookNow = () => {
 
       // Success
       setMatchedCoupon(match);
-      setCouponError('');
-      toast({
-        title: "Success!",
-        description: `Coupon ${match.code} applied.`
-      });
-    } catch (err) {
+      if (!details?.silent && !window.location.pathname.includes('/book')) {
+    toast({
+      title: "File Saved",
+      description: `Inquiry copy saved to File Manager.`,
+    });
+  }
+}
+ catch (err) {
       console.error('[BookNow] applyCoupon error', err);
       setCouponError('Could not validate coupon. Please try again.');
     }
@@ -668,7 +670,13 @@ const BookNow = () => {
       try {
         const { onBookingCreated } = await import("@/lib/bookingsSync");
         await onBookingCreated(bookingRecord);
-        console.log('✅ PDF GENERATED and saved to File Manager');
+        console.log('✅ PDF GENERATED (Local Archive Only)');
+        
+        toast({
+          title: "Booking Request Sent!",
+          description: "We've received your request and will contact you shortly to confirm.",
+          variant: "default",
+        });
       } catch (syncErr) {
         console.error("❌ PDF/Alert generation failed:", syncErr);
       }
@@ -681,7 +689,7 @@ const BookNow = () => {
       setTimeout(async () => {
         await refreshBookings();
         console.log('✅ Bookings store refreshed AGAIN');
-      }, 1000);
+      }, 10000);
 
       // Send REAL Email to Admin (Rick.PrimeAutoDetail@gmail.com)
       try {
