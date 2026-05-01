@@ -312,6 +312,9 @@ const ServiceChecklist = () => {
         }
       }
 
+      const cNameRaw = params.get("customerName");
+      if (cNameRaw) setGenericCustomerName(decodeURIComponent(cNameRaw));
+
       const pkgId = params.get("package");
       if (pkgId) setSelectedPackage(pkgId);
 

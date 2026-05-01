@@ -124,6 +124,10 @@ const FileManager = () => {
     }
     loadRecords();
 
+    // Listen for real-time PDF updates (from bookings, invoices, etc)
+    const handleUpdate = () => loadRecords();
+    window.addEventListener('pdf_archive_updated', handleUpdate);
+
     // Apply category filter from URL if present
     const params = new URLSearchParams(window.location.search);
     const category = params.get('category');
@@ -138,6 +142,10 @@ const FileManager = () => {
         window.history.replaceState(null, '', url.toString());
       } catch { }
     }
+
+    return () => {
+      window.removeEventListener('pdf_archive_updated', handleUpdate);
+    };
   }, [user, isDemoMode]);
 
   // Update filter when the URL query changes (e.g., clicking another alert)

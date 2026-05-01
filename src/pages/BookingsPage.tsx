@@ -140,7 +140,7 @@ export default function BookingsPage() {
   const handleStartJob = () => {
     const params = new URLSearchParams();
     if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
-    else if (formData.customer) params.set('customerName', formData.customer); // Fallback
+    if (formData.customer) params.set('customerName', formData.customer);
 
     // Find service ID
     const svc = allServices.find(s => s.name === formData.service);
