@@ -1888,7 +1888,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
               reminder_frequency: booking.reminderFrequency,
               custom_reminder_date: booking.customReminderDate
             },
-            // end_time: booking.endTime || booking.end_time || null,
+            end_time: booking.endTime || booking.end_time || null,
             is_archived: booking.isArchived || false,
             source_origin: booking.source || booking.source_origin || 'Manual Entry',
             created_at: booking.createdAt || new Date().toISOString()

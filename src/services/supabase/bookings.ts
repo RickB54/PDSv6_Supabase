@@ -93,7 +93,7 @@ export async function create(input: BookingInput) {
       status: input.status || 'pending',
       notes: fullNotes,
       add_ons: input.add_ons,  // Store add-ons
-      // end_time: input.end_time || null,
+      end_time: input.end_time || null,
       source_origin: bookedByInfo,
       // SNAPSHOT: Store vehicle & customer details in booking_vehicle JSONB so they appear even if not joined
       booking_vehicle: {
