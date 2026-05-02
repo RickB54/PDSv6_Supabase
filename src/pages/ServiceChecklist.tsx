@@ -177,6 +177,9 @@ const ServiceChecklist = () => {
     setOdometerStart("");
     setOdometerEnd("");
     setChecklistSteps([]);
+    setChemRows([]);
+    setMatRows([]);
+    setToolRows([]);
     setFinishedJobId(null);
     setShowTipScreen(false);
   };
@@ -1749,15 +1752,8 @@ const ServiceChecklist = () => {
                   variant="ghost" 
                   size="icon" 
                   onClick={() => {
-                    if (window.confirm("Are you sure you want to clear this checklist? All progress, selection, and materials logged will be reset.")) {
-                      setSelectedPackage("");
-                      setSelectedAddOns([]);
-                      setNotes("");
-                      setChecklistId("");
-                      setChemRows([]);
-                      setMatRows([]);
-                      setToolRows([]);
-                      setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
+                    if (window.confirm("Are you sure you want to clear this checklist? All progress, selections, and Job Setup data will be permanently wiped for a fresh start.")) {
+                      resetForm();
                       localStorage.removeItem('service_checklist_draft');
                       toast({ title: 'Checklist Reset', description: 'Started a fresh job.' });
                     }
