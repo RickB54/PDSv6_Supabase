@@ -1571,34 +1571,30 @@ const ServiceChecklist = () => {
           {/* Decorative background element */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
         </div>
-
+        
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-black italic text-white tracking-tighter flex items-center gap-3">
-                Job Setup
-              </h1>
-              <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest mt-1">Configure vehicle and service details</p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
-                  resetForm();
-                  toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
-                }
-              }}
-              className="border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset Entire Form
-            </Button>
-          </div>
-
           {/* Job Setup - Generic, no forced customer link */}
           <Card className="p-6 bg-gradient-card border-border">
-            <h2 className="text-2xl font-bold text-foreground mb-4">Job Setup</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Job Setup</h2>
+                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1">Configure vehicle and service details</p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
+                    resetForm();
+                    toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
+                  }
+                }}
+                className="border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Entire Form
+              </Button>
+            </div>
             {/* Customer selection restored — includes Generic option */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
