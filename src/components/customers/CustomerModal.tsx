@@ -282,48 +282,54 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     }));
   };
 
-  const handleFileUpload = async (file: File, type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos', index: number, vehicleIndex?: number) => {
+  const handleFileUpload = async (files: FileList | File[], type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos', vehicleIndex?: number) => {
     try {
-      if (!file) return;
+      if (!files || files.length === 0) return;
       setLoading(true);
-      toast.info("Uploading...", { description: "Processing..." });
+      
+      const fileArray = Array.from(files);
+      const total = fileArray.length;
+      toast.info(`Uploading ${total} item${total > 1 ? 's' : ''}...`, { description: "Processing media archive." });
 
-      let fileToUpload = file;
-      if (file.type.startsWith('image/')) {
-        fileToUpload = await browserImageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1280, useWebWorker: true });
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        let fileToUpload = file;
+        if (file.type.startsWith('image/')) {
+          fileToUpload = await browserImageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1280, useWebWorker: true });
+        }
+
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+        const filePath = `customers/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage.from('customer-photos').upload(filePath, fileToUpload);
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage.from('customer-photos').getPublicUrl(filePath);
+        uploadedUrls.push(publicUrl);
       }
-
-      const ext = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
-      const filePath = `customers/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage.from('customer-photos').upload(filePath, fileToUpload);
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('customer-photos').getPublicUrl(filePath);
 
       setForm(prev => {
         if (vehicleIndex !== undefined && vehicleIndex !== -1 && prev.vehicles && prev.vehicles[vehicleIndex]) {
           const updatedVehicles = [...prev.vehicles];
           const vehicle = { ...updatedVehicles[vehicleIndex] };
           const currentMedia = (vehicle as any)[type] || [];
-          const updatedMedia = [...currentMedia];
-          if (!updatedMedia.includes(publicUrl)) {
-            updatedMedia.push(publicUrl);
-          }
-          (vehicle as any)[type] = updatedMedia;
+          const updatedMedia = [...currentMedia, ...uploadedUrls];
+          // Deduplicate if needed
+          const uniqueMedia = Array.from(new Set(updatedMedia));
+          (vehicle as any)[type] = uniqueMedia;
           updatedVehicles[vehicleIndex] = vehicle;
           return { ...prev, vehicles: updatedVehicles };
         } else {
           const current = (prev as any)[type] || [];
-          const updated = [...current];
-          if (!updated.includes(publicUrl)) {
-            updated.push(publicUrl);
-          }
-          return { ...prev, [type]: updated };
+          const updated = [...current, ...uploadedUrls];
+          const uniqueMedia = Array.from(new Set(updated));
+          return { ...prev, [type]: uniqueMedia };
         }
       });
-      toast.success("Uploaded successfully!");
+      toast.success(`Successfully uploaded ${total} item${total > 1 ? 's' : ''}!`);
     } catch (error: any) {
       console.error('Upload error:', error);
       toast.error("Upload Failed", { description: error.message });
@@ -755,7 +761,7 @@ interface MediaUploadFieldProps {
   type: 'generalPhotos' | 'beforePhotos' | 'afterPhotos';
   photos: string[];
   vIdx: number;
-  onUpload: (file: File, type: 'generalPhotos'|'beforePhotos'|'afterPhotos', index: number, vIdx: number) => void;
+  onUpload: (files: FileList | File[], type: 'generalPhotos'|'beforePhotos'|'afterPhotos', vIdx: number) => void;
   onRemove: (type: 'generalPhotos'|'beforePhotos'|'afterPhotos', index: number, vIdx: number) => void;
 }
 
@@ -765,9 +771,9 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
   const currentPhotos = photos || [];
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUpload(file, type, currentPhotos.length, vIdx);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      onUpload(files, type, vIdx);
     }
     // Reset so same file can be selected again and onChange doesn't double-fire
     e.target.value = '';
@@ -791,7 +797,7 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
         >
           <Plus className="w-4 h-4 text-zinc-700" />
           {/* Gallery / file picker */}
-          <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFile} />
+          <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFile} />
           {/* Camera capture - separate input, button stops propagation so only camera fires */}
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
           <button
