@@ -39,6 +39,8 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_INVOICES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
 import { generateInvoiceNumber } from "@/lib/utils";
 import logo from "@/assets/pds-final-logo.png";
+import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as LibVehicleType } from "@/lib/services";
+import { getCustomPackages } from "@/lib/servicesMeta";
 
 interface Invoice {
   id?: string;
@@ -74,10 +76,16 @@ const Invoicing = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isEditingPaid, setIsEditingPaid] = useState(false);
   const [editPaidValue, setEditPaidValue] = useState("");
+  const [serviceCategory, setServiceCategory] = useState<"package" | "addon" | "custom">("custom");
 
   useEffect(() => {
     loadData();
   }, [isDemoMode]);
+
+  const toBuiltInVehKey = (key: string): LibVehicleType => {
+    const k = key?.toLowerCase();
+    return (k === 'compact' || k === 'midsize' || k === 'truck' || k === 'luxury') ? (k as LibVehicleType) : 'midsize';
+  };
 
   const loadData = async () => {
     if (isDemoMode) {
@@ -444,23 +452,100 @@ const Invoicing = () => {
 
                 <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800">
                   <Label className="text-zinc-400 mb-2 block">Line Items</Label>
-                  <div className="flex gap-2 mb-4">
-                    <Input
-                      placeholder="Service Description"
-                      value={newService.name}
-                      onChange={e => setNewService({ ...newService, name: e.target.value })}
-                      className="bg-zinc-900 border-zinc-800 text-zinc-200"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Price"
-                      value={newService.price}
-                      onChange={e => setNewService({ ...newService, price: e.target.value })}
-                      className="w-32 bg-zinc-900 border-zinc-800 text-zinc-200"
-                    />
-                    <Button size="icon" variant="outline" onClick={addService} className="border-zinc-700 hover:bg-zinc-800">
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-4 mb-4">
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-xs text-zinc-500 uppercase font-bold">Service Type</Label>
+                      <Select value={serviceCategory} onValueChange={(val: any) => {
+                        setServiceCategory(val);
+                        setNewService({ name: "", price: "" });
+                      }}>
+                        <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                          <SelectValue placeholder="Select Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="package">Service Packages</SelectItem>
+                          <SelectItem value="addon">Add-ons</SelectItem>
+                          <SelectItem value="custom">Custom Entry</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        {serviceCategory === "package" ? (
+                          <Select 
+                            value={newService.name} 
+                            onValueChange={(val) => {
+                              const pkg = servicePackages.find(p => p.id === val) || (getCustomPackages().find(p => p.id === val) as any);
+                              if (pkg) {
+                                // Attempt to get price based on customer vehicle type
+                                const customer = customers.find(c => c.id === selectedCustomer);
+                                const vType = toBuiltInVehKey(customer?.vehicleType || 'midsize');
+                                const price = getServicePrice(pkg.id, vType) || pkg.basePrice || 0;
+                                setNewService({ name: pkg.name, price: price.toString() });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                              <SelectValue placeholder="Choose Package" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {servicePackages.map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                              ))}
+                              {getCustomPackages().length > 0 && (
+                                <>
+                                  <div className="h-px bg-zinc-800 my-1 mx-2" />
+                                  <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Custom Packages</div>
+                                  {getCustomPackages().map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                  ))}
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        ) : serviceCategory === "addon" ? (
+                          <Select 
+                            value={newService.name} 
+                            onValueChange={(val) => {
+                              const addon = addOns.find(a => a.id === val);
+                              if (addon) {
+                                const customer = customers.find(c => c.id === selectedCustomer);
+                                const vType = toBuiltInVehKey(customer?.vehicleType || 'midsize');
+                                const price = getAddOnPrice(addon.id, vType);
+                                setNewService({ name: addon.name, price: price.toString() });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                              <SelectValue placeholder="Choose Add-on" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {addOns.map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            placeholder="Custom Service Name"
+                            value={newService.name}
+                            onChange={e => setNewService({ ...newService, name: e.target.value })}
+                            className="bg-zinc-900 border-zinc-800 text-zinc-200"
+                          />
+                        )}
+                      </div>
+                      <Input
+                        type="number"
+                        placeholder="Price"
+                        value={newService.price}
+                        onChange={e => setNewService({ ...newService, price: e.target.value })}
+                        className="w-32 bg-zinc-900 border-zinc-800 text-zinc-200"
+                      />
+                      <Button size="icon" variant="outline" onClick={addService} className="border-zinc-700 hover:bg-zinc-800 shrink-0">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   {services.length > 0 ? (
