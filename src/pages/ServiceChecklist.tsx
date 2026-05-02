@@ -1567,13 +1567,6 @@ const ServiceChecklist = () => {
             <div>
               <h1 className="text-4xl font-black italic text-white tracking-tighter flex items-center gap-3">
                 Job Setup
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prospect-vs-customer' } }))}
-                  className="p-1 text-zinc-500 hover:text-blue-400 transition-colors"
-                  title="Prospect vs. Customer Logic"
-                >
-                  <HelpCircle className="h-6 w-6" />
-                </button>
               </h1>
               <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest mt-1">Configure vehicle and service details</p>
             </div>
