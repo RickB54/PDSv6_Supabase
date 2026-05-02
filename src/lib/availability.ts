@@ -232,6 +232,16 @@ export async function getDayAvailability(
     date: string,
     existingBookings: Array<{ scheduled_at: string; estimated_duration: number }> = []
 ): Promise<DayAvailability> {
+    // Helper to safely parse dates without timezone shifts for date-only strings
+    const safeParse = (dStr: string) => {
+        if (!dStr) return new Date();
+        // If it's just YYYY-MM-DD, append noon to keep it on the same day in any US timezone
+        if (dStr.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+            return new Date(`${dStr}T12:00:00`);
+        }
+        return new Date(dStr);
+    };
+
 
     // 1. Fetch blocks for this date
     const { data: dbBlocks } = await supabase
@@ -270,19 +280,20 @@ export async function getDayAvailability(
 
         // 2. Check if booked by customer (Half-Day Slot Logic)
         const isBooked = existingBookings.some(booking => {
-            const bookingDate = new Date(booking.scheduled_at);
+            const bookingDate = safeParse(booking.scheduled_at);
             if (format(bookingDate, 'yyyy-MM-dd') !== date) return false;
 
             const bookingStartH = bookingDate.getHours();
+            const bookingEndH = bookingStartH + (booking.estimated_duration || 1);
             const [slotH] = slot.start.split(':').map(Number);
 
-            if (bookingStartH < 12) {
-                // MORNING JOB (Before 12PM): Block all slots before 12 PM
-                return slotH < 12;
-            } else {
-                // AFTERNOON JOB (12PM or later): Block all slots from 12 PM onwards
-                return slotH >= 12;
-            }
+            const blocksMorning = bookingStartH < 12;
+            const blocksAfternoon = bookingEndH > 12 || (bookingEndH === 12 && bookingDate.getMinutes() > 0);
+
+            if (blocksMorning && slotH < 12) return true;
+            if (blocksAfternoon && slotH >= 12) return true;
+            
+            return false;
         });
 
         if (isManuallyBlocked || isBooked) {

@@ -19,6 +19,14 @@ import {
 } from './googleCalendar';
 import { addDays, format, startOfMonth, startOfDay, endOfDay } from 'date-fns';
 
+const safeParse = (dStr: string) => {
+    if (!dStr) return new Date();
+    if (dStr.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+        return new Date(`${dStr}T12:00:00`);
+    }
+    return new Date(dStr);
+};
+
 export interface HybridAvailability {
     date: string;
     fullyBlocked: boolean;
@@ -54,11 +62,12 @@ export async function getHybridAvailability(
     if (!googleEnabled) {
         // No Google Calendar config at all, use manual + bookings
         const bookingSlots = existingBookings
-            .filter(b => format(new Date(b.scheduled_at), 'yyyy-MM-dd') === date)
+            .filter(b => format(safeParse(b.scheduled_at), 'yyyy-MM-dd') === date)
             .map(b => {
-                const start = format(new Date(b.scheduled_at), 'HH:mm');
-                const h = new Date(b.scheduled_at).getHours() + (b.estimated_duration || 1);
-                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(new Date(b.scheduled_at), 'mm')}`;
+                const bDate = safeParse(b.scheduled_at);
+                const start = format(bDate, 'HH:mm');
+                const h = bDate.getHours() + (b.estimated_duration || 1);
+                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(bDate, 'mm')}`;
                 return { start, end, source: 'booking' as const };
             });
 
@@ -100,12 +109,13 @@ export async function getHybridAvailability(
 
         // Distinguish bookings from manual blocks in the trace
         const bookingSlots = existingBookings
-            .filter(b => format(new Date(b.scheduled_at), 'yyyy-MM-dd') === date)
+            .filter(b => format(safeParse(b.scheduled_at), 'yyyy-MM-dd') === date)
             .map(b => {
-                const start = format(new Date(b.scheduled_at), 'HH:mm');
+                const bDate = safeParse(b.scheduled_at);
+                const start = format(bDate, 'HH:mm');
                 // Estimating duration if not provided
-                const h = new Date(b.scheduled_at).getHours() + (b.estimated_duration || 1);
-                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(new Date(b.scheduled_at), 'mm')}`;
+                const h = bDate.getHours() + (b.estimated_duration || 1);
+                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(bDate, 'mm')}`;
                 return { start, end, source: 'booking' as const };
             });
 
@@ -138,11 +148,12 @@ export async function getHybridAvailability(
         console.error('Google Calendar check failed, using manual + bookings:', error);
 
         const bookingSlots = existingBookings
-            .filter(b => format(new Date(b.scheduled_at), 'yyyy-MM-dd') === date)
+            .filter(b => format(safeParse(b.scheduled_at), 'yyyy-MM-dd') === date)
             .map(b => {
-                const start = format(new Date(b.scheduled_at), 'HH:mm');
-                const h = new Date(b.scheduled_at).getHours() + (b.estimated_duration || 1);
-                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(new Date(b.scheduled_at), 'mm')}`;
+                const bDate = safeParse(b.scheduled_at);
+                const start = format(bDate, 'HH:mm');
+                const h = bDate.getHours() + (b.estimated_duration || 1);
+                const end = `${String(Math.min(23, h)).padStart(2, '0')}:${format(bDate, 'mm')}`;
                 return { start, end, source: 'booking' as const };
             });
 
@@ -217,10 +228,10 @@ export async function getRangeBlockedDates(
 
     // 1.5 Real Bookings
     const bookingMapped = existingBookings.filter(b => {
-        const d = new Date(b.scheduled_at);
+        const d = safeParse(b.scheduled_at);
         return d >= start && d <= end;
     }).map(b => {
-        const dateObj = new Date(b.scheduled_at);
+        const dateObj = safeParse(b.scheduled_at);
         const hStart = dateObj.getHours();
         const mStart = dateObj.getMinutes();
         const durationHours = b.estimated_duration || 1;
@@ -348,10 +359,10 @@ export async function getWeeklyBlocks(
 
     // 1.5 Filter bookings to range
     const bookingsInRange = existingBookings.filter(b => {
-        const d = new Date(b.scheduled_at);
+        const d = safeParse(b.scheduled_at);
         return d >= startDate && d <= endDate;
     }).map((b, idx) => {
-        const dateObj = new Date(b.scheduled_at);
+        const dateObj = safeParse(b.scheduled_at);
         const hStart = dateObj.getHours();
         const mStart = dateObj.getMinutes();
         const durationHours = b.estimated_duration || 1;

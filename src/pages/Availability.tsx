@@ -77,6 +77,14 @@ const IndicatorStyles = () => (
     `}</style>
 );
 
+const safeParse = (dStr: string) => {
+    if (!dStr) return new Date();
+    if (dStr.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+        return new Date(`${dStr}T12:00:00`);
+    }
+    return new Date(dStr);
+};
+
 const Availability = () => {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [blockedFull, setBlockedFull] = useState<Date[]>([]);
@@ -114,7 +122,7 @@ const Availability = () => {
     const mappedBookings = (allBookings || []).map(b => ({
         scheduled_at: b.date,
         estimated_duration: b.endTime
-            ? (new Date(b.endTime).getTime() - new Date(b.date).getTime()) / (1000 * 60 * 60)
+            ? (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60)
             : getServiceDuration('') || 3
     }));
 
