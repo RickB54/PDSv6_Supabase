@@ -77,6 +77,8 @@ const Invoicing = () => {
   const [isEditingPaid, setIsEditingPaid] = useState(false);
   const [editPaidValue, setEditPaidValue] = useState("");
   const [serviceCategory, setServiceCategory] = useState<"package" | "addon" | "custom">("custom");
+  const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+  const [editServices, setEditServices] = useState<{ name: string; price: number }[]>([]);
 
   useEffect(() => {
     loadData();
@@ -298,6 +300,37 @@ const Invoicing = () => {
     setIsEditingPaid(false);
     loadData();
     toast({ title: "Payment updated", description: `Payment amount manually updated to $${amt.toFixed(2)}` });
+  };
+
+  const handleEditInvoice = () => {
+    if (!selectedInvoice) return;
+    setEditServices([...selectedInvoice.services]);
+    setIsEditingInvoice(true);
+  };
+
+  const saveEditedInvoice = async () => {
+    if (!selectedInvoice) return;
+    const newTotal = editServices.reduce((sum, s) => sum + s.price, 0);
+    const updated: Invoice = { 
+      ...selectedInvoice, 
+      services: editServices, 
+      total: newTotal 
+    };
+    
+    // Auto-update status if total changed
+    if (updated.paidAmount && updated.paidAmount >= newTotal) {
+      updated.paymentStatus = "paid";
+    } else if (updated.paidAmount && updated.paidAmount > 0) {
+      updated.paymentStatus = "partially-paid";
+    } else {
+      updated.paymentStatus = "unpaid";
+    }
+
+    await upsertSupabaseInvoice(updated);
+    setSelectedInvoice(updated);
+    setIsEditingInvoice(false);
+    loadData();
+    toast({ title: "Invoice Updated", description: "Changes saved successfully" });
   };
 
   const generatePDF = (invoice: Invoice, download = false) => {
@@ -719,17 +752,69 @@ const Invoicing = () => {
               </div>
 
               <div className="py-6 space-y-3">
-                <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold mb-4 block">Services Provided</Label>
-                {selectedInvoice.services.map((s, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm">
-                    <span className="text-zinc-300">{s.name}</span>
-                    <span className="font-mono text-zinc-200">${s.price.toFixed(2)}</span>
-                  </div>
-                ))}
-                <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
-                  <span className="text-lg font-bold text-white">Total</span>
-                  <span className="text-2xl font-bold text-emerald-400">${selectedInvoice.total.toFixed(2)}</span>
+                <div className="flex justify-between items-center mb-4">
+                  <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Services Provided</Label>
+                  {!isEditingInvoice && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-400 hover:text-white" onClick={handleEditInvoice}>
+                      <Pencil className="h-3 w-3 mr-1" /> Edit Items
+                    </Button>
+                  )}
                 </div>
+
+                {isEditingInvoice ? (
+                  <div className="space-y-3">
+                    {editServices.map((s, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <Input 
+                          value={s.name} 
+                          onChange={e => {
+                            const newS = [...editServices];
+                            newS[i].name = e.target.value;
+                            setEditServices(newS);
+                          }}
+                          className="flex-1 bg-zinc-900 border-zinc-800 text-sm h-9"
+                        />
+                        <Input 
+                          type="number"
+                          value={s.price} 
+                          onChange={e => {
+                            const newS = [...editServices];
+                            newS[i].price = parseFloat(e.target.value) || 0;
+                            setEditServices(newS);
+                          }}
+                          className="w-24 bg-zinc-900 border-zinc-800 text-sm h-9"
+                        />
+                        <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-500 hover:text-red-400" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2 pt-2">
+                      <Button variant="outline" size="sm" className="flex-1 border-dashed border-zinc-700" onClick={() => setEditServices([...editServices, { name: "", price: 0 }])}>
+                        <Plus className="h-3 w-3 mr-1" /> Add Line Item
+                      </Button>
+                    </div>
+                    <div className="flex gap-2 pt-4 border-t border-zinc-800">
+                      <Button size="sm" variant="ghost" className="flex-1 text-zinc-500" onClick={() => setIsEditingInvoice(false)}>Cancel</Button>
+                      <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={saveEditedInvoice}>Save Changes</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {selectedInvoice.services.map((s, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-300">{s.name}</span>
+                        <span className="font-mono text-zinc-200">${s.price.toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
+                      <span className="text-lg font-bold text-white">Total</span>
+                      <span className="text-2xl font-bold text-emerald-400">
+                        ${selectedInvoice.total.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
                 {(selectedInvoice.paidAmount || 0) >= 0 && ( /* Always show if editing possibility exists, usually > 0 but we might want to edit 0 too. But let's keep logic simple for now: if paid > 0 OR editing */
                   <div className="flex justify-between items-center text-sm text-zinc-400 h-9">
                     <span>Amount Paid</span>

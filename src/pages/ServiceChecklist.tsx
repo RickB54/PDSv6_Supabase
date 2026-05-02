@@ -24,6 +24,7 @@ import {
   getSupabaseCustomers, 
   upsertSupabaseCustomer, 
   upsertSupabaseBooking,
+  upsertSupabaseEstimate,
   Customer as CustomerType
 } from "@/lib/supa-data";
 import { generateInvoiceNumber } from "@/lib/utils";
