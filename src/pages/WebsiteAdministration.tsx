@@ -78,6 +78,8 @@ export default function WebsiteAdministration() {
   const [aboutFeatures, setAboutFeatures] = useState<{ expertTeam: string; ecoFriendly: string; satisfactionGuarantee: string }>({ expertTeam: '', ecoFriendly: '', satisfactionGuarantee: '' });
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [servicesDisclaimer, setServicesDisclaimer] = useState<string>('');
+  const [contractualDisclosure, setContractualDisclosure] = useState<string>('Precision paint decontamination, high-level interior sanitation, and hydrophobic surface sealing. Premium tiers focus on long-term ceramic preservation.');
+  const [valuationDisclaimer, setValuationDisclaimer] = useState<string>('Automated digital quotations serve as initial estimates based on standard vehicle metadata. Prime Auto Detail reserves the right to adjust final invoicing on-site upon verification of actual vehicle dimensions, surface contamination levels, and overall condition.');
   const DEFAULT_HOME_DATA = {
     heroTitle: 'PRIME AUTO DETAIL',
     heroSubtitle: 'Premium auto detailing services that exceed expectations',
@@ -508,9 +510,14 @@ export default function WebsiteAdministration() {
     // 6. SERVICE META (Disclaimer + Learn More)
     try {
       const allMeta = await contentService.getAllServiceMeta();
-      // Find disclaimer
       const d = allMeta.find(m => m.key === 'disclaimer');
       if (d) setServicesDisclaimer(d.description || '');
+
+      const cd = allMeta.find(m => m.key === 'contractual_disclosure');
+      if (cd) setContractualDisclosure(cd.description || '');
+
+      const vd = allMeta.find(m => m.key === 'valuation_disclaimer');
+      if (vd) setValuationDisclaimer(vd.description || '');
       
       // Global Settings
       const gs = allMeta.find(m => m.key === 'global_settings');
@@ -1850,24 +1857,59 @@ export default function WebsiteAdministration() {
             <AccordionItem value="package-details" className="border-b-0 mb-2 rounded-lg bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors border border-zinc-800/50 overflow-hidden px-2">
               <AccordionTrigger className="hover:no-underline px-4 hover:text-red-400 [&[data-state=open]]:text-red-500 font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-2">
-                  Learn More & Disclaimer
+                  Services Page (Disclaimer & Details)
                   <HelpCircle className="h-4 w-4 text-zinc-600" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'services-disclaimer-management', role: 'admin' }})); }} />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 space-y-8">
                 <div className="space-y-2">
-                  <Label className="text-zinc-400 text-xs uppercase font-bold">Services Section Disclaimer</Label>
+                  <Label className="text-zinc-400 text-xs uppercase font-bold">Services Section Disclaimer (Top Notice)</Label>
                   <textarea
                     className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
                     value={servicesDisclaimer}
                     onChange={(e) => setServicesDisclaimer(e.target.value)}
+                    placeholder="⚠️ Service & Pricing Disclaimer..."
                   />
                   <div className="flex justify-end">
                     <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs uppercase font-bold" onClick={async () => {
                       if (!ensureNotDemo("save")) return;
                       await contentService.upsertServiceMeta({ key: 'disclaimer', description: servicesDisclaimer });
                       toast({ title: 'Disclaimer Updated' });
-                    }}>Save Disclaimer</Button>
+                    }}>Save Top Notice</Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-zinc-400 text-xs uppercase font-bold">Contractual Disclosure (Scope/Limitations)</Label>
+                  <textarea
+                    className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
+                    value={contractualDisclosure}
+                    onChange={(e) => setContractualDisclosure(e.target.value)}
+                    placeholder="Enter the text for the Contractual Disclosure section..."
+                  />
+                  <div className="flex justify-end">
+                    <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs uppercase font-bold" onClick={async () => {
+                      if (!ensureNotDemo("save")) return;
+                      await contentService.upsertServiceMeta({ key: 'contractual_disclosure', description: contractualDisclosure });
+                      toast({ title: 'Contractual Disclosure Updated' });
+                    }}>Save Disclosure</Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-zinc-400 text-xs uppercase font-bold">Valuation Disclaimer (Bottom Bar)</Label>
+                  <textarea
+                    className="w-full rounded-md bg-zinc-950 border-zinc-800 text-white p-3 h-32 text-sm leading-relaxed"
+                    value={valuationDisclaimer}
+                    onChange={(e) => setValuationDisclaimer(e.target.value)}
+                    placeholder="Enter the text for the Valuation Disclaimer bottom bar..."
+                  />
+                  <div className="flex justify-end">
+                    <Button className="bg-red-700 hover:bg-red-800 h-8 text-xs uppercase font-bold" onClick={async () => {
+                      if (!ensureNotDemo("save")) return;
+                      await contentService.upsertServiceMeta({ key: 'valuation_disclaimer', description: valuationDisclaimer });
+                      toast({ title: 'Valuation Disclaimer Updated' });
+                    }}>Save Bottom Disclaimer</Button>
                   </div>
                 </div>
 

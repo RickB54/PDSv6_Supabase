@@ -761,7 +761,7 @@ const CustomerPortal = () => {
                   </div>
                   <div className="shrink-0">
                     <div className="bg-zinc-800 px-4 py-2 rounded-lg border border-zinc-700">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Est. 2024</span>
+                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Est. 2026</span>
                     </div>
                   </div>
                 </div>
