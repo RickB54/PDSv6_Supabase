@@ -1554,7 +1554,7 @@ const ServiceChecklist = () => {
             <div className="flex flex-row items-center gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
               <div className="text-right">
                 <div className="text-xl md:text-2xl font-bold text-white mb-0.5">{progressPercent}%</div>
-                <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Completion</div>
+        <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Completion</div>
               </div>
             </div>
           </div>
@@ -1563,6 +1563,29 @@ const ServiceChecklist = () => {
         </div>
 
         <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-black italic text-white tracking-tighter flex items-center gap-3">
+                Job Setup
+              </h1>
+              <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest mt-1">Configure vehicle and service details</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
+                  resetForm();
+                  toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
+                }
+              }}
+              className="border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset Entire Form
+            </Button>
+          </div>
+
           {/* Job Setup - Generic, no forced customer link */}
           <Card className="p-6 bg-gradient-card border-border">
             <h2 className="text-2xl font-bold text-foreground mb-4">Job Setup</h2>
@@ -1752,10 +1775,13 @@ const ServiceChecklist = () => {
                   variant="ghost" 
                   size="icon" 
                   onClick={() => {
-                    if (window.confirm("Are you sure you want to clear this checklist? All progress, selections, and Job Setup data will be permanently wiped for a fresh start.")) {
-                      resetForm();
+                    if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
+                      setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
+                      setChemRows([]);
+                      setMatRows([]);
+                      setToolRows([]);
                       localStorage.removeItem('service_checklist_draft');
-                      toast({ title: 'Checklist Reset', description: 'Started a fresh job.' });
+                      toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
                     }
                   }}
                   className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
