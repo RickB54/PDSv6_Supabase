@@ -1906,7 +1906,6 @@ export const upsertSupabaseBooking = async (booking: any) => {
         // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
         const payload: any = {
             customer_id: booking.customerId || booking.customer_id || null,
-            customer_name: booking.customer || booking.customer_name || 'Unknown',
             vehicle_id: booking.vehicleId || booking.vehicle_id || null,
             scheduled_at: booking.date || booking.scheduled_at,
             service_package: booking.title || booking.service_package,
