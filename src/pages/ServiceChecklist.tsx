@@ -155,6 +155,32 @@ const ServiceChecklist = () => {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  const resetForm = () => {
+    setChecklistId("");
+    setSelectedCustomer("");
+    setVehicleType("midsize");
+    setSelectedServices([]);
+    setDiscountValue("");
+    setDestinationFee(0);
+    setNotes("");
+    setSelectedPackage("");
+    setSelectedAddOns([]);
+    setEstimatedTime("");
+    setVYear("");
+    setVMake("");
+    setVModel("");
+    setEmployeeAssigned("");
+    setCustomerSearch("");
+    setGenericCustomerName("");
+    setVehicleTypeOther("");
+    setSelectedVehicleId("");
+    setOdometerStart("");
+    setOdometerEnd("");
+    setChecklistSteps([]);
+    setFinishedJobId(null);
+    setShowTipScreen(false);
+  };
+
   // Read employee from URL params (from Staff Schedule "Start Job")
   useEffect(() => {
     const employeeParam = searchParams.get('employee');
@@ -2478,7 +2504,7 @@ const ServiceChecklist = () => {
                 try {
                   await deleteSupabaseBooking(checklistId);
                   toast({ title: 'Job Deleted', description: 'This service record has been permanently removed.' });
-                  setChecklistId("");
+                  resetForm();
                   navigate('/job-history');
                 } catch (err) {
                   toast({ title: 'Delete Failed', description: 'Could not remove the record.', variant: 'destructive' });
