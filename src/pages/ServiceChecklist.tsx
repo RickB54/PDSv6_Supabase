@@ -25,6 +25,7 @@ import {
   upsertSupabaseCustomer, 
   upsertSupabaseBooking,
   upsertSupabaseEstimate,
+  deleteSupabaseBooking,
   Customer as CustomerType
 } from "@/lib/supa-data";
 import { generateInvoiceNumber } from "@/lib/utils";
@@ -46,6 +47,16 @@ import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummar
 import HelpModal from "@/components/help/HelpModal";
 import TipSelectionScreen from "@/components/TipSelectionScreen";
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type DisplayService = {
   id: string;
@@ -141,6 +152,8 @@ const ServiceChecklist = () => {
     if (!isNaN(start) && !isNaN(end) && end >= start) return end - start;
     return 0;
   }, [odometerStart, odometerEnd]);
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Read employee from URL params (from Staff Schedule "Start Job")
   useEffect(() => {
@@ -2308,7 +2321,20 @@ const ServiceChecklist = () => {
                     <Save className="h-4 w-4 mr-2" />
                     Save Progress
                   </Button>
-                  {checklistId && <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/10 px-3 py-1">Saved</Badge>}
+                  {checklistId && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/10 px-3 py-1">Saved</Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-zinc-500 hover:text-red-400 h-8 px-2"
+                        onClick={() => setShowDeleteDialog(true)}
+                        title="Delete this checklist record"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2435,6 +2461,36 @@ const ServiceChecklist = () => {
           onCancel={() => setShowTipScreen(false)}
         />
       )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-zinc-950 border border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Checklist Record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This will permanently remove this service record from your job history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-800 text-zinc-300">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                if (!checklistId) return;
+                try {
+                  await deleteSupabaseBooking(checklistId);
+                  toast({ title: 'Job Deleted', description: 'This service record has been permanently removed.' });
+                  setChecklistId("");
+                  navigate('/job-history');
+                } catch (err) {
+                  toast({ title: 'Delete Failed', description: 'Could not remove the record.', variant: 'destructive' });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
