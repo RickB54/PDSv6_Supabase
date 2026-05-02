@@ -1,7 +1,7 @@
 import { SidebarTrigger } from "@/components/ui/sidebar"; // NEW IMPORT
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears, parseISO, isToday, isWithinInterval, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears, parseISO, isToday, isWithinInterval, startOfYear, endOfYear, eachMonthOfInterval, isBefore } from "date-fns";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getSupabaseCustomers, Customer, subscribeRealtime, deleteSupabaseVehicle } from "@/lib/supa-data";
+import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getSupabaseCustomers, Customer, deleteSupabaseVehicle } from "@/lib/supa-data";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
@@ -140,9 +140,106 @@ export default function BookingsPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'blocked' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'next-booking' | 'name' | 'last-active'>('next-booking');
+
   const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const lastLoadTimeRef = useRef<number>(0);
+
+  const uniqueCustomers = useMemo(() => {
+    const today = startOfDay(new Date());
+    
+    return Array.from(
+      new Set([
+        ...items.map(b => b.customer),
+        ...unifiedEvents.map(e => e.customer || 'INTERNAL: System Blocks')
+      ])
+    ).map(customerName => {
+      if (!customerName) return null;
+      
+      const customerData = customers.find(c => c.name === customerName);
+      
+      // ARCHIVE FILTER
+      const isCustArchived = customerData?.is_archived === true;
+      if (showArchived) {
+        if (!isCustArchived) return null;
+      } else {
+        if (isCustArchived) return null;
+      }
+
+      // Aggregate activity
+      let customerEvents = [
+        ...items.filter(b => {
+          const isCustMatch = b.customer === customerName;
+          const isArchived = (b as any).isArchived === true || (b as any).is_archived === true;
+          const isArchiveVisible = showArchived || !isArchived;
+          return isCustMatch && isArchiveVisible;
+        }).map(b => ({ ...b, type: 'booking' as const })),
+        ...unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName && e.type !== 'booking')
+      ];
+
+      // Filters
+      if (sourceFilter) customerEvents = customerEvents.filter(e => ((e as any).source || (e as any).source_origin) === sourceFilter);
+      if (statusFilter) customerEvents = customerEvents.filter(e => ((e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending')) === statusFilter);
+      if (dateFilter.start) {
+        customerEvents = customerEvents.filter(e => isWithinInterval(parseISO(e.date), { 
+          start: startOfDay(dateFilter.start!), 
+          end: endOfDay(dateFilter.end || dateFilter.start!) 
+        }));
+      }
+
+      if (customerEvents.length === 0) return null;
+
+      // Analysis for sorting
+      const sortedEvents = customerEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const future = customerEvents.filter(e => !isBefore(startOfDay(parseISO(e.date)), today));
+      const past = customerEvents.filter(e => isBefore(startOfDay(parseISO(e.date)), today));
+      
+      const nextDate = future.length > 0 
+        ? future.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date
+        : null;
+      const lastPastDate = past.length > 0
+        ? past.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date
+        : null;
+
+      const mostRecent = sortedEvents[0];
+
+      return {
+        name: customerName,
+        bookingCount: customerEvents.length,
+        lastBooking: mostRecent.date,
+        nextBookingDate: nextDate,
+        lastPastBookingDate: lastPastDate,
+        mostRecentStatus: mostRecent.type,
+        mostRecentStatusValue: mostRecent.type === 'booking' ? (mostRecent.status || 'pending').toUpperCase() : 'BLOCKED',
+        vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
+          ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
+          : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
+        vehicles: customerData?.vehicles || [],
+        address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || customerData?.address || 'N/A') : 'Internal System',
+        phone: customerData?.phone || '—',
+        email: customerData?.email || '—',
+        type: customerData?.type || 'customer',
+        events: sortedEvents,
+        isSystem: customerName === 'INTERNAL: System Blocks',
+        id: customerData?.id
+      };
+    }).filter(Boolean).sort((a: any, b: any) => {
+      if (sortOrder === 'next-booking') {
+        // 1. Future bookings first, soonest first (Ascending)
+        if (a.nextBookingDate && !b.nextBookingDate) return -1;
+        if (!a.nextBookingDate && b.nextBookingDate) return 1;
+        if (a.nextBookingDate && b.nextBookingDate) {
+          return new Date(a.nextBookingDate).getTime() - new Date(b.nextBookingDate).getTime();
+        }
+        // 2. Only past bookings last, latest first (Descending)
+        return new Date(b.lastPastBookingDate!).getTime() - new Date(a.lastPastBookingDate!).getTime();
+      }
+      if (sortOrder === 'name') return a.name.localeCompare(b.name);
+      return new Date(b.lastBooking).getTime() - new Date(a.lastBooking).getTime();
+    }) as any[];
+  }, [items, unifiedEvents, customers, showArchived, sourceFilter, statusFilter, dateFilter, sortOrder]);
+
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
@@ -2488,8 +2585,33 @@ export default function BookingsPage() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                <div className="w-px h-6 bg-zinc-800 mx-1" />
+ 
+                 <div className="w-px h-6 bg-zinc-800 mx-1" />
+ 
+                 <TooltipProvider>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <Button 
+                         variant="outline" 
+                         size="icon" 
+                         className="h-8 w-8 border-zinc-700 bg-zinc-900/50 hover:bg-red-600 hover:text-white transition-all shadow-xl rounded-lg"
+                         onClick={() => {
+                           setSortOrder('next-booking');
+                           setDateFilter({ start: undefined, end: undefined });
+                           setSourceFilter(null);
+                           setStatusFilter(null);
+                           setShowArchived(false);
+                           toast.success("Sort & filters reset to default");
+                         }}
+                       >
+                         <RotateCcw className="h-3.5 w-3.5" />
+                       </Button>
+                     </TooltipTrigger>
+                     <TooltipContent className="bg-zinc-900 border-zinc-800 text-white text-[10px] font-black uppercase tracking-widest">
+                       Reset Default Sort & Filters
+                     </TooltipContent>
+                   </Tooltip>
+                 </TooltipProvider>
 
                 <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <PopoverTrigger asChild>
@@ -2594,108 +2716,13 @@ export default function BookingsPage() {
             <div className="p-6">
               <div className="space-y-4">
 
-                <div className="space-y-2">
-                  {(() => {
-                    // Get unique customers from ALL bookings (not just current view)
-                    const uniqueCustomers = Array.from(
-                      new Set([
-                        ...items.map(b => b.customer),
-                        ...unifiedEvents.map(e => e.customer || 'INTERNAL: System Blocks')
-                      ])
-                    ).map(customerName => {
-                      if (!customerName) return null;
-                      
-                      const customerData = customers.find(c => c.name === customerName);
-                      
-                      // ARCHIVE FILTER: Strict Toggle (Show ONLY archived if true, otherwise show ONLY active)
-                      const isCustArchived = customerData?.is_archived === true;
-                      if (showArchived) {
-                        if (!isCustArchived) return null;
-                      } else {
-                        if (isCustArchived) return null;
-                      }
-
-                      // Aggregate all activity for this customer
-                      let customerEvents = [
-                        ...items.filter(b => {
-                          const isCustMatch = b.customer === customerName;
-                          // STRICT FILTER: If showArchived is false, ONLY show non-archived bookings
-                          // Handle both potential property names just in case
-                          const isArchived = (b as any).isArchived === true || (b as any).is_archived === true;
-                          const isArchiveVisible = showArchived || !isArchived;
-                          return isCustMatch && isArchiveVisible;
-                        }).map(b => ({ ...b, type: 'booking' as const })),
-                        ...unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName && e.type !== 'booking')
-                      ];
-
-                      // Apply Source Filter
-                      if (sourceFilter) {
-                        customerEvents = customerEvents.filter(e => {
-                          const source = (e as any).source || (e as any).source_origin;
-                          return source === sourceFilter;
-                        });
-                      }
-                      
-                      // Apply Status Filter
-                      if (statusFilter) {
-                        customerEvents = customerEvents.filter(e => {
-                          const s = (e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending');
-                          return s === statusFilter;
-                        });
-                      }
-                      
-                      if (dateFilter.start) {
-                        customerEvents = customerEvents.filter(e => {
-                          const d = parseISO(e.date);
-                          const rangeEnd = dateFilter.end || dateFilter.start;
-                          return isWithinInterval(d, { 
-                            start: startOfDay(dateFilter.start!), 
-                            end: endOfDay(rangeEnd!) 
-                          });
-                        });
-                      }
-
-                      if (customerEvents.length === 0) return null;
-
-                      // Sort by date descending
-                      const sortedEvents = customerEvents.sort((a, b) =>
-                        new Date(b.date).getTime() - new Date(a.date).getTime()
-                      );
-
-                      const mostRecent = sortedEvents[0];
-
-                      return {
-                        name: customerName,
-                        bookingCount: customerEvents.length,
-                        lastBooking: mostRecent.date,
-                        mostRecentStatus: mostRecent.type,
-                        mostRecentStatusValue: mostRecent.type === 'booking' ? (mostRecent.status || 'pending').toUpperCase() : 'BLOCKED',
-                        vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
-                          ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
-                          : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
-                        vehicles: customerData?.vehicles || [],
-                        address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || customerData?.address || 'N/A') : 'Internal System',
-                        phone: customerData?.phone || 'N/A',
-                        email: customerData?.email || 'N/A',
-                        type: customerData?.type || 'customer',
-                        events: sortedEvents,
-                        isSystem: customerName === 'INTERNAL: System Blocks',
-                        id: customerData?.id
-                      };
-                    }).filter(Boolean) as any[];
-                    
-                    // SORT: Latest booking date first by default
-                    uniqueCustomers.sort((a, b) => new Date(b.lastBooking).getTime() - new Date(a.lastBooking).getTime());
-
-                    if (uniqueCustomers.length === 0) {
-                      return (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No booking history yet. Create your first booking above!
-                        </div>
-                      );
-                    }
-
-                    return uniqueCustomers.map((customer) => (
+                  <div className="space-y-2">
+                    {uniqueCustomers.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No booking history yet. Create your first booking above!
+                      </div>
+                    ) : (
+                      uniqueCustomers.map((customer) => (
                       <Collapsible
                         key={customer.name}
                         open={selectedHistoryCustomer === customer.name}
@@ -3002,7 +3029,7 @@ export default function BookingsPage() {
                         </div>
                       </Collapsible>
                     ))
-                  })()}
+                  )}
                 </div>
               </div>
             </div>
