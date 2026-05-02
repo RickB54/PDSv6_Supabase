@@ -37,6 +37,8 @@ import {
 
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_INVOICES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
+import { generateInvoiceNumber } from "@/lib/utils";
+import logo from "@/assets/pds-final-logo.png";
 
 interface Invoice {
   id?: string;
@@ -149,11 +151,10 @@ const Invoicing = () => {
       });
 
       // 2. Prepare Invoice
-      const maxInvoiceNum = invoices.reduce((max, inv) => Math.max(max, inv.invoiceNumber || 99), 99);
       const vehicleDesc = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
 
       const invoice: Invoice = {
-        invoiceNumber: maxInvoiceNum + 1,
+        invoiceNumber: generateInvoiceNumber(),
         customerId: crmCustomer.id!, // Use ID from CRM upsert result to be safe
         customerName: crmCustomer.full_name || customer.name,
         vehicle: vehicleDesc.trim() || "Unknown Vehicle",
@@ -283,9 +284,17 @@ const Invoicing = () => {
 
   const generatePDF = (invoice: Invoice, download = false) => {
     const doc = new jsPDF();
+    
+    // Add Logo
+    try {
+      doc.addImage(logo, 'PNG', 15, 10, 35, 35);
+    } catch (e) {
+      console.warn("Logo failed to load for PDF", e);
+    }
+
     doc.setFontSize(18);
     doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text("Prime Auto Detail", 105, 20, { align: "center" });
+    doc.text("Prime Auto Detail", 105, 25, { align: "center" });
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);

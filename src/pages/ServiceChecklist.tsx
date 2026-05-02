@@ -16,8 +16,18 @@ import { format } from "date-fns";
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { purgeTestCustomers } from "@/lib/db";
-import { upsertSupabaseInvoice, getSupabaseInvoices, upsertSupabaseBooking, upsertSupabaseEstimate, upsertSupabaseCustomer } from "@/lib/supa-data";
+import { 
+  getSupabaseEmployees, 
+  getSupabaseInvoices, 
+  upsertSupabaseInvoice,
+  getSupabaseCustomers, 
+  upsertSupabaseCustomer, 
+  upsertSupabaseBooking,
+  purgeTestCustomers,
+  Customer as CustomerType
+} from "@/lib/supa-data";
+import { generateInvoiceNumber } from "@/lib/utils";
+import logo from "@/assets/pds-final-logo.png";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -1347,8 +1357,32 @@ const ServiceChecklist = () => {
       step = 'push_alert';
       const customer = customers.find(c => c.id === selectedCustomer);
       const customerName = customer?.name || genericCustomerName || 'Generic Customer';
+      
+      // AUTO-CREATE INVOICE
+      try {
+        step = 'create_invoice';
+        const invoiceData = {
+          invoiceNumber: generateInvoiceNumber(),
+          customerId: selectedCustomer || idToUse, // Fallback to booking ID if no customer
+          customerName: customerName,
+          vehicle: `${vYear} ${vMake} ${vModel}`.trim() || "Unknown Vehicle",
+          services: buildSelectedItemsForSummary(),
+          total: calculateTotal(),
+          date: new Date().toLocaleDateString(),
+          createdAt: new Date().toISOString(),
+          paymentStatus: 'unpaid',
+          paidAmount: 0
+        };
+        await upsertSupabaseInvoice(invoiceData);
+        console.log("✅ Auto-invoice created for job:", idToUse);
+      } catch (invErr) {
+        console.error("Auto-invoice creation failed:", invErr);
+        // Don't fail the whole job finish if just invoice creation fails, 
+        // but alert the user if possible.
+      }
+
       pushAdminAlert('job_completed', `Job completed for ${customerName}`, 'system', { checklistId: idToUse, customerId: selectedCustomer });
-      toast({ title: 'Job Finished', description: 'Materials posted and completion archived.' });
+      toast({ title: 'Job Finished', description: 'Materials posted, completion archived, and invoice generated.' });
       
       // Trigger tip and payment
       setFinishedJobId(idToUse);
@@ -1365,10 +1399,17 @@ const ServiceChecklist = () => {
     const doc = new jsPDF();
     const customer = customers.find(c => c.id === selectedCustomer);
 
+    // Add Logo
+    try {
+      doc.addImage(logo, 'PNG', 15, 10, 35, 35);
+    } catch (e) {
+      console.warn("Logo failed to load for PDF", e);
+    }
+
     doc.setFontSize(18);
-    doc.text("Prime Auto Detail - Service Estimate", 20, 20);
+    doc.text("Prime Auto Detail - Service Estimate", 105, 25, { align: 'center' });
     doc.setFontSize(12);
-    doc.text(`Customer: ${customer?.name || "N/A"}`, 20, 35);
+    doc.text(`Customer: ${customer?.name || "N/A"}`, 20, 50);
     doc.text(`Vehicle Type: ${vehicleLabels[vehicleType] || vehicleType}`, 20, 42);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 49);
 

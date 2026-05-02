@@ -12,6 +12,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
+import logo from "@/assets/pds-final-logo.png";
 
 interface Invoice {
     id?: string;
@@ -49,8 +50,16 @@ const MyInvoices = () => {
 
     const downloadInvoice = (invoice: Invoice) => {
         const doc = new jsPDF();
+        
+        // Add Logo
+        try {
+            doc.addImage(logo, 'PNG', 15, 10, 35, 35);
+        } catch (e) {
+            console.warn("Logo failed to load for PDF", e);
+        }
+
         doc.setFontSize(18);
-        doc.text("Prime Auto Detail", 105, 20, { align: "center" });
+        doc.text("Prime Auto Detail", 105, 25, { align: "center" });
         doc.setFontSize(12);
         doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 30, { align: "center" });
         doc.text(`Date: ${invoice.date}`, 20, 50);
