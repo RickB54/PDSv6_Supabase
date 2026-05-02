@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
+import { purgeTestCustomers } from "@/lib/db";
 import { 
   getSupabaseEmployees, 
   getSupabaseInvoices, 
@@ -23,7 +24,6 @@ import {
   getSupabaseCustomers, 
   upsertSupabaseCustomer, 
   upsertSupabaseBooking,
-  purgeTestCustomers,
   Customer as CustomerType
 } from "@/lib/supa-data";
 import { generateInvoiceNumber } from "@/lib/utils";
