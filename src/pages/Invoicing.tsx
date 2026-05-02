@@ -102,13 +102,16 @@ const Invoicing = () => {
       return;
     }
     const [invs, custs] = await Promise.all([getSupabaseInvoices(), getSupabaseCustomers()]);
-    // Assign invoice numbers starting from 100 if missing
-    const invoicesWithNumbers = (invs as Invoice[]).map((inv, idx) => ({
+    // Ensure all invoices have numbers and safe data
+    const invoicesWithNumbers = (invs as Invoice[] || []).map((inv, idx) => ({
       ...inv,
-      invoiceNumber: inv.invoiceNumber || 100 + idx
+      invoiceNumber: inv.invoiceNumber || (100 + idx),
+      total: inv.total || 0,
+      paymentStatus: inv.paymentStatus || 'unpaid',
+      date: inv.date || new Date().toLocaleDateString()
     }));
     setInvoices(invoicesWithNumbers);
-    setCustomers(custs as Customer[]);
+    setCustomers(custs as Customer[] || []);
   };
 
   const addService = () => {
@@ -234,6 +237,13 @@ const Invoicing = () => {
   };
 
   const filteredInvoices = filterItems();
+  
+  // Safe Sort: Create a copy and handle invalid dates
+  const sortedInvoices = [...filteredInvoices].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.date).getTime() || 0;
+    const dateB = new Date(b.createdAt || b.date).getTime() || 0;
+    return dateB - dateA;
+  });
   const totalOutstanding = filteredInvoices
     .filter(inv => (inv.paymentStatus || "unpaid") !== "paid")
     .reduce((sum, inv) => sum + (inv.total - (inv.paidAmount || 0)), 0);
@@ -589,9 +599,9 @@ const Invoicing = () => {
 
         {/* Invoice List */}
         <div className="space-y-4">
-          {filteredInvoices.length > 0 ? (
+          {sortedInvoices.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
-              {filteredInvoices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(invoice => (
+              {sortedInvoices.map(invoice => (
                 <div key={invoice.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
                   <div className="flex items-center gap-4 mb-4 md:mb-0">
                     <div className={`h-12 w-12 rounded-full flex items-center justify-center border ${(invoice.paymentStatus === 'paid')
