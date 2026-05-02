@@ -106,14 +106,15 @@ const ServiceChecklist = () => {
   const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
   // Dynamic vehicle types (store slug key directly)
-  const [vehicleType, setVehicleType] = useState<string>('midsize');
+  const [vehicleType, setVehicleType] = useState<string>("choose");
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
+    choose: "Choose Type",
     compact: "Compact/Sedan",
     midsize: "Mid-Size/SUV",
     truck: "Truck/Van/Large SUV",
     luxury: "Luxury/High-End",
   });
-  const [vehicleOptions, setVehicleOptions] = useState<string[]>(['compact', 'midsize', 'truck', 'luxury']);
+  const [vehicleOptions, setVehicleOptions] = useState<string[]>(['choose', 'compact', 'midsize', 'truck', 'luxury']);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [discountType, setDiscountType] = useState<"percent" | "dollar">("percent");
   const [discountValue, setDiscountValue] = useState("");
@@ -158,7 +159,7 @@ const ServiceChecklist = () => {
   const resetForm = () => {
     setChecklistId("");
     setSelectedCustomer("");
-    setVehicleType("midsize");
+    setVehicleType("choose");
     setSelectedServices([]);
     setDiscountValue("");
     setDestinationFee(0);
@@ -169,7 +170,16 @@ const ServiceChecklist = () => {
     setVYear("");
     setVMake("");
     setVModel("");
-    setEmployeeAssigned("");
+    
+    // Default to the admin (Rick) instead of clearing it
+    const defaultEmp = employees.find(e => 
+      e.name?.toLowerCase().includes('rick') || 
+      e.email?.toLowerCase().includes('rberube') ||
+      e.name?.toLowerCase().includes('rberube54')
+    ) || employees[0];
+    
+    setEmployeeAssigned(defaultEmp ? String(defaultEmp.id || defaultEmp.name || '') : "");
+    
     setCustomerSearch("");
     setGenericCustomerName("");
     setVehicleTypeOther("");
@@ -242,8 +252,8 @@ const ServiceChecklist = () => {
               if (id && name) { map[id] = name; opts.push(id); }
             });
             setVehicleLabels(map);
-            setVehicleOptions(opts.length ? opts : ['compact', 'midsize', 'truck', 'luxury']);
-            if (!opts.includes(vehicleType)) setVehicleType(opts[0] || 'midsize');
+            setVehicleOptions(opts.length ? ['choose', ...opts] : ['choose', 'compact', 'midsize', 'truck', 'luxury']);
+            if (!opts.includes(vehicleType) && vehicleType !== 'choose') setVehicleType('choose');
           }
         }
       } catch { }
