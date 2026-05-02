@@ -9,8 +9,10 @@ import {
   User, Mail, Phone, MapPin, Car, Calendar, Search, 
   Image as ImageIcon, Video, X, Camera, Trash2, 
   FileBarChart, Plus, ChevronDown, ExternalLink, 
-  Star, ShieldCheck, Zap, Users, Info, HelpCircle
+  Star, ShieldCheck, Zap, Users, Info, HelpCircle,
+  Sparkles, Loader2, RotateCcw
 } from "lucide-react";
+import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -75,6 +77,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   });
 
   const isProspect = form.type === 'prospect';
+
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [prevNotes, setPrevNotes] = useState<string | null>(null);
 
   useEffect(() => {
     const initForm = async () => {
@@ -170,7 +175,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         setForm({
           ...initial,
           vehicles: baseVehicles,
-          type: initial.type || defaultType,
+          type: (initial.type || defaultType || 'customer').toLowerCase(),
           conditionInside: initial.conditionInside || cIn,
           conditionOutside: initial.conditionOutside || cOut,
         });
@@ -214,6 +219,29 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
   const handleChange = (key: keyof Customer, value: string) => {
     setForm((f) => ({ ...f, [key]: value } as Customer));
+  };
+
+  const handleModifyWithAI = async () => {
+    if (!form.notes) return;
+    setPrevNotes(form.notes);
+    setAiProcessing(true);
+    try {
+      const refined = await refineTextWithAI(form.notes);
+      handleChange("notes", refined);
+      toast.success("Note Professionalized");
+    } catch (error) {
+      toast.error("AI Refinement Failed");
+    } finally {
+      setAiProcessing(false);
+    }
+  };
+
+  const handleRevertNotes = () => {
+    if (prevNotes !== null) {
+      handleChange("notes", prevNotes);
+      setPrevNotes(null);
+      toast.info("Notes reverted");
+    }
   };
 
   const handleVehicleSelect = (data: { make: string; model: string; category: string }, index?: number) => {
@@ -463,15 +491,25 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                           <HelpCircle className="h-3.5 w-3.5" />
                         </button>
                      </div>
-                     <div className="flex items-center gap-2">
-                        <span className={cn("text-[10px] font-bold uppercase", !isProspect ? "text-purple-400" : "text-zinc-600")}>Customer</span>
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className={cn("text-[10px] font-bold uppercase cursor-pointer", !isProspect ? "text-purple-400" : "text-zinc-600")}
+                          onClick={() => setForm(prev => ({ ...prev, type: 'customer' }))}
+                        >
+                          Customer
+                        </span>
                         <Switch 
                           checked={isProspect}
                           onCheckedChange={(checked) => setForm(prev => ({ ...prev, type: checked ? 'prospect' : 'customer' }))}
                           className="data-[state=checked]:bg-orange-600 scale-90"
                         />
-                        <span className={cn("text-[10px] font-bold uppercase", isProspect ? "text-orange-400" : "text-zinc-600")}>Prospect</span>
-                     </div>
+                        <span 
+                          className={cn("text-[10px] font-bold uppercase cursor-pointer", isProspect ? "text-orange-400" : "text-zinc-600")}
+                          onClick={() => setForm(prev => ({ ...prev, type: 'prospect' }))}
+                        >
+                          Prospect
+                        </span>
+                      </div>
                   </div>
                   <div className="flex gap-2">
                     <Input
@@ -643,6 +681,21 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   <div className="flex gap-2">
                      <Button variant="outline" size="sm" onClick={() => window.open(`/client-evaluation?customerId=${form.id}`, '_blank')} className="h-8 text-xs border-blue-600 text-blue-500"><FileBarChart className="h-3 w-3 mr-1" /> Client Eval</Button>
                      <Button variant="outline" size="sm" onClick={() => window.open(`/addon-upsell?customerId=${form.id}`, '_blank')} className="h-8 text-xs border-purple-600 text-purple-600"><Zap className="h-3 w-3 mr-1" /> Addon Upsell</Button>
+                     {prevNotes && (
+                        <Button variant="ghost" size="sm" onClick={handleRevertNotes} className="h-8 text-[10px] text-zinc-500 hover:text-white gap-1 uppercase font-black">
+                          <RotateCcw className="h-3 w-3" /> Revert
+                        </Button>
+                     )}
+                     <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleModifyWithAI} 
+                        disabled={aiProcessing || !form.notes}
+                        className="h-8 text-xs bg-indigo-600/10 border-indigo-500/50 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all rounded-lg"
+                      >
+                        {aiProcessing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                        Modify Using AI
+                      </Button>
                   </div>
                </div>
                <Textarea 

@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2 } from "lucide-react";
+import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -120,6 +121,31 @@ const ServiceChecklist = () => {
   const [discountValue, setDiscountValue] = useState("");
   const [destinationFee, setDestinationFee] = useState(0);
   const [notes, setNotes] = useState("");
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [prevNotes, setPrevNotes] = useState<string | null>(null);
+  
+  const handleModifyWithAI = async () => {
+    if (!notes) return;
+    setPrevNotes(notes);
+    setAiProcessing(true);
+    try {
+      const refined = await refineTextWithAI(notes);
+      setNotes(refined);
+      toast({ title: "Note Professionalized", description: "AI has refined your notes for the customer record." });
+    } catch (error) {
+      toast({ title: "AI Refinement Failed", variant: "destructive" });
+    } finally {
+      setAiProcessing(false);
+    }
+  };
+
+  const handleRevertNotes = () => {
+    if (prevNotes !== null) {
+      setNotes(prevNotes);
+      setPrevNotes(null);
+      toast({ title: "Notes Reverted", description: "Returned to original version." });
+    }
+  };
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
 
   // Tip Checkout Flow
@@ -2269,6 +2295,40 @@ const ServiceChecklist = () => {
           </Card>
 
           {/* Complete & Save controls moved to bottom Actions */}
+
+          {/* Job Notes & Professional AI Assistant */}
+          <Card className="p-6 bg-gradient-card border-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-indigo-400" />
+                <h2 className="text-xl font-bold text-white">Job Notes & Communication</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {prevNotes && (
+                  <Button variant="ghost" size="sm" onClick={handleRevertNotes} className="h-8 text-[10px] text-zinc-500 hover:text-white gap-1 uppercase font-black">
+                    <RotateCcw className="h-3 w-3" /> Revert
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleModifyWithAI} 
+                  disabled={aiProcessing || !notes}
+                  className="h-8 text-xs bg-indigo-600/10 border-indigo-500/50 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all rounded-lg"
+                >
+                  {aiProcessing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                  Modify Using AI
+                </Button>
+              </div>
+            </div>
+            <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">These notes will appear on the customer's PDF estimate and invoice.</p>
+            <Textarea
+              placeholder="e.g. Surface scratches on hood were deeper than expected. Recommended a 2-step correction for best results."
+              className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-200 focus:border-indigo-500/50"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </Card>
 
           {/* Discount & Total */}
           <Card className="p-6 bg-gradient-card border-border">

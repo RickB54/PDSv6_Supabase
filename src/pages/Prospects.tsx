@@ -146,7 +146,7 @@ const Prospects = () => {
         phone: data.phone,
         address: data.address,
         notes: data.notes,
-        type: 'prospect',
+        type: data.type || 'prospect',
         is_archived: (data as any).is_archived || false,
         vehicles: data.vehicles, // Pass the multiple vehicles array
         generalPhotos: data.generalPhotos,
