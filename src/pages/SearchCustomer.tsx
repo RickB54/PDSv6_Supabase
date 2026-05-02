@@ -411,8 +411,24 @@ const SearchCustomer = () => {
 
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
   const toggleCustomer = (id: string) => {
+    const isExpanding = !expandedCustomers.includes(id);
     setExpandedCustomers(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
     setAllExpanded(false);
+    
+    if (isExpanding) {
+      setTimeout(() => {
+        const el = document.getElementById(`customer-${id}`);
+        if (el) {
+          const offset = 100; // Account for fixed header
+          const elementPosition = el.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          });
+        }
+      }, 150);
+    }
   };
   const toggleAll = () => {
     if (expandedCustomers.length === filteredCustomers.length) {
@@ -479,7 +495,7 @@ const SearchCustomer = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[...filteredCustomers]
             .sort((a, b) => {
               const daStr = (a as any).updated_at || (a as any).updatedAt || "";
@@ -488,11 +504,11 @@ const SearchCustomer = () => {
             })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
-              // REMOVED: if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
-                <div key={customer.id} className={cn(
+                <div key={customer.id} id={`customer-${customer.id}`} className={cn(
                   "border rounded-xl overflow-hidden transition-all",
+                  isExpanded && "md:col-span-2",
                   customer.is_archived
                     ? "bg-green-900/40 border-green-700 hover:bg-green-900/50"
                     : "bg-zinc-900/50 border-blue-500/20 hover:border-blue-500/40"
@@ -553,6 +569,11 @@ const SearchCustomer = () => {
                           <span>{customer.phone || 'No phone'}</span>
                           <span className="hidden sm:inline">•</span>
                           <span className="hidden sm:inline">{customer.vehicle} {customer.model}</span>
+                          {customer.notes && !isExpanded && (
+                            <span className="hidden lg:inline text-blue-400 italic truncate max-w-[200px]">
+                              • "{customer.notes.substring(0, 40)}{customer.notes.length > 40 ? '...' : ''}"
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -623,7 +644,7 @@ const SearchCustomer = () => {
                                         <div className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-0.5">Primary Vehicle</div>
                                         <div className="text-zinc-200 text-sm font-black tracking-tight">{v_year ? `${v_year} ` : ''}{v_make} {v_model}</div>
                                       </div>
-                                      <Badge variant="ghost" className="text-[8px] text-zinc-600">LEGACY DATA</Badge>
+                                      <Badge variant="outline" className="text-[8px] text-zinc-600 border-zinc-800">LEGACY DATA</Badge>
                                     </div>
                                   );
                                 }
@@ -651,24 +672,22 @@ const SearchCustomer = () => {
                                           onClick={async (e) => {
                                             e.stopPropagation();
                                             if (confirm(`Remove this ${v.make} ${v.model} from garage?`)) {
-                                              // Optimistic UI update: Remove from local state immediately
                                               setCustomers(prev => prev.map(c => {
                                                 if (c.id === customer.id) {
-                                                  return { 
-                                                    ...c, 
-                                                    vehicles: (c.vehicles || []).filter((veh: any) => veh.id !== v.id) 
-                                                  };
+                                                  return { ...c, vehicles: (c.vehicles || []).filter((veh: any) => veh.id !== v.id) };
                                                 }
                                                 return c;
                                               }));
-
                                               try {
                                                 await deleteSupabaseVehicle(v.id);
-                                                toast.success("Vehicle removed");
-                                                // refresh(); // Optional: sync with server
+                                                toast({ title: "Success", description: "Vehicle removed" });
                                               } catch (err: any) {
-                                                toast.error(err.message || "Failed to remove vehicle");
-                                                refresh(); // Rollback to server state on error
+                                                toast({ 
+                                                  title: "Error", 
+                                                  description: err.message || "Failed to remove vehicle",
+                                                  variant: "destructive"
+                                                });
+                                                refresh();
                                               }
                                             }
                                           }}
@@ -683,122 +702,124 @@ const SearchCustomer = () => {
                             </div>
                           </section>
 
-                          <section>
-                             <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact profile</h4>
-                             <div className="space-y-3 bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/30">
-                                <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
-                                <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
-                                <div className="flex items-center gap-6 mt-4 pt-4 border-t border-zinc-800/50">
-                                  <div>
-                                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block mb-1">Feedback Tracking</span>
-                                    <div className="flex items-center gap-2">
-                                       <Star className={cn("h-4 w-4", customer.has_google_review ? "fill-amber-500 text-amber-500" : "text-zinc-700")} />
-                                       <span className="text-xs font-bold text-zinc-300">{customer.has_google_review ? 'Identity Verified VIP' : 'No review response recorded'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
-                             </div>
-                          </section>
-
-                          {customer.notes && (
-                            <section className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-xl">
-                              <div className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Admin Directive</div>
-                              <div className="text-zinc-300 text-sm italic leading-relaxed tracking-tight">"{customer.notes}"</div>
-                            </section>
-                          )}
-
                           <RetentionHub customer={customer} />
                         </div>
 
-                        {/* RIGHT COLUMN: BOOKING FORENSICS */}
-                        <div>
-                          <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <History className="h-3.5 w-3.5" /> Relationship History
-                          </h4>
-                          <div className="space-y-4 max-h-[700px] overflow-y-auto custom-scrollbar pr-2">
-                            {(() => {
-                              const relatedBookings = allBookings
-                                .filter(b => 
-                                  (b.customerId === customer.id) || 
-                                  (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                  (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                )
-                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        {/* RIGHT COLUMN: CONTACT & HISTORY */}
+                        <div className="space-y-6">
+                           <section>
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact profile</h4>
+                              <div className="space-y-3 bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/30">
+                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
+                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
+                                 <div className="flex items-center gap-6 mt-4 pt-4 border-t border-zinc-800/50">
+                                   <div>
+                                     <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block mb-1">Feedback Tracking</span>
+                                     <div className="flex items-center gap-2">
+                                        <Star className={cn("h-4 w-4", customer.has_google_review ? "fill-amber-500 text-amber-500" : "text-zinc-700")} />
+                                        <span className="text-xs font-bold text-zinc-300">{customer.has_google_review ? 'Identity Verified VIP' : 'No review response recorded'}</span>
+                                     </div>
+                                   </div>
+                                 </div>
+                                 {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
+                              </div>
+                           </section>
 
-                              if (relatedBookings.length === 0) {
-                                return (
-                                  <div className="text-center py-12 text-zinc-700 bg-zinc-950/20 border border-dashed border-zinc-800 rounded-3xl">
-                                    <Clock className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                    <div className="text-xs font-black uppercase tracking-widest opacity-40">Zero prior sessions found.</div>
-                                  </div>
-                                );
-                              }
+                           {customer.notes && (
+                             <section className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-xl">
+                               <div className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Admin Directive</div>
+                               <div className="text-zinc-300 text-sm italic leading-relaxed tracking-tight">"{customer.notes}"</div>
+                             </section>
+                           )}
 
-                              return relatedBookings.map((booking) => {
-                                const bookingDate = new Date(booking.date);
-                                const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                           <section>
+                             <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+                               <History className="h-3.5 w-3.5" /> Relationship History
+                             </h4>
+                             <div className="space-y-4 max-h-[700px] overflow-y-auto custom-scrollbar pr-2">
+                               {(() => {
+                                 const relatedBookings = allBookings
+                                   .filter(b => 
+                                     (b.customerId === customer.id) || 
+                                     (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                     (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                   )
+                                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-                                return (
-                                  <div key={booking.id} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-blue-500/40 transition-all group/booking shadow-xl relative overflow-hidden">
-                                     {/* Background subtle status gradient */}
-                                     <div className={cn("absolute inset-0 opacity-[0.03]", booking.status === 'done' ? "bg-emerald-500" : "bg-blue-500")} />
+                                 if (relatedBookings.length === 0) {
+                                   return (
+                                     <div className="text-center py-12 text-zinc-700 bg-zinc-950/20 border border-dashed border-zinc-800 rounded-3xl">
+                                       <Clock className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                       <div className="text-xs font-black uppercase tracking-widest opacity-40">Zero prior sessions found.</div>
+                                     </div>
+                                   );
+                                 }
 
-                                      <div className="flex items-start justify-between mb-4 relative z-10">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <Calendar className="h-4 w-4 text-blue-500" />
-                                            <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
-                                            <span className="text-zinc-600 text-xs">•</span>
-                                            <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
-                                          </div>
-                                          <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
-                                          
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
-                                              <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
-                                              <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
-                                            </div>
-                                            <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
-                                              <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
-                                              <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <Badge className={cn(
-                                          "text-[10px] font-black uppercase px-3 py-1 rounded-full border shadow-2xl transition-all",
-                                          booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                          booking.status === 'confirmed' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                          "bg-zinc-800 text-zinc-500 border-zinc-700"
-                                        )}>
-                                          {booking.status}
-                                        </Badge>
-                                      </div>
+                                 return relatedBookings.map((booking) => {
+                                   const bookingDate = new Date(booking.date);
+                                   const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                   const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-                                      {booking.notes && (
-                                        <div className="mt-2 p-3 bg-blue-900/10 rounded-xl border border-blue-500/10 text-[11px] text-zinc-400 italic leading-relaxed">
-                                          "{booking.notes}"
-                                        </div>
-                                      )}
-                                      
-                                      <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
-                                         <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
-                                         <Button 
-                                          variant="ghost" 
-                                          size="sm" 
-                                          className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
-                                          onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
-                                         >
-                                           Inspect <ExternalLink className="h-2.5 w-2.5" />
-                                         </Button>
-                                      </div>
-                                  </div>
-                                );
-                              });
-                            })()}
-                          </div>
+                                   return (
+                                     <div key={booking.id} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-blue-500/40 transition-all group/booking shadow-xl relative overflow-hidden">
+                                        <div className={cn("absolute inset-0 opacity-[0.03]", booking.status === 'done' ? "bg-emerald-500" : "bg-blue-500")} />
+
+                                         <div className="flex items-start justify-between mb-4 relative z-10">
+                                           <div className="flex-1">
+                                             <div className="flex items-center gap-2 mb-2">
+                                               <Calendar className="h-4 w-4 text-blue-500" />
+                                               <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
+                                               <span className="text-zinc-600 text-xs">•</span>
+                                               <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
+                                             </div>
+                                             <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
+                                             
+                                             <div className="grid grid-cols-2 gap-2">
+                                               <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
+                                                 <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
+                                                 <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
+                                               </div>
+                                               <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
+                                                 <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
+                                                 <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
+                                               </div>
+                                             </div>
+                                           </div>
+                                           <Badge className={cn(
+                                             "text-[10px] font-black uppercase px-3 py-1 rounded-full border shadow-2xl transition-all",
+                                             booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                             booking.status === 'confirmed' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                             "bg-zinc-800 text-zinc-500 border-zinc-700"
+                                           )}>
+                                             {booking.status}
+                                           </Badge>
+                                         </div>
+
+                                         {booking.notes && (
+                                           <div className="mt-2 p-3 bg-blue-900/10 rounded-xl border border-blue-500/10 text-[11px] text-zinc-400 italic leading-relaxed">
+                                             "{booking.notes}"
+                                           </div>
+                                         )}
+                                         
+                                         <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
+                                            <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
+                                            <Button 
+                                             variant="ghost" 
+                                             size="sm" 
+                                             className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
+                                             onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
+                                            >
+                                              Inspect <ExternalLink className="h-2.5 w-2.5" />
+                                            </Button>
+                                         </div>
+                                     </div>
+                                   );
+                                 });
+                               })()}
+                             </div>
+                           </section>
                         </div>
+                      </div>
                                             {/* MEDIA GALLERY - dynamic */}
                       {(() => {
                         const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
@@ -869,10 +890,9 @@ const SearchCustomer = () => {
                         );
                       })()}
                     </div>
-                  </div>
-                )}
-              </div>
-            );
+                  )}
+                </div>
+              );
             })}
         </div>
 

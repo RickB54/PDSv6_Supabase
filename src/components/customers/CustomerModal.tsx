@@ -524,6 +524,16 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       </Button>
                     )}
                   </div>
+                  
+                  <div className="pt-2">
+                    <Label className="text-[10px] text-zinc-500 uppercase font-black mb-1.5 block">Internal Notes / Admin Directives</Label>
+                    <Textarea 
+                      placeholder="Add any internal notes, history, or specific instructions for this customer..."
+                      className="bg-zinc-900 border-zinc-800 min-h-[100px] text-zinc-200 text-sm"
+                      value={form.notes}
+                      onChange={(e) => handleChange("notes", e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 

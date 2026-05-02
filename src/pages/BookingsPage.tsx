@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle } from "lucide-react"; // Added Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid } from "lucide-react"; // Added LayoutGrid
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -135,7 +135,7 @@ export default function BookingsPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
@@ -149,33 +149,41 @@ export default function BookingsPage() {
   const uniqueCustomers = useMemo(() => {
     const today = startOfDay(new Date());
     
-    return Array.from(
+    const customersList = Array.from(
       new Set([
-        ...items.map(b => b.customer),
-        ...unifiedEvents.map(e => e.customer || 'INTERNAL: System Blocks')
+        ...items.map(b => (b.customer || '').trim()),
+        ...unifiedEvents.map(e => (e.customer || 'INTERNAL: System Blocks').trim())
       ])
     ).map(customerName => {
       if (!customerName) return null;
       
-      const customerData = customers.find(c => c.name === customerName);
+      const customerData = customers.find(c => c.name?.trim().toLowerCase() === customerName.trim().toLowerCase());
       
-      // ARCHIVE FILTER
+      // We'll filter events individually below, so we don't need to return null here
+      // based on the customer profile's archive status. This ensures customers with 
+      // active bookings show up in history regardless of their profile status.
       const isCustArchived = customerData?.is_archived === true;
-      if (showArchived) {
-        if (!isCustArchived) return null;
-      } else {
-        if (isCustArchived) return null;
-      }
 
       // Aggregate activity
       let customerEvents = [
         ...items.filter(b => {
-          const isCustMatch = b.customer === customerName;
+          const isCustMatch = b.customer?.trim().toLowerCase() === customerName.trim().toLowerCase();
           const isArchived = (b as any).isArchived === true || (b as any).is_archived === true;
-          const isArchiveVisible = showArchived || !isArchived;
+          const isArchiveVisible = 
+            archiveFilter === 'all' ? true : 
+            archiveFilter === 'archived' ? isArchived : !isArchived;
+          
           return isCustMatch && isArchiveVisible;
         }).map(b => ({ ...b, type: 'booking' as const })),
-        ...unifiedEvents.filter(e => (e.customer || 'INTERNAL: System Blocks') === customerName && e.type !== 'booking')
+        ...unifiedEvents.filter(e => {
+          const eCust = (e.customer || 'INTERNAL: System Blocks').trim().toLowerCase();
+          const isCustMatch = eCust === customerName.trim().toLowerCase();
+          const isArchived = (e as any).isArchived === true || (e as any).is_archived === true;
+          const isArchiveVisible = 
+            archiveFilter === 'all' ? true : 
+            archiveFilter === 'archived' ? isArchived : !isArchived;
+          return isCustMatch && isArchiveVisible && e.type !== 'booking';
+        })
       ];
 
       // Filters
@@ -219,12 +227,16 @@ export default function BookingsPage() {
         address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || customerData?.address || 'N/A') : 'Internal System',
         phone: customerData?.phone || '—',
         email: customerData?.email || '—',
+        notes: customerData?.notes || '—',
         type: customerData?.type || 'customer',
         events: sortedEvents,
         isSystem: customerName === 'INTERNAL: System Blocks',
         id: customerData?.id
       };
-    }).filter(Boolean).sort((a: any, b: any) => {
+    });
+
+    const result = (customersList || []).filter(Boolean).sort((a: any, b: any) => {
+      if (!a || !b) return 0;
       if (sortOrder === 'next-booking') {
         // 1. Future bookings first, soonest first (Ascending)
         if (a.nextBookingDate && !b.nextBookingDate) return -1;
@@ -233,12 +245,18 @@ export default function BookingsPage() {
           return new Date(a.nextBookingDate).getTime() - new Date(b.nextBookingDate).getTime();
         }
         // 2. Only past bookings last, latest first (Descending)
-        return new Date(b.lastPastBookingDate!).getTime() - new Date(a.lastPastBookingDate!).getTime();
+        if (a.lastPastBookingDate && b.lastPastBookingDate) {
+          return new Date(b.lastPastBookingDate).getTime() - new Date(a.lastPastBookingDate).getTime();
+        }
+        return 0;
       }
-      if (sortOrder === 'name') return a.name.localeCompare(b.name);
-      return new Date(b.lastBooking).getTime() - new Date(a.lastBooking).getTime();
-    }) as any[];
-  }, [items, unifiedEvents, customers, showArchived, sourceFilter, statusFilter, dateFilter, sortOrder]);
+      if (sortOrder === 'name') return (a.name || '').localeCompare(b.name || '');
+      return new Date(b.lastBooking || 0).getTime() - new Date(a.lastBooking || 0).getTime();
+    });
+
+
+    return result;
+  }, [items, unifiedEvents, customers, archiveFilter, sourceFilter, statusFilter, dateFilter, sortOrder]);
 
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
@@ -581,11 +599,15 @@ export default function BookingsPage() {
   // Filter bookings for the current view
   const monthBookings = useMemo(() => {
     return items.filter(b => {
-      if (!showArchived && b.isArchived) return false;
+      const isArchived = b.isArchived;
+      const isArchiveVisible = 
+        archiveFilter === 'all' ? true : 
+        archiveFilter === 'archived' ? isArchived : !isArchived;
+      if (!isArchiveVisible) return false;
       const d = parseISO(b.date);
       return isSameMonth(d, currentDate);
     });
-  }, [items, currentDate, showArchived]);
+  }, [items, currentDate, archiveFilter]);
 
   const getBookingsForDay = (day: Date) => {
     // Get unified events for this day
@@ -597,7 +619,11 @@ export default function BookingsPage() {
   // Get real bookings only (for legacy compatibility)
   const getRealBookingsForDay = (day: Date) => {
     return items.filter(b => {
-      if (!showArchived && b.isArchived) return false;
+      const isArchived = b.isArchived;
+      const isArchiveVisible = 
+        archiveFilter === 'all' ? true : 
+        archiveFilter === 'archived' ? isArchived : !isArchived;
+      if (!isArchiveVisible) return false;
       return isSameDay(parseISO(b.date), day);
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
@@ -698,12 +724,12 @@ export default function BookingsPage() {
       vehicleYear: booking.vehicleYear || matchingCust?.year || "",
       vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
       vehicleModel: booking.vehicleModel || matchingCust?.model || "",
-      address: booking.address || "",
+      address: booking.address || matchingCust?.address || "",
       time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "",
-      notes: booking.notes || "",
+      notes: booking.notes || matchingCust?.notes || "",
       addons: booking.addons || [],
       hasReminder: booking.hasReminder || false,
       reminderFrequency: booking.reminderFrequency?.toString() || "3",
@@ -1864,7 +1890,8 @@ export default function BookingsPage() {
                             vehicleMake: primaryVeh?.make || cust.vehicle || prev.vehicleMake,
                             vehicleModel: primaryVeh?.model || cust.model || prev.vehicleModel,
                             vehicleId: primaryVeh?.id,
-                            vehicle: primaryVeh?.type || cust.vehicleType || prev.vehicle
+                            vehicle: primaryVeh?.type || cust.vehicleType || prev.vehicle,
+                            notes: cust.notes || prev.notes,
                           }));
                           // console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
                         }
@@ -2569,19 +2596,24 @@ export default function BookingsPage() {
                       size="sm" 
                       className={cn(
                         "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border", 
-                        showArchived ? "bg-amber-600/20 text-amber-500 border-amber-600/30" : "text-zinc-400 border-transparent"
+                        archiveFilter === 'archived' ? "bg-amber-600/20 text-amber-500 border-amber-600/30" : 
+                        archiveFilter === 'all' ? "bg-blue-600/20 text-blue-400 border-blue-600/30" : 
+                        "text-zinc-400 border-transparent"
                       )}
                     >
                       <Archive className="h-3 w-3 mr-1.5" />
-                      {showArchived ? 'ARCHIVED' : 'ACTIVE'} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                      {archiveFilter === 'all' ? 'ALL BOOKINGS' : archiveFilter.toUpperCase()} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-48">
-                    <DropdownMenuItem onClick={() => setShowArchived(false)} className="cursor-pointer flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-zinc-500" /> Show Active Only
+                    <DropdownMenuItem onClick={() => setArchiveFilter('active')} className="cursor-pointer flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-zinc-500" /> Active Only
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowArchived(true)} className="cursor-pointer flex items-center gap-2 text-amber-400">
-                      <Archive className="h-3 w-3" /> Show Archived Only
+                    <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className="cursor-pointer flex items-center gap-2 text-amber-400">
+                      <Archive className="h-3 w-3" /> Archived Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setArchiveFilter('all')} className="cursor-pointer flex items-center gap-2 text-blue-400">
+                      <LayoutGrid className="h-3 w-3" /> Show All (Both)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -2600,7 +2632,7 @@ export default function BookingsPage() {
                            setDateFilter({ start: undefined, end: undefined });
                            setSourceFilter(null);
                            setStatusFilter(null);
-                           setShowArchived(false);
+                           setArchiveFilter('active');
                            toast.success("Sort & filters reset to default");
                          }}
                        >
@@ -2618,9 +2650,9 @@ export default function BookingsPage() {
                     <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (dateFilter.start || dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}>
                       <Filter className="h-3.5 w-3.5" />
                       Filter History
-                      {(showArchived) && (
+                      {(archiveFilter !== 'active') && (
                         <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 ml-1 h-4 px-1 border-none text-[8px]">
-                          +Archived
+                          +{archiveFilter === 'all' ? 'All' : 'Archived'}
                         </Badge>
                       )}
                     </Button>
@@ -2636,14 +2668,20 @@ export default function BookingsPage() {
                     <div className="p-4 space-y-6">
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white">Show Archived</span>
-                          <span className="text-[10px] text-zinc-500 uppercase font-black">Include secondary records</span>
+                          <span className="text-sm font-bold text-white">Archive Mode</span>
+                          <span className="text-[10px] text-zinc-500 uppercase font-black">{archiveFilter === 'all' ? 'Showing All' : archiveFilter === 'archived' ? 'Archived Only' : 'Active Only'}</span>
                         </div>
-                        <Switch
-                          checked={showArchived}
-                          onCheckedChange={setShowArchived}
-                          className="data-[state=checked]:bg-red-600"
-                        />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-[10px] font-black border border-zinc-800"
+                          onClick={() => {
+                            const next: Record<string, 'active' | 'archived' | 'all'> = { active: 'archived', archived: 'all', all: 'active' };
+                            setArchiveFilter(next[archiveFilter]);
+                          }}
+                        >
+                          TOGGLE
+                        </Button>
                       </div>
 
                       <div className="space-y-3">
@@ -2934,12 +2972,19 @@ export default function BookingsPage() {
                                               )}
                                             </div>
                                           </div>
-                                          <Badge
-                                            variant="outline"
-                                            className={cn("text-[10px] h-5", event.type === 'booking' ? getStatusColor((event.status || 'pending') as any) : "text-blue-400 border-blue-900")}
-                                          >
-                                            {event.type === 'booking' ? (event.status || 'PENDING') : 'BLOCKED'}
-                                          </Badge>
+                                          <div className="flex items-center gap-2">
+                                            {archiveFilter === 'all' && (('isArchived' in event ? event.isArchived : (items.find(i => i.id === event.id)?.isArchived)) && (
+                                              <Badge variant="outline" className="text-[10px] h-5 bg-amber-500/10 text-amber-500 border-amber-500/20">
+                                                ARCHIVED
+                                              </Badge>
+                                            ))}
+                                            <Badge
+                                              variant="outline"
+                                              className={cn("text-[10px] h-5", event.type === 'booking' ? getStatusColor((event.status || 'pending') as any) : "text-blue-400 border-blue-900")}
+                                            >
+                                              {event.type === 'booking' ? (event.status || 'PENDING') : 'BLOCKED'}
+                                            </Badge>
+                                          </div>
                                         </div>
                                         
                                         <div className="flex items-center gap-2 mt-1">

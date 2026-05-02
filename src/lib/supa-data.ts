@@ -1822,7 +1822,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
     try {
         let query = supabase
             .from('bookings')
-            .select('*, customers(full_name, email, phone), vehicles(make, model, year, type)');
+            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type)');
 
         if (filterByCurrentUser) {
             const { data: { user } } = await supabase.auth.getUser();
@@ -1873,7 +1873,6 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
                 endTime: b.end_time || meta.end_time,
                 status: b.status || 'confirmed',
-                notes: b.notes || meta.notes,
 
                 // Vehicle Relations
                 vehicleId: b.vehicle_id || meta.vehicle_id,
@@ -1888,7 +1887,8 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
                 hasReminder: b.has_reminder || meta.has_reminder,
                 reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
-                address: b.address || meta.address || '',
+                address: b.address || b.customers?.address || meta.address || '',
+                notes: b.notes || b.customers?.notes || meta.notes || '',
                 customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
                 isArchived: b.is_archived || meta.is_archived || false,
                 source: b.source_origin || meta.source_origin || b.source || 'Manual Entry'
@@ -1906,10 +1906,12 @@ export const upsertSupabaseBooking = async (booking: any) => {
         // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
         const payload: any = {
             customer_id: booking.customerId || booking.customer_id || null,
+            customer_name: booking.customer || booking.customer_name || 'Unknown',
             vehicle_id: booking.vehicleId || booking.vehicle_id || null,
             scheduled_at: booking.date || booking.scheduled_at,
             service_package: booking.title || booking.service_package,
             status: booking.status || 'confirmed',
+            address: booking.address,
             notes: booking.notes,
             service_price: Number(booking.price || booking.service_price || 0),
             add_ons: booking.addons || [],
