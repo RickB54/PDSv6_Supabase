@@ -455,6 +455,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                      <div className="flex items-center gap-2">
                         <Users className={cn("h-4 w-4", isProspect ? "text-orange-500" : "text-purple-500")} />
                         <span className="text-xs font-bold uppercase tracking-tight text-zinc-300">Relationship Type</span>
+                        <button 
+                          onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prospect-vs-customer' } }))}
+                          className="text-zinc-500 hover:text-blue-400"
+                          title="Relationship Logic Help"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        </button>
                      </div>
                      <div className="flex items-center gap-2">
                         <span className={cn("text-[10px] font-bold uppercase", !isProspect ? "text-purple-400" : "text-zinc-600")}>Customer</span>

@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -1567,6 +1567,13 @@ const ServiceChecklist = () => {
             <div>
               <h1 className="text-4xl font-black italic text-white tracking-tighter flex items-center gap-3">
                 Job Setup
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prospect-vs-customer' } }))}
+                  className="p-1 text-zinc-500 hover:text-blue-400 transition-colors"
+                  title="Prospect vs. Customer Logic"
+                >
+                  <HelpCircle className="h-6 w-6" />
+                </button>
               </h1>
               <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest mt-1">Configure vehicle and service details</p>
             </div>
@@ -1592,7 +1599,15 @@ const ServiceChecklist = () => {
             {/* Customer selection restored — includes Generic option */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
-                <Label>Customer Link</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Customer Link</Label>
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prospect-vs-customer' } }))}
+                    className="text-zinc-600 hover:text-blue-400"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <select
                   value={selectedCustomer}
                   onChange={(e) => setSelectedCustomer(e.target.value)}

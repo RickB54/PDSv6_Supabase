@@ -268,6 +268,38 @@ export const multiVehicleBookingHelpTopic: HelpTopic = {
   section: 'system',
 };
 
+export const prospectVsCustomerTopic: HelpTopic = {
+  id: 'prospect-vs-customer',
+  title: 'Prospect vs. Customer Logic',
+  summary: 'Understand how the system distinguishes between potential leads and active clients.',
+  content: [
+    '**The Relationship Cycle**: Your database categorizes individuals into two primary groups to help you focus your marketing and operations correctly.',
+    '',
+    '👤 **1. What is a Prospect?**',
+    'A **Prospect** is someone who has inquired about services or requested an estimate but has NOT yet booked a firm appointment or started a service checklist.',
+    '• **Focus**: Lead nurturing, sending follow-up estimates, and introductory discounts.',
+    '• **Location**: These clients appear in the **Prospects** page.',
+    '',
+    '✅ **2. What is a Customer?**',
+    'A **Customer** is anyone who has an active or past booking/checklist in your system. The moment a job is started or scheduled, the system considers them an active client.',
+    '• **Focus**: Retention, maintenance reminders, and loyalty rewards.',
+    '• **Location**: These clients appear in the **Customers & History** pages.',
+    '',
+    '🔄 **3. The "Generic" Record Warning**',
+    'When starting a **Service Checklist**, if you type a name into the "Generic Customer Name" box instead of selecting them from the **"Customer Link"** list:',
+    '• **New Record Created**: The system creates a brand-new "Customer" profile for that person.',
+    '• **Duplicate Alert**: If that person was already a "Prospect", you will now have two records for them. **Always use the Link dropdown** to connect a checklist to an existing Prospect to keep your history unified.',
+    '',
+    '⚙️ **4. Manual Overrides**',
+    'Mistakes happen! If someone is incorrectly marked as a Customer (e.g., they canceled or you created a duplicate):',
+    '• **Edit Profile**: Go to the Customer Database, find the person, and click the Edit icon.',
+    '• **The Toggle**: Use the **"Relationship Type"** switch in their profile to manually flip them back to "Prospect" (or vice versa).',
+    '',
+    '💡 **Pro Tip**: Use the **Follow-Up Center** to see a clear list of "Potential Leads" (Prospects) vs "Active Clients" (Customers) for your weekly outreach sessions.',
+  ],
+  section: 'system',
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
   netProfitExplanationTopic,
@@ -281,6 +313,7 @@ export const adminMenuTopics: HelpTopic[] = [
   mobileSetupTopic,
   chemicalAiTopic,
   multiVehicleBookingHelpTopic,
+  prospectVsCustomerTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',
