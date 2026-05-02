@@ -44,17 +44,18 @@ export const formatETDate = (date: Date | string) => {
 };
 
 /**
- * Generates a logical invoice number based on current timestamp (YYYYMMDDHHmm)
- * This fits within safe integer limits and provides clear reasoning.
+ * Generates a logical invoice number based on current timestamp (YMMDDHHmm)
+ * This fits within 32-bit integer limits (max 2,147,483,647) and provides clear reasoning.
+ * Example for May 1, 2026 8:25pm: 605012025
  */
 export const generateInvoiceNumber = () => {
   const now = new Date();
-  const year = now.getFullYear();
+  const yearLastDigit = String(now.getFullYear()).slice(-1);
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const hour = String(now.getHours()).padStart(2, '0');
   const minute = String(now.getMinutes()).padStart(2, '0');
   
-  // Example: 202605011959
-  return parseInt(`${year}${month}${day}${hour}${minute}`);
+  // Max value will be around 912312359 (Dec 31, 2029)
+  return parseInt(`${yearLastDigit}${month}${day}${hour}${minute}`);
 };
