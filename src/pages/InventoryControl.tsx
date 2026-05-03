@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
 import { auditEmployeeAction } from "@/lib/audit";
@@ -59,46 +59,24 @@ const transformRatio = (r: string) => {
 };
 
 /**
+ * Context to manage a single active zoomed thumbnail across all inventory lists
+ */
+const ThumbnailZoomContext = createContext<{
+  activeId: string | null;
+  register: (id: string, el: HTMLImageElement | null) => void;
+}>({ activeId: null, register: () => {} });
+
+/**
  * Enhanced Thumbnail that auto-zooms when scrolled into the center of the viewport (Mobile)
  * and supports manual hover/touch zoom on all devices.
  */
-const InventoryThumbnail = ({ src, alt, className, activeBorderClass }: { src: string, alt: string, className?: string, activeBorderClass?: string }) => {
-  const [isAutoZoomed, setIsAutoZoomed] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    // Intersection Observer for Scroll-based Auto Zoom (Mobile Only)
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsAutoZoomed(false);
-        return;
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Trigger zoom when image enters the center area of the screen
-        setIsAutoZoomed(entry.isIntersecting);
-      },
-      {
-        threshold: 0.1,
-        rootMargin: "-40% 0px -40% 0px" // Focus on the middle 20% of the screen
-      }
-    );
-
-    if (imgRef.current) observer.observe(imgRef.current);
-    
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
+const InventoryThumbnail = ({ id, src, alt, className, activeBorderClass }: { id: string, src: string, alt: string, className?: string, activeBorderClass?: string }) => {
+  const { activeId, register } = useContext(ThumbnailZoomContext);
+  const isAutoZoomed = activeId === id;
 
   return (
     <img
-      ref={imgRef}
+      ref={(el) => register(id, el)}
       src={src}
       alt={alt}
       onClick={(e) => e.stopPropagation()}
@@ -136,6 +114,39 @@ const InventoryControl = () => {
       return (tools || []).reduce((a, t) => a + (((t as any).price || (t as any).cost || 0) * (t.quantity || 1)), 0);
     }
   };
+
+  // --- Thumbnail Auto-Zoom Logic (Mobile) ---
+  const [activeThumbnailId, setActiveThumbnailId] = useState<string | null>(null);
+  const thumbnailObserver = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    if (window.innerWidth >= 768) return;
+
+    // Use a single observer for all thumbnails to ensure mutual exclusivity
+    thumbnailObserver.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setActiveThumbnailId(entry.target.getAttribute('data-id'));
+          }
+        });
+      },
+      {
+        // Precisely target the center horizontal line of the viewport
+        rootMargin: "-50% 0px -50% 0px",
+        threshold: 0
+      }
+    );
+
+    return () => thumbnailObserver.current?.disconnect();
+  }, []);
+
+  const registerThumbnail = useCallback((id: string, el: HTMLImageElement | null) => {
+    if (el && thumbnailObserver.current) {
+      el.setAttribute('data-id', id);
+      thumbnailObserver.current.observe(el);
+    }
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
@@ -1542,6 +1553,7 @@ const InventoryControl = () => {
       <TableCell className="font-medium flex items-center gap-2 text-white py-3">
         {c.imageUrl && (
           <InventoryThumbnail 
+            id={c.id}
             src={c.imageUrl} 
             alt={c.name} 
             activeBorderClass="border-yellow-500/50"
@@ -1648,6 +1660,7 @@ const InventoryControl = () => {
           <div className="font-bold text-white flex items-center gap-2">
             {c.imageUrl && (
               <InventoryThumbnail 
+                id={c.id}
                 src={c.imageUrl} 
                 alt={c.name} 
                 activeBorderClass="border-yellow-500/50"
@@ -1731,7 +1744,8 @@ const InventoryControl = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <ThumbnailZoomContext.Provider value={{ activeId: activeThumbnailId, register: registerThumbnail }}>
+      <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Inventory Control" />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
@@ -2089,6 +2103,7 @@ const InventoryControl = () => {
                         <TableCell className="font-medium flex items-center gap-2 text-white">
                           {m.imageUrl && (
                             <InventoryThumbnail 
+                              id={m.id}
                               src={m.imageUrl} 
                               alt={m.name} 
                               activeBorderClass="border-blue-500/50"
@@ -2160,6 +2175,7 @@ const InventoryControl = () => {
                         <div className="font-bold text-white flex items-center gap-2">
                           {m.imageUrl && (
                             <InventoryThumbnail 
+                              id={m.id}
                               src={m.imageUrl} 
                               alt={m.name} 
                               activeBorderClass="border-blue-500/50"
@@ -2322,6 +2338,7 @@ const InventoryControl = () => {
                         <TableCell className="font-medium flex items-center gap-2 !text-white">
                           {t.imageUrl && (
                             <InventoryThumbnail 
+                              id={t.id}
                               src={t.imageUrl} 
                               alt={t.name} 
                               activeBorderClass="border-purple-500/50"
@@ -2383,6 +2400,7 @@ const InventoryControl = () => {
                         <div className="font-bold text-white flex items-center gap-2">
                           {t.imageUrl && (
                             <InventoryThumbnail 
+                              id={t.id}
                               src={t.imageUrl} 
                               alt={t.name} 
                               activeBorderClass="border-purple-500/50"
@@ -3203,7 +3221,8 @@ const InventoryControl = () => {
           navigate('/dilution-calculator');
         }}
       />
-    </div >
+      </div>
+    </ThumbnailZoomContext.Provider>
   );
 }
 
