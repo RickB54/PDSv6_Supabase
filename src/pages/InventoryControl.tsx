@@ -63,20 +63,18 @@ const transformRatio = (r: string) => {
  */
 const ThumbnailZoomContext = createContext<{
   activeId: string | null;
-  register: (id: string, el: HTMLImageElement | null) => void;
-}>({ activeId: null, register: () => {} });
+}>({ activeId: null });
 
 /**
- * Enhanced Thumbnail that auto-zooms when scrolled into the center of the viewport (Mobile)
+ * Enhanced Thumbnail that auto-zooms when its parent row is centered (Mobile)
  * and supports manual hover/touch zoom on all devices.
  */
 const InventoryThumbnail = ({ id, src, alt, className, activeBorderClass }: { id: string, src: string, alt: string, className?: string, activeBorderClass?: string }) => {
-  const { activeId, register } = useContext(ThumbnailZoomContext);
+  const { activeId } = useContext(ThumbnailZoomContext);
   const isAutoZoomed = activeId === id;
 
   return (
     <img
-      ref={(el) => register(id, el)}
       src={src}
       alt={alt}
       onClick={(e) => e.stopPropagation()}
@@ -117,13 +115,13 @@ const InventoryControl = () => {
 
   // --- Thumbnail Auto-Zoom Logic (Mobile) ---
   const [activeThumbnailId, setActiveThumbnailId] = useState<string | null>(null);
-  const thumbnailObserver = useRef<IntersectionObserver | null>(null);
+  const rowObserver = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     if (window.innerWidth >= 768) return;
 
-    // Use a single observer for all thumbnails to ensure mutual exclusivity
-    thumbnailObserver.current = new IntersectionObserver(
+    // Use a single observer for all rows to ensure mutual exclusivity
+    rowObserver.current = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -132,19 +130,18 @@ const InventoryControl = () => {
         });
       },
       {
-        // Precisely target the center horizontal line of the viewport
         rootMargin: "-50% 0px -50% 0px",
         threshold: 0
       }
     );
 
-    return () => thumbnailObserver.current?.disconnect();
+    return () => rowObserver.current?.disconnect();
   }, []);
 
-  const registerThumbnail = useCallback((id: string, el: HTMLImageElement | null) => {
-    if (el && thumbnailObserver.current) {
+  const registerRow = useCallback((id: string) => (el: HTMLElement | null) => {
+    if (el && rowObserver.current) {
       el.setAttribute('data-id', id);
-      thumbnailObserver.current.observe(el);
+      rowObserver.current.observe(el);
     }
   }, []);
 
@@ -1547,6 +1544,7 @@ const InventoryControl = () => {
   const renderChemicalRow = (c: Chemical) => (
     <TableRow
       key={c.id}
+      ref={registerRow(c.id)}
       className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer group transition-colors"
       onClick={() => openEdit(c, 'chemical')}
     >
@@ -1652,6 +1650,7 @@ const InventoryControl = () => {
   const renderChemicalCard = (c: Chemical) => (
     <div
       key={c.id}
+      ref={registerRow(c.id)}
       className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors group"
       onClick={() => openEdit(c, 'chemical')}
     >
@@ -1744,7 +1743,7 @@ const InventoryControl = () => {
   );
 
   return (
-    <ThumbnailZoomContext.Provider value={{ activeId: activeThumbnailId, register: registerThumbnail }}>
+    <ThumbnailZoomContext.Provider value={{ activeId: activeThumbnailId }}>
       <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Inventory Control" />
 
@@ -2097,6 +2096,7 @@ const InventoryControl = () => {
                     {filteredSupplies.map(m => (
                       <TableRow
                         key={m.id}
+                        ref={registerRow(m.id)}
                         className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer group transition-colors"
                         onClick={() => openEdit(m, 'material')}
                       >
@@ -2167,6 +2167,7 @@ const InventoryControl = () => {
                 {filteredSupplies.map(m => (
                   <div
                     key={m.id}
+                    ref={registerRow(m.id)}
                     className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors group"
                     onClick={() => openEdit(m, 'material')}
                   >
@@ -2332,6 +2333,7 @@ const InventoryControl = () => {
                     {filteredEquipment.map(t => (
                       <TableRow
                         key={t.id}
+                        ref={registerRow(t.id)}
                         className="border-purple-500/10 hover:bg-purple-500/5 cursor-pointer group transition-colors"
                         onClick={() => openEdit(t, 'tool')}
                       >
@@ -2392,6 +2394,7 @@ const InventoryControl = () => {
                 {tools.map(t => (
                   <div
                     key={t.id}
+                    ref={registerRow(t.id)}
                     className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-purple-500/5 transition-colors group"
                     onClick={() => openEdit(t, 'tool')}
                   >
