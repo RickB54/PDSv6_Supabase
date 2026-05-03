@@ -91,7 +91,8 @@ const CustomerPortal = () => {
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [distance, setDistance] = useState(0);
   const [addOnsExpanded, setAddOnsExpanded] = useState(false);
-  const [learnMorePackage, setLearnMorePackage] = useState<any | null>(null);
+  const [learnMorePackage, setLearnMorePackage] = useState<any>(null);
+  const [infoAddOn, setInfoAddOn] = useState<any>(null);
   const [showClassification, setShowClassification] = useState(false);
   const [comparePkgId, setComparePkgId] = useState<string | null>(null);
 
@@ -544,22 +545,41 @@ const CustomerPortal = () => {
                   return (
                     <Card
                       key={addon.id}
-                      className={`p-4 cursor-pointer transition-all duration-300 hover:shadow-lg
-                        ${isSelected ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/30' : 'border-blue-100 hover:border-blue-300'}
+                      className={`p-5 cursor-pointer transition-all duration-300 hover:shadow-lg flex flex-col gap-3 relative overflow-hidden group
+                        ${isSelected ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/40' : 'border-blue-100 hover:border-blue-300 bg-white'}
                       `}
                       onClick={() => toggleAddOn(addon.id)}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-blue-900 text-sm mb-1">{addon.name}</h4>
-                          <p className="text-blue-700 font-bold text-lg">${addon.pricing[vehicleType]}</p>
+                          <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight mb-1 group-hover:text-blue-700 transition-colors">
+                            {addon.name}
+                          </h4>
+                          <p className="text-blue-700 font-black text-xl">${addon.pricing[vehicleType]}</p>
                         </div>
-                        {isSelected && (
-                          <div className="bg-blue-600 rounded-full p-1">
-                            <Check className="h-4 w-4 text-white" />
-                          </div>
-                        )}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                          ${isSelected ? 'bg-blue-600 border-blue-600 text-white scale-110' : 'border-zinc-200 text-transparent'}
+                        `}>
+                          <Check className="w-4 h-4" />
+                        </div>
                       </div>
+
+                      <p className="text-zinc-500 text-xs leading-relaxed line-clamp-2 min-h-[32px] font-medium">
+                        {addon.description}
+                      </p>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full mt-2 h-9 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-100/50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInfoAddOn(addon);
+                        }}
+                      >
+                        <Info className="w-3.5 h-3.5 mr-2" />
+                        Learn More
+                      </Button>
                     </Card>
                   );
                 })}
@@ -832,16 +852,35 @@ const CustomerPortal = () => {
                         return (
                           <div
                             key={addon.id}
-                            onClick={() => setModalAddOns(prev => prev.includes(addon.id) ? prev.filter(id => id !== addon.id) : [...prev, addon.id])}
-                            className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-600 shadow-sm' : 'bg-zinc-50 border-zinc-200 hover:border-blue-300'}`}
+                            className={`flex flex-col p-4 rounded-xl border transition-all ${isSelected ? 'bg-blue-50/50 border-blue-600 shadow-sm' : 'bg-white border-zinc-200 hover:border-blue-300'}`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-zinc-300'}`}>
-                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                            <div 
+                              className="flex items-center justify-between cursor-pointer"
+                              onClick={() => setModalAddOns(prev => prev.includes(addon.id) ? prev.filter(id => id !== addon.id) : [...prev, addon.id])}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-zinc-300'}`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <span className="text-sm font-bold text-blue-900 uppercase tracking-tight">{addon.name}</span>
                               </div>
-                              <span className="text-sm font-medium text-zinc-700">{addon.name}</span>
+                              <span className="font-bold text-blue-700 text-sm">${addon.pricing[vehicleType]}</span>
                             </div>
-                            <span className="font-bold text-blue-700 text-sm">${addon.pricing[vehicleType]}</span>
+                            
+                            <div className="mt-3 flex items-center justify-between gap-4">
+                              <p className="text-[11px] text-zinc-500 line-clamp-1 italic">{addon.description}</p>
+                              <Button 
+                                variant="link" 
+                                size="sm" 
+                                className="h-auto p-0 text-[10px] font-black uppercase tracking-widest text-blue-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInfoAddOn(addon);
+                                }}
+                              >
+                                Learn More
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
@@ -911,6 +950,75 @@ const CustomerPortal = () => {
                 Close
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add-on Info Dialog */}
+      <Dialog open={!!infoAddOn} onOpenChange={(open) => !open && setInfoAddOn(null)}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl bg-white rounded-3xl">
+          <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 text-white relative">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <PlusCircle className="w-24 h-24" />
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-blue-400 mb-2">Service Detail</h3>
+            <h2 className="text-3xl font-black uppercase tracking-tighter leading-none mb-4">{infoAddOn?.name}</h2>
+            <div className="flex items-center gap-4">
+              <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-md">
+                <span className="text-xs font-bold text-blue-200 uppercase tracking-widest block mb-1">Vehicle Price</span>
+                <span className="text-2xl font-black text-white">${infoAddOn ? infoAddOn.pricing[vehicleType] : 0}</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-[11px] text-blue-200/70 font-bold uppercase tracking-widest leading-tight">
+                  Professional service enhancement performed on-site
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em]">Service Description</h4>
+              <p className="text-zinc-600 text-lg font-medium leading-relaxed italic">
+                "{infoAddOn?.description}"
+              </p>
+            </div>
+            
+            <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">Quality Assurance</p>
+                <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                  Every add-on service uses professional-grade chemicals and specialized tools to ensure the highest quality results.
+                </p>
+              </div>
+            </div>
+
+            <Button 
+              className="w-full h-14 bg-blue-900 hover:bg-blue-800 text-white font-black uppercase tracking-widest shadow-xl shadow-blue-900/20"
+              onClick={() => {
+                if (infoAddOn) {
+                  const id = infoAddOn.id;
+                  // If we are in the main selection flow, toggle it. 
+                  // If in modal, setModalAddOns is handled separately, but we'll prioritize the main list.
+                  if (!selectedAddOns.includes(id)) toggleAddOn(id);
+                }
+                setInfoAddOn(null);
+                toast({ 
+                  title: "Add-on Selected", 
+                  description: `${infoAddOn?.name} added to your summary.` 
+                });
+              }}
+            >
+              Add to My Detail
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="w-full text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-600"
+              onClick={() => setInfoAddOn(null)}
+            >
+              Close Information
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
