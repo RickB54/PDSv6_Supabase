@@ -209,6 +209,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const [uniqueBrands, setUniqueBrands] = useState<string[]>([]);
   const [uniqueSizes, setUniqueSizes] = useState<string[]>([]);
+  const [isFullscreenImage, setIsFullscreenImage] = useState(false);
 
   const DEFAULT_SIZES = ["1 unit", "1 gallon", "14 oz", "16 oz", "24 oz", "32 oz", "64 oz", "128 oz", "256 oz"];
   const DEFAULT_UNITS = ["oz", "mL", "Gallons", "Quarts", "Pints"];
@@ -720,7 +721,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b border-zinc-800">
           <DialogTitle className="text-white">
@@ -741,9 +743,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               onClick={() => !form.imageUrl && photoRef.current?.click()}>
               {form.imageUrl ? (
                 <>
-                  <img src={form.imageUrl} alt="Item" className="w-full h-full object-cover" />
+                  <img 
+                    src={form.imageUrl} 
+                    alt="Item" 
+                    className="w-full h-full object-cover cursor-zoom-in" 
+                    onClick={(e) => { e.stopPropagation(); setIsFullscreenImage(true); }}
+                  />
                   <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(); }}
-                    className="absolute top-1 right-1 bg-red-500 rounded-full p-1 hover:bg-red-600 transition-colors">
+                    className="absolute top-1 right-1 bg-red-500 rounded-full p-1 hover:bg-red-600 transition-colors z-10">
                     <X className="h-3 w-3 text-white" />
                   </button>
                 </>
@@ -2010,5 +2017,25 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    
+    {isFullscreenImage && form.imageUrl && (
+      <div 
+        className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4 md:p-8 cursor-zoom-out animate-in fade-in duration-200"
+        onClick={() => setIsFullscreenImage(false)}
+      >
+        <img 
+          src={form.imageUrl} 
+          alt="Fullscreen Preview" 
+          className="max-w-full max-h-full object-contain rounded-md shadow-2xl ring-1 ring-white/10"
+        />
+        <button 
+          className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full p-3 text-white transition-all hover:scale-110 active:scale-95"
+          onClick={() => setIsFullscreenImage(false)}
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
+    )}
+  </>
   );
 }
