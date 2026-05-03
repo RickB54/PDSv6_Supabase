@@ -15,6 +15,8 @@ import { DilutionRatio } from "@/types/chemicals";
 import { generateTemplate } from "@/lib/chemical-ai";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { uploadFile } from "@/lib/storage-utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown, Plus, Check } from "lucide-react";
 
 // Updated naming: material → supply, tool → equipment
 // Backward compatibility maintained in data layer
@@ -146,9 +148,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           const { getChemicals } = await import("@/lib/inventory-data");
           const chems = await getChemicals();
           const brands = Array.from(new Set(chems.map(c => c.brand).filter(Boolean))) as string[];
-          const sizes = Array.from(new Set(chems.map(c => c.bottleSize).filter(Boolean))) as string[];
           setUniqueBrands(brands.sort((a, b) => a.localeCompare(b)));
-          setUniqueSizes(sizes.sort((a, b) => a.localeCompare(b)));
+          // We no longer fetch all sizes from DB to keep the list clean as requested
         } catch (err) {
           console.error("Failed to fetch unique inventory values", err);
         }
@@ -173,21 +174,43 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [uniqueBrands, setUniqueBrands] = useState<string[]>([]);
   const [uniqueSizes, setUniqueSizes] = useState<string[]>([]);
 
+  const DEFAULT_SIZES = ["1 unit", "1 gallon", "14 oz", "16 oz", "24 oz", "32 oz", "64 oz", "128 oz", "256 oz"];
+  const DEFAULT_UNITS = ["oz", "mL", "Gallons", "Quarts", "Pints"];
+
+  const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_sizes');
+    return saved ? JSON.parse(saved) : DEFAULT_SIZES;
+  });
+
+  const [availableUnits, setAvailableUnits] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_units');
+    return saved ? JSON.parse(saved) : DEFAULT_UNITS;
+  });
+
+  const updateSizes = (newList: string[]) => {
+    setAvailableSizes(newList);
+    localStorage.setItem('inventory_preferred_sizes', JSON.stringify(newList));
+  };
+
+  const updateUnits = (newList: string[]) => {
+    setAvailableUnits(newList);
+    localStorage.setItem('inventory_preferred_units', JSON.stringify(newList));
+  };
+
   const categoryOptions = {
     supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
   };
   
+  const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
+  
   const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com", "Custom"];
 
-  const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
-
-  const chemicalUnits = ["oz", "mL", "L", "Gallons", "Quarts", "Pints", "Custom"];
-  const supplyUnits = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg", "Custom"]; // Renamed from materialUnits
-  const equipmentUnits = ["Units", "Pieces", "Sets", "Custom"]; // Renamed from toolUnits
+  const supplyUnits = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg", "Custom"];
+  const equipmentUnits = ["Units", "Pieces", "Sets", "Custom"];
 
   const getUnitOptions = () => {
-    if (mode === 'chemical') return chemicalUnits;
+    if (mode === 'chemical') return availableUnits;
     if (mode === 'equipment' || mode === 'tool') return equipmentUnits;
     return supplyUnits; // supply or material
   };
@@ -766,34 +789,70 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div>
                     <Label className="text-xs text-zinc-400">Bottle Size</Label>
                     {!customSize ? (
-                      <select
-                        value={uniqueSizes.includes(form.bottleSize) ? form.bottleSize : (form.bottleSize ? "Add New" : "")}
-                        onChange={(e) => {
-                          if (e.target.value === "Add New") {
-                            setCustomSize(true);
-                            if (!uniqueSizes.includes(form.bottleSize)) {
-                              // keep
-                            } else {
-                              setForm({ ...form, bottleSize: "" });
-                            }
-                          } else {
-                            setForm({ ...form, bottleSize: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select Size...</option>
-                        {uniqueSizes.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                        <option value="Add New" className="text-blue-400 font-bold">+ Add New Size</option>
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.bottleSize || "Select Size..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {availableSizes.map(size => (
+                              <div key={size} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, bottleSize: size})}
+                                >
+                                  {size}
+                                </span>
+                                {form.bottleSize === size && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateSizes(availableSizes.filter(s => s !== size));
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomSize(true);
+                                setForm({...form, bottleSize: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add New Size
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.bottleSize}
                           autoFocus
                           onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (form.bottleSize && !availableSizes.includes(form.bottleSize)) {
+                                updateSizes([...availableSizes, form.bottleSize]);
+                              }
+                              setCustomSize(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           placeholder="e.g., 32 oz"
                         />
@@ -801,10 +860,16 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => setCustomSize(false)}
+                          onClick={() => {
+                            if (form.bottleSize && !availableSizes.includes(form.bottleSize)) {
+                              updateSizes([...availableSizes, form.bottleSize]);
+                            }
+                            setCustomSize(false);
+                          }}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -1038,42 +1103,89 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
                     {!customUnit ? (
-                      <select
-                        value={getUnitOptions().includes(form.unitOfMeasure) ? form.unitOfMeasure : "Custom"}
-                        onChange={(e) => {
-                          if (e.target.value === "Custom") {
-                            setCustomUnit(true);
-                            setForm({ ...form, unitOfMeasure: "" });
-                          } else {
-                            setForm({ ...form, unitOfMeasure: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select unit...</option>
-                        {getUnitOptions().map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.unitOfMeasure || "Select Unit..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {getUnitOptions().map(unit => (
+                              <div key={unit} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, unitOfMeasure: unit})}
+                                >
+                                  {unit}
+                                </span>
+                                {form.unitOfMeasure === unit && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                {mode === 'chemical' && availableUnits.includes(unit) && (
+                                  <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateUnits(availableUnits.filter(u => u !== unit));
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                    title="Remove from presets"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomUnit(true);
+                                setForm({...form, unitOfMeasure: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Custom Unit
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.unitOfMeasure}
+                          autoFocus
                           onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (mode === 'chemical' && form.unitOfMeasure && !availableUnits.includes(form.unitOfMeasure)) {
+                                updateUnits([...availableUnits, form.unitOfMeasure]);
+                              }
+                              setCustomUnit(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter custom unit..."
+                          placeholder="Enter unit..."
                         />
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (mode === 'chemical' && form.unitOfMeasure && !availableUnits.includes(form.unitOfMeasure)) {
+                              updateUnits([...availableUnits, form.unitOfMeasure]);
+                            }
                             setCustomUnit(false);
-                            setForm({ ...form, unitOfMeasure: "" });
                           }}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
