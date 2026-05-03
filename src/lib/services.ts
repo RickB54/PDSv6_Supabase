@@ -258,7 +258,15 @@ export const addOns: AddOn[] = [
   { id: 'paint-touch-up', name: 'Minor Paint Touch-Up', category: 'exterior', description: 'Spot touch-ups for small chips and scratches using compatible paint; not a full panel respray.', basePrice: 75, pricing: { compact: 75, midsize: 90, truck: 110, luxury: 140 } },
   { id: 'ceramic-coating', name: 'Ceramic Coating', category: 'exterior', description: 'Long-lasting paint protection with hydrophobic properties', basePrice: 500, pricing: { compact: 500, midsize: 500, truck: 550, luxury: 600 } },
   { id: 'paint-correction', name: 'Paint Correction', category: 'exterior', description: 'Remove swirls, scratches, and restore paint clarity', basePrice: 300, pricing: { compact: 300, midsize: 350, truck: 400, luxury: 450 } },
-  { id: 'odor-treatment', name: 'Odor Elimination Treatment', category: 'interior', description: 'Professional ozone treatment to eliminate persistent odors', basePrice: 100, pricing: { compact: 100, midsize: 100, truck: 100, luxury: 100 } }
+  { id: 'odor-treatment', name: 'Odor Elimination Treatment', category: 'interior', description: 'Professional ozone treatment to eliminate persistent odors', basePrice: 100, pricing: { compact: 100, midsize: 100, truck: 100, luxury: 100 } },
+  { 
+    id: 'ceramic-protection-1yr', 
+    name: '1-Year Ceramic Protection', 
+    category: 'exterior', 
+    description: 'Premium Graphene Ceramic Spray Coating – delivers up to 1 year of superior gloss, hydrophobic protection, and easy maintenance.', 
+    basePrice: 79, 
+    pricing: { compact: 79, midsize: 89, truck: 109, luxury: 139 } 
+  }
 ];
 
 export type VehicleType = 'compact' | 'midsize' | 'truck' | 'luxury';
