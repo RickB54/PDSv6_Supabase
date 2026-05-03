@@ -265,7 +265,15 @@ export const addOns: AddOn[] = [
     category: 'exterior', 
     description: 'Premium Graphene Ceramic Spray Coating – delivers up to 1 year of superior gloss, hydrophobic protection, and easy maintenance.', 
     basePrice: 79, 
-    pricing: { compact: 79, midsize: 89, truck: 109, luxury: 139 } 
+    pricing: { compact: 79, midsize: 109, truck: 129, luxury: 149 } 
+  },
+  { 
+    id: 'ceramic-coating-2yr', 
+    name: '2-Year Professional Ceramic Coating', 
+    category: 'exterior', 
+    description: 'Premium Professional Nano Ceramic Coating – delivers up to 2+ years of maximum gloss, hydrophobic protection, and durability.', 
+    basePrice: 269, 
+    pricing: { compact: 269, midsize: 299, truck: 349, luxury: 449 } 
   }
 ];
 
