@@ -20,7 +20,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import localforage from "localforage";
-import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X, RefreshCw, Info, PlusCircle } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
