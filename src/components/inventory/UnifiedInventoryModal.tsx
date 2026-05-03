@@ -139,17 +139,53 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
 
   useEffect(() => {
-    if (mode === 'chemical' && open) {
+    if (open) {
       getLibraryChemicals().then(setLibraryOptions).catch(err => console.error("Failed to load library", err));
       
-      // Fetch unique brands and sizes from existing inventory
       const fetchUniqueValues = async () => {
         try {
-          const { getChemicals } = await import("@/lib/inventory-data");
+          const { getChemicals, getMaterials, getTools } = await import("@/lib/inventory-data");
           const chems = await getChemicals();
+          const materials = await getMaterials();
+          const tools = await getTools();
+
+          // Brands
           const brands = Array.from(new Set(chems.map(c => c.brand).filter(Boolean))) as string[];
           setUniqueBrands(brands.sort((a, b) => a.localeCompare(b)));
-          // We no longer fetch all sizes from DB to keep the list clean as requested
+
+          // Categories
+          const materialCats = Array.from(new Set(materials.map(m => m.category).filter(Boolean))) as string[];
+          const toolCats = Array.from(new Set(tools.map(t => t.category).filter(Boolean))) as string[];
+          const newCats = { 
+            supply: Array.from(new Set([...availableCategories.supply, ...materialCats])).sort(),
+            equipment: Array.from(new Set([...availableCategories.equipment, ...toolCats])).sort()
+          };
+          setAvailableCategories(newCats);
+          localStorage.setItem('inventory_preferred_categories', JSON.stringify(newCats));
+
+          // Subtypes
+          const materialSubtypes = Array.from(new Set(materials.map(m => m.subtype).filter(Boolean))) as string[];
+          const newSubtypes = Array.from(new Set([...availableSubtypes, ...materialSubtypes])).sort();
+          setAvailableSubtypes(newSubtypes);
+          localStorage.setItem('inventory_preferred_subtypes', JSON.stringify(newSubtypes));
+
+          // Purchased Locations
+          const allItems = [...chems, ...materials, ...tools];
+          const locations = Array.from(new Set(allItems.map(i => (i as any).wherePurchased).filter(Boolean))) as string[];
+          const newPurchased = Array.from(new Set([...availablePurchased, ...locations])).sort();
+          setAvailablePurchased(newPurchased);
+          localStorage.setItem('inventory_preferred_purchased', JSON.stringify(newPurchased));
+
+          // Units (merged with existing presets)
+          const chemUnits = Array.from(new Set(chems.map(c => (c as any).unitOfMeasure || (c as any).unit_of_measure).filter(Boolean))) as string[];
+          updateUnits(Array.from(new Set([...availableUnits, ...chemUnits])).sort());
+
+          const matUnits = Array.from(new Set(materials.map(m => (m as any).unitOfMeasure || (m as any).unit_of_measure).filter(Boolean))) as string[];
+          updateSupplyUnits(Array.from(new Set([...availableSupplyUnits, ...matUnits])).sort());
+
+          const toolUnits = Array.from(new Set(tools.map(t => (t as any).unitOfMeasure || (t as any).unit_of_measure).filter(Boolean))) as string[];
+          updateEquipmentUnits(Array.from(new Set([...availableEquipmentUnits, ...toolUnits])).sort());
+
         } catch (err) {
           console.error("Failed to fetch unique inventory values", err);
         }
@@ -176,6 +212,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const DEFAULT_SIZES = ["1 unit", "1 gallon", "14 oz", "16 oz", "24 oz", "32 oz", "64 oz", "128 oz", "256 oz"];
   const DEFAULT_UNITS = ["oz", "mL", "Gallons", "Quarts", "Pints"];
+  const DEFAULT_SUPPLY_UNITS = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg"];
+  const DEFAULT_EQUIPMENT_UNITS = ["Units", "Pieces", "Sets"];
+  const DEFAULT_PURCHASED = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com"];
+  const DEFAULT_CATEGORIES = {
+    supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE"],
+    equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other"]
+  };
+  const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sizes');
@@ -185,6 +229,31 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [availableUnits, setAvailableUnits] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_units');
     return saved ? JSON.parse(saved) : DEFAULT_UNITS;
+  });
+
+  const [availableSupplyUnits, setAvailableSupplyUnits] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_supply_units');
+    return saved ? JSON.parse(saved) : DEFAULT_SUPPLY_UNITS;
+  });
+
+  const [availableEquipmentUnits, setAvailableEquipmentUnits] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_equipment_units');
+    return saved ? JSON.parse(saved) : DEFAULT_EQUIPMENT_UNITS;
+  });
+
+  const [availablePurchased, setAvailablePurchased] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_purchased');
+    return saved ? JSON.parse(saved) : DEFAULT_PURCHASED;
+  });
+
+  const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[]}>(() => {
+    const saved = localStorage.getItem('inventory_preferred_categories');
+    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+  });
+
+  const [availableSubtypes, setAvailableSubtypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_subtypes');
+    return saved ? JSON.parse(saved) : DEFAULT_SUBTYPES;
   });
 
   const updateSizes = (newList: string[]) => {
@@ -197,22 +266,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     localStorage.setItem('inventory_preferred_units', JSON.stringify(newList));
   };
 
-  const categoryOptions = {
-    supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
-    equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other", "Custom"]
+  const updateSupplyUnits = (newList: string[]) => {
+    setAvailableSupplyUnits(newList);
+    localStorage.setItem('inventory_preferred_supply_units', JSON.stringify(newList));
   };
-  
-  const sizeOptions = ["Small", "Medium", "Large", "Extra Large", "Custom"];
-  
-  const purchasedOptions = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com", "Custom"];
 
-  const supplyUnits = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg", "Custom"];
-  const equipmentUnits = ["Units", "Pieces", "Sets", "Custom"];
+  const updateEquipmentUnits = (newList: string[]) => {
+    setAvailableEquipmentUnits(newList);
+    localStorage.setItem('inventory_preferred_equipment_units', JSON.stringify(newList));
+  };
+
+  const updatePurchased = (newList: string[]) => {
+    setAvailablePurchased(newList);
+    localStorage.setItem('inventory_preferred_purchased', JSON.stringify(newList));
+  };
+
+  const updateCategories = (newList: {supply: string[], equipment: string[]}) => {
+    setAvailableCategories(newList);
+    localStorage.setItem('inventory_preferred_categories', JSON.stringify(newList));
+  };
+
+  const updateSubtypes = (newList: string[]) => {
+    setAvailableSubtypes(newList);
+    localStorage.setItem('inventory_preferred_subtypes', JSON.stringify(newList));
+  };
 
   const getUnitOptions = () => {
     if (mode === 'chemical') return availableUnits;
-    if (mode === 'equipment' || mode === 'tool') return equipmentUnits;
-    return supplyUnits; // supply or material
+    if (mode === 'equipment' || mode === 'tool') return availableEquipmentUnits;
+    return availableSupplyUnits;
   };
 
   useEffect(() => {
@@ -263,17 +345,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       const initialSubtype = (initial as any).subtype || "";
       const initialUnit = (initial as any).unitOfMeasure || "";
       const initialCat = (initial as any).category || "";
-      const isCustomCat = initialCat && 
+      setCustomCategory(initialCat && 
         (mode === 'equipment' || mode === 'tool' ? 
-          !categoryOptions.equipment.includes(initialCat) : 
-          !categoryOptions.supply.includes(initialCat));
-      
-      setCustomCategory(isCustomCat);
-      setCustomSubtype(initialSubtype && !sizeOptions.includes(initialSubtype));
+          !availableCategories.equipment.includes(initialCat) : 
+          !availableCategories.supply.includes(initialCat)));
+      setCustomSubtype(initialSubtype && !availableSubtypes.includes(initialSubtype));
       setCustomUnit(initialUnit && !getUnitOptions().includes(initialUnit));
       
       const initialPurchased = (initial as any).wherePurchased || "";
-      setCustomPurchased(initialPurchased && !purchasedOptions.includes(initialPurchased));
+      setCustomPurchased(initialPurchased && !availablePurchased.includes(initialPurchased));
 
       setForm((f) => ({
         ...f,
@@ -743,34 +823,57 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div>
                     <Label className="text-xs text-zinc-400">Brand (Optional)</Label>
                     {!customBrand ? (
-                      <select
-                        value={uniqueBrands.includes(form.brand || "") ? (form.brand || "") : (form.brand ? "Add New" : "")}
-                        onChange={(e) => {
-                          if (e.target.value === "Add New") {
-                            setCustomBrand(true);
-                            if (!uniqueBrands.includes(form.brand || "")) {
-                              // keep current brand in input if it was already custom
-                            } else {
-                              setForm({ ...form, brand: "" });
-                            }
-                          } else {
-                            setForm({ ...form, brand: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select Brand...</option>
-                        {uniqueBrands.map(b => (
-                          <option key={b} value={b}>{b}</option>
-                        ))}
-                        <option value="Add New" className="text-blue-400 font-bold">+ Add New Brand</option>
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.brand || "Select Brand..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {uniqueBrands.map(brand => (
+                              <div key={brand} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, brand: brand})}
+                                >
+                                  {brand}
+                                </span>
+                                {form.brand === brand && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                {/* Deleting brands doesn't make sense if they come from DB, but we'll allow it from UI state if needed */}
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomBrand(true);
+                                setForm({...form, brand: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Custom Brand
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.brand || ""}
                           autoFocus
                           onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              setCustomBrand(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           placeholder="Enter brand..."
                         />
@@ -780,8 +883,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           size="sm"
                           onClick={() => setCustomBrand(false)}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -881,28 +985,70 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div>
                     <Label className="text-xs text-zinc-400">Category</Label>
                     {!customCategory ? (
-                      <select
-                        value={categoryOptions.supply.includes(form.category) ? form.category : "Custom"}
-                        onChange={(e) => {
-                          if (e.target.value === "Custom") {
-                            setCustomCategory(true);
-                            setForm({ ...form, category: "" });
-                          } else {
-                            setForm({ ...form, category: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select category...</option>
-                        {categoryOptions.supply.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.category || "Select category..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {availableCategories.supply.map(cat => (
+                              <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, category: cat})}
+                                >
+                                  {cat}
+                                </span>
+                                {form.category === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) });
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomCategory(true);
+                                setForm({...form, category: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Custom Category
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.category}
+                          autoFocus
                           onChange={(e) => setForm({ ...form, category: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (form.category && !availableCategories.supply.includes(form.category)) {
+                                updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
+                              }
+                              setCustomCategory(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           placeholder="Enter custom category..."
                         />
@@ -911,12 +1057,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (form.category && !availableCategories.supply.includes(form.category)) {
+                              updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
+                            }
                             setCustomCategory(false);
-                            setForm({ ...form, category: "Other" });
                           }}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -924,28 +1073,70 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div>
                     <Label className="text-xs text-zinc-400">Subtype / Size</Label>
                     {!customSubtype ? (
-                      <select
-                        value={sizeOptions.includes(form.subtype) ? form.subtype : "Custom"}
-                        onChange={(e) => {
-                          if (e.target.value === "Custom") {
-                            setCustomSubtype(true);
-                            setForm({ ...form, subtype: "" });
-                          } else {
-                            setForm({ ...form, subtype: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select size...</option>
-                        {sizeOptions.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.subtype || "Select size..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {availableSubtypes.map(sub => (
+                              <div key={sub} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, subtype: sub})}
+                                >
+                                  {sub}
+                                </span>
+                                {form.subtype === sub && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateSubtypes(availableSubtypes.filter(s => s !== sub));
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomSubtype(true);
+                                setForm({...form, subtype: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Custom Size
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.subtype}
+                          autoFocus
                           onChange={(e) => setForm({ ...form, subtype: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (form.subtype && !availableSubtypes.includes(form.subtype)) {
+                                updateSubtypes([...availableSubtypes, form.subtype].sort());
+                              }
+                              setCustomSubtype(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           placeholder="Enter custom size..."
                         />
@@ -954,12 +1145,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (form.subtype && !availableSubtypes.includes(form.subtype)) {
+                              updateSubtypes([...availableSubtypes, form.subtype].sort());
+                            }
                             setCustomSubtype(false);
-                            setForm({ ...form, subtype: "" });
                           }}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -970,28 +1164,70 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 <div>
                   <Label className="text-xs text-zinc-400">Where Purchased</Label>
                   {!customPurchased ? (
-                    <select
-                      value={purchasedOptions.includes(form.wherePurchased || "") ? form.wherePurchased : (form.wherePurchased ? "Custom" : "")}
-                      onChange={(e) => {
-                        if (e.target.value === "Custom") {
-                          setCustomPurchased(true);
-                          setForm({ ...form, wherePurchased: "" });
-                        } else {
-                          setForm({ ...form, wherePurchased: e.target.value });
-                        }
-                      }}
-                      className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                    >
-                      <option value="">Select source...</option>
-                      {purchasedOptions.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                        >
+                          <span className="truncate">{form.wherePurchased || "Select source..."}</span>
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                        <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                          {availablePurchased.map(source => (
+                            <div key={source} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                              <span 
+                                className="flex-1 text-sm text-zinc-200" 
+                                onClick={() => setForm({...form, wherePurchased: source})}
+                              >
+                                {source}
+                              </span>
+                              {form.wherePurchased === source && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePurchased(availablePurchased.filter(s => s !== source));
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                title="Remove from presets"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="h-px bg-zinc-800 my-1" />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setCustomPurchased(true);
+                              setForm({...form, wherePurchased: ""});
+                            }}
+                            className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Custom Source
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   ) : (
                     <div className="flex gap-2">
                       <Input
                         value={form.wherePurchased}
+                        autoFocus
                         onChange={(e) => setForm({ ...form, wherePurchased: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (form.wherePurchased && !availablePurchased.includes(form.wherePurchased)) {
+                              updatePurchased([...availablePurchased, form.wherePurchased].sort());
+                            }
+                            setCustomPurchased(false);
+                          }
+                        }}
                         className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                         placeholder="Enter store name..."
                       />
@@ -1000,12 +1236,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          if (form.wherePurchased && !availablePurchased.includes(form.wherePurchased)) {
+                            updatePurchased([...availablePurchased, form.wherePurchased].sort());
+                          }
                           setCustomPurchased(false);
-                          setForm({ ...form, wherePurchased: "" });
                         }}
                         className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        title="Save and Return"
                       >
-                        <X className="h-4 w-4" />
+                        <Check className="h-4 w-4" />
                       </Button>
                     </div>
                   )}
@@ -1015,28 +1254,70 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 <div>
                   <Label className="text-xs text-zinc-400">Category</Label>
                   {!customCategory ? (
-                    <select
-                      value={categoryOptions.equipment.includes(form.category) ? form.category : "Custom"}
-                      onChange={(e) => {
-                        if (e.target.value === "Custom") {
-                          setCustomCategory(true);
-                          setForm({ ...form, category: "" });
-                        } else {
-                          setForm({ ...form, category: e.target.value });
-                        }
-                      }}
-                      className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                    >
-                      <option value="">Select category...</option>
-                      {categoryOptions.equipment.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                        >
+                          <span className="truncate">{form.category || "Select category..."}</span>
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                        <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                          {availableCategories.equipment.map(cat => (
+                            <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                              <span 
+                                className="flex-1 text-sm text-zinc-200" 
+                                onClick={() => setForm({...form, category: cat})}
+                              >
+                                {cat}
+                              </span>
+                              {form.category === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) });
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                title="Remove from presets"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="h-px bg-zinc-800 my-1" />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setCustomCategory(true);
+                              setForm({...form, category: ""});
+                            }}
+                            className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Custom Category
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   ) : (
                     <div className="flex gap-2">
                       <Input
                         value={form.category}
+                        autoFocus
                         onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (form.category && !availableCategories.equipment.includes(form.category)) {
+                              updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                            }
+                            setCustomCategory(false);
+                          }
+                        }}
                         className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                         placeholder="Enter custom category..."
                       />
@@ -1045,12 +1326,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          if (form.category && !availableCategories.equipment.includes(form.category)) {
+                            updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                          }
                           setCustomCategory(false);
-                          setForm({ ...form, category: "Other" });
                         }}
                         className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        title="Save and Return"
                       >
-                        <X className="h-4 w-4" />
+                        <Check className="h-4 w-4" />
                       </Button>
                     </div>
                   )}
@@ -1231,42 +1515,87 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
                     {!customUnit ? (
-                      <select
-                        value={getUnitOptions().includes(form.unitOfMeasure) ? form.unitOfMeasure : "Custom"}
-                        onChange={(e) => {
-                          if (e.target.value === "Custom") {
-                            setCustomUnit(true);
-                            setForm({ ...form, unitOfMeasure: "" });
-                          } else {
-                            setForm({ ...form, unitOfMeasure: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select unit...</option>
-                        {getUnitOptions().map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.unitOfMeasure || "Select Unit..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {getUnitOptions().map(unit => (
+                              <div key={unit} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, unitOfMeasure: unit})}
+                                >
+                                  {unit}
+                                </span>
+                                {form.unitOfMeasure === unit && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateEquipmentUnits(availableEquipmentUnits.filter(u => u !== unit));
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomUnit(true);
+                                setForm({...form, unitOfMeasure: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Custom Unit
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.unitOfMeasure}
+                          autoFocus
                           onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (form.unitOfMeasure && !availableEquipmentUnits.includes(form.unitOfMeasure)) {
+                                updateEquipmentUnits([...availableEquipmentUnits, form.unitOfMeasure].sort());
+                              }
+                              setCustomUnit(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter custom unit..."
+                          placeholder="Enter unit..."
                         />
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (form.unitOfMeasure && !availableEquipmentUnits.includes(form.unitOfMeasure)) {
+                              updateEquipmentUnits([...availableEquipmentUnits, form.unitOfMeasure].sort());
+                            }
                             setCustomUnit(false);
-                            setForm({ ...form, unitOfMeasure: "" });
                           }}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -1310,73 +1639,72 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-zinc-400">Where Purchased</Label>
-                    {!customPurchased ? (
-                      <select
-                        value={purchasedOptions.includes(form.wherePurchased) ? form.wherePurchased : (form.wherePurchased ? "Custom" : "")}
-                        onChange={(e) => {
-                          if (e.target.value === "Custom") {
-                            setCustomPurchased(true);
-                            setForm({ ...form, wherePurchased: "" });
-                          } else {
-                            setForm({ ...form, wherePurchased: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select location...</option>
-                        {purchasedOptions.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={form.wherePurchased}
-                          onChange={(e) => setForm({ ...form, wherePurchased: e.target.value })}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter custom location..."
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setCustomPurchased(false);
-                            setForm({ ...form, wherePurchased: "" });
-                          }}
-                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
                     {!customUnit ? (
-                      <select
-                        value={getUnitOptions().includes(form.unitOfMeasure) ? form.unitOfMeasure : "Custom"}
-                        onChange={(e) => {
-                          if (e.target.value === "Custom") {
-                            setCustomUnit(true);
-                            setForm({ ...form, unitOfMeasure: "" });
-                          } else {
-                            setForm({ ...form, unitOfMeasure: e.target.value });
-                          }
-                        }}
-                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
-                      >
-                        <option value="">Select unit...</option>
-                        {getUnitOptions().map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                          >
+                            <span className="truncate">{form.unitOfMeasure || "Select Unit..."}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                            {getUnitOptions().map(unit => (
+                              <div key={unit} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span 
+                                  className="flex-1 text-sm text-zinc-200" 
+                                  onClick={() => setForm({...form, unitOfMeasure: unit})}
+                                >
+                                  {unit}
+                                </span>
+                                {form.unitOfMeasure === unit && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateSupplyUnits(availableSupplyUnits.filter(u => u !== unit));
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="h-px bg-zinc-800 my-1" />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setCustomUnit(true);
+                                setForm({...form, unitOfMeasure: ""});
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Custom Unit
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
                       <div className="flex gap-2">
                         <Input
                           value={form.unitOfMeasure}
+                          autoFocus
                           onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (form.unitOfMeasure && !availableSupplyUnits.includes(form.unitOfMeasure)) {
+                                updateSupplyUnits([...availableSupplyUnits, form.unitOfMeasure].sort());
+                              }
+                              setCustomUnit(false);
+                            }
+                          }}
                           className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           placeholder="Enter custom unit..."
                         />
@@ -1385,12 +1713,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (form.unitOfMeasure && !availableSupplyUnits.includes(form.unitOfMeasure)) {
+                              updateSupplyUnits([...availableSupplyUnits, form.unitOfMeasure].sort());
+                            }
                             setCustomUnit(false);
-                            setForm({ ...form, unitOfMeasure: "" });
                           }}
                           className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                          title="Save and Return"
                         >
-                          <X className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
                       </div>
                     )}

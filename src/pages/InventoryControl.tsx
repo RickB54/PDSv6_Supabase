@@ -1491,7 +1491,14 @@ const InventoryControl = () => {
       onClick={() => openEdit(c, 'chemical')}
     >
       <TableCell className="font-medium flex items-center gap-2 text-white py-3">
-        {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover border border-zinc-700 shrink-0" />}
+        {c.imageUrl && (
+          <img 
+            src={c.imageUrl} 
+            alt={c.name} 
+            onClick={(e) => e.stopPropagation()}
+            className="h-8 w-8 rounded object-cover border border-zinc-700 shrink-0 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-yellow-500/50 touch-none" 
+          />
+        )}
         <div className="flex flex-col">
           <span>{c.brand ? `${c.brand} / ${c.name}` : c.name}</span>
           {(() => {
@@ -1590,7 +1597,14 @@ const InventoryControl = () => {
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0">
           <div className="font-bold text-white flex items-center gap-2">
-            {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="h-8 w-8 rounded object-cover" />}
+            {c.imageUrl && (
+              <img 
+                src={c.imageUrl} 
+                alt={c.name} 
+                onClick={(e) => e.stopPropagation()}
+                className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-yellow-500/50 touch-none" 
+              />
+            )}
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
           </div>
           <div className="text-sm text-zinc-300">
@@ -2024,7 +2038,14 @@ const InventoryControl = () => {
                         onClick={() => openEdit(m, 'material')}
                       >
                         <TableCell className="font-medium flex items-center gap-2 text-white">
-                          {m.imageUrl && <img src={m.imageUrl} alt={m.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
+                          {m.imageUrl && (
+                            <img 
+                              src={m.imageUrl} 
+                              alt={m.name} 
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-blue-500/50 touch-none" 
+                            />
+                          )}
                           {m.name}
                         </TableCell>
                         <TableCell className="text-zinc-300">
@@ -2088,7 +2109,14 @@ const InventoryControl = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-bold text-white flex items-center gap-2">
-                          {m.imageUrl && <img src={m.imageUrl} alt={m.name} className="h-8 w-8 rounded object-cover" />}
+                          {m.imageUrl && (
+                            <img 
+                              src={m.imageUrl} 
+                              alt={m.name} 
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-blue-500/50 touch-none" 
+                            />
+                          )}
                           {m.name}
                         </div>
                         <div className={`text-sm font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
@@ -2243,7 +2271,14 @@ const InventoryControl = () => {
                         onClick={() => openEdit(t, 'tool')}
                       >
                         <TableCell className="font-medium flex items-center gap-2 !text-white">
-                          {t.imageUrl && <img src={t.imageUrl} alt={t.name} className="h-8 w-8 rounded object-cover border border-zinc-700" />}
+                          {t.imageUrl && (
+                            <img 
+                              src={t.imageUrl} 
+                              alt={t.name} 
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-purple-500/50 touch-none" 
+                            />
+                          )}
                           {t.name}
                         </TableCell>
                         <TableCell className="text-zinc-300">
@@ -2297,7 +2332,14 @@ const InventoryControl = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-bold text-white flex items-center gap-2">
-                          {t.imageUrl && <img src={t.imageUrl} alt={t.name} className="h-8 w-8 rounded object-cover" />}
+                          {t.imageUrl && (
+                            <img 
+                              src={t.imageUrl} 
+                              alt={t.name} 
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-purple-500/50 touch-none" 
+                            />
+                          )}
                           {t.name}
                         </div>
                         <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
