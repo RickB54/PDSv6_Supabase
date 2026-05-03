@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
 import { auditEmployeeAction } from "@/lib/audit";
@@ -56,6 +56,55 @@ const transformRatio = (r: string) => {
   const match = normalized.match(/^1[:/](\d+)$/);
   if (match) return `${match[1]}:1`;
   return normalized;
+};
+
+/**
+ * Enhanced Thumbnail that auto-zooms when scrolled into the center of the viewport (Mobile)
+ * and supports manual hover/touch zoom on all devices.
+ */
+const InventoryThumbnail = ({ src, alt, className, activeBorderClass }: { src: string, alt: string, className?: string, activeBorderClass?: string }) => {
+  const [isAutoZoomed, setIsAutoZoomed] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    // Intersection Observer for Scroll-based Auto Zoom (Mobile Only)
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsAutoZoomed(false);
+        return;
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Trigger zoom when image enters the center area of the screen
+        setIsAutoZoomed(entry.isIntersecting);
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "-40% 0px -40% 0px" // Focus on the middle 20% of the screen
+      }
+    );
+
+    if (imgRef.current) observer.observe(imgRef.current);
+    
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  return (
+    <img
+      ref={imgRef}
+      src={src}
+      alt={alt}
+      onClick={(e) => e.stopPropagation()}
+      className={`${className} transition-all duration-300 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl ${isAutoZoomed ? `scale-[2.2] z-40 shadow-xl ${activeBorderClass}` : ''} cursor-zoom-in touch-none`}
+    />
+  );
 };
 
 
@@ -1492,11 +1541,11 @@ const InventoryControl = () => {
     >
       <TableCell className="font-medium flex items-center gap-2 text-white py-3">
         {c.imageUrl && (
-          <img 
+          <InventoryThumbnail 
             src={c.imageUrl} 
             alt={c.name} 
-            onClick={(e) => e.stopPropagation()}
-            className="h-8 w-8 rounded object-cover border border-zinc-700 shrink-0 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-yellow-500/50 touch-none" 
+            activeBorderClass="border-yellow-500/50"
+            className="h-8 w-8 rounded object-cover border border-zinc-700 shrink-0 relative" 
           />
         )}
         <div className="flex flex-col">
@@ -1598,11 +1647,11 @@ const InventoryControl = () => {
         <div className="flex-1 min-w-0">
           <div className="font-bold text-white flex items-center gap-2">
             {c.imageUrl && (
-              <img 
+              <InventoryThumbnail 
                 src={c.imageUrl} 
                 alt={c.name} 
-                onClick={(e) => e.stopPropagation()}
-                className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-yellow-500/50 touch-none" 
+                activeBorderClass="border-yellow-500/50"
+                className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
               />
             )}
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
@@ -2039,11 +2088,11 @@ const InventoryControl = () => {
                       >
                         <TableCell className="font-medium flex items-center gap-2 text-white">
                           {m.imageUrl && (
-                            <img 
+                            <InventoryThumbnail 
                               src={m.imageUrl} 
                               alt={m.name} 
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-blue-500/50 touch-none" 
+                              activeBorderClass="border-blue-500/50"
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
                             />
                           )}
                           {m.name}
@@ -2110,11 +2159,11 @@ const InventoryControl = () => {
                       <div>
                         <div className="font-bold text-white flex items-center gap-2">
                           {m.imageUrl && (
-                            <img 
+                            <InventoryThumbnail 
                               src={m.imageUrl} 
                               alt={m.name} 
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-blue-500/50 touch-none" 
+                              activeBorderClass="border-blue-500/50"
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
                             />
                           )}
                           {m.name}
@@ -2272,11 +2321,11 @@ const InventoryControl = () => {
                       >
                         <TableCell className="font-medium flex items-center gap-2 !text-white">
                           {t.imageUrl && (
-                            <img 
+                            <InventoryThumbnail 
                               src={t.imageUrl} 
                               alt={t.name} 
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-purple-500/50 touch-none" 
+                              activeBorderClass="border-purple-500/50"
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
                             />
                           )}
                           {t.name}
@@ -2333,11 +2382,11 @@ const InventoryControl = () => {
                       <div>
                         <div className="font-bold text-white flex items-center gap-2">
                           {t.imageUrl && (
-                            <img 
+                            <InventoryThumbnail 
                               src={t.imageUrl} 
                               alt={t.name} 
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 transition-all duration-200 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl relative cursor-zoom-in hover:border-purple-500/50 touch-none" 
+                              activeBorderClass="border-purple-500/50"
+                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
                             />
                           )}
                           {t.name}
