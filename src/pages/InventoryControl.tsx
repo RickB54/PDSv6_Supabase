@@ -80,7 +80,7 @@ const InventoryThumbnail = ({ id, src, alt, className, activeBorderClass }: { id
       src={src}
       alt={alt}
       onClick={(e) => e.stopPropagation()}
-      className={`${className} transition-all duration-300 hover:scale-[2.5] active:scale-[3] hover:z-50 active:z-[100] hover:shadow-2xl active:shadow-2xl ${isAutoZoomed ? `scale-[2.2] z-40 shadow-xl ${activeBorderClass}` : ''} cursor-zoom-in touch-none`}
+      className={`${className} transition-all duration-300 hover:scale-[2.5] group-hover:scale-[2.5] active:scale-[3] hover:z-50 group-hover:z-50 active:z-[100] hover:shadow-2xl group-hover:shadow-2xl ${isAutoZoomed ? `scale-[2.2] z-40 shadow-xl ${activeBorderClass}` : ''} cursor-zoom-in touch-none`}
     />
   );
 };
@@ -1547,7 +1547,7 @@ const InventoryControl = () => {
   const renderChemicalRow = (c: Chemical) => (
     <TableRow
       key={c.id}
-      className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer"
+      className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer group transition-colors"
       onClick={() => openEdit(c, 'chemical')}
     >
       <TableCell className="font-medium flex items-center gap-2 text-white py-3">
@@ -1652,7 +1652,7 @@ const InventoryControl = () => {
   const renderChemicalCard = (c: Chemical) => (
     <div
       key={c.id}
-      className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors"
+      className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors group"
       onClick={() => openEdit(c, 'chemical')}
     >
       <div className="flex justify-between items-start">
@@ -2097,7 +2097,7 @@ const InventoryControl = () => {
                     {filteredSupplies.map(m => (
                       <TableRow
                         key={m.id}
-                        className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer"
+                        className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer group transition-colors"
                         onClick={() => openEdit(m, 'material')}
                       >
                         <TableCell className="font-medium flex items-center gap-2 text-white">
@@ -2167,7 +2167,7 @@ const InventoryControl = () => {
                 {filteredSupplies.map(m => (
                   <div
                     key={m.id}
-                    className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors"
+                    className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors group"
                     onClick={() => openEdit(m, 'material')}
                   >
                     <div className="flex justify-between items-start">
@@ -2332,7 +2332,7 @@ const InventoryControl = () => {
                     {filteredEquipment.map(t => (
                       <TableRow
                         key={t.id}
-                        className="border-purple-500/10 hover:bg-purple-500/5 cursor-pointer"
+                        className="border-purple-500/10 hover:bg-purple-500/5 cursor-pointer group transition-colors"
                         onClick={() => openEdit(t, 'tool')}
                       >
                         <TableCell className="font-medium flex items-center gap-2 !text-white">
@@ -2392,7 +2392,7 @@ const InventoryControl = () => {
                 {tools.map(t => (
                   <div
                     key={t.id}
-                    className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-purple-500/5 transition-colors"
+                    className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-purple-500/5 transition-colors group"
                     onClick={() => openEdit(t, 'tool')}
                   >
                     <div className="flex justify-between items-start">
