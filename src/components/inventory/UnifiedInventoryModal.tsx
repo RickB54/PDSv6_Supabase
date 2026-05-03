@@ -139,6 +139,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   useEffect(() => {
     if (mode === 'chemical' && open) {
       getLibraryChemicals().then(setLibraryOptions).catch(err => console.error("Failed to load library", err));
+      
+      // Fetch unique brands and sizes from existing inventory
+      const fetchUniqueValues = async () => {
+        try {
+          const { getChemicals } = await import("@/lib/inventory-data");
+          const chems = await getChemicals();
+          const brands = Array.from(new Set(chems.map(c => c.brand).filter(Boolean))) as string[];
+          const sizes = Array.from(new Set(chems.map(c => c.bottleSize).filter(Boolean))) as string[];
+          setUniqueBrands(brands.sort((a, b) => a.localeCompare(b)));
+          setUniqueSizes(sizes.sort((a, b) => a.localeCompare(b)));
+        } catch (err) {
+          console.error("Failed to fetch unique inventory values", err);
+        }
+      };
+      fetchUniqueValues();
     }
   }, [mode, open]);
 
@@ -152,6 +167,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [customSubtype, setCustomSubtype] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
   const [customPurchased, setCustomPurchased] = useState(false);
+  const [customBrand, setCustomBrand] = useState(false);
+  const [customSize, setCustomSize] = useState(false);
+
+  const [uniqueBrands, setUniqueBrands] = useState<string[]>([]);
+  const [uniqueSizes, setUniqueSizes] = useState<string[]>([]);
 
   const categoryOptions = {
     supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE", "Custom"],
@@ -192,6 +212,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               setCustomUnit(parsed.customUnit || false);
               setCustomCategory(parsed.customCategory || false);
               setCustomPurchased(parsed.customPurchased || false);
+              setCustomBrand(parsed.customBrand || false);
+              setCustomSize(parsed.customSize || false);
               recoveredRef.current = true;
               return;
             }
@@ -203,6 +225,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             setCustomUnit(parsed.customUnit || false);
             setCustomCategory(parsed.customCategory || false);
             setCustomPurchased(parsed.customPurchased || false);
+            setCustomBrand(parsed.customBrand || false);
+            setCustomSize(parsed.customSize || false);
             recoveredRef.current = true;
             return;
           }
@@ -263,6 +287,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       setCustomSubtype(false);
       setCustomUnit(false);
       setCustomPurchased(false);
+      setCustomBrand(false);
+      setCustomSize(false);
       setForm({
         id: undefined,
         name: "",
@@ -308,10 +334,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         mode,
         customCategory,
         customSubtype,
-        customUnit
+        customUnit,
+        customBrand,
+        customSize
       }));
     }
-  }, [form, mode, customCategory, customSubtype, customUnit, open]);
+  }, [form, mode, customCategory, customSubtype, customUnit, customBrand, customSize, open]);
 
   const numeric = (v: string) => {
     const n = parseFloat(v);
@@ -654,7 +682,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       mode,
                       customCategory,
                       customSubtype,
-                      customUnit
+                      customUnit,
+                      customBrand,
+                      customSize
                     }));
                     localStorage.setItem('pending_inventory_form_active', 'true');
                     photoCameraRef.current?.click(); 
@@ -686,25 +716,99 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 />
               </div>
               {mode === 'chemical' && (
-                <div>
-                  <Label className="text-xs text-zinc-400">Brand (Optional)</Label>
-                  <Input
-                    value={form.brand || ""}
-                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    placeholder="e.g., Superior Products, Meguiar's"
-                  />
-                </div>
-              )}
-              {mode === 'chemical' && (
-                <div>
-                  <Label className="text-xs text-zinc-400">Bottle Size</Label>
-                  <Input
-                    value={form.bottleSize}
-                    onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
-                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    placeholder="e.g., 32 oz, 1 L"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-zinc-400">Brand (Optional)</Label>
+                    {!customBrand ? (
+                      <select
+                        value={uniqueBrands.includes(form.brand || "") ? (form.brand || "") : (form.brand ? "Add New" : "")}
+                        onChange={(e) => {
+                          if (e.target.value === "Add New") {
+                            setCustomBrand(true);
+                            if (!uniqueBrands.includes(form.brand || "")) {
+                              // keep current brand in input if it was already custom
+                            } else {
+                              setForm({ ...form, brand: "" });
+                            }
+                          } else {
+                            setForm({ ...form, brand: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select Brand...</option>
+                        {uniqueBrands.map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                        <option value="Add New" className="text-blue-400 font-bold">+ Add New Brand</option>
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.brand || ""}
+                          autoFocus
+                          onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="Enter brand..."
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCustomBrand(false)}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-xs text-zinc-400">Bottle Size</Label>
+                    {!customSize ? (
+                      <select
+                        value={uniqueSizes.includes(form.bottleSize) ? form.bottleSize : (form.bottleSize ? "Add New" : "")}
+                        onChange={(e) => {
+                          if (e.target.value === "Add New") {
+                            setCustomSize(true);
+                            if (!uniqueSizes.includes(form.bottleSize)) {
+                              // keep
+                            } else {
+                              setForm({ ...form, bottleSize: "" });
+                            }
+                          } else {
+                            setForm({ ...form, bottleSize: e.target.value });
+                          }
+                        }}
+                        className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select Size...</option>
+                        {uniqueSizes.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                        <option value="Add New" className="text-blue-400 font-bold">+ Add New Size</option>
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.bottleSize}
+                          autoFocus
+                          onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="e.g., 32 oz"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCustomSize(false)}
+                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {(mode === 'supply' || mode === 'material') && (
