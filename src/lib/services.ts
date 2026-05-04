@@ -11,40 +11,49 @@ export function getServiceInstructions(name: string, id?: string): string {
   const n = name.toLowerCase();
   const sid = id?.toLowerCase() || "";
 
+  // 0. Check for user-defined overrides in localStorage (Admin edits)
+  try {
+    const overrides = JSON.parse(localStorage.getItem('stepInstructionOverrides') || '{}');
+    const key = sid || n;
+    if (overrides[key]) return overrides[key];
+  } catch (e) { console.error('Failed to parse instruction overrides:', e); }
+
   // 1. Precise Prep/Setup steps (by ID)
-  if (sid === 'prep-inspect') return "Walk around the vehicle and note existing damage (dents, scratches) on the diagram. Confirm vehicle condition with customer if present.";
-  if (sid === 'prep-tools') return "Ensure pressure washer, foam cannon, buckets, mitts, and brushes are ready. Check water tank and generator fuel levels.";
-  if (sid === 'prep-walkaround') return "Review the service package with the client. Confirm any special requests or areas of concern.";
+  if (sid === 'prep-inspect') return "Inspect vehicle (exterior & interior). Walk around the vehicle and note existing damage (dents, scratches) on the diagram. Confirm vehicle condition with customer if present.";
+  if (sid === 'prep-tools') return "Gather tools & chemicals. Ensure pressure washer, foam cannon, buckets, mitts, and brushes are ready. Check water tank and generator fuel levels.";
+  if (sid === 'prep-walkaround') return "Customer walkaround & expectations. Review the service package with the client. Confirm any special requests or areas of concern.";
 
-  // 2. Interior Specifics (Highest precedence to avoid "wheel" vs "steering wheel" overlap)
-  if (n.includes('steering wheel') || n.includes('dash')) return "Use a soft brush and microfiber to clean the instrument cluster, steering wheel buttons, and dashboard seams. UV protect handles/plastics.";
-  if (n.includes('console') || n.includes('accessories')) return "Clean cup holders, shift boot, and center storage areas. Use steam for sticky residue if needed.";
+  // 2. Wheels & Tires
+  if (n.includes('wheels & tires first')) return "Chemical: Dark Fury 4:1 or 7:1 (Alternative: Meguiar's APC 4:1). Application: Agitate with brush. Dwell Time: No dwell needed.";
+
+  // 3. Pre-Treat
+  if (n.includes('pre-treat bugs')) return "Chemical: Road Warrior 4:1 (Alternative: Pink Perfection 4:1). Dwell Time: 3–5 minutes. Application Tip: Spray on dry surface before rinsing.";
+
+  // 4. Foam Bath
+  if (n.includes('foam bath')) return "Chemical: Cherry Foam 5:1 or McGuire’s Gold Class 5:1. Dwell Time: 3–5 minutes. Application Tip: Apply thick layer of foam and let it dwell to loosen grime.";
+
+  // 5. Drying
+  if (n.includes('drying')) return "Chemical: Formula 4 20:1 sprayed on wet paint. Application Tip: Use a clean microfiber drying towel or air blower.";
+
+  // 6. Paint Protection
+  if (n.includes('paint protection')) return "Chemical: Spray Wax RTU or Formula 4 20:1. Application Tip: Apply thin, even layer using a soft foam applicator and buff off.";
+
+  // 7. Interior Plastics / Trim
+  if (n.includes('plastics / vinyl / trim')) return "Chemical: Pink Perfection 10:1, final pass with P&S Xpress 3:1 or Cover All 4:1. Application Tip: Use a soft brush for crevices and wipe with clean microfiber.";
+
+  // 8. Fabric / Carpet
+  if (n.includes('fabric / carpet')) return "Chemical: Carpet Bomber 7:1 (standard) or 5:1 (heavy). Application Tip: Agitate with brush and pull out dirt with extractor if needed.";
+
+  // 9. Odor & Stain
+  if (n.includes('odor & stain treatment')) return "Chemical: Terminator RTU. Application Tip: Targeted odor neutralization (food, smoke, pet). Do not mask—neutralize.";
+
+  // 10. General Interior
+  if (n.includes('vacuum')) return "Remove floor mats first. Vacuum all carpets, seats, and crevices from top to bottom. Use stiff brush to agitate embedded debris.";
+  if (n.includes('dashboard') || n.includes('steering wheel')) return "Use a soft brush and microfiber to clean the instrument cluster, steering wheel buttons, and dashboard seams.";
   if (n.includes('mats')) return "Remove mats from vehicle. Pressure wash rubber mats or vacuum and detail carpet mats. Dry completely before reinstalling.";
-  if (n.includes('rugs')) return "Clean large area rugs or custom floor coverings separately to ensure deep grit removal.";
-  if (n.includes('vacuum')) return "Remove floor mats first. Vacuum all carpets, seats, and crevices. Use stiff brush to agitate embedded debris.";
-  if (n.includes('steam clean all panels')) return "Use dry steam to sanitize and deep clean plastic/vinyl panels. Wipe immediately with clean microfiber.";
-  if (n.includes('steam clean all vents')) return "Direct steam into HVAC vents to kill bacteria and remove dust. Follow with compressed air.";
-  if (n.includes('extraction')) return "Apply fabric cleaner/shampoo. Agitate with brush. Use heated extractor to pull out dirt and moisture. Don't over-saturate.";
-  if (n.includes('condition & protect leather')) return "Apply pH-balanced leather conditioner with applicator. Let dwell for 5 mins then buff off excess for a matte finish.";
-  if (n.includes('wipe down') || n.includes('wipe-down')) return "Wipe down dashboard, console, and door panels with APC and a microfiber towel. Use a brush for vents.";
-
-  // 3. Exterior Details & Specialty
+  if (n.includes('glass')) return "Use distinct glass towel. Spray cleaner on towel, not glass (to avoid overspray). Wipe in box pattern for streak-free finish.";
   if (n.includes('jamb')) return "Degrease and wipe all door, trunk, and hood jambs. Ensure no cleaner residue remains on weather stripping.";
-  if (n.includes('gas cap')) return "Open gas cap door, degrease the inner area, and rinse. Wipe dry to prevent water streaks.";
-  if (n.includes('wheel wells') || n.includes('well cleaned')) return "Degrease and pressure wash the wheel wells to remove mud, salt, and road grime.";
-  if (n.includes('rim') || (n.includes('wheel') && !n.includes('steering'))) return "Clean face and barrel of wheels. Use iron remover if brake dust is heavy. Rinse thoroughly.";
-  if (n.includes('tire')) return "Apply tire dressing evenly with an applicator pad. Wipe off excess to prevent sling.";
-  if (n.includes('clay')) return "Spray clay lubricant liberally. Gently glide clay bar over paint until smooth. Fold clay often to expose clean surface.";
-  if (n.includes('wax') || n.includes('sealant')) return "Apply thin, even layer using a soft foam applicator. Allow to haze (if required) then buff off with a clean plush towel.";
-
-  // 4. General Exterior Wash
-  if (n.includes('foam')) return "Apply a thick layer of foam. Let it dwell for 3-5 minutes to loosen grime. Do not let it dry on paint.";
-  if (n.includes('wash')) return "Use the two-bucket method. Wash from top to bottom. Use a separate mitt for lower panels/wheels if possible.";
-  if (n.includes('rinse')) return "Thoroughly rinse the vehicle from top to bottom to remove loose dirt and debris. Don't forget wheel wells.";
-  if (n.includes('dry')) return "Use a clean microfiber drying towel or air blower. Ensure no standing water remains in mirrors, door jambs, or grilles.";
-
-  // 5. Final / Shared
-  if (n.includes('glass') || n.includes('windows cleaned')) return "Use distinct glass towel. Spray cleaner on towel, not glass (to avoid overspray). Wipe in box pattern.";
+  if (n.includes('inspection')) return "Final walkthrough of the interior to ensure all standards are met and no spots were missed.";
 
   return "Perform this step with care. Ensure quality standards are met before proceeding.";
 }
@@ -99,13 +108,14 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 90,
     pricing: { compact: 90, midsize: 110, truck: 120, luxury: 130 },
     steps: [
-      { id: 'foam-bath', name: 'Exterior Foam Bath', category: 'exterior', instructions: getServiceInstructions('Exterior Foam Bath') },
-      { id: 'btn-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior', instructions: getServiceInstructions('Two-Bucket Hand Wash with Grit Guards') },
-      { id: 'tire-shine', name: 'Tire Scrub & Shine', category: 'exterior', instructions: getServiceInstructions('Tire Scrub & Shine') },
-      { id: 'rim-clean', name: 'Rims Cleaned & Shined', category: 'exterior', instructions: getServiceInstructions('Rims Cleaned & Shined') },
-      { id: 'gas-cap', name: 'Clean Gas Cap Area', category: 'exterior', instructions: getServiceInstructions('Clean Gas Cap Area') },
-      { id: 'blow-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior', instructions: getServiceInstructions('Blow Dry – Followed by Microfiber Towel Hand Dry') },
-      { id: 'spray-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'final', instructions: getServiceInstructions('Premium Spray Wax / Paint Sealant') }
+      { id: 'ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
+      { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
+      { id: 'ext-bugs', name: 'Pre-Treat bugs / heavy grime', category: 'exterior' },
+      { id: 'ext-foam', name: 'Foam Bath', category: 'exterior' },
+      { id: 'ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
+      { id: 'ext-drying', name: 'Drying', category: 'exterior' },
+      { id: 'ext-protection', name: 'Paint Protection', category: 'final' }
     ]
   },
   {
@@ -115,13 +125,15 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 180,
     pricing: { compact: 180, midsize: 200, truck: 210, luxury: 240 },
     steps: [
-      { id: 'int-vac', name: 'Thorough Vacuum of Interior', category: 'interior', instructions: getServiceInstructions('Thorough Vacuum of Interior') },
-      { id: 'int-mats', name: 'Clean All Floor Mats', category: 'interior', instructions: getServiceInstructions('Clean All Floor Mats') },
-      { id: 'int-rugs', name: 'Clean All Area Rugs', category: 'interior', instructions: getServiceInstructions('Clean All Area Rugs') },
-      { id: 'int-dash', name: 'Clean Dashboard & Steering Wheel', category: 'interior', instructions: getServiceInstructions('Clean Dashboard & Steering Wheel') },
-      { id: 'int-console', name: 'Clean Center Console & Accessories', category: 'interior', instructions: getServiceInstructions('Clean Center Console & Accessories') },
-      { id: 'int-wipe', name: 'Thorough Wipe Down of All Interior Surfaces', category: 'interior', instructions: getServiceInstructions('Thorough Wipe Down of All Interior Surfaces') },
-      { id: 'int-win', name: 'Windows Cleaned Streak Free', category: 'final', instructions: getServiceInstructions('Windows Cleaned Streak Free') }
+      { id: 'int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
+      { id: 'int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
+      { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
+      { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
+      { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'int-odor', name: 'Odor & Stain Treatment', category: 'interior' },
+      { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'final' },
+      { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
+      { id: 'int-inspection', name: 'Final Interior Inspection', category: 'final' }
     ]
   },
   {
@@ -131,21 +143,23 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 230,
     pricing: { compact: 230, midsize: 270, truck: 290, luxury: 320 },
     steps: [
-      { id: 'ext-foam', name: 'Exterior Foam Bath', category: 'exterior', instructions: getServiceInstructions('Exterior Foam Bath') },
-      { id: 'ext-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior', instructions: getServiceInstructions('Two-Bucket Hand Wash with Grit Guards') },
-      { id: 'ext-tire', name: 'Tire Scrub & Shine', category: 'exterior', instructions: getServiceInstructions('Tire Scrub & Shine') },
-      { id: 'ext-rim', name: 'Rims Cleaned & Shined', category: 'exterior', instructions: getServiceInstructions('Rims Cleaned & Shined') },
-      { id: 'ext-gas', name: 'Clean Gas Cap Area', category: 'exterior', instructions: getServiceInstructions('Clean Gas Cap Area') },
-      { id: 'ext-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior', instructions: getServiceInstructions('Blow Dry – Followed by Microfiber Towel Hand Dry') },
-      { id: 'ext-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'exterior', instructions: getServiceInstructions('Premium Spray Wax / Paint Sealant') },
-      { id: 'int-vac', name: 'Thorough Vacuum of Interior', category: 'interior', instructions: getServiceInstructions('Thorough Vacuum of Interior') },
-      { id: 'int-mats', name: 'Clean All Floor Mats', category: 'interior', instructions: getServiceInstructions('Clean All Floor Mats') },
-      { id: 'int-rugs', name: 'Clean All Area Rugs', category: 'interior', instructions: getServiceInstructions('Clean All Area Rugs') },
-      { id: 'int-dash', name: 'Clean Dashboard & Steering Wheel', category: 'interior', instructions: getServiceInstructions('Clean Dashboard & Steering Wheel') },
-      { id: 'int-console', name: 'Clean Center Console & Accessories', category: 'interior', instructions: getServiceInstructions('Clean Center Console & Accessories') },
-      { id: 'int-wipe', name: 'Thorough Wipe Down of All Interior Surfaces', category: 'interior', instructions: getServiceInstructions('Thorough Wipe Down of All Interior Surfaces') },
-      { id: 'int-win', name: 'Windows Cleaned Streak Free', category: 'final', instructions: getServiceInstructions('Windows Cleaned Streak Free') },
-      { id: 'int-jamb', name: 'Clean Door & Trunk Jambs', category: 'final', instructions: getServiceInstructions('Clean Door & Trunk Jambs') }
+      { id: 'ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
+      { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
+      { id: 'ext-bugs', name: 'Pre-Treat bugs / heavy grime', category: 'exterior' },
+      { id: 'ext-foam', name: 'Foam Bath', category: 'exterior' },
+      { id: 'ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
+      { id: 'ext-drying', name: 'Drying', category: 'exterior' },
+      { id: 'ext-protection', name: 'Paint Protection', category: 'exterior' },
+      { id: 'int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
+      { id: 'int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
+      { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
+      { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
+      { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'int-odor', name: 'Odor & Stain Treatment', category: 'interior' },
+      { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'final' },
+      { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
+      { id: 'int-inspection', name: 'Final Interior Inspection', category: 'final' }
     ]
   },
   // --- PRIME ELITE ---
@@ -156,19 +170,20 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 160,
     pricing: { compact: 160, midsize: 180, truck: 190, luxury: 210 },
     steps: [
-      { id: 'elite-foam', name: 'Exterior Foam Bath', category: 'exterior', instructions: getServiceInstructions('Exterior Foam Bath') },
-      { id: 'elite-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior', instructions: getServiceInstructions('Two-Bucket Hand Wash with Grit Guards') },
-      { id: 'elite-tire', name: 'Tire Scrub & Shine', category: 'exterior', instructions: getServiceInstructions('Tire Scrub & Shine') },
-      { id: 'elite-rim', name: 'Rims Cleaned & Shined', category: 'exterior', instructions: getServiceInstructions('Rims Cleaned & Shined') },
-      { id: 'elite-gas', name: 'Clean Gas Cap Area', category: 'exterior', instructions: getServiceInstructions('Clean Gas Cap Area') },
-      { id: 'elite-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior', instructions: getServiceInstructions('Blow Dry – Followed by Microfiber Towel Hand Dry') },
-      { id: 'elite-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'exterior', instructions: getServiceInstructions('Premium Spray Wax / Paint Sealant') },
-      { id: 'elite-well', name: 'Wheel Wells Cleaned', category: 'exterior', instructions: getServiceInstructions('Wheel Wells Cleaned') },
-      { id: 'elite-clay', name: 'Clay Bar Treatment', category: 'exterior', instructions: getServiceInstructions('Clay Bar Treatment') },
-      { id: 'elite-decon', name: 'Paint Decontamination', category: 'exterior', instructions: getServiceInstructions('Paint Decontamination') },
-      { id: 'elite-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior', instructions: getServiceInstructions('Black Trim Restore & UV Protection') },
-      { id: 'elite-win', name: 'Windows Cleaned Streak Free', category: 'final', instructions: getServiceInstructions('Windows Cleaned Streak Free') },
-      { id: 'elite-jamb', name: 'Clean Door & Trunk Jambs', category: 'final', instructions: getServiceInstructions('Clean Door & Trunk Jambs') }
+      { id: 'elite-ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
+      { id: 'elite-ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
+      { id: 'elite-ext-bugs', name: 'Pre-Treat bugs / heavy grime', category: 'exterior' },
+      { id: 'elite-ext-foam', name: 'Foam Bath', category: 'exterior' },
+      { id: 'elite-well', name: 'Wheel Wells Cleaned', category: 'exterior' },
+      { id: 'elite-clay', name: 'Clay Bar Treatment', category: 'exterior' },
+      { id: 'elite-decon', name: 'Paint Decontamination', category: 'exterior' },
+      { id: 'elite-ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'elite-ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
+      { id: 'elite-ext-drying', name: 'Drying', category: 'exterior' },
+      { id: 'elite-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
+      { id: 'elite-ext-protection', name: 'Paint Protection', category: 'final' },
+      { id: 'elite-ext-win', name: 'Windows & Glass (streak-free)', category: 'final' },
+      { id: 'elite-ext-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' }
     ]
   },
   {
@@ -178,21 +193,22 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 390,
     pricing: { compact: 390, midsize: 475, truck: 495, luxury: 590 },
     steps: [
-      { id: 'elite-int-vac', name: 'Thorough Vacuum of Interior', category: 'interior', instructions: getServiceInstructions('Thorough Vacuum of Interior') },
-      { id: 'elite-int-mats', name: 'Clean All Floor Mats', category: 'interior', instructions: getServiceInstructions('Clean All Floor Mats') },
-      { id: 'elite-int-rugs', name: 'Clean All Area Rugs', category: 'interior', instructions: getServiceInstructions('Clean All Area Rugs') },
-      { id: 'elite-int-dash', name: 'Clean Dashboard & Steering Wheel', category: 'interior', instructions: getServiceInstructions('Clean Dashboard & Steering Wheel') },
-      { id: 'elite-int-console', name: 'Clean Center Console & Accessories', category: 'interior', instructions: getServiceInstructions('Clean Center Console & Accessories') },
-      { id: 'elite-int-wipe', name: 'Thorough Wipe Down of All Interior Surfaces', category: 'interior', instructions: getServiceInstructions('Thorough Wipe Down of All Interior Surfaces') },
-      { id: 'elite-int-win', name: 'Windows Cleaned Streak Free', category: 'interior', instructions: getServiceInstructions('Windows Cleaned Streak Free') },
-      { id: 'elite-int-jamb', name: 'Clean Door & Trunk Jambs', category: 'interior', instructions: getServiceInstructions('Clean Door & Trunk Jambs') },
-      { id: 'elite-int-trunk', name: 'Vacuum Trunk Space', category: 'interior', instructions: getServiceInstructions('Vacuum Trunk Space') },
-      { id: 'elite-int-panels', name: 'Steam Clean All Panels', category: 'interior', instructions: getServiceInstructions('Steam Clean All Panels') },
-      { id: 'elite-int-vents', name: 'Steam Clean All Vents', category: 'interior', instructions: getServiceInstructions('Steam Clean All Vents') },
-      { id: 'elite-int-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior', instructions: getServiceInstructions('Steam Clean & Extraction on Carpets') },
-      { id: 'elite-int-seat-steam', name: 'Steam Clean & Extraction on Seats', category: 'interior', instructions: getServiceInstructions('Steam Clean & Extraction on Seats') },
-      { id: 'elite-int-upholstery-steam', name: 'Steam Clean & Extraction on Upholstery', category: 'interior', instructions: getServiceInstructions('Steam Clean & Extraction on Upholstery') },
-      { id: 'elite-int-cond', name: 'Condition & Protect Leather Seats', category: 'final', instructions: getServiceInstructions('Condition & Protect Leather Seats') }
+      { id: 'elite-int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
+      { id: 'elite-int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
+      { id: 'elite-int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
+      { id: 'elite-int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
+      { id: 'elite-int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'elite-int-odor', name: 'Odor & Stain Treatment', category: 'interior' },
+      { id: 'elite-int-trunk', name: 'Vacuum Trunk Space', category: 'interior' },
+      { id: 'elite-int-panels', name: 'Steam Clean All Panels', category: 'interior' },
+      { id: 'elite-int-vents', name: 'Steam Clean All Vents', category: 'interior' },
+      { id: 'elite-int-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior' },
+      { id: 'elite-int-seat-steam', name: 'Steam Clean & Extraction on Seats', category: 'interior' },
+      { id: 'elite-int-upholstery-steam', name: 'Steam Clean & Extraction on Upholstery', category: 'interior' },
+      { id: 'elite-int-cond', name: 'Condition & Protect Leather Seats', category: 'final' },
+      { id: 'elite-int-win', name: 'Windows & Glass (streak-free)', category: 'final' },
+      { id: 'elite-int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
+      { id: 'elite-int-inspection', name: 'Final Interior Inspection', category: 'final' }
     ]
   },
   {
@@ -202,33 +218,35 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 495,
     pricing: { compact: 495, midsize: 595, truck: 695, luxury: 850 },
     steps: [
-      { id: 'full-foam', name: 'Exterior Foam Bath', category: 'exterior', instructions: getServiceInstructions('Exterior Foam Bath') },
-      { id: 'full-wash', name: 'Two-Bucket Hand Wash with Grit Guards', category: 'exterior', instructions: getServiceInstructions('Two-Bucket Hand Wash with Grit Guards') },
-      { id: 'full-tire', name: 'Tire Scrub & Shine', category: 'exterior', instructions: getServiceInstructions('Tire Scrub & Shine') },
-      { id: 'full-rim', name: 'Rims Cleaned & Shined', category: 'exterior', instructions: getServiceInstructions('Rims Cleaned & Shined') },
-      { id: 'full-gas', name: 'Clean Gas Cap Area', category: 'exterior', instructions: getServiceInstructions('Clean Gas Cap Area') },
-      { id: 'full-dry', name: 'Blow Dry – Followed by Microfiber Towel Hand Dry', category: 'exterior', instructions: getServiceInstructions('Blow Dry – Followed by Microfiber Towel Hand Dry') },
-      { id: 'full-wax', name: 'Premium Spray Wax / Paint Sealant', category: 'exterior', instructions: getServiceInstructions('Premium Spray Wax / Paint Sealant') },
-      { id: 'full-well', name: 'Wheel Wells Cleaned', category: 'exterior', instructions: getServiceInstructions('Wheel Wells Cleaned') },
-      { id: 'full-clay', name: 'Clay Bar Treatment', category: 'exterior', instructions: getServiceInstructions('Clay Bar Treatment') },
-      { id: 'full-decon', name: 'Paint Decontamination', category: 'exterior', instructions: getServiceInstructions('Paint Decontamination') },
-      { id: 'full-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior', instructions: getServiceInstructions('Black Trim Restore & UV Protection') },
-      { id: 'full-ceramic', name: 'Premium Ceramic Sealant Protection', category: 'exterior', instructions: getServiceInstructions('Premium Ceramic Sealant Protection') },
-      { id: 'full-vac', name: 'Thorough Vacuum of Interior', category: 'interior', instructions: getServiceInstructions('Thorough Vacuum of Interior') },
-      { id: 'full-mats', name: 'Clean All Floor Mats', category: 'interior', instructions: getServiceInstructions('Clean All Floor Mats') },
-      { id: 'full-rugs', name: 'Clean All Area Rugs', category: 'interior', instructions: getServiceInstructions('Clean All Area Rugs') },
-      { id: 'full-dash', name: 'Clean Dashboard & Steering Wheel', category: 'interior', instructions: getServiceInstructions('Clean Dashboard & Steering Wheel') },
-      { id: 'full-console', name: 'Clean Center Console & Accessories', category: 'interior', instructions: getServiceInstructions('Clean Center Console & Accessories') },
-      { id: 'full-wipe', name: 'Thorough Wipe Down of All Interior Surfaces', category: 'interior', instructions: getServiceInstructions('Thorough Wipe Down of All Interior Surfaces') },
-      { id: 'full-win', name: 'Windows Cleaned Streak Free', category: 'final', instructions: getServiceInstructions('Windows Cleaned Streak Free') },
-      { id: 'full-jamb', name: 'Clean Door & Trunk Jambs', category: 'final', instructions: getServiceInstructions('Clean Door & Trunk Jambs') },
-      { id: 'full-trunk', name: 'Vacuum Trunk Space', category: 'interior', instructions: getServiceInstructions('Vacuum Trunk Space') },
-      { id: 'full-panels', name: 'Steam Clean All Panels', category: 'interior', instructions: getServiceInstructions('Steam Clean All Panels') },
-      { id: 'full-vents', name: 'Steam Clean All Vents', category: 'interior', instructions: getServiceInstructions('Steam Clean All Vents') },
-      { id: 'full-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior', instructions: getServiceInstructions('Steam Clean & Extraction on Carpets') },
-      { id: 'full-seats', name: 'Steam Clean & Extraction on Seats', category: 'interior', instructions: getServiceInstructions('Steam Clean & Extraction on Seats') },
-      { id: 'full-upholstery', name: 'Steam Clean & Extraction on Upholstery', category: 'interior', instructions: getServiceInstructions('Steam Clean & Extraction on Upholstery') },
-      { id: 'full-leather', name: 'Condition & Protect Leather Seats', category: 'final', instructions: getServiceInstructions('Condition & Protect Leather Seats') }
+      { id: 'elite-full-wheels', name: 'Wheels & Tires First', category: 'exterior' },
+      { id: 'elite-full-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
+      { id: 'elite-full-bugs', name: 'Pre-Treat bugs / heavy grime', category: 'exterior' },
+      { id: 'elite-full-foam', name: 'Foam Bath', category: 'exterior' },
+      { id: 'elite-full-well', name: 'Wheel Wells Cleaned', category: 'exterior' },
+      { id: 'elite-full-clay', name: 'Clay Bar Treatment', category: 'exterior' },
+      { id: 'elite-full-decon', name: 'Paint Decontamination', category: 'exterior' },
+      { id: 'elite-full-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'elite-full-final-rinse', name: 'Final Rinse', category: 'exterior' },
+      { id: 'elite-full-drying', name: 'Drying', category: 'exterior' },
+      { id: 'elite-full-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
+      { id: 'elite-full-ceramic', name: 'Premium Ceramic Sealant Protection', category: 'exterior' },
+      { id: 'elite-full-ext-protection', name: 'Paint Protection', category: 'exterior' },
+      { id: 'elite-full-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
+      { id: 'elite-full-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
+      { id: 'elite-full-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
+      { id: 'elite-full-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
+      { id: 'elite-full-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'elite-full-odor', name: 'Odor & Stain Treatment', category: 'interior' },
+      { id: 'elite-full-trunk', name: 'Vacuum Trunk Space', category: 'interior' },
+      { id: 'elite-full-panels', name: 'Steam Clean All Panels', category: 'interior' },
+      { id: 'elite-full-vents', name: 'Steam Clean All Vents', category: 'interior' },
+      { id: 'elite-full-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior' },
+      { id: 'elite-full-seats', name: 'Steam Clean & Extraction on Seats', category: 'interior' },
+      { id: 'elite-full-upholstery', name: 'Steam Clean & Extraction on Upholstery', category: 'interior' },
+      { id: 'elite-full-leather', name: 'Condition & Protect Leather Seats', category: 'final' },
+      { id: 'elite-full-win', name: 'Windows & Glass (streak-free)', category: 'final' },
+      { id: 'elite-full-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
+      { id: 'elite-full-inspection', name: 'Final Interior Inspection', category: 'final' }
     ]
   },
 ];

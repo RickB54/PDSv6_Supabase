@@ -248,6 +248,24 @@ const ServiceChecklist = () => {
   // Rick's Tips State
   const [tipsOpen, setTipsOpen] = useState(false);
 
+  // Admin Instruction Editing State
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [editInstructionText, setEditInstructionText] = useState("");
+
+  const handleSaveInstruction = (stepId: string, stepName: string) => {
+    try {
+      const overrides = JSON.parse(localStorage.getItem('stepInstructionOverrides') || '{}');
+      // Use ID as primary key, fallback to name
+      const key = (stepId || stepName).toLowerCase();
+      overrides[key] = editInstructionText;
+      localStorage.setItem('stepInstructionOverrides', JSON.stringify(overrides));
+      setEditingStepId(null);
+      toast({ title: "Process Updated", description: `Standardized process for "${stepName}" has been saved.` });
+    } catch (e) {
+      toast({ title: "Failed to save", variant: "destructive" });
+    }
+  };
+
 
 
 
@@ -765,9 +783,9 @@ const ServiceChecklist = () => {
     }
     // Preparation static steps
     const prep: ChecklistStep[] = [
-      { id: 'prep-inspect', name: 'Inspect vehicle', category: 'preparation', checked: false },
-      { id: 'prep-tools', name: 'Gather tools', category: 'preparation', checked: false },
-      { id: 'prep-walkaround', name: 'Customer walkaround', category: 'preparation', checked: false },
+      { id: 'prep-inspect', name: 'Inspect vehicle (exterior & interior)', category: 'preparation', checked: false },
+      { id: 'prep-tools', name: 'Gather tools & chemicals', category: 'preparation', checked: false },
+      { id: 'prep-walkaround', name: 'Customer walkaround & expectations', category: 'preparation', checked: false },
     ];
     // Add-on steps: treat each add-on as a single step under exterior
     const addonSteps: ChecklistStep[] = selectedAddOns.map((aid) => {
@@ -1959,7 +1977,54 @@ const ServiceChecklist = () => {
                                   <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
                                     <div className="flex items-start gap-2">
                                       <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                      <p className="leading-relaxed">{instructionText}</p>
+                                      <div className="flex flex-col gap-2 flex-1">
+                                        {editingStepId === step.id ? (
+                                          <div className="space-y-2 animate-in fade-in">
+                                            <Textarea 
+                                              value={editInstructionText}
+                                              onChange={(e) => setEditInstructionText(e.target.value)}
+                                              className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
+                                              placeholder="Enter custom process details..."
+                                            />
+                                            <div className="flex gap-2">
+                                              <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
+                                                <Save className="h-3 w-3 mr-1" /> Save Process
+                                              </Button>
+                                              <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="leading-relaxed space-y-1">
+                                            {instructionText.split('. ').map((sentence, idx) => {
+                                              const parts = sentence.split(': ');
+                                              if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
+                                                return (
+                                                  <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
+                                                    <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
+                                                    <span>{parts[1]}</span>
+                                                  </div>
+                                                );
+                                              }
+                                              return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
+                                            })}
+                                            {getCurrentUser()?.role === 'admin' && (
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50"
+                                                onClick={() => {
+                                                  setEditingStepId(step.id);
+                                                  setEditInstructionText(instructionText);
+                                                }}
+                                              >
+                                                <FileText className="h-3 w-3" /> Edit Process
+                                              </Button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
