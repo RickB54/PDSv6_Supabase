@@ -2077,239 +2077,240 @@ const ServiceChecklist = () => {
         )}
       </Card>
 
-          {/* Checklist - dynamic from package and add-ons */}
-          <Card className="p-3 md:p-6 bg-gradient-card border-border">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center">
-                  <ClipboardList className="h-5 w-5 text-red-500" />
-                </div>
-                <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-white">Service Checklist</h2>
-                  <p className="text-sm text-zinc-400">Step-by-step quality control</p>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-[10px] h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5"
-                    onClick={() => generateJobReport(false)}
-                  >
-                    <Download className="h-3 w-3" /> Report
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-[10px] h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5"
-                    onClick={() => generateJobReport(true)}
-                  >
-                    <Save className="h-3 w-3" /> Archive
-                  </Button>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
-                      setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
-                      setChemRows([]);
-                      setMatRows([]);
-                      setToolRows([]);
-                      setJobStartTime(null);
-                      setItemDurations({});
-                      localStorage.removeItem('service_checklist_draft');
-                      toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
-                    }
-                  }}
-                  className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-                  title="Clear Checklist"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+      <Card className="p-3 md:p-6 bg-gradient-card border-border">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center">
+              <ClipboardList className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white">Service Checklist</h2>
+              <p className="text-sm text-zinc-400">Step-by-step quality control</p>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-[10px] h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5"
+                onClick={() => generateJobReport(false)}
+              >
+                <Download className="h-3 w-3" /> Report
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-[10px] h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5"
+                onClick={() => generateJobReport(true)}
+              >
+                <Save className="h-3 w-3" /> Archive
+              </Button>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
+                  setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
+                  setChemRows([]);
+                  setMatRows([]);
+                  setToolRows([]);
+                  setJobStartTime(null);
+                  setItemDurations({});
+                  localStorage.removeItem('service_checklist_draft');
+                  toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
+                }
+              }}
+              className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+              title="Clear Checklist"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 pt-1 border-b border-white/5 mb-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
-                    const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
-                    const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
-                    setExpandedHelp(next);
-                  }}>
-                    {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-8 flex-1 sm:flex-none" onClick={() => {
-                    const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
-                    setChecklistSteps(prev => prev.map(s => ({ ...s, checked: !all })));
-                  }}>
-                    {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
-                  </Button>
-                </div>
-                
-                {jobStartTime && (
-                  <div className={`flex items-center gap-2 px-4 py-1.5 bg-zinc-900 border rounded-full ${jobEndTime ? 'border-green-500/50' : 'border-red-500/40 animate-pulse-subtle'}`}>
-                    <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-500' : 'text-red-500'}`} />
-                    <span className={`text-sm md:text-base font-mono font-black ${jobEndTime ? 'text-green-500' : 'text-red-500'}`}>
-                      {formatDuration((jobEndTime || liveNow) - jobStartTime)}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 pt-1 border-b border-white/5 mb-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
+                const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
+                const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
+                setExpandedHelp(next);
+              }}>
+                {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
+              </Button>
+              <Button variant="outline" size="sm" className="text-xs h-8 flex-1 sm:flex-none" onClick={() => {
+                const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
+                setChecklistSteps(prev => prev.map(s => ({ ...s, checked: !all })));
+              }}>
+                {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
+              </Button>
+            </div>
+            
+            {jobStartTime && (
+              <div className={`flex items-center gap-2 px-4 py-1.5 bg-zinc-900 border rounded-full ${jobEndTime ? 'border-green-500/50' : 'border-red-500/40 animate-pulse-subtle'}`}>
+                <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-500' : 'text-red-500'}`} />
+                <span className={`text-sm md:text-base font-mono font-black ${jobEndTime ? 'text-green-500' : 'text-red-500'}`}>
+                  {formatDuration((jobEndTime || liveNow) - jobStartTime)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {(!selectedPackage || !vehicleType) && (
+          <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
+        )}
+
+        {selectedPackage && (
+          <div className="space-y-6 pr-2">
+            {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
+              <div key={section} className="space-y-3">
+                <button
+                  type="button"
+                  className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
+                  onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="group-hover:text-primary transition-colors">
+                      {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
                     </span>
+                    {section !== 'preparation' && jobStartTime && (
+                      <span className="text-[10px] font-mono bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700">
+                        {formatDuration(
+                          checklistSteps
+                            .filter(s => s.category === section && s.checked)
+                            .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
+                </button>
+
+                {!collapsedSections[section] && (
+                  <div className="space-y-2">
+                    {checklistSteps.filter(s => s.category === section).map((step) => {
+                      const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
+                      return (
+                        <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
+                          <div className="flex items-center justify-between py-2">
+                            <label className="flex items-center gap-3 text-sm cursor-pointer flex-1 py-1 group/item">
+                              <input
+                                type="checkbox"
+                                checked={step.checked}
+                                onChange={(e) => handleToggleStep(step.id, e.target.checked)}
+                                className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0"
+                              />
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <span className={`truncate ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}>
+                                  {step.name}
+                                </span>
+                                {itemDurations[step.id] && (
+                                  <span className="text-[9px] text-primary/70 font-mono italic shrink-0 whitespace-nowrap bg-primary/5 px-1 rounded border border-primary/10">
+                                    took {formatDuration(itemDurations[step.id])}
+                                  </span>
+                                )}
+                              </div>
+                            </label>
+                            
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
+                                }}
+                              >
+                                {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleOpenChemicals(step.id, step.name);
+                                }}
+                                title="Chemical Reference"
+                              >
+                                <FlaskConical className="h-4 w-4 mr-1 sm:mr-1.5" />
+                                <span className="text-[10px] sm:text-xs font-bold">Chem</span>
+                              </Button>
+                            </div>
+                          </div>
+
+                          {expandedHelp[step.id] && (
+                            <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
+                              <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
+                                <div className="flex items-start gap-2">
+                                  <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                  <div className="flex flex-col gap-2 flex-1">
+                                    {editingStepId === step.id ? (
+                                      <div className="space-y-2 animate-in fade-in">
+                                        <Textarea 
+                                          value={editInstructionText}
+                                          onChange={(e) => setEditInstructionText(e.target.value)}
+                                          className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
+                                          placeholder="Enter custom process details..."
+                                        />
+                                        <div className="flex gap-2">
+                                          <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
+                                            <Save className="h-3 w-3 mr-1" /> Save Process
+                                          </Button>
+                                          <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="leading-relaxed space-y-1">
+                                        {instructionText.split('. ').map((sentence, idx) => {
+                                          const parts = sentence.split(': ');
+                                          if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
+                                            return (
+                                              <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
+                                                <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
+                                                <span>{parts[1]}</span>
+                                              </div>
+                                            );
+                                          }
+                                          return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
+                                        })}
+                                        {getCurrentUser()?.role === 'admin' && (
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50"
+                                            onClick={() => {
+                                              setEditingStepId(step.id);
+                                              setEditInstructionText(instructionText);
+                                            }}
+                                          >
+                                            <FileText className="h-3 w-3" /> Edit Process
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            </div>
-            {(!selectedPackage || !vehicleType) && (
-              <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
-            )}
-            {selectedPackage && (
-              <div className="space-y-6 pr-2">
-                {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
-                  <div key={section} className="space-y-3">
-                    <button
-                      type="button"
-                      className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
-                      onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="group-hover:text-primary transition-colors">
-                          {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
-                        </span>
-                        {section !== 'preparation' && jobStartTime && (
-                          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700">
-                            {formatDuration(
-                              checklistSteps
-                                .filter(s => s.category === section && s.checked)
-                                .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
-                    </button>
-                    {!collapsedSections[section] && (
-                      <div className="space-y-2">
-                        {checklistSteps.filter(s => s.category === section).map((step) => {
-                          const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
-
-                          return (
-                            <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
-                              <div className="flex items-center justify-between py-2">
-                                <label className="flex items-center gap-3 text-sm cursor-pointer flex-1 py-1 group/item">
-                                  <input
-                                    type="checkbox"
-                                    checked={step.checked}
-                                    onChange={(e) => handleToggleStep(step.id, e.target.checked)}
-                                    className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0"
-                                  />
-                                  <div className="flex items-center gap-2 overflow-hidden">
-                                    <span className={`truncate ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}>
-                                      {step.name}
-                                    </span>
-                                    {itemDurations[step.id] && (
-                                      <span className="text-[9px] text-primary/70 font-mono italic shrink-0 whitespace-nowrap bg-primary/5 px-1 rounded border border-primary/10">
-                                        took {formatDuration(itemDurations[step.id])}
-                                      </span>
-                                    )}
-                                  </div>
-                                </label>
-                                
-                                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-                                    }}
-                                  >
-                                    {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
-                                  </Button>
-
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleOpenChemicals(step.id, step.name);
-                                    }}
-                                    title="Chemical Reference"
-                                  >
-                                    <FlaskConical className="h-4 w-4 mr-1 sm:mr-1.5" />
-                                    <span className="text-[10px] sm:text-xs font-bold">Chem</span>
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {expandedHelp[step.id] && (
-                                <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
-                                  <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
-                                    <div className="flex items-start gap-2">
-                                      <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                      <div className="flex flex-col gap-2 flex-1">
-                                        {editingStepId === step.id ? (
-                                          <div className="space-y-2 animate-in fade-in">
-                                            <Textarea 
-                                              value={editInstructionText}
-                                              onChange={(e) => setEditInstructionText(e.target.value)}
-                                              className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
-                                              placeholder="Enter custom process details..."
-                                            />
-                                            <div className="flex gap-2">
-                                              <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
-                                                <Save className="h-3 w-3 mr-1" /> Save Process
-                                              </Button>
-                                              <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
-                                                Cancel
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <div className="leading-relaxed space-y-1">
-                                            {instructionText.split('. ').map((sentence, idx) => {
-                                              const parts = sentence.split(': ');
-                                              if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
-                                                return (
-                                                  <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
-                                                    <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
-                                                    <span>{parts[1]}</span>
-                                                  </div>
-                                                );
-                                              }
-                                              return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
-                                            })}
-                                            {getCurrentUser()?.role === 'admin' && (
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50"
-                                                onClick={() => {
-                                                  setEditingStepId(step.id);
-                                                  setEditInstructionText(instructionText);
-                                                }}
-                                              >
-                                                <FileText className="h-3 w-3" /> Edit Process
-                                              </Button>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
-            {/* Notes and Destination Fee removed from here - moved to Totals section for cleaner flow */}
-          </Card>
+            ))}
+          </div>
+        )}
+      </Card>
 
           {/* Materials Used */}
           <Card className="p-3 md:p-6 bg-gradient-card border-border space-y-6">
