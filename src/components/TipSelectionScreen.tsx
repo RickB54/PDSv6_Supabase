@@ -136,8 +136,8 @@ export default function TipSelectionScreen({
               <p className="text-sm text-gray-400">Please do not close this window</p>
             </div>
           ) : (
-            <div className="space-y-4 max-w-md mx-auto">
-              <p className="text-center text-lg text-gray-800 font-bold mb-4">
+            <div className="space-y-2 max-w-md mx-auto">
+              <p className="text-center text-base text-gray-800 font-bold mb-2">
                 Add a tip for the service?
               </p>
 
