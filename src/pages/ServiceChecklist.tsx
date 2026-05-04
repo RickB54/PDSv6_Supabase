@@ -2085,8 +2085,9 @@ const ServiceChecklist = () => {
         )}
       </Card>
 
-      <Card className="p-3 md:p-6 bg-gradient-card border-border">
-        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm -mx-3 md:-mx-6 px-3 md:px-6 py-3 border-b border-white/10 shadow-xl space-y-4">
+      <Card className="bg-gradient-card border-border overflow-visible relative">
+        {/* Sticky Header - Moved outside of internal padding for better stickiness */}
+        <div className="sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-md px-3 md:px-6 py-4 border-b border-white/10 shadow-2xl space-y-4 rounded-t-xl transition-all">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
@@ -2166,6 +2167,8 @@ const ServiceChecklist = () => {
             )}
           </div>
         </div>
+
+        <div className="p-3 md:p-6">
 
         {(!selectedPackage || !vehicleType) && (
           <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
