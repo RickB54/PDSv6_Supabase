@@ -2155,13 +2155,13 @@ const ServiceChecklist = () => {
             </div>
             
             {jobStartTime && (
-              <div className={`flex items-center gap-2 px-4 py-1.5 bg-zinc-900 border rounded-full ${jobEndTime ? 'border-green-500/50' : 'border-red-500/40 animate-pulse-subtle'}`}>
-                <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-500' : 'text-red-500'}`} />
-                <span className={`text-sm md:text-base font-mono font-black ${jobEndTime ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatDuration((jobEndTime || liveNow) - jobStartTime)}
-                </span>
-              </div>
-            )}
+                  <div className={`flex items-center gap-2 px-4 py-1.5 bg-white border-2 shadow-lg rounded-full ${jobEndTime ? 'border-green-500' : 'border-red-500 animate-pulse-subtle'}`}>
+                    <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
+                    <span className={`text-sm md:text-lg font-mono font-black ${jobEndTime ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatDuration((jobEndTime || liveNow) - jobStartTime)}
+                    </span>
+                  </div>
+                )}
           </div>
         </div>
 
@@ -2182,15 +2182,15 @@ const ServiceChecklist = () => {
                     <span className="group-hover:text-primary transition-colors">
                       {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
                     </span>
-                    {section !== 'preparation' && jobStartTime && (
-                      <span className="text-[10px] font-mono bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700">
-                        {formatDuration(
-                          checklistSteps
-                            .filter(s => s.category === section && s.checked)
-                            .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                        {section !== 'preparation' && jobStartTime && (
+                          <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                            {formatDuration(
+                              checklistSteps
+                                .filter(s => s.category === section && s.checked)
+                                .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                            )}
+                          </span>
                         )}
-                      </span>
-                    )}
                   </div>
                   {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
                 </button>
@@ -2214,8 +2214,8 @@ const ServiceChecklist = () => {
                                   {step.name}
                                 </span>
                                 {itemDurations[step.id] && (
-                                  <span className="text-[9px] text-primary/70 font-mono italic shrink-0 whitespace-nowrap bg-primary/5 px-1 rounded border border-primary/10">
-                                    took {formatDuration(itemDurations[step.id])}
+                                  <span className="text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-500">
+                                    {formatDuration(itemDurations[step.id])}
                                   </span>
                                 )}
                               </div>
