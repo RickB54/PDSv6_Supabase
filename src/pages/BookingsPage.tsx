@@ -136,6 +136,29 @@ export default function BookingsPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<string | null>(null);
+  
+  const handleSelectHistoryCustomer = (customerName: string | null) => {
+    setSelectedHistoryCustomer(customerName);
+    if (customerName) {
+      setTimeout(() => {
+        const id = `history-customer-${customerName.replace(/\s+/g, '-')}`;
+        const el = document.getElementById(id);
+        if (el) {
+          const offset = 120; // Room for fixed header
+          const bodyRect = document.body.getBoundingClientRect().top;
+          const elementRect = el.getBoundingClientRect().top;
+          const elementPosition = elementRect - bodyRect;
+          const offsetPosition = elementPosition - offset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          });
+        }
+      }, 100);
+    }
+  };
+
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -1605,7 +1628,7 @@ export default function BookingsPage() {
                           if (hasBooking) {
                             // Open history for the first customer of the day?
                             const custName = dayBookings[0].customer;
-                            setSelectedHistoryCustomer(custName);
+                            handleSelectHistoryCustomer(custName);
                             // Scroll to history? Handled by state but need to ensure it expands.
                             toast.info(`Viewing history for ${custName}`);
                           }
@@ -2799,9 +2822,9 @@ export default function BookingsPage() {
                       <Collapsible
                         key={customer.name}
                         open={selectedHistoryCustomer === customer.name}
-                        onOpenChange={(open) => setSelectedHistoryCustomer(open ? customer.name : null)}
+                        onOpenChange={(open) => handleSelectHistoryCustomer(open ? customer.name : null)}
                       >
-                        <div className="border border-zinc-800 rounded-lg overflow-hidden">
+                        <div id={`history-customer-${customer.name.replace(/\s+/g, '-')}`} className="border border-zinc-800 rounded-lg overflow-hidden transition-all">
                           <CollapsibleTrigger className="w-full">
                             <div className="flex items-center justify-between p-2.5 sm:p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
                               <div className="flex items-center gap-4">
