@@ -183,7 +183,7 @@ export default function TipSelectionScreen({
                 </button>
                 
                 {selectedTip === 'custom' && (
-                  <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-2 duration-200 flex gap-2 items-center">
+                  <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-2 duration-200 space-y-2">
                     <div className="relative flex-1">
                       <input
                         type="number"
@@ -193,10 +193,16 @@ export default function TipSelectionScreen({
                         value={customTip}
                         onChange={(e) => setCustomTip(e.target.value)}
                         placeholder="Enter percentage"
-                        className="w-full py-3 px-4 pr-10 border-2 border-accent rounded-xl text-lg font-bold focus:ring-0 focus:outline-none shadow-inner bg-white"
+                        className="w-full py-3 px-4 pr-10 border-2 border-accent rounded-xl text-lg font-bold focus:ring-0 focus:outline-none shadow-inner bg-white text-gray-900"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-extrabold text-lg">%</span>
                     </div>
+                    {customTip && !isNaN(parseFloat(customTip)) && (
+                      <div className="flex justify-between items-center px-1">
+                        <span className="text-sm text-gray-400 font-medium italic">Calculated Tip:</span>
+                        <span className="text-xl font-bold text-accent">+{getTipAmountDisplay()}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
