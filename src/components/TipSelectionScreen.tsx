@@ -10,6 +10,7 @@ interface TipSelectionScreenProps {
   // Defaults to the window's origin when not provided.
   clientUrl?: string; 
   customerId?: string | null;
+  finalTime?: string;
 }
 
 export default function TipSelectionScreen({ 
@@ -17,7 +18,8 @@ export default function TipSelectionScreen({
   remainingBalanceInCents,
   onCancel,
   clientUrl,
-  customerId
+  customerId,
+  finalTime
 }: TipSelectionScreenProps) {
   const [loading, setLoading] = useState(false);
   
@@ -115,7 +117,14 @@ export default function TipSelectionScreen({
             </button>
           )}
           <h2 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Final Details</h2>
-          <p className="text-gray-500 font-medium">Service Balance: ${basePriceFormatted}</p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-gray-500 font-medium">Service Balance: ${basePriceFormatted}</p>
+            {finalTime && (
+              <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Job Time: {finalTime}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Scrollable Content Body */}
@@ -212,11 +221,12 @@ export default function TipSelectionScreen({
 
         {/* Floating sticky footer for Continue */}
         {!loading && (
-          <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-            <div className="flex justify-between items-center mb-4 px-2">
+          <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-3">
+            <div className="flex justify-between items-center mb-1 px-2">
               <span className="text-gray-500 font-semibold">Total to Pay</span>
               <span className="text-2xl font-black text-gray-900">${getTotalAmountDisplay()}</span>
             </div>
+            
             <button
               onClick={handleProceedToPay}
               disabled={!canProceed}
@@ -224,6 +234,13 @@ export default function TipSelectionScreen({
             >
               Continue to Pay
               <ArrowRight size={24} />
+            </button>
+
+            <button
+              onClick={onCancel}
+              className="w-full py-3 text-gray-400 hover:text-gray-600 font-bold text-sm transition-colors"
+            >
+              Cancel / Go Back
             </button>
           </div>
         )}

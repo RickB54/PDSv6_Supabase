@@ -2926,6 +2926,7 @@ const ServiceChecklist = () => {
           remainingBalanceInCents={Math.round(calculateTotal() * 100)}
           clientUrl={window.location.origin}
           onCancel={() => setShowTipScreen(false)}
+          finalTime={elapsedTime}
         />
       )}
 
@@ -2959,8 +2960,8 @@ const ServiceChecklist = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Floating Global Job Timer - Always visible in top right corner */}
-      {jobStartTime && (
+      {/* Floating Global Job Timer - Always visible in top right corner (except on payment screen) */}
+      {jobStartTime && !showTipScreen && (
         <div className="fixed top-[74px] right-2 md:right-4 z-[200] animate-in slide-in-from-right duration-500">
           <div className={`flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950/90 border-2 shadow-lg rounded-2xl backdrop-blur-md ${jobEndTime ? 'border-green-500' : 'border-red-600 animate-pulse-subtle'}`}>
             <Clock className={`h-4 w-4 md:h-5 md:w-5 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
