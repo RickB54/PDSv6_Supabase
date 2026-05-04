@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, AlertCircle, ArrowLeft, Car, Edit, Trash2, History, FileDown, Search } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import vehicleDatabase from "@/data/vehicle_db.json";
 import jsPDF from "jspdf";
@@ -17,13 +18,13 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 
-type ClassificationType = "Compact/Sedan (Small cars and sedans)" | "Mid-Size/SUV (Mid-size cars and SUVs)" | "Truck/Van/Large SUV (Trucks, vans, large SUVs)" | "Luxury/High-End (Luxury and premium vehicles)";
+type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
 
-const CLASSIFICATION_OPTIONS: ClassificationType[] = [
-    "Compact/Sedan (Small cars and sedans)",
-    "Mid-Size/SUV (Mid-size cars and SUVs)",
-    "Truck/Van/Large SUV (Trucks, vans, large SUVs)",
-    "Luxury/High-End (Luxury and premium vehicles)"
+const CLASSIFICATION_OPTIONS: { label: string; value: ClassificationType }[] = [
+    { label: "Compact/Sedan (Small cars and sedans)", value: "Compact/Sedan" },
+    { label: "Mid-Size/SUV (Mid-size cars and SUVs)", value: "Mid-Size/SUV" },
+    { label: "Truck/Van/Large SUV (Trucks, vans, large SUVs)", value: "Truck/Van/Large SUV" },
+    { label: "Luxury/High-End (Luxury and premium vehicles)", value: "Luxury/High-End" }
 ];
 
 // Stable data structure that handles both old and new formats
@@ -804,13 +805,13 @@ export default function VehicleClassification() {
                             </p>
                             {CLASSIFICATION_OPTIONS.map((option) => (
                                 <Button
-                                    key={option}
-                                    onClick={() => handleOverride(option)}
+                                    key={option.value}
+                                    onClick={() => handleOverride(option.value)}
                                     variant="outline"
-                                    className={`w - full justify - between border - zinc - 800 hover: bg - zinc - 900 h - 14 ${category === option ? 'bg-zinc-900 border-emerald-500 ring-1 ring-emerald-500' : 'bg-zinc-900/50'} `}
+                                    className={`w-full justify-between border-zinc-800 hover:bg-zinc-900 h-14 ${category === option.value ? 'bg-zinc-900 border-emerald-500 ring-1 ring-emerald-500' : 'bg-zinc-900/50'}`}
                                 >
-                                    <span className={`font - semibold ${getClassificationColor(option)} `}>{option}</span>
-                                    {category === option && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                                    <span className={`font-semibold ${getClassificationColor(option.value)}`}>{option.label}</span>
+                                    {category === option.value && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                                 </Button>
                             ))}
                         </div>

@@ -8,6 +8,7 @@ import vehicleDatabase from "@/data/vehicle_db.json";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Shared types
 type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
