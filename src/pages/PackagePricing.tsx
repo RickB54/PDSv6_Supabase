@@ -63,6 +63,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -1949,6 +1950,7 @@ export default function PackagePricing() {
                           <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
                             <li>Toggle <strong>"Live"</strong> to show or hide a package.</li>
                             <li>Your choice is saved <strong>instantly</strong> to the cloud database.</li>
+                            <li className="text-red-400 font-bold underline">You do NOT need to hit the red "Save" button for visibility changes!</li>
                           </ul>
                         </section>
 
@@ -1973,7 +1975,9 @@ export default function PackagePricing() {
                         </section>
                       </div>
                       <DialogFooter>
-                        <Button className="bg-red-600 hover:bg-red-700 font-bold" onClick={() => {}}>Understood</Button>
+                        <DialogClose asChild>
+                          <Button className="bg-red-600 hover:bg-red-700 font-bold">Understood</Button>
+                        </DialogClose>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
