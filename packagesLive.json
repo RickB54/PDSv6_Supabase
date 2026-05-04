@@ -151,13 +151,13 @@
       },
       "prime-elite-full": {
         "id": "prime-elite-full",
-        "visible": true,
+        "visible": false,
         "deleted": false,
         "imageDataUrl": ""
       },
       "prime-elite-interior": {
         "id": "prime-elite-interior",
-        "visible": true,
+        "visible": false,
         "deleted": false,
         "imageDataUrl": ""
       },
@@ -298,7 +298,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1777856566786
+    "version": 1777856669859
   },
   "vehicleTypesLive": [
     {

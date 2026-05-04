@@ -1531,6 +1531,11 @@ export default function PackagePricing() {
     }
 
     try {
+      if (type === 'package') {
+        setPendingVisibilityPkg(prev => { const n = { ...prev }; delete n[id]; return n; });
+      } else {
+        setPendingVisibilityAddon(prev => { const n = { ...prev }; delete n[id]; return n; });
+      }
       await postFullSync();
       await forceWebsiteTabRefresh();
       await forceBookNowTabRefresh();
