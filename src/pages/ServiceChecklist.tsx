@@ -276,42 +276,17 @@ const ServiceChecklist = () => {
 
   const toVehKey = (value: string): VehKey => {
     const builtIns: VehKey[] = ['compact', 'midsize', 'truck', 'luxury'];
-    const v = String(value || '').trim();
-    if ((builtIns as string[]).includes(v)) return v as VehKey;
+    let v = String(value || '').trim();
+    // Normalize: remove descriptions in parentheses if present (e.g. "Compact/Sedan (Small...)") -> "Compact/Sedan"
+    if (v.includes('(')) v = v.split('(')[0].trim();
+
+    if ((builtIns as string[]).includes(v.toLowerCase())) return v.toLowerCase() as VehKey;
     const fromLabel = Object.keys(vehicleLabels).find(k => (vehicleLabels[k] || '').toLowerCase() === v.toLowerCase());
     const key = fromLabel || v;
     return toBuiltInVehKey(key);
   };
 
-  // Load live vehicle types
-  useEffect(() => {
-    const loadVehicleTypes = async () => {
-      try {
-        const res = await fetch(`/api/vehicle-types/live?v=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            const map: Record<string, string> = { ...vehicleLabels };
-            const opts: string[] = [];
-            data.forEach((vt: any) => {
-              const id = String(vt.id || vt.key || '').trim();
-              const name = String(vt.name || '').trim();
-              if (id && name) { map[id] = name; opts.push(id); }
-            });
-            setVehicleLabels(map);
-            setVehicleOptions(opts.length ? ['choose', ...opts] : ['choose', 'compact', 'midsize', 'truck', 'luxury']);
-            if (!opts.includes(vehicleType) && vehicleType !== 'choose') setVehicleType('choose');
-          }
-        }
-      } catch { }
-    };
-    loadVehicleTypes();
-    const onChanged = (e: any) => {
-      if (e && e.detail && (e.detail.kind === 'vehicle-types' || e.detail.type === 'vehicle-types')) loadVehicleTypes();
-    };
-    window.addEventListener('content-changed', onChanged as any);
-    return () => window.removeEventListener('content-changed', onChanged as any);
-  }, []);
+  // Standard vehicle types are now hardcoded (compact, midsize, truck, luxury) per user request.
 
   // Load savedPrices for dynamic pricing
   useEffect(() => {

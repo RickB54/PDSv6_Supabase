@@ -249,11 +249,11 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
   const handleVehicleSelect = (data: { make: string; model: string; category: string }, index?: number) => {
     let mappedType = data.category;
-    if (data.category === "Compact") mappedType = "Compact/Sedan (Small cars and sedans)";
-    else if (data.category === "Midsize / Sedan") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
-    else if (data.category === "SUV / Crossover") mappedType = "Mid-Size/SUV (Mid-size cars and SUVs)";
-    else if (data.category === "Truck / Oversized") mappedType = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-    else if (data.category === "Oversized Specialty") mappedType = "Luxury/High-End (Luxury and premium vehicles)";
+    if (data.category === "Compact") mappedType = "Compact/Sedan";
+    else if (data.category === "Midsize / Sedan") mappedType = "Mid-Size/SUV";
+    else if (data.category === "SUV / Crossover") mappedType = "Mid-Size/SUV";
+    else if (data.category === "Truck / Oversized") mappedType = "Truck/Van/Large SUV";
+    else if (data.category === "Oversized Specialty") mappedType = "Luxury/High-End";
 
     if (typeof index === 'number') {
       const updated = [...(form.vehicles || [])];
