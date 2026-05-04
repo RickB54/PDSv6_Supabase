@@ -1080,7 +1080,16 @@ const ServiceChecklist = () => {
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        handleBeforeUnload();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('visibilitychange', handleBeforeUnload);
+    };
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
