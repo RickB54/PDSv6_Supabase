@@ -812,7 +812,25 @@ const SearchCustomer = () => {
                                                  <span className="text-zinc-600 text-xs">•</span>
                                                  <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
                                                </div>
-                                               <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
+                                               <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-none mb-3">{booking.title || 'Premium Service'}</div>
+                                               
+                                               {(() => {
+                                                 const rawAddons = booking.addons || booking.add_ons || [];
+                                                 const addonsArray = Array.isArray(rawAddons) ? rawAddons : 
+                                                                    (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : []);
+                                                 
+                                                 if (addonsArray.length === 0) return null;
+
+                                                 return (
+                                                   <div className="flex flex-wrap gap-1.5 mb-4">
+                                                     {addonsArray.map((a: string, i: number) => (
+                                                       <Badge key={i} variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                                         {a}
+                                                       </Badge>
+                                                     ))}
+                                                   </div>
+                                                 );
+                                               })()}
                                                
                                                <div className="grid grid-cols-2 gap-2">
                                                  <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">

@@ -66,6 +66,7 @@ export default function BookingsPage() {
   const [analyticsDefaultTab, setAnalyticsDefaultTab] = useState<string | undefined>(undefined);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const hasInitialized = useRef(false);
+  const lastHandledBookingId = useRef<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -493,42 +494,49 @@ export default function BookingsPage() {
     }
 
     if (bookingId && items.length > 0) {
-      const booking = items.find(b => b.id === bookingId);
-      if (booking) {
-        // Find matching customer
-        const matchingCust = customers.find(c => c.name === booking.customer);
-        setSelectedCustomer(matchingCust || null);
-        setSelectedBooking(booking);
-        
-        // Populate formData
-        setFormData({
-          customer: booking.customer || "",
-          customerId: booking.customerId || matchingCust?.id,
-          email: booking.customerEmail || matchingCust?.email || "",
-          phone: booking.customerPhone || matchingCust?.phone || "",
-          service: booking.title || "",
-          vehicle: booking.vehicle || matchingCust?.vehicleType || "",
-          vehicleYear: booking.vehicleYear || matchingCust?.year || "",
-          vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
-          vehicleModel: booking.vehicleModel || matchingCust?.model || "",
-          address: booking.address || "",
-          time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
-          endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
-          assignedEmployee: booking.assignedEmployee || "",
-          bookedBy: booking.bookedBy || "",
-          notes: booking.notes || "",
-          addons: booking.addons || [],
-          hasReminder: booking.hasReminder || false,
-          reminderFrequency: booking.reminderFrequency?.toString() || "3",
-          status: booking.status || "confirmed",
-          vehicleId: booking.vehicleId
-        });
-        
-        setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
-        setIsAddModalOpen(true);
-        // Clear param so it doesn't re-open on every render
-        window.history.replaceState({}, '', location.pathname);
+      // ONLY trigger initialization if this is a NEW bookingId we haven't handled yet via URL
+      if (lastHandledBookingId.current !== bookingId) {
+        const booking = items.find(b => b.id === bookingId);
+        if (booking) {
+          lastHandledBookingId.current = bookingId;
+          // Find matching customer
+          const matchingCust = customers.find(c => c.name === booking.customer);
+          setSelectedCustomer(matchingCust || null);
+          setSelectedBooking(booking);
+          
+          // Populate formData
+          setFormData({
+            customer: booking.customer || "",
+            customerId: booking.customerId || matchingCust?.id,
+            email: booking.customerEmail || matchingCust?.email || "",
+            phone: booking.customerPhone || matchingCust?.phone || "",
+            service: booking.title || "",
+            vehicle: booking.vehicle || matchingCust?.vehicleType || "",
+            vehicleYear: booking.vehicleYear || matchingCust?.year || "",
+            vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
+            vehicleModel: booking.vehicleModel || matchingCust?.model || "",
+            address: booking.address || "",
+            time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
+            endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
+            assignedEmployee: booking.assignedEmployee || "",
+            bookedBy: booking.bookedBy || "",
+            notes: booking.notes || "",
+            addons: Array.isArray(booking.addons) ? booking.addons : [],
+            hasReminder: booking.hasReminder || false,
+            reminderFrequency: booking.reminderFrequency?.toString() || "3",
+            status: booking.status || "confirmed",
+            vehicleId: booking.vehicleId
+          });
+          
+          setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
+          setIsAddModalOpen(true);
+          // Clear param so it doesn't re-open on every render
+          window.history.replaceState({}, '', location.pathname);
+        }
       }
+    } else if (!bookingId) {
+      // Clear the ref if no ID in URL so it can be re-triggered if user navigates back to an ID
+      lastHandledBookingId.current = null;
     }
   }, [location.search, items, customers]);
 
@@ -730,7 +738,7 @@ export default function BookingsPage() {
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "",
       notes: booking.notes || matchingCust?.notes || "",
-      addons: booking.addons || [],
+      addons: Array.isArray(booking.addons) ? booking.addons : [],
       hasReminder: booking.hasReminder || false,
       reminderFrequency: booking.reminderFrequency?.toString() || "3",
       status: booking.status || "confirmed",
@@ -1689,7 +1697,12 @@ export default function BookingsPage() {
                                   <span className="font-mono opacity-70 text-[10px]">{format(parseISO(booking.date), "h:mm a")}</span>
                                   <span className="font-semibold truncate">{booking.customer || booking.title}</span>
                                 </div>
-                                <div className="truncate opacity-80 text-[10px]">{booking.title}</div>
+                                <div className="truncate opacity-80 text-[10px] font-bold">
+                                  {booking.title}
+                                  {(booking as Booking).addons && (booking as Booking).addons!.length > 0 && (
+                                    <span className="text-zinc-400 font-normal"> + {(booking as Booking).addons!.join(", ")}</span>
+                                  )}
+                                </div>
 
                                 {/* Status Text for Month View */}
                                 <div className="flex items-center gap-1 text-[9px] opacity-90 font-semibold uppercase mt-0.5">
@@ -1811,9 +1824,17 @@ export default function BookingsPage() {
                 <div className="p-3 bg-zinc-950/50 rounded-lg border border-purple-500/20 mb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Service Summary</div>
-                      <div className="text-white font-medium text-lg">{formData.service || "No Service Selected"}</div>
-                      {formData.addons.length > 0 && <div className="text-zinc-400 text-sm">+ {formData.addons.join(", ")}</div>}
+                      <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Service Summary</div>
+                      <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
+                      {formData.addons && formData.addons.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {formData.addons.map((a, i) => (
+                            <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-0 px-2 h-5">
+                              {a}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-emerald-400 font-bold text-lg">
@@ -2033,37 +2054,46 @@ export default function BookingsPage() {
                           <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 font-normal">
                             <span className="truncate">
                               {formData.addons.length > 0
-                                ? `${formData.addons.length} Addon${formData.addons.length > 1 ? 's' : ''}`
+                                ? formData.addons.join(", ")
                                 : "Addons..."}
                             </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrinking-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0 bg-white border-zinc-300">
-                          <Command>
-                            <CommandInput placeholder="Search addons..." className="h-9 text-zinc-900" />
-                            <CommandEmpty className="text-zinc-600">No addon found.</CommandEmpty>
-                            <CommandGroup className="max-h-64 overflow-auto">
+                        <PopoverContent className="w-[280px] p-0 bg-zinc-900 border-zinc-800 shadow-2xl">
+                          <Command className="bg-zinc-900">
+                            <CommandInput placeholder="Search addons..." className="h-10 text-white border-zinc-800" />
+                            <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
+                            <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
                               {allAddons.map((addon) => (
                                 <CommandItem
                                   key={addon.id}
                                   value={addon.name}
                                   onSelect={() => {
+                                    const name = addon.name;
+                                    console.log(`[AddonSelector] Toggling addon: ${name}`);
                                     setFormData(prev => {
-                                      const exists = prev.addons.includes(addon.name);
-                                      if (exists) return { ...prev, addons: prev.addons.filter(a => a !== addon.name) };
-                                      return { ...prev, addons: [...prev.addons, addon.name] };
+                                      const current = Array.isArray(prev.addons) ? prev.addons : [];
+                                      const exists = current.includes(name);
+                                      const next = exists 
+                                        ? current.filter(a => a !== name)
+                                        : [...current, name];
+                                      console.log(`[AddonSelector] New state:`, next);
+                                      return { ...prev, addons: next };
                                     });
                                   }}
-                                  className="text-zinc-900 cursor-pointer hover:bg-zinc-100"
+                                  className="text-zinc-300 cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 hover:text-white transition-colors rounded-lg mb-1 pointer-events-auto"
                                 >
                                   <Check
                                     className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formData.addons.includes(addon.name) ? "opacity-100" : "opacity-0"
+                                      "mr-2 h-4 w-4 text-blue-500",
+                                      formData.addons.includes(addon.name) ? "opacity-100 scale-100" : "opacity-0 scale-50"
                                     )}
                                   />
-                                  {addon.name}
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold">{addon.name}</span>
+                                    {addon.basePrice && <span className="text-[9px] text-zinc-600 font-black">+${addon.basePrice}</span>}
+                                  </div>
                                 </CommandItem>
                               ))}
                             </CommandGroup>
@@ -2964,7 +2994,12 @@ export default function BookingsPage() {
                                       >
                                         <div className="flex justify-between items-start">
                                           <div>
-                                            <div className="font-medium text-sm">{event.title}</div>
+                                            <div className="font-medium text-sm">
+                                              {event.title}
+                                              {event.addons && event.addons.length > 0 && (
+                                                <span className="text-zinc-500 font-normal text-xs ml-1"> + {event.addons.join(", ")}</span>
+                                              )}
+                                            </div>
                                             <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                                               {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
                                               {event.type === 'booking' && (event.vehicleYear || event.vehicleMake) && (

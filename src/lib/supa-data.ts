@@ -1883,7 +1883,17 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 vehicleModel: b.vehicles?.model || b.model || meta.model || (b.booking_vehicle?.model) || '',
                 vehicleYear: b.vehicles?.year || b.year || meta.year || (b.booking_vehicle?.year) || '',
 
-                addons: Array.isArray(b.add_ons) ? b.add_ons : [],
+                // Addons mapping with robust parsing
+                addons: (() => {
+                  try {
+                    const raw = b.add_ons || meta.add_ons || meta.addons || [];
+                    if (Array.isArray(raw)) return raw;
+                    if (typeof raw === 'string') return JSON.parse(raw);
+                    return [];
+                  } catch (e) {
+                    return [];
+                  }
+                })(),
                 price: b.service_price || b.price || meta.price,
                 createdAt: b.created_at || meta.created_at,
 
@@ -1916,7 +1926,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
             status: booking.status || 'confirmed',
             notes: booking.notes,
             service_price: Number(booking.price || booking.service_price || 0),
-            add_ons: booking.addons || [],
+            add_ons: Array.isArray(booking.addons) ? booking.addons : [],
             booking_vehicle: {
               ...(booking.vehicle_info || booking.booking_vehicle || {}),
               customer_name: booking.customer || booking.customer_name, // fallback for schema safety

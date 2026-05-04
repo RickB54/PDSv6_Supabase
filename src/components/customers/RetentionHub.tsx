@@ -146,7 +146,8 @@ export function RetentionHub({ customer, onRefresh }: Props) {
         customer_email: customer.email,
         note: outreachNote.trim() || (isProspect ? "Introductory Outreach" : "Maintenance Reminder"),
         coupon_code: includeDiscount ? coupon?.code : undefined,
-        type: isProspect ? 'initial' : 'retention'
+        type: isProspect ? 'initial' : 'retention',
+        addons: latestBooking?.addons || []
       };
       setEngagements([tempLog, ...engagements]);
 
@@ -254,6 +255,16 @@ export function RetentionHub({ customer, onRefresh }: Props) {
             <div className="text-[10px] text-zinc-600 font-bold mt-1 uppercase tracking-wider">
               {engagements[0] ? `Last: ${format(new Date(engagements[0].created_at), 'MMM dd, yyyy')}` : 'No history found'}
             </div>
+            {latestBooking && latestBooking.addons && latestBooking.addons.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1">
+                {latestBooking.addons.slice(0, 3).map((a: string, i: number) => (
+                  <Badge key={i} variant="outline" className="text-[8px] font-black uppercase px-1.5 py-0 h-4 bg-blue-500/5 text-blue-400/60 border-blue-500/10">
+                    {a}
+                  </Badge>
+                ))}
+                {latestBooking.addons.length > 3 && <span className="text-[8px] text-zinc-600 font-bold">+{latestBooking.addons.length - 3}</span>}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -371,6 +382,15 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                       <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1">
                          "{eng.note}"
                       </div>
+                      {eng.addons && Array.isArray(eng.addons) && eng.addons.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1 pl-3">
+                          {eng.addons.map((a: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-[7px] font-black uppercase px-1 py-0 h-3 bg-zinc-900 border-zinc-800 text-zinc-500">
+                              {a}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                    </div>
                  ))}
               </div>
