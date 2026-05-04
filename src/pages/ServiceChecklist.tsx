@@ -2305,8 +2305,7 @@ const ServiceChecklist = () => {
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             )}
             {/* Notes and Destination Fee removed from here - moved to Totals section for cleaner flow */}
