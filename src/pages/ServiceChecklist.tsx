@@ -2292,20 +2292,16 @@ const ServiceChecklist = () => {
                                                 <FileText className="h-3 w-3" /> Edit Process
                                               </Button>
                                             )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             {/* Notes and Destination Fee removed from here - moved to Totals section for cleaner flow */}
