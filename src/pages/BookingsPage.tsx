@@ -1340,7 +1340,7 @@ export default function BookingsPage() {
         </div>
       </PageHeader>
 
-      <div className="p-4 sm:p-6 space-y-6 mt-12 lg:mt-0">
+      <div className="p-1 sm:p-6 space-y-6 mt-12 lg:mt-0">
         {/* Mobile Controls (visible only on small screens) */}
         <div className="flex flex-col gap-4 lg:hidden mb-4">
           <div className="flex items-center justify-between gap-2">
@@ -2523,7 +2523,7 @@ export default function BookingsPage() {
 
 
         <Card className="mt-8 p-0 bg-zinc-950/50 border-zinc-800 overflow-hidden">
-          <div className="p-6 pb-2">
+          <div className="p-3 sm:p-6 pb-2">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
               <div className="flex items-center gap-4">
                 <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
@@ -2786,7 +2786,7 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-2 sm:p-6">
               <div className="space-y-4">
 
                   <div className="space-y-2">
@@ -2803,7 +2803,7 @@ export default function BookingsPage() {
                       >
                         <div className="border border-zinc-800 rounded-lg overflow-hidden">
                           <CollapsibleTrigger className="w-full">
-                            <div className="flex items-center justify-between p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
+                            <div className="flex items-center justify-between p-2.5 sm:p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
                               <div className="flex items-center gap-4">
                                 <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", customer.isSystem ? "bg-blue-500/20" : "bg-primary/20")}>
                                   {customer.isSystem ? (
@@ -2842,7 +2842,7 @@ export default function BookingsPage() {
                           </CollapsibleTrigger>
 
                           <CollapsibleContent>
-                            <div className="border-t border-zinc-800 p-4 bg-zinc-900/30">
+                            <div className="border-t border-zinc-800 p-2 sm:p-4 bg-zinc-900/30">
                               <div className="grid md:grid-cols-2 gap-4">
                                 {!customer.isSystem ? (
                                   <div className="space-y-4">

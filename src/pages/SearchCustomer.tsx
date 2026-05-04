@@ -452,8 +452,8 @@ const SearchCustomer = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Customer Database" />
-      <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
-        <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg">
+      <main className="container mx-auto px-1 sm:px-4 py-6 max-w-6xl space-y-6">
+        <Card className="p-3 sm:p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="p-4 rounded-full bg-blue-500/20 text-blue-400"><Users className="h-8 w-8" /></div>
@@ -478,7 +478,7 @@ const SearchCustomer = () => {
           </div>
         </Card>
 
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-2 sm:p-4 rounded-xl border border-zinc-800">
           <div className="relative w-full md:w-96"><Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" /><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="pl-10 bg-zinc-950 border-zinc-800" /></div>
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
             <Button variant="ghost" onClick={refresh} className="text-zinc-400 hover:text-white" disabled={isRefreshing}>
@@ -601,7 +601,7 @@ const SearchCustomer = () => {
                   </div>
 
                   {isExpanded && (
-                    <div className="p-6 border-t border-blue-500/10 bg-zinc-900/30 animate-in slide-in-from-top-2">
+                    <div className="p-3 sm:p-6 border-t border-blue-500/10 bg-zinc-900/30 animate-in slide-in-from-top-2">
                       <div className="flex justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
                         {!customer.is_archived && (
                           <Button asChild variant="outline" size="sm" className="h-9 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">

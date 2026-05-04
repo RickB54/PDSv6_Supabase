@@ -161,7 +161,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   return (
     <div className="space-y-6">
       {/* Input Section */}
-      <div className="bg-zinc-900/40 p-5 rounded-2xl border border-white/10 space-y-4">
+      <div className="bg-zinc-900/40 p-3 sm:p-5 rounded-2xl border border-white/10 space-y-4">
         <div className="flex items-center justify-between mb-1">
           <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Log New Interaction</label>
           <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
           )}
 
           {activities.map((act, idx) => (
-            <div key={act.id || idx} className="group relative flex flex-col gap-2 p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] hover:border-blue-500/20 transition-all shadow-sm">
+            <div key={act.id || idx} className="group relative flex flex-col gap-2 p-3 sm:p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] hover:border-blue-500/20 transition-all shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-zinc-900 rounded-lg border border-zinc-800">
