@@ -1768,7 +1768,7 @@ const ServiceChecklist = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <PageHeader 
         title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
         subtitle="Execute the Prime Standard for every vehicle."
@@ -1793,7 +1793,7 @@ const ServiceChecklist = () => {
         </div>
       </PageHeader>
 
-      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-6 md:space-y-8">
+      <main className="container mx-auto px-1 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8 overflow-x-hidden">
         {/* Premium Header Block */}
         <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
@@ -2036,7 +2036,7 @@ const ServiceChecklist = () => {
           </Card>
 
           {/* Checklist - dynamic from package and add-ons */}
-          <Card className="p-6 bg-gradient-card border-border">
+          <Card className="p-3 md:p-6 bg-gradient-card border-border">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center">
@@ -2312,7 +2312,7 @@ const ServiceChecklist = () => {
           </Card>
 
           {/* Materials Used */}
-          <Card className="p-6 bg-gradient-card border-border space-y-6">
+          <Card className="p-3 md:p-6 bg-gradient-card border-border space-y-6">
             <div 
               className="flex items-center justify-between cursor-pointer group"
               onClick={() => setMaterialsSectionExpanded(!materialsSectionExpanded)}
