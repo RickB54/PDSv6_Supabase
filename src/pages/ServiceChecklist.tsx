@@ -972,6 +972,12 @@ const ServiceChecklist = () => {
 
           if (state.jobStartTime) setJobStartTime(state.jobStartTime);
           if (state.itemDurations) setItemDurations(state.itemDurations);
+          if (state.chemRows) setChemRows(state.chemRows);
+          if (state.matRows) setMatRows(state.matRows);
+          if (state.toolRows) setToolRows(state.toolRows);
+          if (state.milesTraveled) setMilesTraveled(state.milesTraveled);
+          if (state.odometerStart) setOdometerStart(state.odometerStart);
+          if (state.odometerEnd) setOdometerEnd(state.odometerEnd);
 
           // Save dirty steps to be reapplied after regeneration
           if (state.checklistSteps) {
@@ -1021,7 +1027,7 @@ const ServiceChecklist = () => {
       selectedPackage,
       vehicleType,
       selectedAddOns,
-      checklistSteps, // Saves checked status
+      checklistSteps, 
       notes,
       destinationFee,
       employeeAssigned,
@@ -1029,11 +1035,58 @@ const ServiceChecklist = () => {
       discountType,
       jobStartTime,
       itemDurations,
+      chemRows,
+      matRows,
+      toolRows,
+      milesTraveled,
+      odometerStart,
+      odometerEnd,
       timestamp: Date.now()
     };
 
     localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(state));
-  }, [selectedCustomer, selectedPackage, vehicleType, selectedAddOns, checklistSteps, notes, destinationFee, employeeAssigned, discountValue, discountType]);
+  }, [
+    selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
+    checklistSteps, notes, destinationFee, employeeAssigned, 
+    discountValue, discountType, jobStartTime, itemDurations,
+    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd
+  ]);
+
+  // 4. Force Save on Page Exit
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const state = {
+        selectedCustomer,
+        selectedPackage,
+        vehicleType,
+        selectedAddOns,
+        checklistSteps,
+        notes,
+        destinationFee,
+        employeeAssigned,
+        discountValue,
+        discountType,
+        jobStartTime,
+        itemDurations,
+        chemRows,
+        matRows,
+        toolRows,
+        milesTraveled,
+        odometerStart,
+        odometerEnd,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(state));
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [
+    selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
+    checklistSteps, notes, destinationFee, employeeAssigned, 
+    discountValue, discountType, jobStartTime, itemDurations,
+    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd
+  ]);
 
   // --- PERSISTENCE LOGIC END ---
 
