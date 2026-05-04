@@ -343,22 +343,18 @@ const ServiceChecklist = () => {
   // Timer State
   const [jobStartTime, setJobStartTime] = useState<number | null>(null);
   const [jobEndTime, setJobEndTime] = useState<number | null>(null);
+  const [lastItemCompletionTime, setLastItemCompletionTime] = useState<number | null>(null);
+  const [itemDurations, setItemDurations] = useState<Record<string, number>>({}); // stepId -> ms
+  const [liveNow, setLiveNow] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
-
-  useEffect(() => {
-    // Auto-start timer on first check if not already started
-    if (!jobStartTime && checklistSteps.some(s => s.checked)) {
-      setJobStartTime(Date.now());
-    }
-  }, [checklistSteps, jobStartTime]);
-
-  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (jobStartTime && !jobEndTime) {
       interval = setInterval(() => {
-        const diff = Date.now() - jobStartTime;
+        const now = Date.now();
+        setLiveNow(now);
+        const diff = now - jobStartTime;
         const hrs = Math.floor(diff / 3600000);
         const mins = Math.floor((diff % 3600000) / 60000);
         const secs = Math.floor((diff % 60000) / 1000);
@@ -369,6 +365,51 @@ const ServiceChecklist = () => {
     }
     return () => clearInterval(interval);
   }, [jobStartTime, jobEndTime]);
+
+  const formatDuration = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes === 0) return `${seconds}s`;
+    return `${minutes}m ${seconds}s`;
+  };
+
+  const handleToggleStep = (stepId: string, checked: boolean) => {
+    const now = Date.now();
+    setChecklistSteps(prev => {
+      const newSteps = prev.map(ps => ps.id === stepId ? { ...ps, checked } : ps);
+      const step = prev.find(ps => ps.id === stepId);
+      
+      if (!step) return newSteps;
+
+      if (checked) {
+        // Only start the main job timer if it's NOT a preparation step
+        if (step.category !== 'preparation') {
+          if (!jobStartTime) {
+            setJobStartTime(now);
+            setLastItemCompletionTime(now);
+          } else {
+            // Calculate duration since last item was checked
+            const startPoint = lastItemCompletionTime || jobStartTime;
+            const duration = now - startPoint;
+            setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
+            setLastItemCompletionTime(now);
+          }
+        }
+      } else {
+        // If unchecking, we could clear the duration
+        setItemDurations(prevDur => {
+          const next = { ...prevDur };
+          delete next[stepId];
+          return next;
+        });
+      }
+
+      return newSteps;
+    });
+  };
+
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
 
   // Materials Used state
   type ChemItem = { id: string; name: string; threshold?: number; currentStock?: number };
@@ -1828,7 +1869,13 @@ const ServiceChecklist = () => {
           <Card className="p-6 bg-gradient-card border-border">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl md:text-2xl font-bold text-white">Checklist</h2>
+                <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                  <ClipboardList className="h-5 w-5 text-red-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold text-white">Service Checklist</h2>
+                  <p className="text-sm text-zinc-400">Step-by-step quality control</p>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -1838,6 +1885,8 @@ const ServiceChecklist = () => {
                       setChemRows([]);
                       setMatRows([]);
                       setToolRows([]);
+                      setJobStartTime(null);
+                      setItemDurations({});
                       localStorage.removeItem('service_checklist_draft');
                       toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
                     }
@@ -1848,6 +1897,18 @@ const ServiceChecklist = () => {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+
+              {jobStartTime && (
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-red-500/30 rounded-full animate-pulse-subtle">
+                    <Clock className="h-4 w-4 text-red-500" />
+                    <span className="text-sm font-mono font-bold text-red-500">
+                      JOB TIME: {formatDuration(liveNow - jobStartTime)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/5">
                 {/* Section 1: Chemical & Decision Buttons */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -1906,20 +1967,33 @@ const ServiceChecklist = () => {
                   <span className="text-[10px] md:text-sm font-bold text-white">{progressPercent}%</span>
                 </div>
               </div>
-            </div>
             {(!selectedPackage || !vehicleType) && (
               <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
             )}
             {selectedPackage && (
-              <div className="space-y-6 max-h-[50vh] overflow-auto pr-2">
+              <div className="space-y-6 max-h-[60vh] overflow-auto pr-2">
                 {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
-                  <div key={section}>
+                  <div key={section} className="space-y-3">
                     <button
-                      className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between"
+                      type="button"
+                      className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
                       onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
                     >
-                      <span>{section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}</span>
-                      {collapsedSections[section] ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                      <div className="flex items-center gap-2">
+                        <span className="group-hover:text-primary transition-colors">
+                          {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
+                        </span>
+                        {section !== 'preparation' && jobStartTime && (
+                          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700">
+                            {formatDuration(
+                              checklistSteps
+                                .filter(s => s.category === section && s.checked)
+                                .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
                     </button>
                     {!collapsedSections[section] && (
                       <div className="space-y-2">
@@ -1929,16 +2003,23 @@ const ServiceChecklist = () => {
                           return (
                             <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
                               <div className="flex items-center justify-between py-2">
-                                <label className="flex items-center gap-3 text-sm cursor-pointer flex-1 py-1">
+                                <label className="flex items-center gap-3 text-sm cursor-pointer flex-1 py-1 group/item">
                                   <input
                                     type="checkbox"
                                     checked={step.checked}
-                                    onChange={(e) => setChecklistSteps(prev => prev.map(ps => ps.id === step.id ? { ...ps, checked: e.target.checked } : ps))}
+                                    onChange={(e) => handleToggleStep(step.id, e.target.checked)}
                                     className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0"
                                   />
-                                  <span className={step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}>
-                                    {step.name}
-                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className={step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}>
+                                      {step.name}
+                                    </span>
+                                    {itemDurations[step.id] && (
+                                      <span className="text-[10px] text-primary/70 font-mono italic">
+                                        took {formatDuration(itemDurations[step.id])}
+                                      </span>
+                                    )}
+                                  </div>
                                 </label>
                                 
                                 <div className="flex flex-wrap items-center gap-1 sm:gap-2">
@@ -2033,8 +2114,7 @@ const ServiceChecklist = () => {
                           );
                         })}
                       </div>
-                    )
-                    }
+                    )}
                   </div>
                 ))}
               </div>
