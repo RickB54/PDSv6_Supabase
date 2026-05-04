@@ -2049,9 +2049,10 @@ const ServiceChecklist = () => {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-          </Card>
+            )}
+          </div>
+        )}
+      </Card>
 
           {/* Checklist - dynamic from package and add-ons */}
           <Card className="p-3 md:p-6 bg-gradient-card border-border">
