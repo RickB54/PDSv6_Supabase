@@ -2323,7 +2323,8 @@ const ServiceChecklist = () => {
             ))}
           </div>
         )}
-      </Card>
+      </div>
+    </Card>
 
           {/* Materials Used */}
           <Card className="p-3 md:p-6 bg-gradient-card border-border space-y-6">
