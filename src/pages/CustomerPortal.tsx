@@ -231,7 +231,7 @@ const CustomerPortal = () => {
   const customServicesMap: Record<string, string> = Object.fromEntries(getCustomServices().map(s => [s.id, s.name]));
 
   const livePackages = useMemo(() => {
-    const visibleBuiltIns = builtInPackages.filter(p => packageMetaLive[p.id]?.visible === true && p.id.includes('prime-essential'));
+    const visibleBuiltIns = builtInPackages.filter(p => packageMetaLive[p.id]?.visible === true);
     const visibleCustomPkgs = customPackagesLive.filter((p: any) => packageMetaLive[p.id]?.visible === true);
     
     return [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {

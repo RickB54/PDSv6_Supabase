@@ -268,8 +268,7 @@ export default function PackagePricing() {
             midsize_price: Number(updated[`package:${p.id}:midsize`] || p.pricing.midsize),
             truck_price: Number(updated[`package:${p.id}:truck`] || p.pricing.truck),
             luxury_price: Number(updated[`package:${p.id}:luxury`] || p.pricing.luxury),
-            is_active: (getPackageMeta(p.id)?.visible !== false),
-            image_url: getPackageMeta(p.id)?.imageDataUrl || ""
+            is_active: (getPackageMeta(p.id)?.visible !== false)
           }));
 
         const allAddons = [...builtInAddOns, ...getCustomAddOns()];
@@ -308,9 +307,9 @@ export default function PackagePricing() {
         if (pkgRows.length > 0) await supaPkgs.upsert(pkgRows);
         if (addRows.length > 0) await supaAddOns.upsert(addRows);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("saveToBackend failed", e);
-      toast.error("Failed to sync with cloud database.");
+      toast.error(`Failed to sync: ${e.message || "Unknown error"}`);
     }
   }
 

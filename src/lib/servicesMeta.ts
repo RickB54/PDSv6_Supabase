@@ -43,12 +43,6 @@ export function getPackageMeta(id: string): PackageMeta | undefined {
     return { id, visible: false };
   }
 
-  // DEFAULT VISIBILITY:
-  // Prime Elite packages should be HIDDEN by default until the admin decides to show them.
-  if (id.startsWith('prime-elite')) {
-    return { id, visible: false };
-  }
-
   return undefined;
 }
 export function setPackageMeta(id: string, meta: Partial<PackageMeta>) {
