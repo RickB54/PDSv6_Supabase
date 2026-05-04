@@ -2088,7 +2088,7 @@ const ServiceChecklist = () => {
       <Card className="bg-gradient-card border-border overflow-visible relative">
         {/* Sticky Header - Upgraded to inline styles for maximum browser compatibility */}
         <div 
-          style={{ position: 'sticky', top: '0px', zIndex: 50 }}
+          style={{ position: 'sticky', top: '64px', zIndex: 130 }}
           className="bg-zinc-950/95 backdrop-blur-md px-3 md:px-6 py-4 border-b border-white/10 shadow-2xl space-y-4 rounded-t-xl transition-all"
         >
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -2096,26 +2096,30 @@ const ServiceChecklist = () => {
               <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
                 <ClipboardList className="h-5 w-5 text-red-500" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
                 <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
               </div>
-              <div className="flex items-center gap-2 ml-auto lg:ml-4">
+              <div className="flex items-center gap-1 sm:gap-2 ml-auto">
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="text-[10px] h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5"
+                  className="h-8 md:h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5 px-2 md:px-3"
                   onClick={() => generateJobReport(false)}
+                  title="Generate Report"
                 >
-                  <Download className="h-3 w-3" /> Report
+                  <Download className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                  <span className="hidden md:inline text-[10px]">Report</span>
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="text-[10px] h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5"
+                  className="h-8 md:h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5 px-2 md:px-3"
                   onClick={() => generateJobReport(true)}
+                  title="Archive Job"
                 >
-                  <Save className="h-3 w-3" /> Archive
+                  <Save className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                  <span className="hidden md:inline text-[10px]">Archive</span>
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -2132,10 +2136,10 @@ const ServiceChecklist = () => {
                       toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
                     }
                   }}
-                  className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                  className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 md:border-transparent"
                   title="Clear Checklist"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
                 </Button>
               </div>
             </div>
