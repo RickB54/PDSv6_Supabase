@@ -2091,61 +2091,72 @@ const ServiceChecklist = () => {
           style={{ position: 'sticky', top: '64px', zIndex: 130 }}
           className="bg-zinc-950/95 backdrop-blur-md px-3 md:px-6 py-4 border-b border-white/10 shadow-2xl space-y-4 rounded-t-xl transition-all"
         >
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
-                <ClipboardList className="h-5 w-5 text-red-500" />
+          <div className="flex items-center justify-between gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
+                <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 hidden sm:block">
                 <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
                 <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 ml-auto">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 md:h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5 px-2 md:px-3"
-                  onClick={() => generateJobReport(false)}
-                  title="Generate Report"
-                >
-                  <Download className="h-3.5 w-3.5 md:h-3 md:w-3" />
-                  <span className="hidden md:inline text-[10px]">Report</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 md:h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5 px-2 md:px-3"
-                  onClick={() => generateJobReport(true)}
-                  title="Archive Job"
-                >
-                  <Save className="h-3.5 w-3.5 md:h-3 md:w-3" />
-                  <span className="hidden md:inline text-[10px]">Archive</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
-                      setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
-                      setChemRows([]);
-                      setMatRows([]);
-                      setToolRows([]);
-                      setJobStartTime(null);
-                      setItemDurations({});
-                      localStorage.removeItem('service_checklist_draft');
-                      toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
-                    }
-                  }}
-                  className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 md:border-transparent"
-                  title="Clear Checklist"
-                >
-                  <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
-                </Button>
-              </div>
+              
+              {/* Job Timer - Integrated into main sticky row for visibility */}
+              {jobStartTime && (
+                <div className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 bg-white border-2 shadow-lg rounded-full shrink-0 ${jobEndTime ? 'border-green-500' : 'border-red-500 animate-pulse-subtle'}`}>
+                  <Clock className={`h-3.5 w-3.5 md:h-4 md:w-4 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
+                  <span className={`text-xs md:text-lg font-mono font-black ${jobEndTime ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatDuration((jobEndTime || liveNow) - jobStartTime)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 md:h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5 px-2 md:px-3"
+                onClick={() => generateJobReport(false)}
+                title="Generate Report"
+              >
+                <Download className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                <span className="hidden md:inline text-[10px]">Report</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 md:h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5 px-2 md:px-3"
+                onClick={() => generateJobReport(true)}
+                title="Archive Job"
+              >
+                <Save className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                <span className="hidden md:inline text-[10px]">Archive</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
+                    setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
+                    setChemRows([]);
+                    setMatRows([]);
+                    setToolRows([]);
+                    setJobStartTime(null);
+                    setItemDurations({});
+                    localStorage.removeItem('service_checklist_draft');
+                    toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
+                  }
+                }}
+                className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 md:border-transparent"
+                title="Clear Checklist"
+              >
+                <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
+              </Button>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-white/5">
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button variant="ghost" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none border border-white/5 hover:bg-white/5" onClick={() => {
                 const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
@@ -2161,17 +2172,6 @@ const ServiceChecklist = () => {
                 {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
               </Button>
             </div>
-            
-            {jobStartTime && (
-              <div className="flex justify-center w-full sm:w-auto">
-                <div className={`flex items-center gap-2 px-4 py-1 bg-white border-2 shadow-lg rounded-full ${jobEndTime ? 'border-green-500' : 'border-red-500 animate-pulse-subtle'}`}>
-                  <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
-                  <span className={`text-sm md:text-lg font-mono font-black ${jobEndTime ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatDuration((jobEndTime || liveNow) - jobStartTime)}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
