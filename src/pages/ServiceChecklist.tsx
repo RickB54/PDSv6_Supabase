@@ -936,7 +936,13 @@ const ServiceChecklist = () => {
       const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
       return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false };
     });
-    setChecklistSteps([...prep, ...baseSteps, ...addonSteps]);
+    // Final inspection static steps (Ensure they always exist)
+    const final: ChecklistStep[] = [
+      { id: 'final-glass', name: 'Final glass & quality check', category: 'final', checked: false },
+      { id: 'final-walkaround', name: 'Final walkaround / Media archive', category: 'final', checked: false },
+    ];
+
+    setChecklistSteps([...prep, ...baseSteps, ...addonSteps, ...final]);
   }, [selectedPackage, selectedAddOns, vehicleType]);
 
   // --- PERSISTENCE LOGIC START ---
@@ -2193,12 +2199,12 @@ const ServiceChecklist = () => {
                                     onChange={(e) => handleToggleStep(step.id, e.target.checked)}
                                     className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0"
                                   />
-                                  <div className="flex flex-col">
-                                    <span className={step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}>
+                                  <div className="flex items-center gap-2 overflow-hidden">
+                                    <span className={`truncate ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}>
                                       {step.name}
                                     </span>
                                     {itemDurations[step.id] && (
-                                      <span className="text-[10px] text-primary/70 font-mono italic">
+                                      <span className="text-[9px] text-primary/70 font-mono italic shrink-0 whitespace-nowrap bg-primary/5 px-1 rounded border border-primary/10">
                                         took {formatDuration(itemDurations[step.id])}
                                       </span>
                                     )}
