@@ -106,8 +106,8 @@ export default function TipSelectionScreen({
     <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col items-center justify-center animate-in fade-in duration-300">
       <div className="w-full max-w-lg bg-white h-full sm:h-auto sm:rounded-3xl flex flex-col shadow-2xl relative overflow-hidden">
         
-        {/* Top Header */}
-        <div className="bg-gray-50 px-6 py-8 text-center border-b border-gray-100 flex-shrink-0 relative">
+        {/* Top Header - Condensed for Mobile */}
+        <div className="bg-gray-50 px-6 py-4 text-center border-b border-gray-100 flex-shrink-0 relative">
           {!loading && (
             <button 
               onClick={onCancel} 
@@ -116,7 +116,7 @@ export default function TipSelectionScreen({
               <X size={24} />
             </button>
           )}
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Final Details</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Final Details</h2>
           <div className="flex flex-col items-center gap-1">
             <p className="text-gray-500 font-medium">Service Balance: ${basePriceFormatted}</p>
             {finalTime && (
@@ -128,7 +128,7 @@ export default function TipSelectionScreen({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="p-6 sm:p-8 flex-1 overflow-y-auto w-full pb-32 sm:pb-32">
+        <div className="p-4 sm:p-8 flex-1 overflow-y-auto w-full pb-48">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-accent gap-6 h-full">
               <Loader2 size={64} className="animate-spin" />
@@ -137,7 +137,7 @@ export default function TipSelectionScreen({
             </div>
           ) : (
             <div className="space-y-4 max-w-md mx-auto">
-              <p className="text-center text-xl text-gray-800 font-bold mb-6">
+              <p className="text-center text-lg text-gray-800 font-bold mb-4">
                 Add a tip for the service?
               </p>
 
@@ -145,7 +145,7 @@ export default function TipSelectionScreen({
               
               <button
                 onClick={() => setSelectedTip(null)}
-                className={`w-full relative group py-4 px-6 border-2 rounded-2xl font-bold text-xl transition-all active:scale-[0.98] ${
+                className={`w-full relative group py-3 px-6 border-2 rounded-2xl font-bold text-lg transition-all active:scale-[0.98] ${
                   selectedTip === null 
                     ? 'border-gray-900 bg-gray-900 text-white shadow-lg shadow-gray-900/20' 
                     : 'border-gray-200 text-gray-600 bg-white hover:border-gray-400 hover:text-gray-900'
@@ -161,7 +161,7 @@ export default function TipSelectionScreen({
                   <button
                     key={percent}
                     onClick={() => setSelectedTip(percent)}
-                    className={`w-full group py-4 px-6 rounded-2xl font-bold text-2xl transition-all active:scale-[0.98] flex justify-between items-center overflow-hidden border-2 space-y-0 ${
+                    className={`w-full group py-3 px-6 rounded-2xl font-bold text-xl transition-all active:scale-[0.98] flex justify-between items-center overflow-hidden border-2 space-y-0 ${
                       isSelected
                         ? 'bg-accent border-accent text-white shadow-xl shadow-accent/30 scale-[1.02]'
                         : 'bg-white border-gray-200 text-gray-800 hover:border-accent hover:text-accent shadow-sm'
@@ -184,7 +184,7 @@ export default function TipSelectionScreen({
               >
                 <button
                   onClick={() => setSelectedTip('custom')}
-                  className={`w-full py-4 px-6 text-xl font-semibold transition-all flex justify-between items-center ${
+                  className={`w-full py-3 px-6 text-lg font-semibold transition-all flex justify-between items-center ${
                     selectedTip === 'custom' ? 'text-accent' : 'text-gray-600'
                   }`}
                 >
@@ -221,7 +221,7 @@ export default function TipSelectionScreen({
 
         {/* Floating sticky footer for Continue */}
         {!loading && (
-          <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-3">
+          <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 sm:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-2">
             <div className="flex justify-between items-center mb-1 px-2">
               <span className="text-gray-500 font-semibold">Total to Pay</span>
               <span className="text-2xl font-black text-gray-900">${getTotalAmountDisplay()}</span>
@@ -230,7 +230,7 @@ export default function TipSelectionScreen({
             <button
               onClick={handleProceedToPay}
               disabled={!canProceed}
-              className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-xl shadow-lg hover:bg-emerald-600 shadow-emerald-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-emerald-500 text-white rounded-2xl font-black text-lg shadow-lg hover:bg-emerald-600 shadow-emerald-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               Continue to Pay
               <ArrowRight size={24} />
