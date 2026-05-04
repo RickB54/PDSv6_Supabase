@@ -661,7 +661,7 @@ const SearchCustomer = () => {
                                         <div>
                                           <div className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-0.5">{vIdx === 0 ? 'Primary Vehicle' : `Vehicle #${vIdx+1}`}</div>
                                           <div className="text-zinc-200 text-sm font-black tracking-tight">{vy ? `${vy} ` : ''}{v.make} {v.model}</div>
-                                          <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'Standard'} {v.color ? `• ${v.color}` : ''}</div>
+                                          <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'No Type Set'} {v.color ? `• ${v.color}` : ''}</div>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-2">
