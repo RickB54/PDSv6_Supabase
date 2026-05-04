@@ -216,6 +216,8 @@ const ServiceChecklist = () => {
     setChemRows([]);
     setMatRows([]);
     setToolRows([]);
+    setJobStartTime(null);
+    setItemDurations({});
     setFinishedJobId(null);
     setShowTipScreen(false);
   };
@@ -343,7 +345,7 @@ const ServiceChecklist = () => {
   // Timer State
   const [jobStartTime, setJobStartTime] = useState<number | null>(null);
   const [jobEndTime, setJobEndTime] = useState<number | null>(null);
-  const [lastItemCompletionTime, setLastItemCompletionTime] = useState<number | null>(null);
+  const [lastActionTime, setLastActionTime] = useState<number>(Date.now());
   const [itemDurations, setItemDurations] = useState<Record<string, number>>({}); // stepId -> ms
   const [liveNow, setLiveNow] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
@@ -383,21 +385,30 @@ const ServiceChecklist = () => {
       if (!step) return newSteps;
 
       if (checked) {
-        // Only start the main job timer if it's NOT a preparation step
-        if (step.category !== 'preparation') {
+        // If this is a preparation step, just update the "last action" point
+        // so the first real work step knows when the prep ended.
+        if (step.category === 'preparation') {
+          setLastActionTime(now);
+        } else {
+          // If this is the VERY FIRST non-prep step
           if (!jobStartTime) {
-            setJobStartTime(now);
-            setLastItemCompletionTime(now);
-          } else {
-            // Calculate duration since last item was checked
-            const startPoint = lastItemCompletionTime || jobStartTime;
-            const duration = now - startPoint;
+            // Start the job timer at the moment prep ended (or now if no prep was done)
+            const actualStart = lastActionTime || now;
+            setJobStartTime(actualStart);
+            
+            // The duration for this first item is the time since prep ended
+            const duration = now - actualStart;
             setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
-            setLastItemCompletionTime(now);
+            setLastActionTime(now);
+          } else {
+            // Standard mid-job step
+            const duration = now - lastActionTime;
+            setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
+            setLastActionTime(now);
           }
         }
       } else {
-        // If unchecking, we could clear the duration
+        // If unchecking, clear the duration
         setItemDurations(prevDur => {
           const next = { ...prevDur };
           delete next[stepId];
@@ -818,6 +829,13 @@ const ServiceChecklist = () => {
     setSelectedServices(selected);
     // Build steps from selected package
     const pkg = servicePackages.find(p => p.id === selectedPackage) || (getCustomPackages().find((p: any) => p.id === selectedPackage) as any);
+    
+    // Auto-reset timer if everything is unchecked and we're switching
+    if (checklistSteps.length > 0 && checklistSteps.every(s => !s.checked) && jobStartTime) {
+      setJobStartTime(null);
+      setItemDurations({});
+    }
+
     let baseSteps: ChecklistStep[] = [];
     if (pkg && (pkg as any).steps) {
       baseSteps = (pkg as any).steps.map((s: any) => ({ id: s.id || s, name: s.name || s, category: (s.category || 'exterior'), checked: false }));
@@ -867,6 +885,9 @@ const ServiceChecklist = () => {
           if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
           if (state.discountValue) setDiscountValue(state.discountValue);
           if (state.discountType) setDiscountType(state.discountType);
+
+          if (state.jobStartTime) setJobStartTime(state.jobStartTime);
+          if (state.itemDurations) setItemDurations(state.itemDurations);
 
           // Save dirty steps to be reapplied after regeneration
           if (state.checklistSteps) {
@@ -922,6 +943,8 @@ const ServiceChecklist = () => {
       employeeAssigned,
       discountValue,
       discountType,
+      jobStartTime,
+      itemDurations,
       timestamp: Date.now()
     };
 
