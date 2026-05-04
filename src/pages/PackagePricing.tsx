@@ -1506,8 +1506,7 @@ export default function PackagePricing() {
               midsize_price: pricing.midsize || 0,
               truck_price: pricing.truck || 0,
               luxury_price: pricing.luxury || 0,
-              is_active: visible,
-              image_url: getPackageMeta(id)?.imageDataUrl || ""
+              is_active: visible
             }]);
           }
         } else {
@@ -1769,71 +1768,6 @@ export default function PackagePricing() {
               <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" /> 
               <span className="hidden sm:inline">Services</span>
             </Button>
-
-            {/* Help Button & Dialog */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-zinc-500 text-zinc-500 hover:bg-zinc-500/10 font-black uppercase tracking-widest text-[10px] px-2 sm:px-3 h-8 sm:h-9"
-                  title="Proper Procedure Help"
-                >
-                  <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Help</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-black uppercase tracking-tight text-red-500">Proper Procedure: Managing Services</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-6 py-4 overflow-y-auto max-h-[70vh] pr-4">
-                  <section className="space-y-2">
-                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">1. Management Workflow</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                      You can manage your pricing and visibility from <span className="text-white font-bold underline">ANY environment</span> (local computer or live website) as long as you are logged in as an <strong>Admin</strong>.
-                    </p>
-                    <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
-                      <li>Toggle <strong>"Live"</strong> to show or hide a package.</li>
-                      <li>Click the <strong>"Save"</strong> button on the specific package card (or "Save All" at the top).</li>
-                      <li>Changes are saved instantly to the cloud database (Supabase).</li>
-                    </ul>
-                  </section>
-
-                  <section className="space-y-2">
-                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">2. Synchronization & Caching</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                      The public Services page automatically checks for updates every 2 minutes. 
-                    </p>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                      <strong>Pro Tip:</strong> If your changes don't appear immediately on the website, click the <span className="text-blue-400 font-bold">"Sync with Cloud"</span> button located at the top of the Services page to force a refresh.
-                    </p>
-                  </section>
-
-                  <section className="space-y-2">
-                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">3. How to Test Correctly</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed font-bold text-red-400">
-                      IMPORTANT: Always use an "Incognito" or "Private" browser window when testing as a customer.
-                    </p>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                      Because you are an Admin, your browser might remember your settings or show you "hidden" items that a regular customer cannot see. Testing in Incognito ensures you see exactly what a non-logged-in visitor sees.
-                    </p>
-                  </section>
-
-                  <section className="space-y-2">
-                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">4. Troubleshooting</h3>
-                    <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
-                      <li><strong>Failed to Sync?</strong> This usually means a database column mismatch. Contact support if this persists.</li>
-                      <li><strong>Package won't show?</strong> Ensure "is_active" is set to true in the database via the toggle.</li>
-                      <li><strong>Public can't see prices?</strong> Verify that "Public Read" RLS policies are enabled in your Supabase dashboard.</li>
-                    </ul>
-                  </section>
-                </div>
-                <DialogFooter>
-                  <Button className="bg-red-600 hover:bg-red-700 font-bold" onClick={() => {}}>Understood</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
       </PageHeader>
 
@@ -1976,12 +1910,69 @@ export default function PackagePricing() {
             {/* Show Services Section */}
             <AccordionItem value="show-services" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-emerald-900/30 group">
               <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-emerald-400 data-[state=open]:text-emerald-400 transition-colors">
-                <span className="text-lg font-semibold flex items-center gap-3">
-                  <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <div className="flex items-center justify-between w-full pr-4">
+                  <span className="text-lg font-semibold flex items-center gap-3">
+                    <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </span>
+                    Show Services
                   </span>
-                  Show Services
-                </span>
+                  
+                  {/* Help Button & Dialog moved here */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-zinc-500 hover:text-white h-8 w-8 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Proper Procedure Help"
+                      >
+                        <HelpCircle className="w-5 h-5" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white">
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tight text-red-500">Proper Procedure: Managing Services</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-6 py-4 overflow-y-auto max-h-[70vh] pr-4">
+                        <section className="space-y-2">
+                          <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">1. Management Workflow</h3>
+                          <p className="text-zinc-400 text-sm leading-relaxed">
+                            You can manage your pricing and visibility from <span className="text-white font-bold underline">ANY environment</span> (local computer or live website) as long as you are logged in as an <strong>Admin</strong>.
+                          </p>
+                          <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
+                            <li>Toggle <strong>"Live"</strong> to show or hide a package.</li>
+                            <li>Your choice is saved <strong>instantly</strong> to the cloud database.</li>
+                          </ul>
+                        </section>
+
+                        <section className="space-y-2">
+                          <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">2. Synchronization & Caching</h3>
+                          <p className="text-zinc-400 text-sm leading-relaxed">
+                            The public Services page automatically checks for updates every 2 minutes. 
+                          </p>
+                          <p className="text-zinc-400 text-sm leading-relaxed">
+                            <strong>Pro Tip:</strong> If your changes don't appear immediately on the website, click the <span className="text-blue-400 font-bold">"Sync with Cloud"</span> button located at the top of the Services page to force a refresh.
+                          </p>
+                        </section>
+
+                        <section className="space-y-2">
+                          <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">3. How to Test Correctly</h3>
+                          <p className="text-zinc-400 text-sm leading-relaxed font-bold text-red-400">
+                            IMPORTANT: Always use an "Incognito" or "Private" browser window when testing as a customer.
+                          </p>
+                          <p className="text-zinc-400 text-sm leading-relaxed">
+                            Because you are an Admin, your browser might remember your settings or show you "hidden" items that a regular customer cannot see. Testing in Incognito ensures you see exactly what a non-logged-in visitor sees.
+                          </p>
+                        </section>
+                      </div>
+                      <DialogFooter>
+                        <Button className="bg-red-600 hover:bg-red-700 font-bold" onClick={() => {}}>Understood</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex flex-col gap-6">
