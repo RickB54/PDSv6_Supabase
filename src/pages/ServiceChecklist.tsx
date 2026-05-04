@@ -2292,6 +2292,10 @@ const ServiceChecklist = () => {
                                                 <FileText className="h-3 w-3" /> Edit Process
                                               </Button>
                                             )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </div>
