@@ -1985,46 +1985,94 @@ const ServiceChecklist = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
-                <Label>Package</Label>
-                <select
-                  value={selectedPackage}
-                  onChange={(e) => setSelectedPackage(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm"
-                >
-                  <option value="">Select a package...</option>
-                  {coreServicesDisplay.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Vehicle Type</Label>
+                <Label className="text-sm font-semibold text-zinc-300">Vehicle Type</Label>
                 <select
                   value={vehicleType}
                   onChange={(e) => setVehicleType(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm"
+                  className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
                 >
                   {vehicleOptions.map((opt) => (
                     <option key={opt} value={opt}>{vehicleLabels[opt] || opt}</option>
                   ))}
-                  <option value="Other">Other</option>
                 </select>
-                {vehicleType === 'Other' && (
-                  <Input placeholder="Enter vehicle type" value={vehicleTypeOther} onChange={(e) => setVehicleTypeOther(e.target.value)} className="mt-2" />
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-zinc-300">Service Package</Label>
+                  <select
+                    value={selectedPackage}
+                    onChange={(e) => setSelectedPackage(e.target.value)}
+                    className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
+                  >
+                    <option value="">Select a package...</option>
+                    {coreServicesDisplay.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {liveAddOns.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <div 
+                      className="flex items-center justify-between cursor-pointer group mb-2"
+                      onClick={() => setAddOnsExpanded(!addOnsExpanded)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Label className="cursor-pointer font-bold text-zinc-200">Optional Add-Ons</Label>
+                        {selectedAddOns.length > 0 && (
+                          <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] h-4">
+                            {selectedAddOns.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="p-1 rounded-full group-hover:bg-white/10 transition-colors">
+                        {addOnsExpanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+                      </div>
+                    </div>
+                    
+                    {addOnsExpanded && (
+                      <div className="grid grid-cols-1 gap-1.5 animate-in slide-in-from-top-1 duration-200">
+                        {liveAddOns.map((a: any) => (
+                          <label key={a.id} className="flex items-center gap-2 text-xs p-2 rounded hover:bg-white/10 cursor-pointer transition-colors border border-transparent hover:border-white/5">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedAddOns.includes(a.id)} 
+                              onChange={(e) => {
+                                setSelectedAddOns(prev => e.target.checked ? [...prev, a.id] : prev.filter(id => id !== a.id));
+                              }} 
+                              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-purple-600 focus:ring-offset-0"
+                            />
+                            <span className={selectedAddOns.includes(a.id) ? "text-purple-300 font-medium" : "text-zinc-400"}>
+                              {a.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 border-t border-white/5 pt-6">
               <div className="space-y-2">
-                <Label>Estimated Time</Label>
-                <Input placeholder="e.g., 4 hours" value={estimatedTime} onChange={(e) => setEstimatedTime(e.target.value)} />
+                <Label className="text-sm font-semibold text-zinc-300">Estimated Time</Label>
+                <Input 
+                  placeholder="e.g., 4 hours" 
+                  value={estimatedTime} 
+                  onChange={(e) => setEstimatedTime(e.target.value)} 
+                  className="h-11 bg-black border-white/20 focus:ring-2 focus:ring-primary/50"
+                />
               </div>
               <div className="space-y-2">
-                <Label>Employee Assigned</Label>
+                <Label className="text-sm font-semibold text-zinc-300">Employee Assigned</Label>
                 <select
                   value={employeeAssigned}
                   onChange={(e) => setEmployeeAssigned(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm"
+                  className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
                 >
                   <option value="">Select employee...</option>
                   {employees.map((e: any) => (
@@ -2033,46 +2081,6 @@ const ServiceChecklist = () => {
                 </select>
               </div>
             </div>
-            {liveAddOns.length > 0 && (
-              <div className="mt-4 border-t border-white/5 pt-4">
-                <div 
-                  className="flex items-center justify-between cursor-pointer group mb-2"
-                  onClick={() => setAddOnsExpanded(!addOnsExpanded)}
-                >
-                  <div className="flex items-center gap-2">
-                    <Label className="cursor-pointer">Optional Add-Ons</Label>
-                    {selectedAddOns.length > 0 && (
-                      <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] h-4">
-                        {selectedAddOns.length} selected
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
-                    {addOnsExpanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
-                  </div>
-                </div>
-                
-                {addOnsExpanded && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 animate-in slide-in-from-top-1 duration-200">
-                    {liveAddOns.map((a: any) => (
-                      <label key={a.id} className="flex items-center gap-2 text-sm p-2 rounded hover:bg-white/5 cursor-pointer transition-colors">
-                        <input 
-                          type="checkbox" 
-                          checked={selectedAddOns.includes(a.id)} 
-                          onChange={(e) => {
-                            setSelectedAddOns(prev => e.target.checked ? [...prev, a.id] : prev.filter(id => id !== a.id));
-                          }} 
-                          className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-purple-600 focus:ring-offset-0"
-                        />
-                        <span className={selectedAddOns.includes(a.id) ? "text-purple-300 font-medium" : "text-zinc-400"}>
-                          {a.name}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
       </Card>
