@@ -563,14 +563,14 @@ const ServiceChecklist = () => {
         const firstVeh = customer.vehicles[0];
         setSelectedVehicleId(firstVeh.id || "");
         
-        // Use smart normalization first
-        const fullName = `${firstVeh.year || ''} ${firstVeh.make || ''} ${firstVeh.model || ''}`.trim();
-        const smartType = normalizeVehicleType(fullName);
-        if (smartType) {
-          setVehicleType(smartType);
-        } else if (firstVeh.type) {
+        if (firstVeh.type) {
           const key = toVehKey(firstVeh.type);
           setVehicleType((vehicleOptions.includes(key) ? key : 'midsize'));
+        } else {
+          // Only fallback to smart guess if DB record is empty
+          const fullName = `${firstVeh.year || ''} ${firstVeh.make || ''} ${firstVeh.model || ''}`.trim();
+          const smartType = normalizeVehicleType(fullName);
+          if (smartType) setVehicleType(smartType);
         }
       } else {
         setSelectedVehicleId("");
@@ -1926,29 +1926,25 @@ const ServiceChecklist = () => {
                       const cust = customers.find(c => c.id === selectedCustomer);
                       const veh = cust?.vehicles?.find((v: any) => v.id === vehId);
                       if (veh) {
-                        const fullName = `${veh.year || ''} ${veh.make || ''} ${veh.model || ''}`.trim();
-                        const smartType = normalizeVehicleType(fullName);
-                        if (smartType) {
-                          setVehicleType(smartType);
-                        } else if (veh.type) {
+                        if (veh.type) {
                           const key = toVehKey(veh.type);
                           setVehicleType(vehicleOptions.includes(key) ? key : 'midsize');
+                        } else {
+                          // Only fallback to smart guess if DB record is empty
+                          const fullName = `${veh.year || ''} ${veh.make || ''} ${veh.model || ''}`.trim();
+                          const smartType = normalizeVehicleType(fullName);
+                          if (smartType) setVehicleType(smartType);
                         }
                       }
                     }}
                     className="flex h-10 w-full rounded-md border border-purple-900/30 bg-black text-white px-3 py-2 text-sm focus:ring-purple-500/20"
                   >
                     <option value="">-- Choose a Vehicle --</option>
-                    {(customers.find(c => c.id === selectedCustomer)?.vehicles || []).map((v: any) => {
-                      const fullName = `${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim();
-                      const smartType = normalizeVehicleType(fullName);
-                      const typeLabel = smartType ? (vehicleLabels[smartType] || smartType) : (v.type || 'No Type');
-                      return (
-                        <option key={v.id} value={v.id}>
-                          {v.year} {v.make} {v.model} ({typeLabel})
-                        </option>
-                      );
-                    })}
+                    {(customers.find(c => c.id === selectedCustomer)?.vehicles || []).map((v: any) => (
+                      <option key={v.id} value={v.id}>
+                        {v.year} {v.make} {v.model} ({v.type || 'No Type'})
+                      </option>
+                    ))}
                   </select>
                   {selectedCustomer && (
                     <Button
