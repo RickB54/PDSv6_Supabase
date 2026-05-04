@@ -2996,9 +2996,23 @@ export default function BookingsPage() {
                                           <div>
                                             <div className="font-medium text-sm">
                                               {event.title}
-                                              {event.addons && event.addons.length > 0 && (
-                                                <span className="text-zinc-500 font-normal text-xs ml-1"> + {event.addons.join(", ")}</span>
-                                              )}
+                                              {(() => {
+                                                const rawAddons = event.addons || event.add_ons || [];
+                                                const addonsArray = Array.isArray(rawAddons) ? rawAddons : 
+                                                                   (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : []);
+                                                
+                                                if (addonsArray.length === 0) return null;
+
+                                                return (
+                                                  <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1">
+                                                    {addonsArray.map((a: string, i: number) => (
+                                                      <Badge key={i} variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                                        {a}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                );
+                                              })()}
                                             </div>
                                             <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                                               {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
