@@ -170,6 +170,9 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
         }
       } catch (err) {
         console.error("Failed to update booking in DB", err);
+        import("sonner").then(({ toast }) => {
+          toast.error(`Cloud sync failed: ${err.message || 'Unknown error'}. Your changes might not be saved.`);
+        });
       }
     }
   },

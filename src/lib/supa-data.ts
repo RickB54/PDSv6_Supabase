@@ -86,6 +86,7 @@ export interface Customer {
     shortVideos?: string[];
     has_google_review?: boolean;
     engagements?: any[];
+    activity_log?: any[];
 }
 
 // ------------------------------------------------------------------
@@ -331,7 +332,8 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 howFound: c.how_found || '',
                 howFoundOther: c.how_found_other || '',
                 conditionInside: c.condition_inside || vi.conditionInside || '',
-                conditionOutside: c.condition_outside || vi.conditionOutside || ''
+                conditionOutside: c.condition_outside || vi.conditionOutside || '',
+                activity_log: c.activity_log || []
             } as Customer;
         };
 
@@ -595,7 +597,8 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         before_photos: customer.beforePhotos,
         after_photos: customer.afterPhotos,
         video_url: customer.videoUrl,
-        learning_center_url: customer.learningCenterUrl
+        learning_center_url: customer.learningCenterUrl,
+        activity_log: customer.activity_log || (customer as any).activityLog
     };
 
     // ONLY ADD THESE IF THEY WERE PASSED - AND WE'LL CATCH DB ERROR IF MISSING
@@ -1905,12 +1908,13 @@ export const upsertSupabaseBooking = async (booking: any) => {
     try {
         // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
         const payload: any = {
-            customer_id: booking.customerId || booking.customer_id || null,
-            vehicle_id: booking.vehicleId || booking.vehicle_id || null,
+            customer_id: (booking.customerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.customerId)) ? booking.customerId : (booking.customer_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.customer_id)) ? booking.customer_id : null,
+            vehicle_id: (booking.vehicleId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.vehicleId)) ? booking.vehicleId : (booking.vehicle_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.vehicle_id)) ? booking.vehicle_id : null,
             scheduled_at: booking.date || booking.scheduled_at,
+            date: booking.date || booking.scheduled_at,
+            assigned_employee_id: booking.assignedEmployeeId || booking.assigned_employee_id || booking.assignedEmployee || null,
             service_package: booking.title || booking.service_package,
             status: booking.status || 'confirmed',
-            address: booking.address,
             notes: booking.notes,
             service_price: Number(booking.price || booking.service_price || 0),
             add_ons: booking.addons || [],

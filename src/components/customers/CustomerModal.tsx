@@ -25,6 +25,7 @@ import { supabase, Customer, Vehicle, getLibraryItems, LibraryItem } from "@/lib
 import { getCurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { RetentionHub } from "./RetentionHub";
+import { ActivityLog } from "./ActivityLog";
 
 interface Props {
   open: boolean;
@@ -41,6 +42,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [showMap, setShowMap] = useState(false);
   const [linkedVehicles, setLinkedVehicles] = useState<Vehicle[]>([]);
   const [currentVehicleIdx, setCurrentVehicleIdx] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState(initialTab);
   
   const { items: allBookings } = useBookingsStore();
   const { refresh: refreshCoupons } = useCouponsStore();
@@ -214,8 +216,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     if (open) {
       initForm();
       refreshCoupons();
+      setActiveTab(initialTab);
     }
-  }, [initial, open, defaultType]);
+  }, [initial, open, defaultType, initialTab]);
 
   const handleChange = (key: keyof Customer, value: string) => {
     setForm((f) => ({ ...f, [key]: value } as Customer));
@@ -428,7 +431,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue={initialTab} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 border-b border-white/5 bg-zinc-950 sticky top-0 z-20">
             <TabsList className="bg-transparent border-none p-0 h-12 gap-8">
               <TabsTrigger value="profile" className="data-[state=active]:bg-transparent data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
@@ -437,8 +440,8 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
               <TabsTrigger value="media" className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
                 Media & Gallery
               </TabsTrigger>
-              <TabsTrigger value="retention" className="data-[state=active]:bg-transparent data-[state=active]:text-emerald-400 data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
-                Retention
+              <TabsTrigger value="crm" className="data-[state=active]:bg-transparent data-[state=active]:text-emerald-400 data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
+                CRM Hub
               </TabsTrigger>
               <TabsTrigger value="notes" className="data-[state=active]:bg-transparent data-[state=active]:text-amber-400 data-[state=active]:border-b-2 data-[state=active]:border-amber-500 rounded-none h-12 px-0 text-xs font-black uppercase tracking-widest transition-all">
                 Notes
@@ -679,17 +682,35 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                </div>
             </TabsContent>
 
-            <TabsContent value="retention" className="m-0 p-0 outline-none border-0">
-               {form.id ? (
-                 <RetentionHub customer={form} />
-               ) : (
-                 <div className="p-12 text-center space-y-4">
-                   <div className="h-20 w-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-500"><Zap className="h-10 w-10" /></div>
-                   <h3 className="text-lg font-bold text-white">Save Record First</h3>
-                   <p className="text-sm text-zinc-500 max-w-xs mx-auto">Access the Retention Hub once a profile is created to track engagement history and send automated follow-ups.</p>
-                 </div>
-               )}
-            </TabsContent>
+             <TabsContent value="crm" className="m-0 p-0 outline-none border-0 overflow-y-auto">
+                {form.id ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-zinc-800/50 min-h-[600px]">
+                    <div className="p-6 space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                          <Plus className="h-4 w-4" />
+                        </div>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-white">Manual Activity Logger</h3>
+                      </div>
+                      <ActivityLog 
+                        customer={form} 
+                        onRefresh={() => {
+                          // Local refresh logic
+                        }} 
+                      />
+                    </div>
+                    <div className="p-0 bg-zinc-950/20">
+                      <RetentionHub customer={form} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-12 text-center space-y-4">
+                    <div className="h-20 w-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-500"><Zap className="h-10 w-10" /></div>
+                    <h3 className="text-lg font-bold text-white">Save Record First</h3>
+                    <p className="text-sm text-zinc-500 max-w-xs mx-auto">Access the CRM Hub once a profile is created to track engagement history and send follow-ups.</p>
+                  </div>
+                )}
+             </TabsContent>
 
             <TabsContent value="notes" className="m-0 p-6 space-y-6 outline-none border-0">
                <div className="flex items-center justify-between">

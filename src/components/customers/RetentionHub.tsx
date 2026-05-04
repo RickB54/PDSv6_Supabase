@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { History, Send, Zap, Clock, ExternalLink, MessageSquare, TicketPercent, Star, ShieldCheck, Activity, Info, Eye, AlertCircle, Sparkles, Wand2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { History, Send, Zap, Clock, ExternalLink, MessageSquare, TicketPercent, Star, ShieldCheck, Activity, Info, Eye, AlertCircle, Sparkles, Wand2, ArrowRight, CheckCircle2, PhoneIncoming, PhoneOutgoing, Mail, StickyNote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -44,18 +44,37 @@ export function RetentionHub({ customer, onRefresh }: Props) {
   }, [customer.email, customer.id]);
 
   const fetchEngagements = async () => {
-    if (!customer.email) return;
     setLoadingEngs(true);
     try {
-      // Fetch from both email and name for better history
-      const { data, error } = await supabase
-        .from('engagements')
-        .select('*')
-        .or(`customer_email.eq.${customer.email},customer_name.eq.${customer.name}`)
-        .order('created_at', { ascending: false });
-      if (data) setEngagements(data);
+      let combinedData: any[] = [];
+      
+      // 1. Get from activity_log field if present
+      const activityLog = (customer as any).activity_log || (customer as any).activityLog || [];
+      combinedData = [...activityLog];
+
+      // 2. Try to get from engagements table (legacy/automated)
+      if (customer.email || customer.name) {
+        const { data, error } = await supabase
+          .from('engagements')
+          .select('*')
+          .or(`customer_email.eq.${customer.email},customer_name.eq.${customer.name}`)
+          .order('created_at', { ascending: false });
+        
+        if (data) {
+          // Merge and deduplicate by note/timestamp if needed, but for now just combine
+          combinedData = [...combinedData, ...data];
+        }
+      }
+
+      // Sort combined data by date
+      combinedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      setEngagements(combinedData);
     } catch (e) {
       console.warn("Could not fetch engagements", e);
+      // Fallback to just activityLog if table fails
+      const log = (customer as any).activity_log || (customer as any).activityLog || [];
+      setEngagements(log);
     } finally {
       setLoadingEngs(false);
     }

@@ -9,6 +9,7 @@ import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "
 import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
 import { format } from "date-fns";
 import { RetentionHub } from "@/components/customers/RetentionHub";
+import { ActivityLog } from "@/components/customers/ActivityLog";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { cn } from "@/lib/utils";
@@ -17,13 +18,15 @@ import { auditEmployeeAction } from "@/lib/audit";
 import { MOCK_PROSPECTS } from "@/lib/demoMockData";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
+import { exportCustomerHistoryPDF } from '@/lib/pdf-export';
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useBookingsStore } from "@/store/bookings";
 import {
   Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, 
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
-  HelpCircle, History, Clock, ShieldCheck, Calendar, Car
+  HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote
 } from "lucide-react";
 import {
   AlertDialog,
@@ -662,118 +665,180 @@ const Prospects = () => {
                             </div>
                           </section>
                           
-                          <RetentionHub customer={customer} />
-                        </div>
-
-                        {/* RIGHT COLUMN: CONTACT & HISTORY */}
-                        <div className="space-y-6">
-                           <section>
-                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Contact profile</h4>
-                              <div className="space-y-3 bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/30">
-                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
-                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-sm">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
-                                 <div className="flex items-center gap-6 mt-4 pt-4 border-t border-zinc-800/50">
-                                   <div>
-                                     <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest block mb-1">Lead Source</span>
-                                     <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="bg-zinc-800 border-zinc-700 text-zinc-300 text-[10px]">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || 'Manual Entry'}</Badge>
-                                        <span className="text-[10px] text-zinc-500 uppercase font-black tracking-tighter">Created: {(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span>
-                                     </div>
+                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-2">Communication Overview</h4>
+                              <div className="space-y-3">
+                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
+                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
+                                 <div className="pt-4 border-t border-zinc-800/50">
+                                   <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest block mb-2">Lead Source</span>
+                                   <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="bg-zinc-800 border-zinc-700 text-zinc-300 text-[10px]">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || 'Manual Entry'}</Badge>
+                                      <span className="text-[10px] text-zinc-500 uppercase font-black tracking-tighter">Created: {(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span>
                                    </div>
                                  </div>
-                                 {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                               </div>
+                              {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                            </section>
 
+                        </div>
+
+                        {/* RIGHT COLUMN: TIMELINE */}
+                        <div className="space-y-6">
                            {customer.notes && (
-                             <section className="bg-purple-900/10 border border-purple-500/20 p-4 rounded-xl">
-                               <div className="text-purple-500 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Admin Directive</div>
-                               <div className="text-zinc-300 text-sm italic leading-relaxed tracking-tight">"{customer.notes}"</div>
+                             <section className="bg-purple-900/10 border border-purple-500/20 p-5 rounded-2xl shadow-lg animate-in fade-in slide-in-from-right-4 duration-500">
+                               <div className="text-purple-500 text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Admin Directive</div>
+                               <div className="text-zinc-300 text-sm italic leading-relaxed tracking-tight font-medium">"{customer.notes}"</div>
                              </section>
                            )}
 
                            <section>
-                             <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
-                               <History className="h-3.5 w-3.5" /> Relationship History
-                             </h4>
-                             <div className="space-y-4 max-h-[700px] overflow-y-auto custom-scrollbar pr-2">
+                             <div className="flex items-center justify-between mb-4">
+                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                 <History className="h-3.5 w-3.5" /> Combined Session & Interaction Timeline
+                               </h4>
+                               <div className="flex items-center gap-2">
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   className="h-8 text-[10px] font-black text-emerald-400 hover:text-white border-emerald-500/20 hover:bg-emerald-500 px-4 rounded-lg transition-all gap-1.5"
+                                   onClick={(e) => { 
+                                     e.stopPropagation(); 
+                                     const relatedBookings = allBookings.filter(b => 
+                                       (b.customerId === customer.id) || 
+                                       (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                       (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                     );
+                                     exportCustomerHistoryPDF(customer, relatedBookings); 
+                                   }}
+                                 >
+                                   <FileDown className="w-3 h-3" /> EXPORT REPORT
+                                 </Button>
+                                 <Button
+                                   variant="ghost"
+                                   size="sm"
+                                   className="h-8 text-[10px] font-black text-purple-400 hover:text-white bg-purple-500/5 border border-purple-500/20 hover:bg-purple-500 px-4 rounded-lg transition-all gap-1.5"
+                                   onClick={(e) => { e.stopPropagation(); openEdit(customer, "crm"); }}
+                                 >
+                                   <Plus className="w-3 h-3" /> LOG ACTIVITY
+                                 </Button>
+                               </div>
+                             </div>
+                             
+                             <div className="space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar pr-2">
                                {(() => {
-                                 const relatedBookings = allBookings
+                                 const items: any[] = [];
+                                 allBookings
                                    .filter(b => 
                                      (b.customerId === customer.id) || 
                                      (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
                                      (b.customer?.toLowerCase() === customer.name?.toLowerCase())
                                    )
-                                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                                   .forEach(b => items.push({ ...b, timelineType: 'booking' }));
 
-                                 if (relatedBookings.length === 0) {
+                                 const activityLog = (customer as any).activity_log || [];
+                                 activityLog.forEach((a: any) => items.push({ ...a, timelineType: 'activity' }));
+
+                                 items.sort((a, b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime());
+
+                                 if (items.length === 0) {
                                    return (
                                      <div className="text-center py-12 text-zinc-700 bg-zinc-950/20 border border-dashed border-zinc-800 rounded-3xl">
                                        <Clock className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                       <div className="text-xs font-black uppercase tracking-widest opacity-40">Zero prior sessions found.</div>
+                                       <div className="text-xs font-black uppercase tracking-widest opacity-40">Zero prior history found.</div>
                                      </div>
                                    );
                                  }
 
-                                 return relatedBookings.map((booking) => {
-                                   const bookingDate = new Date(booking.date);
-                                   const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                   const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                                 return items.map((item, idx) => {
+                                   if (item.timelineType === 'booking') {
+                                     const booking = item;
+                                     const bookingDate = new Date(booking.date);
+                                     const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                     const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-                                   return (
-                                     <div key={booking.id} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-purple-500/40 transition-all group/booking shadow-xl relative overflow-hidden">
-                                         <div className={cn("absolute inset-0 opacity-[0.03]", booking.status === 'done' ? "bg-emerald-500" : "bg-purple-500")} />
-
-                                          <div className="flex items-start justify-between mb-4 relative z-10">
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <Calendar className="h-4 w-4 text-purple-500" />
-                                                <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
-                                                <span className="text-zinc-600 text-xs">•</span>
-                                                <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
-                                              </div>
-                                              <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-purple-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
-                                              
-                                              <div className="grid grid-cols-2 gap-2">
-                                                <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
-                                                  <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
-                                                  <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
-                                                </div>
-                                                <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
-                                                  <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
-                                                  <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            <Badge className={cn(
-                                              "text-[10px] font-black uppercase px-3 py-1 rounded-full border shadow-2xl transition-all",
-                                              booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                              booking.status === 'confirmed' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                                              "bg-zinc-800 text-zinc-500 border-zinc-700"
-                                            )}>
-                                              {booking.status}
-                                            </Badge>
+                                     return (
+                                       <div key={`booking-${booking.id}-${idx}`} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-purple-500/40 transition-all group/booking shadow-xl relative overflow-hidden">
+                                          <div className={cn("absolute inset-0 opacity-[0.03]", booking.status === 'done' ? "bg-emerald-500" : "bg-purple-500")} />
+                                           <div className="flex items-start justify-between mb-4 relative z-10">
+                                             <div className="flex-1">
+                                               <div className="flex items-center gap-2 mb-2">
+                                                 <Calendar className="h-4 w-4 text-purple-500" />
+                                                 <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
+                                                 <span className="text-zinc-600 text-xs">•</span>
+                                                 <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
+                                               </div>
+                                               <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-purple-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
+                                               <div className="grid grid-cols-2 gap-2">
+                                                 <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
+                                                   <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
+                                                   <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
+                                                 </div>
+                                                 <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
+                                                   <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
+                                                   <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
+                                                 </div>
+                                               </div>
+                                             </div>
+                                             <Badge className={cn(
+                                               "text-[10px] font-black uppercase px-3 py-1 rounded-full border shadow-2xl transition-all",
+                                               booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                               booking.status === 'confirmed' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                                               "bg-zinc-800 text-zinc-500 border-zinc-700"
+                                             )}>
+                                               {booking.status}
+                                             </Badge>
+                                           </div>
+                                           {booking.notes && (
+                                             <div className="mt-2 p-3 bg-purple-900/10 rounded-xl border border-purple-500/10 text-[11px] text-zinc-400 italic leading-relaxed">
+                                               "{booking.notes}"
+                                             </div>
+                                           )}
+                                           <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
+                                              <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
+                                              <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5" onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}>
+                                                Inspect <ExternalLink className="h-2.5 w-2.5" />
+                                              </Button>
+                                           </div>
+                                       </div>
+                                     );
+                                   } else {
+                                     const act = item;
+                                     const getActivityIcon = (type: string) => {
+                                       switch (type) {
+                                         case 'call_in': return <PhoneIncoming className="h-4 w-4 text-emerald-400" />;
+                                         case 'call_out': return <PhoneOutgoing className="h-4 w-4 text-purple-400" />;
+                                         case 'text': return <MessageSquare className="h-4 w-4 text-amber-400" />;
+                                         case 'email': return <Mail className="h-4 w-4 text-indigo-400" />;
+                                         case 'attempt': return <AlertCircle className="h-4 w-4 text-red-400" />;
+                                         default: return <StickyNote className="h-4 w-4 text-zinc-400" />;
+                                       }
+                                     };
+                                     const getActivityLabel = (type: string) => {
+                                       switch (type) {
+                                         case 'call_in': return 'Incoming Call';
+                                         case 'call_out': return 'Outgoing Call';
+                                         case 'text': return 'Text Message';
+                                         case 'email': return 'Email Sent';
+                                         case 'attempt': return 'Contact Attempt';
+                                         default: return 'General Note';
+                                       }
+                                     };
+                                     return (
+                                       <div key={`act-${act.id || idx}`} className="p-5 bg-zinc-900/30 rounded-2xl border border-zinc-800/50 hover:border-zinc-700 transition-all shadow-lg flex gap-4">
+                                          <div className="h-10 w-10 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-center shrink-0">
+                                            {getActivityIcon(act.type)}
                                           </div>
-
-                                          {booking.notes && (
-                                            <div className="mt-2 p-3 bg-purple-900/10 rounded-xl border border-purple-500/10 text-[11px] text-zinc-400 italic leading-relaxed">
-                                              "{booking.notes}"
+                                          <div className="flex-1">
+                                            <div className="flex items-center justify-between mb-1">
+                                              <div className="text-zinc-200 font-black uppercase tracking-tight text-sm">{getActivityLabel(act.type)}</div>
+                                              <div className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(act.created_at).toLocaleDateString()}</div>
                                             </div>
-                                          )}
-                                          
-                                          <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
-                                             <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
-                                             <Button 
-                                              variant="ghost" 
-                                              size="sm" 
-                                              className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
-                                              onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
-                                             >
-                                               Inspect <ExternalLink className="h-2.5 w-2.5" />
-                                             </Button>
+                                            <p className="text-xs text-zinc-300 italic leading-relaxed font-medium">"{act.note}"</p>
                                           </div>
-                                     </div>
-                                   );
+                                       </div>
+                                     );
+                                   }
                                  });
                                })()}
                              </div>

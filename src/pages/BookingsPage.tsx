@@ -894,7 +894,7 @@ export default function BookingsPage() {
         vehicle: formData.vehicleMake,
         model: formData.vehicleModel,
         year: formData.vehicleYear,
-        type: 'customer', // Force 'customer' type for direct bookings
+        type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || formData.status === 'done') ? 'customer' : 'prospect',
         updatedAt: new Date().toISOString()
       };
 
@@ -1024,8 +1024,13 @@ export default function BookingsPage() {
       }
 
       // Final cleanup and close
+      // Final cleanup and close
       console.log("Save complete, closing modal...");
       setIsAddModalOpen(false);
+      
+      // Refresh in background to ensure everything is in sync
+      refresh();
+      loadUnifiedEvents();
       
       // Delay state resets slightly to allow modal animation to complete
       setTimeout(() => {

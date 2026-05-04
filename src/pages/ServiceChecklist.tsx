@@ -1072,7 +1072,8 @@ const ServiceChecklist = () => {
               make: c.vehicle?.split(' ')[1] || '',
               model: c.model,
               year: c.year
-            }
+            },
+            type: (status === 'completed' || status === 'confirmed') ? 'customer' : (c.type || 'prospect')
           });
         } catch (err) {
           console.error("Failed to sync customer for booking:", err);
