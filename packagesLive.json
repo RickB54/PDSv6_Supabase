@@ -145,7 +145,7 @@
     "packageMeta": {
       "prime-elite-exterior": {
         "id": "prime-elite-exterior",
-        "visible": false,
+        "visible": true,
         "deleted": false,
         "imageDataUrl": ""
       },
@@ -298,7 +298,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1777855716341
+    "version": 1777856251750
   },
   "vehicleTypesLive": [
     {

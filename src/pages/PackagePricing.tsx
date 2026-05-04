@@ -62,6 +62,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -75,7 +76,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Info, RefreshCw, ShieldAlert } from "lucide-react";
+import { Trash2, Info, RefreshCw, ShieldAlert, HelpCircle } from "lucide-react";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
@@ -1768,6 +1769,71 @@ export default function PackagePricing() {
               <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" /> 
               <span className="hidden sm:inline">Services</span>
             </Button>
+
+            {/* Help Button & Dialog */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-zinc-500 text-zinc-500 hover:bg-zinc-500/10 font-black uppercase tracking-widest text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+                  title="Proper Procedure Help"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Help</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tight text-red-500">Proper Procedure: Managing Services</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4 overflow-y-auto max-h-[70vh] pr-4">
+                  <section className="space-y-2">
+                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">1. Management Workflow</h3>
+                    <p className="text-zinc-400 text-sm leading-relaxed">
+                      You can manage your pricing and visibility from <span className="text-white font-bold underline">ANY environment</span> (local computer or live website) as long as you are logged in as an <strong>Admin</strong>.
+                    </p>
+                    <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
+                      <li>Toggle <strong>"Live"</strong> to show or hide a package.</li>
+                      <li>Click the <strong>"Save"</strong> button on the specific package card (or "Save All" at the top).</li>
+                      <li>Changes are saved instantly to the cloud database (Supabase).</li>
+                    </ul>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">2. Synchronization & Caching</h3>
+                    <p className="text-zinc-400 text-sm leading-relaxed">
+                      The public Services page automatically checks for updates every 2 minutes. 
+                    </p>
+                    <p className="text-zinc-400 text-sm leading-relaxed">
+                      <strong>Pro Tip:</strong> If your changes don't appear immediately on the website, click the <span className="text-blue-400 font-bold">"Sync with Cloud"</span> button located at the top of the Services page to force a refresh.
+                    </p>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">3. How to Test Correctly</h3>
+                    <p className="text-zinc-400 text-sm leading-relaxed font-bold text-red-400">
+                      IMPORTANT: Always use an "Incognito" or "Private" browser window when testing as a customer.
+                    </p>
+                    <p className="text-zinc-400 text-sm leading-relaxed">
+                      Because you are an Admin, your browser might remember your settings or show you "hidden" items that a regular customer cannot see. Testing in Incognito ensures you see exactly what a non-logged-in visitor sees.
+                    </p>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">4. Troubleshooting</h3>
+                    <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
+                      <li><strong>Failed to Sync?</strong> This usually means a database column mismatch. Contact support if this persists.</li>
+                      <li><strong>Package won't show?</strong> Ensure "is_active" is set to true in the database via the toggle.</li>
+                      <li><strong>Public can't see prices?</strong> Verify that "Public Read" RLS policies are enabled in your Supabase dashboard.</li>
+                    </ul>
+                  </section>
+                </div>
+                <DialogFooter>
+                  <Button className="bg-red-600 hover:bg-red-700 font-bold" onClick={() => {}}>Understood</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
       </PageHeader>
 
