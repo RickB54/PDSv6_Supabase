@@ -1800,7 +1800,7 @@ const ServiceChecklist = () => {
         </div>
       </PageHeader>
 
-      <main className="container mx-auto px-1 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8 overflow-x-hidden">
+      <main className="container mx-auto px-1 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8 overflow-visible">
         {/* Premium Header Block */}
         <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
@@ -2086,8 +2086,11 @@ const ServiceChecklist = () => {
       </Card>
 
       <Card className="bg-gradient-card border-border overflow-visible relative">
-        {/* Sticky Header - Moved outside of internal padding for better stickiness */}
-        <div className="sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-md px-3 md:px-6 py-4 border-b border-white/10 shadow-2xl space-y-4 rounded-t-xl transition-all">
+        {/* Sticky Header - Upgraded to inline styles for maximum browser compatibility */}
+        <div 
+          style={{ position: 'sticky', top: '0px', zIndex: 50 }}
+          className="bg-zinc-950/95 backdrop-blur-md px-3 md:px-6 py-4 border-b border-white/10 shadow-2xl space-y-4 rounded-t-xl transition-all"
+        >
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
