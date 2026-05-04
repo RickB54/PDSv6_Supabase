@@ -184,7 +184,7 @@ export default function VehicleClassification() {
         setSelectedModel(model);
 
         // Determine category with safe access
-        let autoCategory = "Manual Classification Required";
+        let autoCategory = "Mid-Size/SUV";
 
         try {
             // 1. Try JSON Database First
@@ -193,30 +193,29 @@ export default function VehicleClassification() {
                 if (makeData && typeof makeData === 'object' && model in makeData) {
                     const value = makeData[model];
                     if (value && typeof value === 'string') {
-                        // Map legacy/JSON values to new User-Approved Categories
-                        if (value === "Compact") autoCategory = "Compact/Sedan (Small cars and sedans)";
-                        else if (value === "Midsize / Sedan") autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
-                        else if (value === "SUV / Crossover") autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
-                        else if (value === "Truck / Oversized") autoCategory = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-                        else if (value === "Oversized Specialty") autoCategory = "Luxury/High-End (Luxury and premium vehicles)";
-                        else autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)"; // Default fallback
+                        // Map legacy/JSON values to clean standardized labels
+                        if (value === "Compact" || value.includes("Compact")) autoCategory = "Compact/Sedan";
+                        else if (value === "Midsize / Sedan") autoCategory = "Mid-Size/SUV";
+                        else if (value === "SUV / Crossover") autoCategory = "Mid-Size/SUV";
+                        else if (value === "Truck / Oversized") autoCategory = "Truck/Van/Large SUV";
+                        else if (value === "Oversized Specialty") autoCategory = "Luxury/High-End";
+                        else if (value.includes("Mid-Size/SUV")) autoCategory = "Mid-Size/SUV";
+                        else if (value.includes("Truck/Van/Large SUV")) autoCategory = "Truck/Van/Large SUV";
+                        else if (value.includes("Luxury/High-End")) autoCategory = "Luxury/High-End";
                     }
                 }
             }
 
             // 2. Apply Robust Overrides from Pricing Engine
-            // This fixes issues where JSON DB misclassifies Large SUVs (e.g. Expedition) as small SUVs
             const searchStr = `${selectedMake} ${model}`;
             const pricingType = normalizeVehicleType(searchStr);
 
-            // Force upgrade for Truck/Luxury detected vehicles
-            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-            if (pricingType === 'luxury') autoCategory = "Luxury/High-End (Luxury and premium vehicles)";
-            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
-            if (pricingType === 'compact') autoCategory = "Compact/Sedan (Small cars and sedans)";
+            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
+            if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
+            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
+            if (pricingType === 'compact') autoCategory = "Compact/Sedan";
 
-            // 3. Check History (Highest Priority - Learning Behavior)
-            // If the user has explicitly classified this vehicle before, respect their choice
+            // 3. Check History (Highest Priority)
             const previousEntry = history.find(h =>
                 h.make.toLowerCase() === selectedMake.toLowerCase() &&
                 h.model.toLowerCase() === model.toLowerCase()

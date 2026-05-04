@@ -463,10 +463,10 @@ export default function AddonUpsellScript() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent className="bg-zinc-800 border-zinc-700">
-                                            <SelectItem value="Compact/Sedan (Small cars and sedans)" className="text-white">Compact/Sedan (Small cars and sedans)</SelectItem>
-                                            <SelectItem value="Mid-Size/SUV (Mid-size cars and SUVs)" className="text-white">Mid-Size/SUV (Mid-size cars and SUVs)</SelectItem>
-                                            <SelectItem value="Truck/Van/Large SUV (Trucks, vans, large SUVs)" className="text-white">Truck/Van/Large SUV (Trucks, vans, large SUVs)</SelectItem>
-                                            <SelectItem value="Luxury/High-End (Luxury and premium vehicles)" className="text-white">Luxury/High-End (Luxury and premium vehicles)</SelectItem>
+                                            <SelectItem value="Compact/Sedan" className="text-white">Compact/Sedan</SelectItem>
+                                            <SelectItem value="Mid-Size/SUV" className="text-white">Mid-Size/SUV</SelectItem>
+                                            <SelectItem value="Truck/Van/Large SUV" className="text-white">Truck/Van/Large SUV</SelectItem>
+                                            <SelectItem value="Luxury/High-End" className="text-white">Luxury/High-End</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

@@ -70,28 +70,28 @@ export function VehicleClassificationDialog({ open, onOpenChange, onSelect }: Ve
     const handleModelSelect = (model: string) => {
         setSelectedModel(model);
 
-        // Use the same logic as VehicleClassification.tsx
-        let autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)"; // Default
+        // Standardized mapping logic
+        let autoCategory = "Mid-Size/SUV"; // Default
 
         try {
             // 1. JSON DB Check
             if (selectedMake && safeDB[selectedMake]) {
                 const value = safeDB[selectedMake][model];
                 if (value) {
-                    if (value === "Compact") autoCategory = "Compact/Sedan (Small cars and sedans)";
-                    else if (value.includes("Midsize")) autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
-                    else if (value.includes("SUV")) autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
-                    else if (value.includes("Truck")) autoCategory = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-                    else if (value.includes("Oversized")) autoCategory = "Luxury/High-End (Luxury and premium vehicles)";
+                    if (value === "Compact" || value.includes("Compact")) autoCategory = "Compact/Sedan";
+                    else if (value.includes("Midsize")) autoCategory = "Mid-Size/SUV";
+                    else if (value.includes("SUV")) autoCategory = "Mid-Size/SUV";
+                    else if (value.includes("Truck")) autoCategory = "Truck/Van/Large SUV";
+                    else if (value.includes("Oversized")) autoCategory = "Luxury/High-End";
                 }
             }
 
             // 2. Pricing Engine Robust Overrides
             const pricingType = normalizeVehicleType(`${selectedMake} ${model}`);
-            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV (Trucks, vans, large SUVs)";
-            if (pricingType === 'luxury') autoCategory = "Luxury/High-End (Luxury and premium vehicles)";
-            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV (Mid-size cars and SUVs)";
-            if (pricingType === 'compact') autoCategory = "Compact/Sedan (Small cars and sedans)";
+            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
+            if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
+            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
+            if (pricingType === 'compact') autoCategory = "Compact/Sedan";
         } catch (e) {
             console.error("Classification error:", e);
         }
@@ -114,7 +114,7 @@ export function VehicleClassificationDialog({ open, onOpenChange, onSelect }: Ve
         onOpenChange(false);
         toast({
             title: "Vehicle Set",
-            description: `Size set to: ${category} (Pricing Code: ${simpleKey})`
+            description: `Size set to: ${category}`
         });
     };
 
@@ -213,7 +213,6 @@ export function VehicleClassificationDialog({ open, onOpenChange, onSelect }: Ve
                                                 className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 hover:text-white justify-between px-4 py-3 h-auto"
                                             >
                                                 <span>{model}</span>
-                                                <span className="text-[10px] text-zinc-600 uppercase font-bold">{safeDB[selectedMake][model]}</span>
                                             </Button>
                                         ))}
                                         <Button
