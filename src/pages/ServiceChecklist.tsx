@@ -243,6 +243,7 @@ const ServiceChecklist = () => {
   const [addOnsExpanded, setAddOnsExpanded] = useState(false);
   const [discountExpanded, setDiscountExpanded] = useState(false);
   const [destinationExpanded, setDestinationExpanded] = useState(false);
+  const [jobSetupExpanded, setJobSetupExpanded] = useState(true);
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
@@ -1829,27 +1830,43 @@ const ServiceChecklist = () => {
         
         <div className="space-y-6">
           {/* Job Setup - Generic, no forced customer link */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-foreground">Job Setup</h2>
-                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1">Configure vehicle and service details</p>
+          <Card className="p-4 md:p-6 bg-gradient-card border-border">
+            <div 
+              className="flex items-center justify-between cursor-pointer group"
+              onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                  <Settings2 className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold text-white">Job Setup</h2>
+                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Customer, Vehicle & Services</p>
+                </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
-                    resetForm();
-                    toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
-                  }
-                }}
-                className="border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Entire Form
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
+                      resetForm();
+                      toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
+                    }
+                  }}
+                  className="hidden sm:flex border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" /> Reset
+                </Button>
+                <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+                  {jobSetupExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-6 w-6 text-zinc-500" />}
+                </div>
+              </div>
             </div>
+
+            {jobSetupExpanded && (
+              <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
             {/* Customer selection restored — includes Generic option */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
@@ -2032,7 +2049,8 @@ const ServiceChecklist = () => {
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          )}
           </Card>
 
           {/* Checklist - dynamic from package and add-ons */}
