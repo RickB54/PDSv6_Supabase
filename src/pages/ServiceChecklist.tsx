@@ -2293,11 +2293,12 @@ const ServiceChecklist = () => {
                                               </Button>
                                             )}
                                           </div>
-                                        </div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
-                                )}
+                                </div>
+                              )}
                               </div>
                             );
                           })}
