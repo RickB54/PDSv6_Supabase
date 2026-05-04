@@ -1817,10 +1817,27 @@ const ServiceChecklist = () => {
               </div>
               <p className="text-zinc-400 text-sm md:text-base max-w-xl">Track job progress, manage materials, and generate estimates.</p>
             </div>
-            <div className="flex flex-row items-center gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
-              <div className="text-right">
-                <div className="text-xl md:text-2xl font-bold text-white mb-0.5">{progressPercent}%</div>
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Completion</div>
+            <div className="flex flex-col md:flex-row items-center gap-3">
+              {/* Decision Buttons moved to header */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-7 text-[10px] px-2 font-bold">
+                  Tips
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-7 text-[10px] px-2">
+                  Prep
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-7 text-[10px] px-2">
+                  Decision
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/chemical-training')} className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 h-7 text-[10px] px-2 font-bold">
+                  Training
+                </Button>
+              </div>
+              <div className="flex flex-row items-center gap-4 bg-black/40 p-2 md:p-3 rounded-xl border border-white/5">
+                <div className="text-right">
+                  <div className="text-lg md:text-2xl font-bold text-white mb-0.5">{progressPercent}%</div>
+                  <div className="text-[8px] md:text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Completion</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1947,18 +1964,18 @@ const ServiceChecklist = () => {
                 </p>
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 border-t border-white/5 pt-4">
-              <div className="space-y-2">
-                <Label>Vehicle Year</Label>
-                <Input placeholder="e.g. 2024" value={vYear} onChange={(e) => setVYear(e.target.value)} className="bg-black" />
+            <div className="grid grid-cols-3 gap-2 mb-4 border-t border-white/5 pt-4">
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-zinc-500">Year</Label>
+                <Input placeholder="2024" value={vYear} onChange={(e) => setVYear(e.target.value)} className="h-8 bg-black text-sm" />
               </div>
-              <div className="space-y-2">
-                <Label>Vehicle Make</Label>
-                <Input placeholder="e.g. Ford" value={vMake} onChange={(e) => setVMake(e.target.value)} className="bg-black" />
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-zinc-500">Make</Label>
+                <Input placeholder="Ford" value={vMake} onChange={(e) => setVMake(e.target.value)} className="h-8 bg-black text-sm" />
               </div>
-              <div className="space-y-2">
-                <Label>Vehicle Model</Label>
-                <Input placeholder="e.g. F-150" value={vModel} onChange={(e) => setVModel(e.target.value)} className="bg-black" />
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-zinc-500">Model</Label>
+                <Input placeholder="F-150" value={vModel} onChange={(e) => setVModel(e.target.value)} className="h-8 bg-black text-sm" />
               </div>
             </div>
 
@@ -2105,55 +2122,9 @@ const ServiceChecklist = () => {
                 </Button>
               </div>
 
-              {jobStartTime && (
-                <div className="flex flex-col items-end">
-                  <div className={`flex items-center gap-2 px-3 py-1 bg-zinc-900 border rounded-full ${jobEndTime ? 'border-green-500/50' : 'border-red-500/30 animate-pulse-subtle'}`}>
-                    <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-500' : 'text-red-500'}`} />
-                    <span className={`text-sm font-mono font-bold ${jobEndTime ? 'text-green-500' : 'text-red-500'}`}>
-                      {jobEndTime ? 'FINISHED: ' : 'JOB TIME: '}
-                      {formatDuration((jobEndTime || liveNow) - jobStartTime)}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/5">
-                {/* Section 1: Chemical & Decision Buttons */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-8 text-[10px] md:text-xs font-bold px-2 md:px-3">
-                    Rick's Tips
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-8 text-[10px] md:text-xs px-2 md:px-3">
-                    <FlaskConical className="w-3 h-3 mr-1" /> Prep
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-8 text-[10px] md:text-xs px-2 md:px-3">
-                    <Sparkles className="w-3 h-3 mr-1" /> Decision
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => navigate('/chemical-training')} 
-                    className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 h-8 text-[10px] md:text-xs px-2 md:px-3 font-bold"
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" /> Training
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('open-help', { 
-                        detail: { topicId: 'checklist-tools-guide', role: getCurrentUser()?.role } 
-                      }));
-                    }} 
-                    className="h-8 w-8 text-zinc-400 hover:text-white"
-                    title="Tools Guide"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* Section 2: View Controls (Expand/Check All) */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 pt-1 border-b border-white/5 mb-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
                     const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
                     const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
@@ -2169,12 +2140,16 @@ const ServiceChecklist = () => {
                   </Button>
                 </div>
                 
-                {/* Section 3: Static Progress Bar */}
-                <div className="flex items-center justify-end gap-2 bg-zinc-900/50 px-3 py-1 rounded-full border border-white/5 w-full sm:w-auto">
-                  <Progress value={progressPercent} className="w-20 md:w-32 h-2" />
-                  <span className="text-[10px] md:text-sm font-bold text-white">{progressPercent}%</span>
-                </div>
+                {jobStartTime && (
+                  <div className={`flex items-center gap-2 px-4 py-1.5 bg-zinc-900 border rounded-full ${jobEndTime ? 'border-green-500/50' : 'border-red-500/40 animate-pulse-subtle'}`}>
+                    <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-500' : 'text-red-500'}`} />
+                    <span className={`text-sm md:text-base font-mono font-black ${jobEndTime ? 'text-green-500' : 'text-red-500'}`}>
+                      {formatDuration((jobEndTime || liveNow) - jobStartTime)}
+                    </span>
+                  </div>
+                )}
               </div>
+            </div>
             {(!selectedPackage || !vehicleType) && (
               <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
             )}
