@@ -2086,67 +2086,67 @@ const ServiceChecklist = () => {
       </Card>
 
       <Card className="p-3 md:p-6 bg-gradient-card border-border">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center">
-              <ClipboardList className="h-5 w-5 text-red-500" />
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm -mx-3 md:-mx-6 px-3 md:px-6 py-3 border-b border-white/10 shadow-xl space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
+                <ClipboardList className="h-5 w-5 text-red-500" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
+                <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
+              </div>
+              <div className="flex items-center gap-2 ml-auto lg:ml-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-[10px] h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5"
+                  onClick={() => generateJobReport(false)}
+                >
+                  <Download className="h-3 w-3" /> Report
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-[10px] h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5"
+                  onClick={() => generateJobReport(true)}
+                >
+                  <Save className="h-3 w-3" /> Archive
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
+                      setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
+                      setChemRows([]);
+                      setMatRows([]);
+                      setToolRows([]);
+                      setJobStartTime(null);
+                      setItemDurations({});
+                      localStorage.removeItem('service_checklist_draft');
+                      toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
+                    }
+                  }}
+                  className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                  title="Clear Checklist"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold text-white">Service Checklist</h2>
-              <p className="text-sm text-zinc-400">Step-by-step quality control</p>
-            </div>
-            <div className="flex items-center gap-2 ml-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-[10px] h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5"
-                onClick={() => generateJobReport(false)}
-              >
-                <Download className="h-3 w-3" /> Report
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-[10px] h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5"
-                onClick={() => generateJobReport(true)}
-              >
-                <Save className="h-3 w-3" /> Archive
-              </Button>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => {
-                if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
-                  setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
-                  setChemRows([]);
-                  setMatRows([]);
-                  setToolRows([]);
-                  setJobStartTime(null);
-                  setItemDurations({});
-                  localStorage.removeItem('service_checklist_draft');
-                  toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
-                }
-              }}
-              className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-              title="Clear Checklist"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
 
-        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 pt-1 border-b border-white/5 mb-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => {
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="ghost" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none border border-white/5 hover:bg-white/5" onClick={() => {
                 const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
                 const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
                 setExpandedHelp(next);
               }}>
                 {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
               </Button>
-              <Button variant="outline" size="sm" className="text-xs h-8 flex-1 sm:flex-none" onClick={() => {
+              <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
                 const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
                 setChecklistSteps(prev => prev.map(s => ({ ...s, checked: !all })));
               }}>
@@ -2155,13 +2155,15 @@ const ServiceChecklist = () => {
             </div>
             
             {jobStartTime && (
-                  <div className={`flex items-center gap-2 px-4 py-1.5 bg-white border-2 shadow-lg rounded-full ${jobEndTime ? 'border-green-500' : 'border-red-500 animate-pulse-subtle'}`}>
-                    <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
-                    <span className={`text-sm md:text-lg font-mono font-black ${jobEndTime ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatDuration((jobEndTime || liveNow) - jobStartTime)}
-                    </span>
-                  </div>
-                )}
+              <div className="flex justify-center w-full sm:w-auto">
+                <div className={`flex items-center gap-2 px-4 py-1 bg-white border-2 shadow-lg rounded-full ${jobEndTime ? 'border-green-500' : 'border-red-500 animate-pulse-subtle'}`}>
+                  <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
+                  <span className={`text-sm md:text-lg font-mono font-black ${jobEndTime ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatDuration((jobEndTime || liveNow) - jobStartTime)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
