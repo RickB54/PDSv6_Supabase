@@ -39,6 +39,7 @@ import { pushAdminAlert } from "@/lib/adminAlerts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as VehKey, getServiceInstructions } from "@/lib/services";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { getCustomPackages, getCustomAddOns, getPackageMeta, getAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { Progress } from "@/components/ui/progress";
 import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
@@ -559,9 +560,16 @@ const ServiceChecklist = () => {
 
       // Auto-select first vehicle if available
       if (customer?.vehicles && customer.vehicles.length > 0) {
-        setSelectedVehicleId(customer.vehicles[0].id || "");
-        if (customer.vehicles[0].type) {
-          const key = toVehKey(customer.vehicles[0].type);
+        const firstVeh = customer.vehicles[0];
+        setSelectedVehicleId(firstVeh.id || "");
+        
+        // Use smart normalization first
+        const fullName = `${firstVeh.year || ''} ${firstVeh.make || ''} ${firstVeh.model || ''}`.trim();
+        const smartType = normalizeVehicleType(fullName);
+        if (smartType) {
+          setVehicleType(smartType);
+        } else if (firstVeh.type) {
+          const key = toVehKey(firstVeh.type);
           setVehicleType((vehicleOptions.includes(key) ? key : 'midsize'));
         }
       } else {
@@ -1917,19 +1925,30 @@ const ServiceChecklist = () => {
                       setSelectedVehicleId(vehId);
                       const cust = customers.find(c => c.id === selectedCustomer);
                       const veh = cust?.vehicles?.find((v: any) => v.id === vehId);
-                      if (veh && veh.type) {
-                        const key = toVehKey(veh.type);
-                        setVehicleType(vehicleOptions.includes(key) ? key : 'midsize');
+                      if (veh) {
+                        const fullName = `${veh.year || ''} ${veh.make || ''} ${veh.model || ''}`.trim();
+                        const smartType = normalizeVehicleType(fullName);
+                        if (smartType) {
+                          setVehicleType(smartType);
+                        } else if (veh.type) {
+                          const key = toVehKey(veh.type);
+                          setVehicleType(vehicleOptions.includes(key) ? key : 'midsize');
+                        }
                       }
                     }}
                     className="flex h-10 w-full rounded-md border border-purple-900/30 bg-black text-white px-3 py-2 text-sm focus:ring-purple-500/20"
                   >
                     <option value="">-- Choose a Vehicle --</option>
-                    {(customers.find(c => c.id === selectedCustomer)?.vehicles || []).map((v: any) => (
-                      <option key={v.id} value={v.id}>
-                        {v.year} {v.make} {v.model} ({v.type || 'No Type'})
-                      </option>
-                    ))}
+                    {(customers.find(c => c.id === selectedCustomer)?.vehicles || []).map((v: any) => {
+                      const fullName = `${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim();
+                      const smartType = normalizeVehicleType(fullName);
+                      const typeLabel = smartType ? (vehicleLabels[smartType] || smartType) : (v.type || 'No Type');
+                      return (
+                        <option key={v.id} value={v.id}>
+                          {v.year} {v.make} {v.model} ({typeLabel})
+                        </option>
+                      );
+                    })}
                   </select>
                   {selectedCustomer && (
                     <Button
