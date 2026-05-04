@@ -145,19 +145,19 @@
     "packageMeta": {
       "prime-elite-exterior": {
         "id": "prime-elite-exterior",
-        "visible": true,
+        "visible": false,
         "deleted": false,
         "imageDataUrl": ""
       },
       "prime-elite-full": {
         "id": "prime-elite-full",
-        "visible": false,
+        "visible": true,
         "deleted": false,
         "imageDataUrl": ""
       },
       "prime-elite-interior": {
         "id": "prime-elite-interior",
-        "visible": false,
+        "visible": true,
         "deleted": false,
         "imageDataUrl": ""
       },
@@ -298,7 +298,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1777854312215
+    "version": 1777855204627
   },
   "vehicleTypesLive": [
     {
