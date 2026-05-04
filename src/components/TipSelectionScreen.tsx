@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, DollarSign, ChevronRight, X, ArrowRight } from 'lucide-react';
+import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock } from 'lucide-react';
 
 interface TipSelectionScreenProps {
   jobId: string;
