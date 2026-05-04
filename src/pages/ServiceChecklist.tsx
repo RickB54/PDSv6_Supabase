@@ -416,6 +416,14 @@ const ServiceChecklist = () => {
         });
       }
 
+      // Check if the entire job is now finished
+      const allDone = newSteps.every(s => s.checked);
+      if (allDone) {
+        setJobEndTime(now);
+      } else {
+        setJobEndTime(null);
+      }
+
       return newSteps;
     });
   };
@@ -668,113 +676,189 @@ const ServiceChecklist = () => {
   const updateToolRow = (idx: number, patch: Partial<ToolRow>) => setToolRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
   const removeToolRow = (idx: number) => setToolRows(prev => prev.filter((_, i) => i !== idx));
 
+
+   const generateJobReport = (saveToArchive: boolean = false) => {
+    const doc = new jsPDF();
+    let y = 20;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(220, 38, 38); // Primary red
+    doc.text('JOB COMPLETION REPORT', 105, y, { align: 'center' });
+    y += 15;
+
+    // Job Metadata
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, y);
+    doc.text(`Job ID: ${checklistId || 'DRAFT'}`, 190, y, { align: 'right' });
+    y += 10;
+    doc.setDrawColor(200);
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    // Customer & Vehicle Section
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text('Customer & Vehicle Information', 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    const customer = customers.find(c => c.id === selectedCustomer);
+    doc.text(`Customer: ${customer?.name || genericCustomerName || 'N/A'}`, 25, y);
+    y += 6;
+    doc.text(`Vehicle: ${vYear} ${vMake} ${vModel}`, 25, y);
+    y += 6;
+    doc.text(`Vehicle Type: ${vehicleLabels[vehicleType] || vehicleType}`, 25, y);
+    y += 6;
+    doc.text(`Assigned To: ${employees.find(e => String(e.id) === employeeAssigned)?.name || employeeAssigned || 'N/A'}`, 25, y);
+    y += 12;
+
+    // Service & Timing Summary
+    doc.setFontSize(14);
+    doc.text('Service Summary', 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Main Package: ${selectedPackage}`, 25, y);
+    y += 6;
+    if (selectedAddOns.length > 0) {
+      doc.text(`Add-ons: ${selectedAddOns.join(', ')}`, 25, y);
+      y += 6;
+    }
+    const totalJobMs = (jobEndTime || liveNow) - (jobStartTime || Date.now());
+    doc.text(`Total Job Time: ${formatDuration(totalJobMs)}`, 25, y);
+    if (jobEndTime) {
+      doc.setTextColor(22, 163, 74); // Green
+      doc.text('Status: COMPLETED', 190, y, { align: 'right' });
+      doc.setTextColor(0);
+    }
+    y += 12;
+
+    // Checklist Detail Section
+    doc.setFontSize(14);
+    doc.text('Work Process & Timing', 20, y);
+    y += 8;
+    
+    checklistSteps.forEach((step) => {
+      // Page break check
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      const isCategoryStart = y === 20 || checklistSteps[checklistSteps.indexOf(step) - 1]?.category !== step.category;
+      if (isCategoryStart) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(step.category.toUpperCase(), 20, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+      }
+
+      // Step row
+      doc.text(step.checked ? '[X]' : '[ ]', 25, y);
+      doc.text(step.name, 35, y);
+      
+      if (itemDurations[step.id]) {
+        doc.setTextColor(100);
+        doc.text(`(${formatDuration(itemDurations[step.id])})`, 190, y, { align: 'right' });
+        doc.setTextColor(0);
+      }
+      y += 6;
+    });
+
+    // Financials
+    y += 10;
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(14);
+    doc.text('Financial Summary', 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    const subtotal = calculateSubtotal();
+    doc.text('Subtotal:', 25, y);
+    doc.text(`$${subtotal.toFixed(2)}`, 190, y, { align: 'right' });
+    y += 6;
+    
+    if (discountValue) {
+      doc.text(`Discount (${discountType === 'percent' ? discountValue + '%' : '$' + discountValue}):`, 25, y);
+      const discAmt = discountType === 'percent' ? (subtotal * (parseFloat(discountValue) / 100)) : parseFloat(discountValue);
+      doc.text(`-$${discAmt.toFixed(2)}`, 190, y, { align: 'right' });
+      y += 6;
+    }
+    
+    const finalTotal = subtotal - (discountType === 'percent' ? (subtotal * (parseFloat(discountValue) / 100)) : (parseFloat(discountValue) || 0));
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL AMOUNT:', 25, y);
+    doc.text(`$${finalTotal.toFixed(2)}`, 190, y, { align: 'right' });
+
+    // Save/Archive logic
+    const pdfDataUrl = doc.output('dataurlstring');
+    const fileName = `Job_Report_${selectedCustomer || 'Guest'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    if (saveToArchive) {
+      savePDFToArchive(
+        'Job Reports', 
+        customer?.name || genericCustomerName || 'Guest', 
+        checklistId || generateInvoiceNumber(), 
+        pdfDataUrl, 
+        { fileName, path: 'Reports/' }
+      );
+      toast({ title: "Report Archived", description: "The job completion report has been saved to your file manager." });
+    } else {
+      doc.save(fileName);
+      toast({ title: "Report Generated", description: "Your PDF report has been downloaded." });
+    }
+  };
+
   const postChecklistMaterials = async (jobId: string, finalize = false) => {
     // Map fractional selections to numeric quantities for inventory decrement
     const FRACTION_TO_NUM: Record<string, number> = {
-      '1/8': 0.125,
-      '1/4': 0.25,
-      '3/8': 0.375,
-      '1/2': 0.5,
-      '5/8': 0.625,
-      '3/4': 0.75,
-      '7/8': 0.875,
-      '1': 1,
-      '': 0,
+      '1/8': 0.125, '1/4': 0.25, '3/8': 0.375, '1/2': 0.5, '5/8': 0.625, '3/4': 0.75, '7/8': 0.875, '1': 1, '': 0
     };
     const serviceName = (servicePackages.find(p => p.id === selectedPackage)?.name
       || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name
       || 'Service');
     const nowIso = new Date().toISOString();
-    const chemItems = chemRows
-      .filter(r => r.chemicalId)
-      .map(r => ({
-        chemicalId: r.chemicalId,
-        quantity: FRACTION_TO_NUM[r.fraction || ''] || 0,
-        notes: r.notes || '',
+    const chemItems = chemRows.filter(r => r.chemicalId).map(r => ({
+      chemicalId: r.chemicalId,
+      quantity: FRACTION_TO_NUM[r.fraction || ''] || 0,
+      notes: r.notes || '',
+      serviceName,
+      date: nowIso,
+      employee: employeeAssigned || '',
+    })).filter(i => i.quantity > 0);
+    const matItems = matRows.filter(r => r.materialId).map(r => {
+      const match = String(r.quantityNote || '').match(/\d+(\.\d+)?/);
+      const quantity = match ? Number(match[0]) : 0;
+      return {
+        materialId: r.materialId,
+        quantity,
+        notes: r.quantityNote || '',
         serviceName,
         date: nowIso,
         employee: employeeAssigned || '',
-      }))
-      .filter(i => i.quantity > 0);
-    const matItems = matRows
-      .filter(r => r.materialId)
-      .map(r => {
-        const match = String(r.quantityNote || '').match(/\d+(\.\d+)?/);
-        const quantity = match ? Number(match[0]) : 0;
-        return {
-          materialId: r.materialId,
-          quantity,
-          notes: r.quantityNote || '',
-          serviceName,
-          date: nowIso,
-          employee: employeeAssigned || '',
-        };
-      })
-      .filter(i => i.quantity > 0);
-    const toolItems = toolRows
-      .filter(r => r.toolId)
-      .map(r => ({
-        toolId: r.toolId,
-        toolName: toolsList.find(t => t.id === r.toolId)?.name,
-        notes: r.notes || '',
-        serviceName,
-        date: nowIso,
-        employee: employeeAssigned || '',
-      }));
+      };
+    }).filter(i => i.quantity > 0);
+    const toolItems = toolRows.filter(r => r.toolId).map(r => ({
+      toolId: r.toolId,
+      toolName: toolsList.find(t => t.id === r.toolId)?.name,
+      notes: r.notes || '',
+      serviceName,
+      date: nowIso,
+      employee: employeeAssigned || '',
+    }));
     const items = [...chemItems, ...matItems];
 
-    // Save tool usage to localforage
     if (toolItems.length > 0) {
       const currentUsage = await localforage.getItem<any[]>('tool-usage') || [];
       await localforage.setItem('tool-usage', [...currentUsage, ...toolItems]);
     }
+
     try {
       const res = await api('/api/checklist/materials', { method: 'POST', body: JSON.stringify({ jobId, rows: items }) });
       if ((res as any)?.ok || res === null) {
         toast({ title: finalize ? 'Materials finalized' : 'Materials saved', description: finalize ? 'Inventory updated and usage history logged.' : 'Materials usage recorded for this job.' });
-
-        // On finalize, generate an Admin Updates PDF summarizing materials/chemicals used
-        if (finalize && items.length > 0) {
-          const doc = new jsPDF();
-          let y = 20;
-          doc.setFontSize(16);
-          doc.text('Admin Updates', 20, y);
-          y += 10;
-          doc.setFontSize(12);
-          doc.text(`Materials Update — Job ${jobId}`, 20, y);
-          y += 8;
-          doc.text(`Service: ${serviceName}`, 20, y);
-          y += 8;
-          if (employeeAssigned) { doc.text(`Employee: ${employeeAssigned}`, 20, y); y += 8; }
-          doc.text(`Date: ${new Date().toLocaleString()}`, 20, y);
-          y += 12;
-
-          doc.setFontSize(12);
-          doc.text('Chemicals Used:', 20, y);
-          y += 8;
-          const chemLines = chemItems.map(ci => `• ${String(chemicalsList.find(c => String(c.id) === String(ci.chemicalId))?.name || ci.chemicalId)} — ${ci.quantity} unit(s)`);
-          const chemText = doc.splitTextToSize(chemLines.length ? chemLines.join('\n') : '(none)', 170);
-          doc.text(chemText, 20, y);
-          y += chemText.length * 6 + 8;
-
-          doc.text('Materials Used:', 20, y);
-          y += 8;
-          const matLines = matItems.map(mi => `• ${String(materialsList.find(m => String(m.id) === String(mi.materialId))?.name || mi.materialId)} — ${mi.quantity} unit(s)`);
-          const matText = doc.splitTextToSize(matLines.length ? matLines.join('\n') : '(none)', 170);
-          doc.text(matText, 20, y);
-          y += matText.length * 6 + 8;
-
-          doc.text('Tools Used:', 20, y);
-          y += 8;
-          const toolLines = toolItems.map(ti => `• ${String(ti.toolName || ti.toolId)}`);
-          const toolText = doc.splitTextToSize(toolLines.length ? toolLines.join('\n') : '(none)', 170);
-          doc.text(toolText, 20, y);
-          y += toolText.length * 6 + 8;
-
-          const pdfDataUrl = doc.output('dataurlstring');
-          const fileName = `Admin_Update_Materials_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
-          savePDFToArchive('Admin Updates', 'Admin', `materials-${jobId}`, pdfDataUrl, { fileName, path: 'Admin Updates/' });
-        }
       } else {
         const serverErr = (res as any)?.error;
         throw new Error(String(serverErr || 'Failed to sync materials'));
@@ -1899,6 +1983,24 @@ const ServiceChecklist = () => {
                   <h2 className="text-xl md:text-2xl font-bold text-white">Service Checklist</h2>
                   <p className="text-sm text-zinc-400">Step-by-step quality control</p>
                 </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-[10px] h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5"
+                    onClick={() => generateJobReport(false)}
+                  >
+                    <Download className="h-3 w-3" /> Report
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-[10px] h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5"
+                    onClick={() => generateJobReport(true)}
+                  >
+                    <Save className="h-3 w-3" /> Archive
+                  </Button>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -1923,10 +2025,11 @@ const ServiceChecklist = () => {
 
               {jobStartTime && (
                 <div className="flex flex-col items-end">
-                  <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-red-500/30 rounded-full animate-pulse-subtle">
-                    <Clock className="h-4 w-4 text-red-500" />
-                    <span className="text-sm font-mono font-bold text-red-500">
-                      JOB TIME: {formatDuration(liveNow - jobStartTime)}
+                  <div className={`flex items-center gap-2 px-3 py-1 bg-zinc-900 border rounded-full ${jobEndTime ? 'border-green-500/50' : 'border-red-500/30 animate-pulse-subtle'}`}>
+                    <Clock className={`h-4 w-4 ${jobEndTime ? 'text-green-500' : 'text-red-500'}`} />
+                    <span className={`text-sm font-mono font-bold ${jobEndTime ? 'text-green-500' : 'text-red-500'}`}>
+                      {jobEndTime ? 'FINISHED: ' : 'JOB TIME: '}
+                      {formatDuration((jobEndTime || liveNow) - jobStartTime)}
                     </span>
                   </div>
                 </div>
