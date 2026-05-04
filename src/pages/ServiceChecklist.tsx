@@ -1107,33 +1107,7 @@ const ServiceChecklist = () => {
       return undefined;
     }
 
-    // 0. Ensure Customer Exists in CRM (Sync Auth -> CRM)
-    // This is critical to avoid Foreign Key violation in Bookings table
-    if (selectedCustomer) {
-      const c = customers.find(x => x.id === selectedCustomer);
-      // Only try upsert if we actually found a customer object
-      if (c) {
-        try {
-          await upsertSupabaseCustomer({
-            id: c.id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            address: c.address,
-            vehicle_info: {
-              make: c.vehicle?.split(' ')[1] || '',
-              model: c.model,
-              year: c.year
-            },
-            type: (status === 'completed' || status === 'confirmed') ? 'customer' : (c.type || 'prospect')
-          });
-        } catch (err) {
-          console.error("Failed to sync customer for booking:", err);
-          // We don't abort, as maybe they already exist? 
-          // But typically if this fails, booking insert will fail too if FK is strict.
-        }
-      }
-    }
+    // Customer sync is now handled solely by the CRM/Modal to avoid duplicate ghost vehicles.
 
     // 0.5 Ensure we have a customer ID if history requires it
     let targetCustomerId = selectedCustomer;

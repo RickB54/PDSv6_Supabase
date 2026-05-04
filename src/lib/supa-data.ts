@@ -668,7 +668,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                     make: v.make,
                     model: v.model,
                     year: v.year,
-                    type: v.type || v.vehicleType || 'Compact/Sedan',
+                    type: v.type || v.vehicleType || '',
                     color: v.color,
                     customer_id: finalId
                 });
