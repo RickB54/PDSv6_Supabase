@@ -2160,7 +2160,7 @@ const ServiceChecklist = () => {
               <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
             )}
             {selectedPackage && (
-              <div className="space-y-6 max-h-[60vh] overflow-auto pr-2">
+              <div className="space-y-6 pr-2">
                 {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
                   <div key={section} className="space-y-3">
                     <button
