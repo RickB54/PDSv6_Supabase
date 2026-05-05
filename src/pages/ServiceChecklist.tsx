@@ -3407,6 +3407,9 @@ const ServiceChecklist = () => {
           />
 
           <RicksTipsModal open={tipsOpen} onOpenChange={setTipsOpen} />
+          
+          {/* Bottom Spacer to prevent floating bar overlap */}
+          <div className="h-32 md:h-24" aria-hidden="true" />
         </div>
       </main>
       <ChemicalStepModal
