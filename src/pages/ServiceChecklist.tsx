@@ -3335,24 +3335,24 @@ const ServiceChecklist = () => {
 
           {/* Floating Timer Bar - Always Onscreen */}
           {selectedPackage && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md animate-in slide-in-from-bottom-10 duration-500">
-              <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-4 sm:px-6 py-3 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-2 sm:gap-3 border-r border-white/10 pr-4 sm:pr-6">
-                  <div className={`h-3 w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
+            <div className="fixed bottom-8 left-4 right-4 md:left-1/2 md:-translate-x-1/2 z-50 max-w-md mx-auto animate-in slide-in-from-bottom-10 duration-500">
+              <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-3 sm:px-6 py-3 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center gap-1.5 sm:gap-3 border-r border-white/10 pr-3 sm:pr-6">
+                  <div className={`h-2 w-2 sm:h-3 sm:w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total Time</span>
-                    <span className="text-xl md:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
+                    <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Time</span>
+                    <span className="text-lg sm:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {!isTimerRunning ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <Button 
                         onClick={handleStartTimer} 
-                        className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-6 font-bold shadow-lg shadow-green-900/20"
+                        className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold shadow-lg shadow-green-900/20 text-xs sm:text-base"
                       >
-                        <Play className="h-4 w-4 mr-2" /> 
+                        <Play className="h-4 w-4 mr-1 sm:mr-2" /> 
                         {totalElapsedMs > 0 ? "Resume" : "Start"}
                       </Button>
                       
@@ -3370,26 +3370,17 @@ const ServiceChecklist = () => {
                   ) : (
                     <Button 
                       onClick={handleStopTimer} 
-                      className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-10 px-6 font-bold"
+                      className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold text-xs sm:text-base"
                     >
-                      <Pause className="h-4 w-4 mr-2" /> Pause
+                      <Pause className="h-4 w-4 mr-1 sm:mr-2" /> Pause
                     </Button>
                   )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleResetTimer} 
-                    className="text-zinc-500 hover:text-red-400 h-10 w-10 rounded-full"
-                    title="Reset Timer"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
                 </div>
 
-                <div className="flex flex-col border-l border-white/10 pl-6">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Progress</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-white leading-none">{progressPercent}%</span>
+                <div className="flex flex-col border-l border-white/10 pl-3 sm:pl-6">
+                  <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Progress</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-base sm:text-lg font-bold text-white leading-none">{progressPercent}%</span>
                   </div>
                 </div>
               </div>
