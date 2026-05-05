@@ -12,6 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 
 import localforage from "localforage";
@@ -435,13 +442,13 @@ const ServiceChecklist = () => {
   };
 
   const handleResetTimer = () => {
-    if (window.confirm("Reset the job timer to 00:00:00?")) {
+    if (confirm("Reset the job timer and all item durations to zero? This cannot be undone.")) {
       setJobStartTime(null);
       setIsTimerRunning(false);
       setTotalElapsedMs(0);
       setElapsedTime("00:00:00");
       setItemDurations({});
-      toast({ title: "Timer Reset", description: "Clock has been cleared." });
+      toast({ title: "Timer Reset", description: "Clock and task times have been cleared." });
     }
   };
 
@@ -468,8 +475,12 @@ const ServiceChecklist = () => {
       return next;
     });
 
-    // Update duration if checking ON while timer is active
-    if (checked && isTimerRunning) {
+    // Auto-start timer on first check if not running
+    if (checked && !isTimerRunning && !jobStartTime) {
+      handleStartTimer();
+      // StartTimer will set jobStartTime and lastActionTime
+    } else if (checked && isTimerRunning) {
+      // Update duration if checking ON while timer is active
       const diff = now - lastActionTime;
       setItemDurations(prev => ({
         ...prev,
@@ -2300,7 +2311,23 @@ const ServiceChecklist = () => {
                       <span>{new Date(draft.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full hover:bg-red-500/20 hover:text-red-400">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full hover:bg-red-500/20 hover:text-red-400"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (checklistId && checklistId !== draft.id) {
+                        if (!confirm(`You have an active job for ${recentDrafts.find(d => d.id === checklistId)?.customerName || 'someone else'}. \n\nSwitching will save your current progress but change your active checklist. Continue?`)) {
+                          return;
+                        }
+                      }
+                      
+                      // Trigger the main restore logic (which is on the parent div click)
+                      const parentDiv = e.currentTarget.parentElement;
+                      if (parentDiv) parentDiv.click();
+                    }}
+                  >
                     <Play className="h-4 w-4" />
                   </Button>
                 </div>
@@ -2462,14 +2489,14 @@ const ServiceChecklist = () => {
                     {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
                   </button>
 
-                  {!collapsedSections[section] && (
+{!collapsedSections[section] && (
                     <div className="space-y-2">
                       {checklistSteps.filter(s => s.category === section).map((step) => {
                         const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
                         return (
                           <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
                             <div className="flex items-center justify-between py-2">
-                              <div className="flex items-center gap-3 text-sm flex-1 py-1 group/item">
+                              <label className="flex items-center gap-3 text-sm flex-1 py-1 group/item cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={step.checked}
@@ -2482,6 +2509,7 @@ const ServiceChecklist = () => {
                                       <Input 
                                         value={editStepNameText}
                                         onChange={(e) => setEditStepNameText(e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
                                         className="h-8 bg-black text-white border-blue-500/50 flex-1 text-sm"
                                         autoFocus
                                         onKeyDown={(e) => {
@@ -2489,22 +2517,22 @@ const ServiceChecklist = () => {
                                           if (e.key === 'Escape') setEditingStepNameId(null);
                                         }}
                                       />
-                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={() => handleSaveStepName(step.id)}>
+                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); handleSaveStepName(step.id); }}>
                                         <Check className="h-4 w-4" />
                                       </Button>
-                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={() => setEditingStepNameId(null)}>
+                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); setEditingStepNameId(null); }}>
                                         <X className="h-4 w-4" />
                                       </Button>
                                     </div>
                                   ) : (
                                     <span 
-                                      className={`truncate flex-1 cursor-pointer py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
-                                      onClick={() => {
+                                      className={`truncate flex-1 py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
+                                      onClick={(e) => {
                                         if (isAdminEditMode) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
                                           setEditingStepNameId(step.id);
                                           setEditStepNameText(step.name);
-                                        } else {
-                                          handleToggleStep(step.id, !step.checked);
                                         }
                                       }}
                                     >
@@ -2512,51 +2540,89 @@ const ServiceChecklist = () => {
                                       {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
                                     </span>
                                   )}
-                                  {itemDurations[step.id] ? (
-                                    editingDurationId === step.id ? (
-                                      <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
-                                        <Input
-                                          value={editDurationValue}
-                                          onChange={(e) => setEditDurationValue(e.target.value)}
-                                          className="h-6 w-16 bg-black text-[10px] px-1 border-yellow-500/50 text-white font-mono"
-                                          placeholder="mm:ss"
-                                          autoFocus
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleSaveItemDuration(step.id);
-                                            if (e.key === 'Escape') setEditingDurationId(null);
-                                          }}
-                                        />
-                                        <Button 
-                                          size="sm" 
-                                          variant="ghost" 
-                                          className="h-6 w-6 p-0 text-green-500 hover:bg-green-500/10"
-                                          onClick={() => handleSaveItemDuration(step.id)}
-                                        >
-                                          <Check className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <span 
-                                        className={`text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300 ${getCurrentUser()?.role === 'admin' ? 'cursor-pointer hover:bg-yellow-300 hover:scale-105 transition-all' : ''}`}
-                                        onClick={() => {
-                                          if (getCurrentUser()?.role === 'admin') {
-                                            setEditingDurationId(step.id);
-                                            const totalSecs = Math.floor((itemDurations[step.id] || 0) / 1000);
-                                            const m = Math.floor(totalSecs / 60);
-                                            const s = totalSecs % 60;
-                                            setEditDurationValue(`${m}:${s.toString().padStart(2, '0')}`);
-                                          }
-                                        }}
-                                        title={getCurrentUser()?.role === 'admin' ? "Click to edit duration" : ""}
-                                      >
-                                        {formatDuration(itemDurations[step.id])}
-                                      </span>
-                                    )
-                                  ) : null}
                                 </div>
-                              </div>
+                              </label>
                               
-                              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                                {itemDurations[step.id] ? (
+                                  editingDurationId === step.id ? (
+                                    <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button size="sm" variant="outline" className="h-6 px-1.5 text-[10px] bg-black border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                                            Presets
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800">
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 30000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>30 sec</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 60000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>1 min</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 900000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>15 min</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 1200000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>20 mins</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 1800000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>30 mins</DropdownMenuItem>
+                                          <DropdownMenuSeparator className="bg-zinc-800" />
+                                          <DropdownMenuItem className="text-xs font-bold text-blue-400">Custom (Below)</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+
+                                      <Input
+                                        value={editDurationValue}
+                                        onChange={(e) => setEditDurationValue(e.target.value)}
+                                        className="h-6 w-16 bg-black text-[10px] px-1 border-yellow-500/50 text-white font-mono"
+                                        placeholder="mm:ss"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleSaveItemDuration(step.id);
+                                          if (e.key === 'Escape') setEditingDurationId(null);
+                                        }}
+                                      />
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        className="h-6 w-6 p-0 text-green-500 hover:bg-green-500/10"
+                                        onClick={() => handleSaveItemDuration(step.id)}
+                                      >
+                                        <Check className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span 
+                                      className={`text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300 ${getCurrentUser()?.role === 'admin' ? 'cursor-pointer hover:bg-yellow-300 hover:scale-105 transition-all' : ''}`}
+                                      onClick={() => {
+                                        if (getCurrentUser()?.role === 'admin') {
+                                          setEditingDurationId(step.id);
+                                          const totalSecs = Math.floor((itemDurations[step.id] || 0) / 1000);
+                                          const m = Math.floor(totalSecs / 60);
+                                          const s = totalSecs % 60;
+                                          setEditDurationValue(`${m}:${s.toString().padStart(2, '0')}`);
+                                        }
+                                      }}
+                                      title={getCurrentUser()?.role === 'admin' ? "Click to edit duration" : ""}
+                                    >
+                                      {formatDuration(itemDurations[step.id])}
+                                    </span>
+                                  )
+                                ) : null}
+
                                 {isAdminEditMode && !step.id.startsWith('addon-') && (
                                   <Button
                                     variant="ghost"
@@ -2568,6 +2634,7 @@ const ServiceChecklist = () => {
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 )}
+                                
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -3196,7 +3263,6 @@ const ServiceChecklist = () => {
                   }} 
                   className="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-16 md:h-14 text-lg md:text-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-2 border-emerald-400/50 mt-2 rounded-xl flex-col md:flex-row leading-tight px-4"
                 >
-                  <DollarSign className="h-6 w-6 md:h-7 md:w-7 md:mr-3 mb-1 md:mb-0" />
                   <div className="text-center">
                     COLLECT IN-PERSON <br className="md:hidden" /> PAYMENT (W/ TIP)
                   </div>
@@ -3269,12 +3335,26 @@ const ServiceChecklist = () => {
 
                 <div className="flex items-center gap-2">
                   {!isTimerRunning ? (
-                    <Button 
-                      onClick={handleStartTimer} 
-                      className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-6 font-bold shadow-lg shadow-green-900/20"
-                    >
-                      <Play className="h-4 w-4 mr-2" /> Start
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        onClick={handleStartTimer} 
+                        className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-6 font-bold shadow-lg shadow-green-900/20"
+                      >
+                        <Play className="h-4 w-4 mr-2" /> 
+                        {totalElapsedMs > 0 ? "Resume" : "Start"}
+                      </Button>
+                      
+                      {totalElapsedMs > 0 && (
+                        <Button 
+                          onClick={handleResetTimer}
+                          variant="ghost"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full h-10 w-10 p-0"
+                          title="Reset Timer"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   ) : (
                     <Button 
                       onClick={handleStopTimer} 
