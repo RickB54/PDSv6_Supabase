@@ -1938,7 +1938,7 @@ const ServiceChecklist = () => {
         </div>
       </PageHeader>
 
-      <main className="container mx-auto px-1 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8 overflow-visible">
+      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8 overflow-x-hidden">
         {/* Premium Header Block */}
         <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
@@ -2008,7 +2008,7 @@ const ServiceChecklist = () => {
             </div>
           )}
           {/* Job Setup - Generic, no forced customer link */}
-          <Card className="p-4 md:p-6 bg-gradient-card border-border">
+          <Card className="p-3 sm:p-6 bg-gradient-card border-border overflow-hidden">
             <div 
               className="flex items-center justify-between cursor-pointer group"
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
@@ -2484,8 +2484,8 @@ const ServiceChecklist = () => {
                     className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
                     onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="group-hover:text-primary transition-colors">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                      <span className="group-hover:text-primary transition-colors truncate">
                         {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
                       </span>
                       {section !== 'preparation' && jobStartTime && (
@@ -2506,9 +2506,9 @@ const ServiceChecklist = () => {
                       {checklistSteps.filter(s => s.category === section).map((step) => {
                         const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
                         return (
-                          <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
-                            <div className="flex items-center justify-between py-2">
-                              <label className="flex items-center gap-3 text-sm flex-1 py-1 group/item cursor-pointer">
+                          <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg transition-colors">
+                            <div className="flex items-center justify-between py-2 gap-2">
+                              <label className="flex items-center gap-3 text-sm flex-1 py-1 group/item cursor-pointer min-w-0">
                                 <input
                                   type="checkbox"
                                   checked={step.checked}
@@ -2718,7 +2718,7 @@ const ServiceChecklist = () => {
                                             <Button 
                                               variant="ghost" 
                                               size="sm" 
-                                              className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50"
+                                              className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50 shrink-0"
                                               onClick={() => {
                                                 setEditingStepId(step.id);
                                                 setEditInstructionText(instructionText);
