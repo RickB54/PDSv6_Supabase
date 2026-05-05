@@ -2538,7 +2538,7 @@ const ServiceChecklist = () => {
                                     </div>
                                   ) : (
                                     <span 
-                                      className={`truncate flex-1 py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
+                                      className={`whitespace-normal break-words flex-1 py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
                                       onClick={(e) => {
                                         if (isAdminEditMode) {
                                           e.preventDefault();
@@ -3414,7 +3414,7 @@ const ServiceChecklist = () => {
               <div className="flex items-center gap-1.5 sm:gap-3 border-r border-white/10 pr-3 sm:pr-6">
                 <div className={`h-2 w-2 sm:h-3 sm:w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
                 <div className="flex flex-col">
-                  <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Time</span>
+                  <span className="text-[7px] sm:text-[10px] text-zinc-500 uppercase tracking-tight sm:tracking-widest font-bold">Time</span>
                   <span className="text-lg sm:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
                 </div>
               </div>
@@ -3444,17 +3444,17 @@ const ServiceChecklist = () => {
                 ) : (
                   <Button 
                     onClick={handleStopTimer} 
-                    className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold text-xs sm:text-base"
+                    className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-8 px-3 font-bold text-xs"
                   >
-                    <Pause className="h-4 w-4 mr-1 sm:mr-2" /> Pause
+                    <Pause className="h-3 w-3 mr-1" /> Pause
                   </Button>
                 )}
               </div>
 
-              <div className="flex flex-col border-l border-white/10 pl-3 sm:pl-6">
-                <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Progress</span>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg font-bold text-white leading-none">{progressPercent}%</span>
+              <div className="flex flex-col border-l border-white/10 pl-2">
+                <span className="text-[7px] text-zinc-500 uppercase font-bold">Progress</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-white leading-none">{progressPercent}%</span>
                 </div>
               </div>
             </div>
