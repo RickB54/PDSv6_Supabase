@@ -1028,7 +1028,7 @@ const ServiceChecklist = () => {
 
   // 1. Restore State on Mount (if no URL params)
   useEffect(() => {
-    const hasUrlParams = params.get("package") || params.get("vehicleType") || params.get("addons");
+    const hasUrlParams = searchParams.get("package") || searchParams.get("vehicleType") || searchParams.get("addons");
     if (!hasUrlParams) {
       const saved = localStorage.getItem(CHECKLIST_DRAFT_KEY);
       if (saved) {
@@ -1054,6 +1054,10 @@ const ServiceChecklist = () => {
           if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
           if (state.discountValue) setDiscountValue(state.discountValue);
           if (state.discountType) setDiscountType(state.discountType);
+          
+          const urlId = searchParams.get("id");
+          if (urlId) setChecklistId(urlId);
+          else if (state.checklistId) setChecklistId(state.checklistId);
 
           if (state.jobStartTime) setJobStartTime(state.jobStartTime);
           if (state.itemDurations) setItemDurations(state.itemDurations);
@@ -1209,30 +1213,33 @@ const ServiceChecklist = () => {
 
     // 0.5 Ensure we have a customer ID if history requires it
     let targetCustomerId = selectedCustomer;
-    if (!targetCustomerId) {
-        // Try to find a "Generic Customer" in existing list
-        const generic = customers.find(c => c.name.toLowerCase().includes('generic'));
-        if (generic) {
-          targetCustomerId = generic.id!;
-        } else {
-          try {
-            // Create a "Generic Customer" one-time record if it doesn't exist
-            const newGeneric = await upsertSupabaseCustomer({ 
-              name: genericCustomerName || 'Generic Customer',
-              notes: 'System generated for non-linked jobs'
-            });
-            targetCustomerId = newGeneric.id!;
-            // Reloading customers would be good here, but for now we just use the ID
-          } catch (err) {
-            console.error("Failed to create generic customer record", err);
-          }
-        }
+    const isGenericTest = !targetCustomerId;
+
+    if (isGenericTest) {
+      // If no customer is selected, treat as a local test/generic job.
+      // We do NOT record these in the booking calendar to avoid clutter.
+      console.log("Generic/Test Customer detected. Skipping database booking.");
+      
+      // We still update the draft and allow PDF generation
+      const mockId = checklistId || `test-${Date.now()}`;
+      setChecklistId(mockId);
+      
+      // DISPATCH LOCAL EVENT SO UI UPDATES WITHOUT REQUIRING DB SYNC
+      window.dispatchEvent(new Event('bookings-updated'));
+      
+      toast({ 
+        title: 'Test/Generic Mode', 
+        description: 'Progress is local-only. No record will be added to the booking calendar.',
+        className: 'bg-zinc-800 text-zinc-300 border-zinc-700'
+      });
+      
+      return mockId;
     }
 
+    // --- FROM HERE DOWN: REAL CUSTOMER PERSISTENCE ---
+    
     // 1. Save to Supabase Bookings (Job History)
     const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package';
-
-    // Create detailed notes
     const jobDetails = {
       checklist: checklistSteps.map(s => ({ n: s.name, c: s.checked })),
       chemicals: chemRows,
@@ -1241,14 +1248,14 @@ const ServiceChecklist = () => {
     };
 
     const bookingPayload = {
-      id: checklistId || undefined, // Use existing ID if we have it
+      id: checklistId || undefined,
       title: pkgName,
-      customerId: targetCustomerId || null,
+      customerId: targetCustomerId,
       date: new Date().toISOString(),
       status: status,
       vehicle_info: { type: vehicleType, other: vehicleType === 'Other' ? vehicleTypeOther : undefined },
       notes: `Job Details: ${JSON.stringify(jobDetails)} \n\n User Notes: ${notes}`,
-      price: calculateTotal(), // Estimated total
+      price: calculateTotal(),
       addons: selectedAddOns
     };
 
@@ -1264,7 +1271,6 @@ const ServiceChecklist = () => {
       toast({ title: 'Progress Saved', description: 'Checklist saved to Job History.' });
       
       try {
-        // Post materials usage on save (no subtract)
         await postChecklistMaterials(newId, false);
       } catch (err) {
         console.warn("Materials Sync Delayed:", err);
@@ -1339,7 +1345,8 @@ const ServiceChecklist = () => {
       doc.text(`Date: ${new Date().toLocaleString()}`, 20, 38);
       doc.text(`Customer: ${customerName}`, 20, 46);
       doc.text(`Vehicle Type: ${vehicleLabels[vehicleType] || vehicleType}`, 20, 54);
-      let y = 62;
+      doc.text(`Total Time: ${elapsedTime}`, 20, 62);
+      let y = 70;
       if (employeeAssigned) { doc.text(`Employee: ${employeeAssigned}`, 20, y); y += 8; }
 
       // Timer Info

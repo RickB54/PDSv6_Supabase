@@ -129,6 +129,31 @@ export default function BookingsPage() {
     }
   };
 
+  const handlePurgeGenericBookings = async () => {
+    if (!isAdmin) return;
+    if (!window.confirm("Are you sure you want to delete ALL 'Generic Customer' bookings? This cannot be undone.")) return;
+
+    const purgeToast = toast.loading("Purging test data...");
+    try {
+      const genericItems = items.filter(b => 
+        b.customer === 'Generic Customer' || 
+        b.customer === 'New Customer' ||
+        (b.customer || '').toLowerCase().includes('test customer')
+      );
+      
+      console.log(`Purging ${genericItems.length} generic bookings`);
+      
+      for (const item of genericItems) {
+        await remove(item.id);
+      }
+      
+      toast.success(`Successfully purged ${genericItems.length} test records.`, { id: purgeToast });
+    } catch (err) {
+      console.error("Purge failed:", err);
+      toast.error("Failed to complete purge.", { id: purgeToast });
+    }
+  };
+
   const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'payment-success' | 'reminder'>('confirmation');
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -296,6 +321,7 @@ export default function BookingsPage() {
     const params = new URLSearchParams();
     if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
     if (formData.customer) params.set('customerName', formData.customer);
+    if (selectedBooking?.id) params.set('id', selectedBooking.id); // PASS THE BOOKING ID
 
     // Find service ID
     const svc = allServices.find(s => s.name === formData.service);
@@ -1342,7 +1368,9 @@ export default function BookingsPage() {
 
             <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
 
-            {/* 🗑️ DELETE TEST DATA BUTTON REMOVED per user request */}
+            <Button variant="outline" size="icon" onClick={handlePurgeGenericBookings} className="h-8 w-8 text-red-500/50 hover:text-red-500 border-red-500/20" title="Cleanup Generic Test Bookings">
+              <Trash2 className="h-3 w-3" />
+            </Button>
 
             <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
               <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>
