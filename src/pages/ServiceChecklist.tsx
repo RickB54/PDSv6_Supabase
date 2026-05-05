@@ -104,7 +104,19 @@ function buildAddOnServices(): DisplayService[] {
     ...base.map(a => ({ id: a.id, name: a.name, kind: 'addon' as const })),
     ...customs.map(a => ({ id: a.id, name: a.name, kind: 'addon' as const })),
   ];
-  return merged.filter(a => (getAddOnMeta(a.id)?.deleted !== true) && (getAddOnMeta(a.id)?.visible !== false));
+  
+  const hiddenByDefault = [
+    'paint-sealant', 'odor-eliminator', 'paint-touch-up', 'ceramic-coating', 
+    'paint-correction', 'odor-treatment', 'ceramic-protection-1yr', 'ceramic-coating-2yr'
+  ];
+
+  return merged.filter(a => {
+    const m = getAddOnMeta(a.id);
+    if (m?.deleted) return false;
+    if (m?.visible === true) return true;
+    if (m?.visible === false) return false;
+    return !hiddenByDefault.includes(a.id);
+  });
 }
 
 const ServiceChecklist = () => {
@@ -2122,18 +2134,18 @@ const ServiceChecklist = () => {
                 </p>
               </div>
             )}
-            <div className="grid grid-cols-3 gap-2 mb-4 border-t border-white/5 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 border-t border-white/5 pt-4">
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase text-zinc-500">Year</Label>
-                <Input placeholder="2024" value={vYear} onChange={(e) => setVYear(e.target.value)} className="h-8 bg-black text-sm" />
+                <Input placeholder="" value={vYear} onChange={(e) => setVYear(e.target.value)} className="h-10 bg-black text-sm border-zinc-800" />
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase text-zinc-500">Make</Label>
-                <Input placeholder="Ford" value={vMake} onChange={(e) => setVMake(e.target.value)} className="h-8 bg-black text-sm" />
+                <Input placeholder="" value={vMake} onChange={(e) => setVMake(e.target.value)} className="h-10 bg-black text-sm border-zinc-800" />
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase text-zinc-500">Model</Label>
-                <Input placeholder="F-150" value={vModel} onChange={(e) => setVModel(e.target.value)} className="h-8 bg-black text-sm" />
+                <Input placeholder="" value={vModel} onChange={(e) => setVModel(e.target.value)} className="h-10 bg-black text-sm border-zinc-800" />
               </div>
             </div>
 
@@ -3323,9 +3335,9 @@ const ServiceChecklist = () => {
 
           {/* Floating Timer Bar - Always Onscreen */}
           {selectedPackage && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 duration-500">
-              <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-3 border-r border-white/10 pr-6">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md animate-in slide-in-from-bottom-10 duration-500">
+              <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-4 sm:px-6 py-3 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center gap-2 sm:gap-3 border-r border-white/10 pr-4 sm:pr-6">
                   <div className={`h-3 w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total Time</span>
