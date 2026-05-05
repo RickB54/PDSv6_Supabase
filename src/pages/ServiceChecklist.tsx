@@ -453,39 +453,29 @@ const ServiceChecklist = () => {
 
   const handleToggleStep = (stepId: string, checked: boolean) => {
     const now = Date.now();
+    
+    // Update checklist status
     setChecklistSteps(prev => {
-      const newSteps = prev.map(ps => ps.id === stepId ? { ...ps, checked } : ps);
-      const step = prev.find(ps => ps.id === stepId);
+      const next = prev.map(ps => ps.id === stepId ? { ...ps, checked } : ps);
       
-      if (!step) return newSteps;
-
-      if (checked) {
-        // If the timer is NOT running, we don't record duration automatically
-        // but we still update lastActionTime to prevent huge spikes if they start it later
-        if (isTimerRunning) {
-          const duration = now - lastActionTime;
-          setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
-          setLastActionTime(now);
-        } else {
-          setLastActionTime(now);
-        }
-      } else {
-        // If unchecking, clear the duration
-        setItemDurations(prevDur => {
-          const next = { ...prevDur };
-          delete next[stepId];
-          return next;
-        });
-      }
-
-      // Check if the entire job is now finished
-      const allDone = newSteps.every(s => s.checked);
+      // Auto-stop timer if everything is done
+      const allDone = next.every(s => s.checked);
       if (allDone && isTimerRunning) {
         handleStopTimer();
       }
-
-      return newSteps;
+      return next;
     });
+
+    // Update duration if checking ON while timer is active
+    if (checked && isTimerRunning) {
+      const diff = now - lastActionTime;
+      setItemDurations(prev => ({
+        ...prev,
+        [stepId]: (prev[stepId] || 0) + diff
+      }));
+      setLastActionTime(now);
+    }
+    // Note: If unchecking, we keep the recorded duration so far (accumulated work)
   };
 
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
@@ -978,8 +968,6 @@ const ServiceChecklist = () => {
     const vkey = toBuiltInVehKey(vehicleType);
     const selected = [selectedPackage, ...selectedAddOns].filter(Boolean);
     setSelectedServices(selected);
-    // Build steps from selected package
-    const pkg = servicePackages.find(p => p.id === selectedPackage) || (getCustomPackages().find((p: any) => p.id === selectedPackage) as any);
     
     // Auto-reset timer if everything is unchecked and we're switching
     if (checklistSteps.length > 0 && checklistSteps.every(s => !s.checked) && jobStartTime) {
@@ -987,39 +975,52 @@ const ServiceChecklist = () => {
       setItemDurations({});
     }
 
-    // Check for global overrides first
+    // Capture previous state to preserve it
+    const prevChecked = new Map(checklistSteps.map(s => [s.id, s.checked]));
+    const prevNamesChecked = new Map(checklistSteps.map(s => [s.name, s.checked]));
+
+    // Build new steps
+    const pkg = servicePackages.find(p => p.id === selectedPackage) || (getCustomPackages().find((p: any) => p.id === selectedPackage) as any);
     const globalOverrides = JSON.parse(localStorage.getItem('packageStepOverrides') || '{}');
+    
+    let nextSteps: ChecklistStep[] = [];
     if (selectedPackage && globalOverrides[selectedPackage]) {
-      // Re-apply any missing dynamic info if needed, but mostly just trust the override
-      setChecklistSteps([...globalOverrides[selectedPackage], ...selectedAddOns.map(aid => {
+      nextSteps = [...globalOverrides[selectedPackage], ...selectedAddOns.map(aid => {
         const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
         return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
-      })]);
-      return;
+      })];
+    } else {
+      let baseSteps: ChecklistStep[] = [];
+      if (pkg && (pkg as any).steps) {
+        baseSteps = (pkg as any).steps.map((s: any) => ({ id: s.id || s, name: s.name || s, category: (s.category || 'exterior'), checked: false }));
+      }
+      const prep: ChecklistStep[] = [
+        { id: 'prep-inspect', name: 'Inspect vehicle (exterior & interior)', category: 'preparation', checked: false },
+        { id: 'prep-tools', name: 'Gather tools & chemicals', category: 'preparation', checked: false },
+        { id: 'prep-walkaround', name: 'Customer walkaround & expectations', category: 'preparation', checked: false },
+      ];
+      const final: ChecklistStep[] = [
+        { id: 'final-personal', name: 'Remove personal items & trash', category: 'final', checked: false },
+        { id: 'final-inspect', name: 'Final inspection & touch-ups', category: 'final', checked: false },
+        { id: 'final-walkaround', name: 'Final customer walkaround', category: 'final', checked: false },
+      ];
+      const addonSteps = selectedAddOns.map(aid => {
+        const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
+        return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
+      });
+      nextSteps = [...prep, ...baseSteps, ...addonSteps, ...final];
     }
 
-    let baseSteps: ChecklistStep[] = [];
-    if (pkg && (pkg as any).steps) {
-      baseSteps = (pkg as any).steps.map((s: any) => ({ id: s.id || s, name: s.name || s, category: (s.category || 'exterior'), checked: false }));
-    }
-    // Preparation static steps
-    const prep: ChecklistStep[] = [
-      { id: 'prep-inspect', name: 'Inspect vehicle (exterior & interior)', category: 'preparation', checked: false },
-      { id: 'prep-tools', name: 'Gather tools & chemicals', category: 'preparation', checked: false },
-      { id: 'prep-walkaround', name: 'Customer walkaround & expectations', category: 'preparation', checked: false },
-    ];
-    // Add-on steps: treat each add-on as a single step under exterior
-    const addonSteps: ChecklistStep[] = selectedAddOns.map((aid) => {
-      const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
-      return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false };
+    // Merge previous progress back in
+    const merged = nextSteps.map(step => {
+      // Priority 1: Match by ID
+      if (prevChecked.has(step.id)) return { ...step, checked: prevChecked.get(step.id) };
+      // Priority 2: Match by Name (for stability when IDs are generated from names)
+      if (prevNamesChecked.has(step.name)) return { ...step, checked: prevNamesChecked.get(step.name) };
+      return step;
     });
-    // Final inspection static steps (Ensure they always exist)
-    const final: ChecklistStep[] = [
-      { id: 'final-glass', name: 'Final glass & quality check', category: 'final', checked: false },
-      { id: 'final-walkaround', name: 'Final walkaround / Media archive', category: 'final', checked: false },
-    ];
 
-    setChecklistSteps([...prep, ...baseSteps, ...addonSteps, ...final]);
+    setChecklistSteps(merged);
   }, [selectedPackage, selectedAddOns, vehicleType]);
 
   // --- PERSISTENCE LOGIC START ---
@@ -2257,8 +2258,29 @@ const ServiceChecklist = () => {
                 {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
               </Button>
               <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
+                const now = Date.now();
                 const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
-                setChecklistSteps(prev => prev.map(s => ({ ...s, checked: !all })));
+                const targetState = !all;
+                
+                setChecklistSteps(prev => prev.map(s => ({ ...s, checked: targetState })));
+                
+                // If checking all ON while timer is active, distribute time to remaining items
+                if (targetState && isTimerRunning) {
+                  const unchecked = checklistSteps.filter(s => !s.checked);
+                  if (unchecked.length > 0) {
+                    const totalDiff = now - lastActionTime;
+                    const perItemDiff = totalDiff / unchecked.length;
+                    
+                    setItemDurations(prev => {
+                      const next = { ...prev };
+                      unchecked.forEach(s => {
+                        next[s.id] = (next[s.id] || 0) + perItemDiff;
+                      });
+                      return next;
+                    });
+                    setLastActionTime(now);
+                  }
+                }
               }}>
                 {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
               </Button>
@@ -2348,11 +2370,11 @@ const ServiceChecklist = () => {
                                     {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
                                   </span>
                                 )}
-                                {itemDurations[step.id] && (
-                                  <span className="text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-500">
+                                {itemDurations[step.id] ? (
+                                  <span className="text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300">
                                     {formatDuration(itemDurations[step.id])}
                                   </span>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                             
