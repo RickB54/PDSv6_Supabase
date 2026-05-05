@@ -90,22 +90,85 @@ export default function NotificationBell() {
     };
   }, [refresh, employeeKeys.join('|')]);
 
-  const items = useMemo(() => {
-    // Sort by newest first (reverse the array since alerts are stored oldest-first)
+  // Helper to extract customer name from alert message
+  const getCustomerName = (message: string) => {
+    if (!message) return null;
+    const patterns = [
+      /Job completed for (.*)/i,
+      /New Job for (.*)/i,
+      /NEW BOOKING: (.*?) -/i,
+      /New customer added: (.*)/i,
+      /NEW ONLINE REQUEST: (.*?) -/i,
+      /Confirmation email sent to (.*?) \(/i,
+      /Employee contact: (.*)/i,
+      /Payment Success: (.*?) -/i,
+      /Inquiry from (.*)/i,
+      /for (.*)/i
+    ];
+    for (const p of patterns) {
+      const match = message.match(p);
+      if (match) return match[1].trim();
+    }
+    return null;
+  };
+
+  const groupedItems = useMemo(() => {
     if (isEmployee) {
       const sorted = [...(empItems || [])].reverse();
-      return sorted.slice(0, 10);
+      return sorted.slice(0, 10).map(i => ({ ...i, group: null, shortTitle: i.title }));
     }
-    // For admin alerts, get raw alerts to access timestamps, then map to UI format
+
     const sortedAlerts = [...(alerts || [])]
-      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
-      .slice(0, 10)
-      .map(a => {
-        const mapped = mapAlert(a);
-        return { ...mapped, timestamp: a.timestamp, read: a.read };
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+
+    const groups: Record<string, any[]> = {};
+    const others: any[] = [];
+
+    sortedAlerts.forEach(a => {
+      const mapped = mapAlert(a);
+      const cust = getCustomerName(a.message || a.type);
+      
+      const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safeCust = cust ? escapeRegExp(cust) : '';
+      
+      const item = { 
+        ...mapped, 
+        timestamp: a.timestamp, 
+        read: a.read, 
+        rawMessage: a.message,
+        shortTitle: (a.message && safeCust) 
+          ? a.message.replace(new RegExp(` (for|to|of|from|:|-|—) ${safeCust}`, 'i'), '').trim()
+          : mapped.title
+      };
+
+      if (cust && cust.length < 50) {
+        if (!groups[cust]) groups[cust] = [];
+        groups[cust].push(item);
+      } else {
+        others.push(item);
+      }
+    });
+
+    // Convert groups to a list
+    const result: any[] = [];
+    Object.entries(groups).forEach(([name, alerts]) => {
+      result.push({
+        id: `group-${name}`,
+        isGroup: true,
+        customerName: name,
+        alerts: alerts.slice(0, 5), // Don't overflow a single group
+        timestamp: alerts[0].timestamp // Latest timestamp
       });
-    return sortedAlerts;
+    });
+
+    others.forEach(o => result.push({ ...o, isGroup: false }));
+
+    // Re-sort final list by timestamp
+    return result.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 10);
   }, [alerts, empItems, isEmployee]);
+
+  const items = groupedItems;
+
   // Compute important unread using full AdminAlert objects, not mapped UI items
   const importantUnreadActual = useMemo(() => {
     if (isEmployee) return 0; // employee notifications are all treated equally for now
@@ -194,60 +257,87 @@ export default function NotificationBell() {
         {items.length === 0 ? (
           <div className="px-3 py-4 text-sm text-muted-foreground text-center">No new alerts</div>
         ) : (
-          items.map(a => (
-            <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-border/50 focus:bg-zinc-800 focus:text-white cursor-pointer group">
-              <div className="flex items-center justify-between w-full">
-                <div className="text-sm break-words flex-1 leading-relaxed group-hover:text-white">{a.title}</div>
-                {(a as any).timestamp && (
-                  <div className="text-[10px] text-muted-foreground ml-2 whitespace-nowrap">
-                    {(() => {
-                      const diff = Date.now() - new Date((a as any).timestamp).getTime();
-                      const mins = Math.floor(diff / 60000);
-                      const hrs = Math.floor(diff / 3600000);
-                      const days = Math.floor(diff / 86400000);
-                      if (mins < 1) return 'Just now';
-                      if (mins < 60) return `${mins}m ago`;
-                      if (hrs < 24) return `${hrs}h ago`;
-                      return `${days}d ago`;
-                    })()}
+          items.map(a => {
+            const timeStr = a.timestamp ? (() => {
+              const diff = Date.now() - new Date(a.timestamp).getTime();
+              const mins = Math.floor(diff / 60000);
+              const hrs = Math.floor(diff / 3600000);
+              const days = Math.floor(diff / 86400000);
+              if (mins < 1) return 'Just now';
+              if (mins < 60) return `${mins}m ago`;
+              if (hrs < 24) return `${hrs}h ago`;
+              return `${days}d ago`;
+            })() : null;
+
+            if (a.isGroup) {
+              return (
+                <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-zinc-800/50 focus:bg-zinc-800 focus:text-white cursor-pointer group">
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <div className="text-[11px] font-black uppercase tracking-wider text-emerald-500">{a.customerName}</div>
+                    {timeStr && <div className="text-[10px] text-muted-foreground">{timeStr}</div>}
                   </div>
-                )}
-              </div>
-              <div className="flex items-center justify-end w-full gap-3 mt-1">
-                <a
-                  href={a.href}
-                  className="text-xs font-medium text-primary hover:text-white hover:underline px-2 py-1 rounded hover:bg-primary transition-colors bg-zinc-900 border border-zinc-700"
-                  onClick={(e) => {
-                    if (isEmployee) {
-                      try { markEmployeeNotificationRead(a.id); } catch { }
-                      try {
-                        const list = getEmployeeNotifications();
-                        const filtered = list.filter(n => employeeKeys.includes(String(n.employeeId || '').toLowerCase()));
-                        setEmpItems(filtered.map(n => ({ id: n.id, title: n.message, href: '/tasks', read: !!n.read })));
-                        setEmpUnreadCount(filtered.filter(n => !n.read).length);
-                      } catch { }
-                    } else {
-                      markRead(a.id);
-                    }
-                  }}
-                >
-                  Open
-                </a>
-                {!isEmployee && (
-                  <button
-                    className="text-xs text-muted-foreground hover:text-red-400 px-2 py-1 rounded hover:bg-zinc-900 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      try { useAlertsStore.getState().dismiss(a.id); } catch { }
-                    }}
+                  <div className="flex flex-col gap-2 w-full">
+                    {a.alerts.map((alert: any) => (
+                      <div key={alert.id} className="flex items-center justify-between w-full gap-2">
+                        <div className="text-sm truncate text-zinc-300 group-hover:text-white flex-1">{alert.shortTitle}</div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={alert.href}
+                            className="text-[10px] font-bold uppercase text-primary hover:text-white px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800"
+                            onClick={() => { if (isEmployee) markEmployeeNotificationRead(alert.id); else markRead(alert.id); }}
+                          >
+                            Open
+                          </a>
+                          <button
+                            className="text-[10px] text-zinc-500 hover:text-red-400"
+                            onClick={(e) => {
+                              e.preventDefault(); e.stopPropagation();
+                              try { useAlertsStore.getState().dismiss(alert.id); } catch { }
+                            }}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </DropdownMenuItem>
+              );
+            }
+
+            return (
+              <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-2 p-3 border-b border-border/50 focus:bg-zinc-800 focus:text-white cursor-pointer group">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-sm break-words flex-1 leading-relaxed group-hover:text-white">{a.title}</div>
+                  {timeStr && (
+                    <div className="text-[10px] text-muted-foreground ml-2 whitespace-nowrap">
+                      {timeStr}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-end w-full gap-3 mt-1">
+                  <a
+                    href={a.href}
+                    className="text-xs font-medium text-primary hover:text-white hover:underline px-2 py-1 rounded hover:bg-primary transition-colors bg-zinc-900 border border-zinc-700"
+                    onClick={() => { if (isEmployee) markEmployeeNotificationRead(a.id); else markRead(a.id); }}
                   >
-                    Dismiss
-                  </button>
-                )}
-              </div>
-            </DropdownMenuItem>
-          ))
+                    Open
+                  </a>
+                  {!isEmployee && (
+                    <button
+                      className="text-xs text-muted-foreground hover:text-red-400 px-2 py-1 rounded hover:bg-zinc-900 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault(); e.stopPropagation();
+                        try { useAlertsStore.getState().dismiss(a.id); } catch { }
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  )}
+                </div>
+              </DropdownMenuItem>
+            );
+          })
         )}
         <div className="px-3 py-2">
           {isEmployee ? (
