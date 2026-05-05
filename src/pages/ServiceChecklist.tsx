@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2 } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -255,6 +255,62 @@ const ServiceChecklist = () => {
   // Admin Instruction Editing State
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [editInstructionText, setEditInstructionText] = useState("");
+  const [isAdminEditMode, setIsAdminEditMode] = useState(false);
+  const [editingStepNameId, setEditingStepNameId] = useState<string | null>(null);
+  const [editStepNameText, setEditStepNameText] = useState("");
+
+  const handleSaveStepName = (stepId: string) => {
+    setChecklistSteps(prev => prev.map(s => s.id === stepId ? { ...s, name: editStepNameText } : s));
+    setEditingStepNameId(null);
+  };
+
+  const handleDeleteStep = (stepId: string) => {
+    if (window.confirm("Are you sure you want to remove this step from the current job?")) {
+      setChecklistSteps(prev => prev.filter(s => s.id !== stepId));
+    }
+  };
+
+  const handleAddStep = (category: ChecklistStep['category']) => {
+    const name = window.prompt(`Enter new ${category} step name:`);
+    if (name) {
+      const newStep: ChecklistStep = {
+        id: `custom-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        name,
+        category,
+        checked: false
+      };
+      setChecklistSteps(prev => {
+        // Insert after the last item of the same category
+        const lastIdx = [...prev].reverse().findIndex(s => s.category === category);
+        if (lastIdx === -1) return [...prev, newStep];
+        const idx = prev.length - 1 - lastIdx;
+        const next = [...prev];
+        next.splice(idx + 1, 0, newStep);
+        return next;
+      });
+    }
+  };
+
+  const saveAsStandardProcess = () => {
+    if (!selectedPackage) return;
+    if (!window.confirm(`Save this current checklist layout as the PERMANENT standard for "${selectedPackage}"? This will affect all future jobs using this package.`)) return;
+
+    try {
+      const overrides = JSON.parse(localStorage.getItem('packageStepOverrides') || '{}');
+      // We only save the steps that belong to the package (not prep/addons/final unless we want to)
+      // Actually, let's just save the whole thing but filter out addons which are dynamic?
+      // Or save by category. 
+      // The user probably wants the whole "Preparation", "Exterior", "Interior", "Final" sections to be customizable.
+      
+      const pkgSteps = checklistSteps.filter(s => !s.id.startsWith('addon-'));
+      overrides[selectedPackage] = pkgSteps;
+      localStorage.setItem('packageStepOverrides', JSON.stringify(overrides));
+      
+      toast({ title: "Standard Process Saved", description: `The process for "${selectedPackage}" has been updated globally.` });
+    } catch (e) {
+      toast({ title: "Failed to save standard", variant: "destructive" });
+    }
+  };
 
   const handleSaveInstruction = (stepId: string, stepName: string) => {
     try {
@@ -322,28 +378,70 @@ const ServiceChecklist = () => {
   // Timer State
   const [jobStartTime, setJobStartTime] = useState<number | null>(null);
   const [jobEndTime, setJobEndTime] = useState<number | null>(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [totalElapsedMs, setTotalElapsedMs] = useState(0);
   const [lastActionTime, setLastActionTime] = useState<number>(Date.now());
   const [itemDurations, setItemDurations] = useState<Record<string, number>>({}); // stepId -> ms
   const [liveNow, setLiveNow] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
 
+  const updateElapsedTime = (now: number, startTime: number | null, accumulated: number) => {
+    const diff = (now - (startTime || now)) + accumulated;
+    const hrs = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    setElapsedTime(
+      `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    );
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (jobStartTime && !jobEndTime) {
+    if (isTimerRunning) {
       interval = setInterval(() => {
         const now = Date.now();
         setLiveNow(now);
-        const diff = now - jobStartTime;
-        const hrs = Math.floor(diff / 3600000);
-        const mins = Math.floor((diff % 3600000) / 60000);
-        const secs = Math.floor((diff % 60000) / 1000);
-        setElapsedTime(
-          `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-        );
+        updateElapsedTime(now, jobStartTime, totalElapsedMs);
+        // Sync to localStorage for Quick Pay
+        localStorage.setItem('recent_service_time', elapsedTime);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [jobStartTime, jobEndTime]);
+  }, [isTimerRunning, jobStartTime, totalElapsedMs, elapsedTime]);
+
+  const handleStartTimer = () => {
+    if (!isTimerRunning) {
+      const now = Date.now();
+      setJobStartTime(now);
+      setIsTimerRunning(true);
+      setLastActionTime(now);
+      updateElapsedTime(now, now, totalElapsedMs); // Immediate UI update
+      toast({ title: "Timer Started", description: "Detaling clock is now running." });
+    }
+  };
+
+  const handleStopTimer = () => {
+    if (isTimerRunning) {
+      const now = Date.now();
+      const sessionDiff = now - (jobStartTime || now);
+      setTotalElapsedMs(prev => prev + sessionDiff);
+      setIsTimerRunning(false);
+      setJobStartTime(null);
+      updateElapsedTime(now, null, totalElapsedMs + sessionDiff); // Immediate UI update
+      toast({ title: "Timer Paused", description: "Clock stopped." });
+    }
+  };
+
+  const handleResetTimer = () => {
+    if (window.confirm("Reset the job timer to 00:00:00?")) {
+      setJobStartTime(null);
+      setIsTimerRunning(false);
+      setTotalElapsedMs(0);
+      setElapsedTime("00:00:00");
+      setItemDurations({});
+      toast({ title: "Timer Reset", description: "Clock has been cleared." });
+    }
+  };
 
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -362,27 +460,14 @@ const ServiceChecklist = () => {
       if (!step) return newSteps;
 
       if (checked) {
-        // If this is a preparation step, just update the "last action" point
-        // so the first real work step knows when the prep ended.
-        if (step.category === 'preparation') {
+        // If the timer is NOT running, we don't record duration automatically
+        // but we still update lastActionTime to prevent huge spikes if they start it later
+        if (isTimerRunning) {
+          const duration = now - lastActionTime;
+          setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
           setLastActionTime(now);
         } else {
-          // If this is the VERY FIRST non-prep step
-          if (!jobStartTime) {
-            // Start the job timer at the moment prep ended (or now if no prep was done)
-            const actualStart = lastActionTime || now;
-            setJobStartTime(actualStart);
-            
-            // The duration for this first item is the time since prep ended
-            const duration = now - actualStart;
-            setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
-            setLastActionTime(now);
-          } else {
-            // Standard mid-job step
-            const duration = now - lastActionTime;
-            setItemDurations(prevDur => ({ ...prevDur, [stepId]: duration }));
-            setLastActionTime(now);
-          }
+          setLastActionTime(now);
         }
       } else {
         // If unchecking, clear the duration
@@ -395,10 +480,8 @@ const ServiceChecklist = () => {
 
       // Check if the entire job is now finished
       const allDone = newSteps.every(s => s.checked);
-      if (allDone) {
-        setJobEndTime(now);
-      } else {
-        setJobEndTime(null);
+      if (allDone && isTimerRunning) {
+        handleStopTimer();
       }
 
       return newSteps;
@@ -904,6 +987,17 @@ const ServiceChecklist = () => {
       setItemDurations({});
     }
 
+    // Check for global overrides first
+    const globalOverrides = JSON.parse(localStorage.getItem('packageStepOverrides') || '{}');
+    if (selectedPackage && globalOverrides[selectedPackage]) {
+      // Re-apply any missing dynamic info if needed, but mostly just trust the override
+      setChecklistSteps([...globalOverrides[selectedPackage], ...selectedAddOns.map(aid => {
+        const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
+        return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
+      })]);
+      return;
+    }
+
     let baseSteps: ChecklistStep[] = [];
     if (pkg && (pkg as any).steps) {
       baseSteps = (pkg as any).steps.map((s: any) => ({ id: s.id || s, name: s.name || s, category: (s.category || 'exterior'), checked: false }));
@@ -1024,6 +1118,9 @@ const ServiceChecklist = () => {
       discountValue,
       discountType,
       jobStartTime,
+      isTimerRunning,
+      totalElapsedMs,
+      elapsedTime,
       itemDurations,
       chemRows,
       matRows,
@@ -1038,7 +1135,7 @@ const ServiceChecklist = () => {
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
-    discountValue, discountType, jobStartTime, itemDurations,
+    discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
     chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd
   ]);
 
@@ -1245,8 +1342,8 @@ const ServiceChecklist = () => {
       if (employeeAssigned) { doc.text(`Employee: ${employeeAssigned}`, 20, y); y += 8; }
 
       // Timer Info
-      if (finalize && jobStartTime) {
-        doc.text(`Started: ${new Date(jobStartTime).toLocaleTimeString()}`, 120, 46);
+      if (finalize && (jobStartTime || totalElapsedMs > 0)) {
+        if (jobStartTime) doc.text(`Started: ${new Date(jobStartTime).toLocaleTimeString()}`, 120, 46);
         if (jobEndTime) doc.text(`Finished: ${new Date(jobEndTime).toLocaleTimeString()}`, 120, 54);
         doc.setFont(undefined, 'bold');
         doc.text(`Time Taken: ${elapsedTime}`, 120, 62);
@@ -1291,7 +1388,9 @@ const ServiceChecklist = () => {
           else doc.setTextColor(220, 38, 38); // red
           doc.text(mark, 28, y);
           doc.setTextColor(0, 0, 0);
-          const wrapped = doc.splitTextToSize(String(t.name || ''), 170);
+          
+          const durationStr = itemDurations[t.id] ? ` [${formatDuration(itemDurations[t.id])}]` : '';
+          const wrapped = doc.splitTextToSize(String((t.name || '') + durationStr), 170);
           // indent the text slightly after the mark
           doc.text(wrapped, 34, y);
           y += wrapped.length * 5 + 2;
@@ -1809,6 +1908,23 @@ const ServiceChecklist = () => {
         </div>
         
         <div className="space-y-6">
+          {/* Timer Reminder Notification */}
+          {(selectedPackage && (selectedCustomer || genericCustomerName)) && !isTimerRunning && totalElapsedMs === 0 && (
+            <div className="bg-blue-600/20 border border-blue-500/50 p-4 rounded-xl flex items-center justify-between animate-in slide-in-from-top-4 duration-500 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-600/30 flex items-center justify-center animate-pulse">
+                  <Clock className="h-6 w-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-sm md:text-base">Ready to start detailing?</h3>
+                  <p className="text-blue-300/80 text-xs md:text-sm">Don't forget to start your timer to track job performance!</p>
+                </div>
+              </div>
+              <Button onClick={handleStartTimer} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 shadow-lg shadow-blue-900/40">
+                <Play className="h-4 w-4 mr-2" /> Start Clock
+              </Button>
+            </div>
+          )}
           {/* Job Setup - Generic, no forced customer link */}
           <Card className="p-4 md:p-6 bg-gradient-card border-border">
             <div 
@@ -2066,6 +2182,28 @@ const ServiceChecklist = () => {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
+              {getCurrentUser()?.role === 'admin' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={`h-8 md:h-7 gap-1.5 px-2 md:px-3 ${isAdminEditMode ? 'bg-orange-500 text-white border-orange-600' : 'bg-zinc-900 border-zinc-700 text-zinc-300'}`}
+                  onClick={() => setIsAdminEditMode(!isAdminEditMode)}
+                >
+                  <Settings2 className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                  <span className="hidden md:inline text-[10px]">{isAdminEditMode ? 'Exit Edit' : 'Edit Checklist'}</span>
+                </Button>
+              )}
+              {isAdminEditMode && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 md:h-7 bg-green-900/20 border-green-700/30 text-green-400 hover:bg-green-900/30 gap-1.5 px-2 md:px-3"
+                  onClick={saveAsStandardProcess}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                  <span className="hidden md:inline text-[10px]">Save Standard</span>
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -2167,26 +2305,69 @@ const ServiceChecklist = () => {
                       return (
                         <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
                           <div className="flex items-center justify-between py-2">
-                            <label className="flex items-center gap-3 text-sm cursor-pointer flex-1 py-1 group/item">
+                            <div className="flex items-center gap-3 text-sm flex-1 py-1 group/item">
                               <input
                                 type="checkbox"
                                 checked={step.checked}
                                 onChange={(e) => handleToggleStep(step.id, e.target.checked)}
-                                className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0"
+                                className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0 cursor-pointer"
                               />
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                <span className={`truncate ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}>
-                                  {step.name}
-                                </span>
+                              <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                {editingStepNameId === step.id ? (
+                                  <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-1">
+                                    <Input 
+                                      value={editStepNameText}
+                                      onChange={(e) => setEditStepNameText(e.target.value)}
+                                      className="h-8 bg-black text-white border-blue-500/50 flex-1 text-sm"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveStepName(step.id);
+                                        if (e.key === 'Escape') setEditingStepNameId(null);
+                                      }}
+                                    />
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={() => handleSaveStepName(step.id)}>
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={() => setEditingStepNameId(null)}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <span 
+                                    className={`truncate flex-1 cursor-pointer py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
+                                    onClick={() => {
+                                      if (isAdminEditMode) {
+                                        setEditingStepNameId(step.id);
+                                        setEditStepNameText(step.name);
+                                      } else {
+                                        handleToggleStep(step.id, !step.checked);
+                                      }
+                                    }}
+                                  >
+                                    {step.name}
+                                    {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
+                                  </span>
+                                )}
                                 {itemDurations[step.id] && (
                                   <span className="text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-500">
                                     {formatDuration(itemDurations[step.id])}
                                   </span>
                                 )}
                               </div>
-                            </label>
+                            </div>
                             
                             <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                              {isAdminEditMode && !step.id.startsWith('addon-') && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full shrink-0"
+                                  onClick={() => handleDeleteStep(step.id)}
+                                  title="Remove Step"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2277,6 +2458,17 @@ const ServiceChecklist = () => {
                         </div>
                       );
                     })}
+                    {isAdminEditMode && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleAddStep(section)}
+                        className="w-full justify-start text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 border border-dashed border-zinc-800 mt-2 h-9 group"
+                      >
+                        <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
+                        Add {section === 'final' ? 'Inspection' : section} Step
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -2723,8 +2915,9 @@ const ServiceChecklist = () => {
                   ${(() => {
                      const t = calculateTotal();
                      try { 
-                       localStorage.setItem('recent_service_amount', t.toString()); 
+                       localStorage.setItem('recent_service_amount', t.toFixed(2)); 
                        localStorage.setItem('recent_service_job_id', checklistId || '');
+                       localStorage.setItem('recent_service_time', elapsedTime);
                      } catch(e) {}
                      return t.toFixed(2);
                   })()}
@@ -2851,6 +3044,55 @@ const ServiceChecklist = () => {
                 </div>
               </div>
             </Card>
+          )}
+
+          {/* Floating Timer Bar - Always Onscreen */}
+          {selectedPackage && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 duration-500">
+              <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center gap-3 border-r border-white/10 pr-6">
+                  <div className={`h-3 w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total Time</span>
+                    <span className="text-xl md:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!isTimerRunning ? (
+                    <Button 
+                      onClick={handleStartTimer} 
+                      className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-6 font-bold shadow-lg shadow-green-900/20"
+                    >
+                      <Play className="h-4 w-4 mr-2" /> Start
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleStopTimer} 
+                      className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-10 px-6 font-bold"
+                    >
+                      <Pause className="h-4 w-4 mr-2" /> Pause
+                    </Button>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleResetTimer} 
+                    className="text-zinc-500 hover:text-red-400 h-10 w-10 rounded-full"
+                    title="Reset Timer"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-col border-l border-white/10 pl-6">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Progress</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-white leading-none">{progressPercent}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           <CustomerModal

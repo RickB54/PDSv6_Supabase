@@ -22,6 +22,7 @@ export default function QuickPayModal() {
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [suggestedTime, setSuggestedTime] = useState<string | null>(null);
 
   // Read the suggestion when the modal opens
   useEffect(() => {
@@ -38,9 +39,11 @@ export default function QuickPayModal() {
         }
         
         setSuggestedJobId(storedId || null);
+        setSuggestedTime(localStorage.getItem('recent_service_time') || null);
       } catch (e) {
         setSuggestedAmount(null);
         setSuggestedJobId(null);
+        setSuggestedTime(null);
       }
       
       setAmountStr('');
@@ -92,6 +95,7 @@ export default function QuickPayModal() {
         clientUrl={window.location.origin}
         customerId={selectedCustomerId || null}
         onCancel={handleClose}
+        finalTime={(isExactSuggested && suggestedTime) ? suggestedTime : undefined}
       />
     );
   }

@@ -128,7 +128,7 @@ export default function TipSelectionScreen({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="p-4 sm:p-8 flex-1 overflow-y-auto w-full pb-48">
+        <div className="p-4 sm:p-8 flex-1 overflow-y-auto w-full pb-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-accent gap-6 h-full">
               <Loader2 size={64} className="animate-spin" />
@@ -219,9 +219,9 @@ export default function TipSelectionScreen({
           )}
         </div>
 
-        {/* Floating sticky footer for Continue */}
+        {/* Footer - Part of flex to prevent overlap */}
         {!loading && (
-          <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 sm:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-2">
+          <div className="mt-auto bg-white border-t border-gray-100 p-4 sm:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-2">
             <div className="flex justify-between items-center mb-1 px-2">
               <span className="text-gray-500 font-semibold">Total to Pay</span>
               <span className="text-2xl font-black text-gray-900">${getTotalAmountDisplay()}</span>
