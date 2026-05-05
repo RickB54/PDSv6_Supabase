@@ -3333,59 +3333,6 @@ const ServiceChecklist = () => {
             </Card>
           )}
 
-          {/* Floating Timer Bar - Always Onscreen */}
-          {selectedPackage && (
-            <div className="fixed bottom-8 left-4 right-4 md:left-1/2 md:-translate-x-1/2 z-50 max-w-md mx-auto animate-in slide-in-from-bottom-10 duration-500">
-              <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-3 sm:px-6 py-3 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-1.5 sm:gap-3 border-r border-white/10 pr-3 sm:pr-6">
-                  <div className={`h-2 w-2 sm:h-3 sm:w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
-                  <div className="flex flex-col">
-                    <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Time</span>
-                    <span className="text-lg sm:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  {!isTimerRunning ? (
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <Button 
-                        onClick={handleStartTimer} 
-                        className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold shadow-lg shadow-green-900/20 text-xs sm:text-base"
-                      >
-                        <Play className="h-4 w-4 mr-1 sm:mr-2" /> 
-                        {totalElapsedMs > 0 ? "Resume" : "Start"}
-                      </Button>
-                      
-                      {totalElapsedMs > 0 && (
-                        <Button 
-                          onClick={handleResetTimer}
-                          variant="ghost"
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full h-10 w-10 p-0"
-                          title="Reset Timer"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <Button 
-                      onClick={handleStopTimer} 
-                      className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold text-xs sm:text-base"
-                    >
-                      <Pause className="h-4 w-4 mr-1 sm:mr-2" /> Pause
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex flex-col border-l border-white/10 pl-3 sm:pl-6">
-                  <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Progress</span>
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-base sm:text-lg font-bold text-white leading-none">{progressPercent}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           <CustomerModal
             open={customerModalOpen}
@@ -3458,6 +3405,62 @@ const ServiceChecklist = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Floating Timer Bar - Always Onscreen (Relocated and refactored for perfect centering on mobile) */}
+      {selectedPackage && (
+        <div className="fixed bottom-8 left-0 right-0 z-[100] flex justify-center px-4 pointer-events-none">
+          <div className="w-full max-w-md pointer-events-auto animate-in slide-in-from-bottom-10 duration-500">
+            <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-3 sm:px-6 py-3 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+              <div className="flex items-center gap-1.5 sm:gap-3 border-r border-white/10 pr-3 sm:pr-6">
+                <div className={`h-2 w-2 sm:h-3 sm:w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
+                <div className="flex flex-col">
+                  <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Time</span>
+                  <span className="text-lg sm:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {!isTimerRunning ? (
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Button 
+                      onClick={handleStartTimer} 
+                      className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold shadow-lg shadow-green-900/20 text-xs sm:text-base"
+                    >
+                      <Play className="h-4 w-4 mr-1 sm:mr-2" /> 
+                      {totalElapsedMs > 0 ? "Resume" : "Start"}
+                    </Button>
+                    
+                    {totalElapsedMs > 0 && (
+                      <Button 
+                        onClick={handleResetTimer}
+                        variant="ghost"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full h-10 w-10 p-0"
+                        title="Reset Timer"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={handleStopTimer} 
+                    className="bg-yellow-600 hover:bg-yellow-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold text-xs sm:text-base"
+                  >
+                    <Pause className="h-4 w-4 mr-1 sm:mr-2" /> Pause
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-col border-l border-white/10 pl-3 sm:pl-6">
+                <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Progress</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg font-bold text-white leading-none">{progressPercent}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Global Job Timer - Always visible in top right corner (except on payment screen) */}
       {jobStartTime && !showTipScreen && (
