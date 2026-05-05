@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -248,6 +248,8 @@ const ServiceChecklist = () => {
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
+  const [editingDurationId, setEditingDurationId] = useState<string | null>(null);
+  const [editDurationValue, setEditDurationValue] = useState<string>("");
 
   // Rick's Tips State
   const [tipsOpen, setTipsOpen] = useState(false);
@@ -479,6 +481,19 @@ const ServiceChecklist = () => {
   };
 
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+
+  const handleSaveItemDuration = (stepId: string) => {
+    let ms = 0;
+    if (editDurationValue.includes(':')) {
+      const [m, s] = editDurationValue.split(':').map(n => parseInt(n) || 0);
+      ms = (m * 60 + s) * 1000;
+    } else {
+      // Treat as seconds if no colon
+      ms = (parseInt(editDurationValue) || 0) * 1000;
+    }
+    setItemDurations(prev => ({ ...prev, [stepId]: ms }));
+    setEditingDurationId(null);
+  };
 
   // Materials Used state
   type ChemItem = { id: string; name: string; threshold?: number; currentStock?: number };
@@ -1025,63 +1040,78 @@ const ServiceChecklist = () => {
 
   // --- PERSISTENCE LOGIC START ---
   const CHECKLIST_DRAFT_KEY = 'service_checklist_draft';
+  const DRAFTS_INDEX_KEY = 'service_checklist_drafts_v1';
+
+  const [recentDrafts, setRecentDrafts] = useState<any[]>([]);
+
+  // Helper to load draft index
+  const loadDraftsIndex = () => {
+    try {
+      const idx = JSON.parse(localStorage.getItem(DRAFTS_INDEX_KEY) || '[]');
+      setRecentDrafts(idx);
+      return idx;
+    } catch { return []; }
+  };
 
   // 1. Restore State on Mount (if no URL params)
   useEffect(() => {
+    loadDraftsIndex();
     const hasUrlParams = searchParams.get("package") || searchParams.get("vehicleType") || searchParams.get("addons");
-    if (!hasUrlParams) {
-      const saved = localStorage.getItem(CHECKLIST_DRAFT_KEY);
-      if (saved) {
-        try {
-          const state = JSON.parse(saved);
-          console.log("Restoring checklist draft:", state);
+    const urlId = searchParams.get("id");
+    
+    // Priority: If we have a URL ID, try to restore THAT specific draft
+    const targetKey = urlId ? `${CHECKLIST_DRAFT_KEY}_${urlId}` : CHECKLIST_DRAFT_KEY;
+    const saved = localStorage.getItem(targetKey);
 
-          if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
-          if (state.selectedPackage) {
-            setSelectedPackage(state.selectedPackage);
-            // We need to wait for step regeneration before restoring checked status?
-            // Actually, checklistSteps regeneration depends on selectedPackage.
-            // We can restore checking status in a separate effect or forcing it here after a tick?
-            // Better: Set the inputs, and let the regeneration effect run. 
-            // BUT, the regeneration effect resets 'checked' to false!
-            // We need a way to re-apply 'checked' status *after* steps are regenerated.
-            // We will save 'checklistSteps' to a temp ref or state and apply it after regeneration.
-          }
-          if (state.vehicleType) setVehicleType(state.vehicleType);
-          if (state.selectedAddOns) setSelectedAddOns(state.selectedAddOns);
-          if (state.destinationFee) setDestinationFee(state.destinationFee);
-          if (state.notes) setNotes(state.notes);
-          if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
-          if (state.discountValue) setDiscountValue(state.discountValue);
-          if (state.discountType) setDiscountType(state.discountType);
-          
-          const urlId = searchParams.get("id");
-          if (urlId) setChecklistId(urlId);
-          else if (state.checklistId) setChecklistId(state.checklistId);
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        console.log("Restoring checklist draft:", state);
 
-          if (state.jobStartTime) setJobStartTime(state.jobStartTime);
-          if (state.itemDurations) setItemDurations(state.itemDurations);
-          if (state.chemRows) setChemRows(state.chemRows);
-          if (state.matRows) setMatRows(state.matRows);
-          if (state.toolRows) setToolRows(state.toolRows);
-          if (state.milesTraveled) setMilesTraveled(state.milesTraveled);
-          if (state.odometerStart) setOdometerStart(state.odometerStart);
-          if (state.odometerEnd) setOdometerEnd(state.odometerEnd);
+        if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
+        if (state.selectedPackage) setSelectedPackage(state.selectedPackage);
+        if (state.vehicleType) setVehicleType(state.vehicleType);
+        if (state.selectedAddOns) setSelectedAddOns(state.selectedAddOns);
+        if (state.destinationFee) setDestinationFee(state.destinationFee);
+        if (state.notes) setNotes(state.notes);
+        if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
+        if (state.discountValue) setDiscountValue(state.discountValue);
+        if (state.discountType) setDiscountType(state.discountType);
+        
+        if (urlId) setChecklistId(urlId);
+        else if (state.checklistId) setChecklistId(state.checklistId);
 
-          // Save dirty steps to be reapplied after regeneration
-          if (state.checklistSteps) {
-            window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
-          }
+        if (state.jobStartTime) setJobStartTime(state.jobStartTime);
+        if (state.isTimerRunning) setIsTimerRunning(state.isTimerRunning);
+        if (state.totalElapsedMs) setTotalElapsedMs(state.totalElapsedMs);
+        if (state.elapsedTime) setElapsedTime(state.elapsedTime);
+        if (state.itemDurations) setItemDurations(state.itemDurations);
+        if (state.chemRows) setChemRows(state.chemRows);
+        if (state.matRows) setMatRows(state.matRows);
+        if (state.toolRows) setToolRows(state.toolRows);
+        if (state.milesTraveled) setMilesTraveled(state.milesTraveled);
+        if (state.odometerStart) setOdometerStart(state.odometerStart);
+        if (state.odometerEnd) setOdometerEnd(state.odometerEnd);
 
-          toast({ title: "Draft Restored", description: "Resumed your checklist from where you left off." });
-        } catch (e) {
-          console.error("Failed to restore draft", e);
+        // Save dirty steps to be reapplied after regeneration
+        if (state.checklistSteps) {
+          window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
         }
+
+        toast({ title: "Draft Restored", description: `Resumed job for ${state.customerName || 'Generic Customer'}.` });
+      } catch (e) {
+        console.error("Failed to restore draft", e);
       }
     }
   }, []); // Run once on mount
 
-  // 2. Re-apply steps checked status after regeneration (No replacement, just view)stored a draft)
+  const progressPercent = useMemo(() => {
+    const total = checklistSteps.length || 0;
+    const done = checklistSteps.filter(s => s.checked).length;
+    return total ? Math.round((done / total) * 100) : 0;
+  }, [checklistSteps]);
+
+  // 2. Re-apply steps checked status after regeneration
   useEffect(() => {
     const pending = window.sessionStorage.getItem('pending_draft_steps');
     if (pending && checklistSteps.length > 0) {
@@ -1111,7 +1141,14 @@ const ServiceChecklist = () => {
     // Don't save if empty/initial
     if (!selectedPackage && !selectedCustomer) return;
 
+    const currentCustomer = customers.find(c => c.id === selectedCustomer);
+    const customerName = currentCustomer?.name || genericCustomerName || 'Generic Customer';
+    const packageName = servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package';
+
     const state = {
+      checklistId,
+      customerName,
+      packageName,
       selectedCustomer,
       selectedPackage,
       vehicleType,
@@ -1136,12 +1173,34 @@ const ServiceChecklist = () => {
       timestamp: Date.now()
     };
 
+    // Save to dual keys: general draft (for quick restore) and ID-specific (for history)
     localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(state));
+    if (checklistId) {
+      localStorage.setItem(`${CHECKLIST_DRAFT_KEY}_${checklistId}`, JSON.stringify(state));
+    }
+
+    // Update Index
+    try {
+      const idx = JSON.parse(localStorage.getItem(DRAFTS_INDEX_KEY) || '[]');
+      const filtered = idx.filter((d: any) => d.id !== (checklistId || 'temp'));
+      const newEntry = {
+        id: checklistId || 'temp',
+        customerName,
+        packageName,
+        vehicleType,
+        lastUpdated: Date.now(),
+        progress: progressPercent,
+        isTimerRunning
+      };
+      const nextIdx = [newEntry, ...filtered].slice(0, 10); // Keep last 10
+      localStorage.setItem(DRAFTS_INDEX_KEY, JSON.stringify(nextIdx));
+      setRecentDrafts(nextIdx);
+    } catch { }
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
     discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
-    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd
+    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent
   ]);
 
   // 4. Force Save on Page Exit
@@ -1191,13 +1250,7 @@ const ServiceChecklist = () => {
 
   // --- PERSISTENCE LOGIC END ---
 
-  const progressPercent = useMemo(() => {
-    const total = checklistSteps.length || 0;
-    const done = checklistSteps.filter(s => s.checked).length;
-    return total ? Math.round((done / total) * 100) : 0;
-  }, [checklistSteps]);
 
-  // Save generic checklist progress
   // Save generic checklist progress
   const saveGenericChecklist = async (status: 'in-progress' | 'completed' = 'in-progress'): Promise<string | undefined> => {
     if (!selectedPackage) {
@@ -1675,9 +1728,7 @@ const ServiceChecklist = () => {
         doc.save(`invoice-${now.getTime()}.pdf`);
       } catch { }
 
-      // Clear persistent draft on successful save
-      localStorage.removeItem('service_checklist_draft');
-      window.sessionStorage.removeItem('pending_draft_steps');
+      // DO NOT clear draft here - let the final "Complete" or "Close" button decide when to clear.
 
       toast({ title: "Invoice Created", description: "Invoice saved to Supabase and PDF downloaded." });
 
@@ -2171,11 +2222,93 @@ const ServiceChecklist = () => {
                 </select>
               </div>
             </div>
-          </div>
-        )}
-      </Card>
+            </div>
+          )}
+        </Card>
 
-      {/* Service Checklist Header - Back to normal flow for stability */}
+        {/* Service Checklist History - NEW SECTION */}
+        {recentDrafts.length > 0 && (
+          <Card className="p-4 bg-zinc-950/50 border-zinc-800/50 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <HistoryIcon className="h-4 w-4" /> Service Checklist History
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-[10px] h-6 text-zinc-500 hover:text-red-400"
+                onClick={() => {
+                  if (confirm("Clear all recent checklist drafts?")) {
+                    localStorage.removeItem(DRAFTS_INDEX_KEY);
+                    setRecentDrafts([]);
+                  }
+                }}
+              >
+                Clear All
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {recentDrafts.map((draft) => (
+                <div 
+                  key={draft.id} 
+                  className={`group flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                    checklistId === draft.id 
+                      ? 'bg-red-500/10 border-red-500/50' 
+                      : 'bg-zinc-900/50 border-white/5 hover:border-white/20 hover:bg-zinc-800'
+                  }`}
+                  onClick={() => {
+                    // Restore this draft
+                    const saved = localStorage.getItem(`${CHECKLIST_DRAFT_KEY}_${draft.id}`);
+                    if (saved) {
+                      const state = JSON.parse(saved);
+                      setChecklistId(state.checklistId || "");
+                      setSelectedCustomer(state.selectedCustomer || "");
+                      setSelectedPackage(state.selectedPackage || "");
+                      setVehicleType(state.vehicleType || "choose");
+                      setSelectedAddOns(state.selectedAddOns || []);
+                      setNotes(state.notes || "");
+                      setJobStartTime(state.jobStartTime || null);
+                      setIsTimerRunning(!!state.isTimerRunning);
+                      setTotalElapsedMs(state.totalElapsedMs || 0);
+                      setElapsedTime(state.elapsedTime || "00:00:00");
+                      setItemDurations(state.itemDurations || {});
+                      setChemRows(state.chemRows || []);
+                      setMatRows(state.matRows || []);
+                      setToolRows(state.toolRows || []);
+                      if (state.checklistSteps) {
+                        window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
+                      }
+                      toast({ title: "Switched Job", description: `Resumed job for ${draft.customerName}.` });
+                    }
+                  }}
+                >
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm truncate text-white">{draft.customerName}</span>
+                      <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-tighter">
+                        {draft.progress}%
+                      </span>
+                      {draft.isTimerRunning && (
+                        <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full uppercase font-black animate-pulse">
+                          Live
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-zinc-500 truncate">
+                      <span className="text-red-400/80 font-medium">{draft.packageName}</span>
+                      <span>•</span>
+                      <span>{new Date(draft.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full hover:bg-red-500/20 hover:text-red-400">
+                    <Play className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
       <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
         <div className="px-4 md:px-6 py-4 border-b border-white/10 space-y-4">
           <div className="flex items-center justify-between gap-2 md:gap-4">
@@ -2266,13 +2399,12 @@ const ServiceChecklist = () => {
               </Button>
               <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
                 const now = Date.now();
-                const all = checklistSteps.length > 0 && checklistSteps.every(s => s.checked);
-                const targetState = !all;
+                const anyUnchecked = checklistSteps.some(s => !s.checked);
+                const targetState = anyUnchecked;
                 
                 setChecklistSteps(prev => prev.map(s => ({ ...s, checked: targetState })));
                 
-                // If checking all ON while timer is active, distribute time to remaining items
-                if (targetState && isTimerRunning) {
+                if (targetState && jobStartTime) {
                   const unchecked = checklistSteps.filter(s => !s.checked);
                   if (unchecked.length > 0) {
                     const totalDiff = now - lastActionTime;
@@ -2292,225 +2424,271 @@ const ServiceChecklist = () => {
                 {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
               </Button>
             </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
+              <div className="flex flex-col items-end">
+                <span className="text-[8px] text-zinc-500 uppercase font-black">Progress</span>
+                <span className="text-sm font-black text-white">{progressPercent}%</span>
+              </div>
+              <Progress value={progressPercent} className="h-2 w-20 md:w-32 bg-zinc-800" />
+            </div>
           </div>
         </div>
 
         <div className="p-3 md:p-6">
+          {selectedPackage && (
+            <div className="space-y-6 pr-2">
+              {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
+                <div key={section} className="space-y-3">
+                  <button
+                    type="button"
+                    className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
+                    onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="group-hover:text-primary transition-colors">
+                        {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
+                      </span>
+                      {section !== 'preparation' && jobStartTime && (
+                        <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                          {formatDuration(
+                            checklistSteps
+                              .filter(s => s.category === section && s.checked)
+                              .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
+                  </button>
 
-        {(!selectedPackage || !vehicleType) && (
-          <p className="text-sm text-muted-foreground">Select a package and vehicle type to load checklist.</p>
-        )}
-
-        {selectedPackage && (
-          <div className="space-y-6 pr-2">
-            {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
-              <div key={section} className="space-y-3">
-                <button
-                  type="button"
-                  className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
-                  onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="group-hover:text-primary transition-colors">
-                      {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
-                    </span>
-                        {section !== 'preparation' && jobStartTime && (
-                          <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-                            {formatDuration(
-                              checklistSteps
-                                .filter(s => s.category === section && s.checked)
-                                .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
-                            )}
-                          </span>
-                        )}
-                  </div>
-                  {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
-                </button>
-
-                {!collapsedSections[section] && (
-                  <div className="space-y-2">
-                    {checklistSteps.filter(s => s.category === section).map((step) => {
-                      const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
-                      return (
-                        <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
-                          <div className="flex items-center justify-between py-2">
-                            <div className="flex items-center gap-3 text-sm flex-1 py-1 group/item">
-                              <input
-                                type="checkbox"
-                                checked={step.checked}
-                                onChange={(e) => handleToggleStep(step.id, e.target.checked)}
-                                className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0 cursor-pointer"
-                              />
-                              <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                {editingStepNameId === step.id ? (
-                                  <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-1">
-                                    <Input 
-                                      value={editStepNameText}
-                                      onChange={(e) => setEditStepNameText(e.target.value)}
-                                      className="h-8 bg-black text-white border-blue-500/50 flex-1 text-sm"
-                                      autoFocus
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveStepName(step.id);
-                                        if (e.key === 'Escape') setEditingStepNameId(null);
+                  {!collapsedSections[section] && (
+                    <div className="space-y-2">
+                      {checklistSteps.filter(s => s.category === section).map((step) => {
+                        const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
+                        return (
+                          <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors">
+                            <div className="flex items-center justify-between py-2">
+                              <div className="flex items-center gap-3 text-sm flex-1 py-1 group/item">
+                                <input
+                                  type="checkbox"
+                                  checked={step.checked}
+                                  onChange={(e) => handleToggleStep(step.id, e.target.checked)}
+                                  className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0 cursor-pointer"
+                                />
+                                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                  {editingStepNameId === step.id ? (
+                                    <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-1">
+                                      <Input 
+                                        value={editStepNameText}
+                                        onChange={(e) => setEditStepNameText(e.target.value)}
+                                        className="h-8 bg-black text-white border-blue-500/50 flex-1 text-sm"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleSaveStepName(step.id);
+                                          if (e.key === 'Escape') setEditingStepNameId(null);
+                                        }}
+                                      />
+                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={() => handleSaveStepName(step.id)}>
+                                        <Check className="h-4 w-4" />
+                                      </Button>
+                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={() => setEditingStepNameId(null)}>
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span 
+                                      className={`truncate flex-1 cursor-pointer py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
+                                      onClick={() => {
+                                        if (isAdminEditMode) {
+                                          setEditingStepNameId(step.id);
+                                          setEditStepNameText(step.name);
+                                        } else {
+                                          handleToggleStep(step.id, !step.checked);
+                                        }
                                       }}
-                                    />
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={() => handleSaveStepName(step.id)}>
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={() => setEditingStepNameId(null)}>
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <span 
-                                    className={`truncate flex-1 cursor-pointer py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
-                                    onClick={() => {
-                                      if (isAdminEditMode) {
-                                        setEditingStepNameId(step.id);
-                                        setEditStepNameText(step.name);
-                                      } else {
-                                        handleToggleStep(step.id, !step.checked);
-                                      }
-                                    }}
-                                  >
-                                    {step.name}
-                                    {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
-                                  </span>
-                                )}
-                                {itemDurations[step.id] ? (
-                                  <span className="text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300">
-                                    {formatDuration(itemDurations[step.id])}
-                                  </span>
-                                ) : null}
+                                    >
+                                      {step.name}
+                                      {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
+                                    </span>
+                                  )}
+                                  {itemDurations[step.id] ? (
+                                    editingDurationId === step.id ? (
+                                      <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                                        <Input
+                                          value={editDurationValue}
+                                          onChange={(e) => setEditDurationValue(e.target.value)}
+                                          className="h-6 w-16 bg-black text-[10px] px-1 border-yellow-500/50 text-white font-mono"
+                                          placeholder="mm:ss"
+                                          autoFocus
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSaveItemDuration(step.id);
+                                            if (e.key === 'Escape') setEditingDurationId(null);
+                                          }}
+                                        />
+                                        <Button 
+                                          size="sm" 
+                                          variant="ghost" 
+                                          className="h-6 w-6 p-0 text-green-500 hover:bg-green-500/10"
+                                          onClick={() => handleSaveItemDuration(step.id)}
+                                        >
+                                          <Check className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <span 
+                                        className={`text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300 ${getCurrentUser()?.role === 'admin' ? 'cursor-pointer hover:bg-yellow-300 hover:scale-105 transition-all' : ''}`}
+                                        onClick={() => {
+                                          if (getCurrentUser()?.role === 'admin') {
+                                            setEditingDurationId(step.id);
+                                            const totalSecs = Math.floor((itemDurations[step.id] || 0) / 1000);
+                                            const m = Math.floor(totalSecs / 60);
+                                            const s = totalSecs % 60;
+                                            setEditDurationValue(`${m}:${s.toString().padStart(2, '0')}`);
+                                          }
+                                        }}
+                                        title={getCurrentUser()?.role === 'admin' ? "Click to edit duration" : ""}
+                                      >
+                                        {formatDuration(itemDurations[step.id])}
+                                      </span>
+                                    )
+                                  ) : null}
+                                </div>
                               </div>
-                            </div>
-                            
-                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                              {isAdminEditMode && !step.id.startsWith('addon-') && (
+                              
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                                {isAdminEditMode && !step.id.startsWith('addon-') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full shrink-0"
+                                    onClick={() => handleDeleteStep(step.id)}
+                                    title="Remove Step"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full shrink-0"
-                                  onClick={() => handleDeleteStep(step.id)}
-                                  title="Remove Step"
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
+                                  }}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
                                 </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-                                }}
-                              >
-                                {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
-                              </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleOpenChemicals(step.id, step.name);
-                                }}
-                                title="Chemical Reference"
-                              >
-                                <FlaskConical className="h-4 w-4 mr-1 sm:mr-1.5" />
-                                <span className="text-[10px] sm:text-xs font-bold">Chem</span>
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleOpenChemicals(step.id, step.name);
+                                  }}
+                                  title="Chemical Reference"
+                                >
+                                  <FlaskConical className="h-4 w-4 mr-1 sm:mr-1.5" />
+                                  <span className="text-[10px] sm:text-xs font-bold">Chem</span>
+                                </Button>
+                              </div>
                             </div>
-                          </div>
 
-                          {expandedHelp[step.id] && (
-                            <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
-                              <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
-                                <div className="flex items-start gap-2">
-                                  <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                  <div className="flex flex-col gap-2 flex-1">
-                                    {editingStepId === step.id ? (
-                                      <div className="space-y-2 animate-in fade-in">
-                                        <Textarea 
-                                          value={editInstructionText}
-                                          onChange={(e) => setEditInstructionText(e.target.value)}
-                                          className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
-                                          placeholder="Enter custom process details..."
-                                        />
-                                        <div className="flex gap-2">
-                                          <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
-                                            <Save className="h-3 w-3 mr-1" /> Save Process
-                                          </Button>
-                                          <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
-                                            Cancel
-                                          </Button>
+                            {expandedHelp[step.id] && (
+                              <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
+                                <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
+                                  <div className="flex items-start gap-2">
+                                    <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                    <div className="flex flex-col gap-2 flex-1">
+                                      {editingStepId === step.id ? (
+                                        <div className="space-y-2 animate-in fade-in">
+                                          <Textarea 
+                                            value={editInstructionText}
+                                            onChange={(e) => setEditInstructionText(e.target.value)}
+                                            className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
+                                            placeholder="Enter custom process details..."
+                                          />
+                                          <div className="flex gap-2">
+                                            <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
+                                              <Save className="h-3 w-3 mr-1" /> Save Process
+                                            </Button>
+                                            <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
+                                              Cancel
+                                            </Button>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ) : (
-                                      <div className="leading-relaxed space-y-1">
-                                        {instructionText.split('. ').map((sentence, idx) => {
-                                          const parts = sentence.split(': ');
-                                          if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
-                                            return (
-                                              <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
-                                                <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
-                                                <span>{parts[1]}</span>
-                                              </div>
-                                            );
-                                          }
-                                          return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
-                                        })}
-                                        {getCurrentUser()?.role === 'admin' && (
-                                          <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50"
-                                            onClick={() => {
-                                              setEditingStepId(step.id);
-                                              setEditInstructionText(instructionText);
-                                            }}
-                                          >
-                                            <FileText className="h-3 w-3" /> Edit Process
-                                          </Button>
-                                        )}
-                                      </div>
-                                    )}
+                                      ) : (
+                                        <div className="leading-relaxed space-y-1">
+                                          {instructionText.split('. ').map((sentence, idx) => {
+                                            const parts = sentence.split(': ');
+                                            if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
+                                              return (
+                                                <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
+                                                  <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
+                                                  <span>{parts[1]}</span>
+                                                </div>
+                                              );
+                                            }
+                                            return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
+                                          })}
+                                          {getCurrentUser()?.role === 'admin' && (
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50"
+                                              onClick={() => {
+                                                setEditingStepId(step.id);
+                                                setEditInstructionText(instructionText);
+                                              }}
+                                            >
+                                              <FileText className="h-3 w-3" /> Edit Process
+                                            </Button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {isAdminEditMode && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleAddStep(section)}
-                        className="w-full justify-start text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 border border-dashed border-zinc-800 mt-2 h-9 group"
-                      >
-                        <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
-                        Add {section === 'final' ? 'Inspection' : section} Step
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Card>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {isAdminEditMode && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleAddStep(section)}
+                          className="w-full justify-start text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 border border-dashed border-zinc-800 mt-2 h-9 group"
+                        >
+                          <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
+                          Add {section === 'final' ? 'Inspection' : section} Step
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {(!selectedPackage || !vehicleType || vehicleType === 'choose') && (
+            <div className="flex flex-col items-center justify-center py-12 text-zinc-500 animate-in fade-in duration-500">
+              <ClipboardList className="h-16 w-16 mb-4 opacity-20" />
+              <p className="text-lg font-medium">Select a package and vehicle type above</p>
+              <p className="text-sm">to load the Prime Standard checklist for this job.</p>
+            </div>
+          )}
+        </div>
+      </Card>
 
-          {/* Materials Used */}
-          <Card className="p-3 md:p-6 bg-gradient-card border-border space-y-6">
-            <div 
-              className="flex items-center justify-between cursor-pointer group"
+      {/* Materials Used */}
+      <Card className="p-3 md:p-6 bg-gradient-card border-border space-y-6">
+        <div 
+          className="flex items-center justify-between cursor-pointer group"
               onClick={() => setMaterialsSectionExpanded(!materialsSectionExpanded)}
             >
               <div className="flex items-center gap-3">
@@ -3016,10 +3194,12 @@ const ServiceChecklist = () => {
                     setFinishedJobId(idToUse);
                     setShowTipScreen(true);
                   }} 
-                  className="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-14 text-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-2 border-emerald-400/50 mt-2 rounded-xl"
+                  className="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-16 md:h-14 text-lg md:text-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-2 border-emerald-400/50 mt-2 rounded-xl flex-col md:flex-row leading-tight px-4"
                 >
-                  <DollarSign className="h-7 w-7 mr-3" />
-                  COLLECT IN-PERSON PAYMENT (W/ TIP)
+                  <DollarSign className="h-6 w-6 md:h-7 md:w-7 md:mr-3 mb-1 md:mb-0" />
+                  <div className="text-center">
+                    COLLECT IN-PERSON <br className="md:hidden" /> PAYMENT (W/ TIP)
+                  </div>
                 </Button>
               </div>
 
@@ -3127,9 +3307,7 @@ const ServiceChecklist = () => {
           <CustomerModal
             open={customerModalOpen}
             onOpenChange={setCustomerModalOpen}
-            initial={customers.find(c => c.id === selectedCustomer) as any}
-            onSave={async (data) => {
-              const saved = await upsertSupabaseCustomer(data as any);
+            onSuccess={async (saved) => {
               const list = await getUnifiedCustomers();
               setCustomers(list as CustomerType[]);
               setSelectedCustomer((saved as any).id);
