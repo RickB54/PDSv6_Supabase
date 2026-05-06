@@ -2785,6 +2785,62 @@ const ServiceChecklist = () => {
                                             })}
                                           </div>
                                         )}
+
+                                        {/* ─── Inline Add New Chemical ─── */}
+                                        {(() => {
+                                          const addKey = `adding_chem_${step.id}`;
+                                          const isAdding = !!(window as any)[addKey];
+                                          return isAdding ? (
+                                            <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                                              <Input
+                                                id={`new-chem-name-${step.id}`}
+                                                placeholder="Chemical name"
+                                                className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-32 px-2"
+                                                autoFocus
+                                              />
+                                              <Input
+                                                id={`new-chem-dilution-${step.id}`}
+                                                placeholder="Dilution (e.g. 4:1)"
+                                                className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-28 px-2"
+                                              />
+                                              <button
+                                                type="button"
+                                                className="h-6 px-2 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
+                                                onClick={async () => {
+                                                  const nameEl = document.getElementById(`new-chem-name-${step.id}`) as HTMLInputElement;
+                                                  const dilEl = document.getElementById(`new-chem-dilution-${step.id}`) as HTMLInputElement;
+                                                  const name = nameEl?.value?.trim();
+                                                  if (!name) return;
+                                                  const newChem = { id: `chem-${Date.now()}`, name, dilution: dilEl?.value?.trim() || '' };
+                                                  try {
+                                                    await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(newChem) });
+                                                  } catch { /* save best-effort */ }
+                                                  setChemicalsList((prev: any[]) => [...prev, newChem]);
+                                                  setChecklistSteps(prev => prev.map(s => {
+                                                    if (s.id !== step.id) return s;
+                                                    return { ...s, stepChemicals: [...(s.stepChemicals || []), newChem.id] };
+                                                  }));
+                                                  (window as any)[addKey] = false;
+                                                  // Force re-render by toggling a dummy state — use existing mechanism
+                                                  setExpandedHelp(prev => ({ ...prev }));
+                                                }}
+                                              >Save</button>
+                                              <button
+                                                type="button"
+                                                className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white rounded border border-zinc-700 transition-colors"
+                                                onClick={() => { (window as any)[addKey] = false; setExpandedHelp(prev => ({ ...prev })); }}
+                                              >Cancel</button>
+                                            </div>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              className="mt-2 inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-primary transition-colors cursor-pointer"
+                                              onClick={() => { (window as any)[addKey] = true; setExpandedHelp(prev => ({ ...prev })); }}
+                                            >
+                                              <Plus className="h-3 w-3" /> Add new chemical
+                                            </button>
+                                          );
+                                        })()}
                                       </div>
                                     </div>
                                   </div>
