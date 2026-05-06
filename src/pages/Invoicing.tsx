@@ -527,11 +527,20 @@ const Invoicing = () => {
     const customer = customers.find(c => c.id === selectedInv?.customerId);
     const firstName = customer?.name?.split(' ')[0] || 'Customer';
 
+    let summaryText = `Total: $${selectedInv?.total.toFixed(2)}`;
+    if (selectedInv?.discount && selectedInv.discount.amount > 0) {
+      const subtotal = selectedInv.total + selectedInv.discount.amount;
+      summaryText = `Subtotal: $${subtotal.toFixed(2)}\nDiscount: -$${selectedInv.discount.amount.toFixed(2)}\nTotal: $${selectedInv.total.toFixed(2)}`;
+    }
+
     const draft = `Hi ${firstName}!
 
 Thank you for trusting Prime Auto Detail with your vehicle. It was a pleasure working on your car, and I truly appreciate your business.
 
-Attached is your paid invoice/receipt for your records.
+Service Summary:
+${summaryText}
+${(selectedInv?.paymentStatus === 'paid' || selectedInv?.total === 0) ? 'Status: PAID IN FULL\n' : ''}
+Attached is your invoice/receipt for your records.
 
 If you were happy with the service, I would greatly appreciate it if you could take a moment to leave a review. Your feedback not only helps my business grow, but also helps others feel confident choosing Prime Auto Detail.
 
