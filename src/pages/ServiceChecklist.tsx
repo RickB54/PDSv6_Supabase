@@ -1918,7 +1918,7 @@ const ServiceChecklist = () => {
         </div>
       </PageHeader>
 
-      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8 overflow-x-hidden">
+      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8">
         {/* Premium Header Block */}
         <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
@@ -1988,7 +1988,7 @@ const ServiceChecklist = () => {
             </div>
           )}
           {/* Job Setup - Sticky header for mobile efficiency */}
-          <Card className={`bg-gradient-card border-border overflow-hidden sticky top-0 z-40 transition-all duration-300 ${!jobSetupExpanded ? 'p-2 shadow-xl shadow-black/50 border-white/20 bg-black/90 backdrop-blur-md' : 'p-3 sm:p-6 mb-4'}`}>
+          <Card className={`bg-gradient-card border-border overflow-hidden sticky top-0 z-50 transition-all duration-300 ${!jobSetupExpanded ? 'p-2 shadow-xl shadow-black/50 border-white/20 bg-black/90 backdrop-blur-md rounded-none md:rounded-xl' : 'p-3 sm:p-6 mb-4'}`}>
             <div 
               className={`flex items-center justify-between cursor-pointer group ${!jobSetupExpanded ? 'h-10' : ''}`}
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
@@ -2334,7 +2334,7 @@ const ServiceChecklist = () => {
 
       <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
         <div 
-          className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group"
+          className="sticky top-[56px] md:top-[64px] z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/80 backdrop-blur-md transition-all rounded-t-xl"
           onClick={() => setChecklistExpanded(!checklistExpanded)}
         >
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
