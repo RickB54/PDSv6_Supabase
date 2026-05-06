@@ -104,6 +104,9 @@ const Invoicing = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [customVehicle, setCustomVehicle] = useState("");
+  const [editVehicle, setEditVehicle] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -198,6 +201,14 @@ const Invoicing = () => {
 
   const calculateTotal = () => services.reduce((sum, s) => sum + s.price, 0);
 
+  const handleCustomerChange = (cid: string) => {
+    setSelectedCustomer(cid);
+    const c = customers.find(x => x.id === cid);
+    if (c) {
+      setCustomVehicle(`${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`.trim());
+    }
+  };
+
   const createInvoice = async () => {
     if (!selectedCustomer || services.length === 0) {
       toast({ title: "Error", description: "Please select a customer and add services", variant: "destructive" });
@@ -251,7 +262,7 @@ const Invoicing = () => {
       });
 
       // 2. Prepare Invoice
-      const vehicleDesc = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
+      const vehicleDesc = customVehicle || `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
 
       const invoice: Invoice = {
         invoiceNumber: generateInvoiceNumber(),
@@ -272,6 +283,7 @@ const Invoicing = () => {
 
       setSelectedCustomer("");
       setServices([]);
+      setCustomVehicle("");
       setShowCreateForm(false);
       loadData();
 
@@ -394,6 +406,7 @@ const Invoicing = () => {
   const handleEditInvoice = () => {
     if (!selectedInvoice) return;
     setEditServices([...selectedInvoice.services]);
+    setEditVehicle(selectedInvoice.vehicle);
     setIsEditingInvoice(true);
   };
 
@@ -403,6 +416,7 @@ const Invoicing = () => {
     const updated: Invoice = { 
       ...selectedInvoice, 
       services: editServices, 
+      vehicle: editVehicle,
       total: newTotal 
     };
     
@@ -839,7 +853,7 @@ Precision. Protection. Perfection.`;
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Select Customer</Label>
-                  <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                  <Select value={selectedCustomer} onValueChange={handleCustomerChange}>
                     <SelectTrigger className="bg-zinc-950 border-zinc-800">
                       <SelectValue placeholder="Choose customer..." />
                     </SelectTrigger>
@@ -849,6 +863,17 @@ Precision. Protection. Perfection.`;
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Vehicle Info</Label>
+                  <Input 
+                    placeholder="e.g. 2023 Tesla Model 3"
+                    value={customVehicle}
+                    onChange={(e) => setCustomVehicle(e.target.value)}
+                    className="bg-zinc-950 border-zinc-800"
+                  />
+                  <p className="text-[10px] text-zinc-500 italic">Leave blank to use customer's default vehicle.</p>
                 </div>
 
                 <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800">
@@ -1158,6 +1183,17 @@ Precision. Protection. Perfection.`;
                         </Button>
                       </div>
                     ))}
+
+                    <div className="space-y-2 pt-2 pb-4">
+                      <Label className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Vehicle Information</Label>
+                      <Input 
+                        value={editVehicle}
+                        onChange={(e) => setEditVehicle(e.target.value)}
+                        placeholder="Year Make Model"
+                        className="bg-zinc-900 border-zinc-800 text-sm h-9"
+                      />
+                    </div>
+
                     <div className="flex gap-2 pt-2">
                       <Button variant="outline" size="sm" className="flex-1 border-dashed border-zinc-700" onClick={() => setEditServices([...editServices, { name: "", price: 0 }])}>
                         <Plus className="h-3 w-3 mr-1" /> Add Line Item

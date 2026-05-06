@@ -1181,7 +1181,6 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
         // services is JSONB
         services: invoice.services,
         total: invoice.total,
-        discount: invoice.discount, // JSONB or text
         date: invoice.date,
         status: invoice.paymentStatus,
         paid_amount: invoice.paidAmount,
