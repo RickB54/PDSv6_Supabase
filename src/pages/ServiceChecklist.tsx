@@ -265,6 +265,18 @@ const ServiceChecklist = () => {
   const [destinationExpanded, setDestinationExpanded] = useState(false);
   const [jobSetupExpanded, setJobSetupExpanded] = useState(true);
   const [checklistExpanded, setChecklistExpanded] = useState(true);
+
+  // Auto-collapse Job Setup when scrolling down
+  useEffect(() => {
+    const handleScroll = () => {
+      // Only auto-collapse if we have the minimum data needed for the sticky summary
+      if (window.scrollY > 300 && jobSetupExpanded && selectedPackage && vehicleType !== 'choose') {
+        setJobSetupExpanded(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [jobSetupExpanded, selectedPackage, vehicleType]);
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
@@ -1987,8 +1999,8 @@ const ServiceChecklist = () => {
               </Button>
             </div>
           )}
-          {/* Job Setup - Sticky header for mobile efficiency */}
-          <Card className={`bg-gradient-card border-border overflow-hidden sticky top-0 z-50 transition-all duration-300 ${!jobSetupExpanded ? 'p-2 shadow-xl shadow-black/50 border-white/20 bg-black/90 backdrop-blur-md rounded-none md:rounded-xl' : 'p-3 sm:p-6 mb-4'}`}>
+          {/* Job Setup - Sticky header for mobile efficiency - Offset below fixed PageHeader (64px) */}
+          <Card className={`bg-gradient-card border-border overflow-hidden sticky top-[64px] z-50 transition-all duration-300 ${!jobSetupExpanded ? 'p-2 shadow-xl shadow-black/50 border-white/20 bg-black/95 backdrop-blur-md rounded-none md:rounded-xl' : 'p-3 sm:p-6 mb-4'}`}>
             <div 
               className={`flex items-center justify-between cursor-pointer group ${!jobSetupExpanded ? 'h-10' : ''}`}
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
@@ -1998,7 +2010,21 @@ const ServiceChecklist = () => {
                   <Settings2 className={`${!jobSetupExpanded ? 'h-3.5 w-3.5' : 'h-5 w-5'} text-blue-500`} />
                 </div>
                 <div>
-                  <h2 className={`${!jobSetupExpanded ? 'text-sm' : 'text-xl md:text-2xl'} font-bold text-white transition-all`}>Job Setup</h2>
+                  <h2 className={`${!jobSetupExpanded ? 'text-xs sm:text-sm' : 'text-xl md:text-2xl'} font-bold text-white transition-all`}>
+                    {!jobSetupExpanded && selectedPackage ? (
+                      <span className="flex items-center gap-2">
+                        <span className="text-blue-400 truncate max-w-[120px] sm:max-w-none">
+                          {servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package'}
+                        </span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-zinc-300">
+                          {vehicleLabels[vehicleType] || vehicleType}
+                        </span>
+                      </span>
+                    ) : (
+                      "Job Setup"
+                    )}
+                  </h2>
                   {jobSetupExpanded && <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest animate-in fade-in">Customer, Vehicle & Services</p>}
                 </div>
               </div>
@@ -2116,7 +2142,7 @@ const ServiceChecklist = () => {
                 </p>
               </div>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 border-t border-white/5 pt-4">
+            <div className="grid grid-cols-3 gap-3 mb-4 border-t border-white/5 pt-4">
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase text-zinc-500">Year</Label>
                 <Input placeholder="" value={vYear} onChange={(e) => setVYear(e.target.value)} className="h-10 bg-black text-sm border-zinc-800" />
@@ -2334,7 +2360,7 @@ const ServiceChecklist = () => {
 
       <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
         <div 
-          className="sticky top-[56px] md:top-[64px] z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/80 backdrop-blur-md transition-all rounded-t-xl"
+          className="sticky top-[110px] md:top-[128px] z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/90 backdrop-blur-md transition-all rounded-t-xl"
           onClick={() => setChecklistExpanded(!checklistExpanded)}
         >
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
