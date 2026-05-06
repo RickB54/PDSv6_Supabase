@@ -425,29 +425,32 @@ const Invoicing = () => {
   const generatePDF = (invoice: Invoice, download = false) => {
     const doc = new jsPDF();
     
-    // Add Logo
+    // Add Logo - Top Center
     try {
-      doc.addImage(logo, 'PNG', 15, 10, 35, 35);
+      const logoWidth = 35;
+      const logoHeight = 35;
+      const xPos = (210 - logoWidth) / 2; // Center horizontally (A4 is 210mm wide)
+      doc.addImage(logo, 'PNG', xPos, 10, logoWidth, logoHeight);
     } catch (e) {
       console.warn("Logo failed to load for PDF", e);
     }
 
     doc.setFontSize(18);
     doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text("Prime Auto Detail", 105, 25, { align: "center" });
+    doc.text("Prime Auto Detail", 105, 52, { align: "center" });
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text("INVOICE", 105, 30, { align: "center" });
-    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 38, { align: "center" });
+    doc.text("INVOICE", 105, 58, { align: "center" });
+    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 66, { align: "center" });
 
     doc.setFontSize(10);
-    doc.text(`Service Date: ${invoice.date}`, 20, 50);
-    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 56);
-    doc.text(`Customer: ${invoice.customerName}`, 20, 62);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 68);
+    doc.text(`Service Date: ${invoice.date}`, 20, 80);
+    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 86);
+    doc.text(`Customer: ${invoice.customerName}`, 20, 92);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 98);
 
-    let y = 80;
+    let y = 110;
     doc.setFontSize(12);
     doc.text("Services Provided:", 20, y);
     y += 8;
@@ -480,6 +483,7 @@ const Invoicing = () => {
 
     doc.text("Total Amount:", 140, y);
     doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
+    y += 10;
 
     if (invoice.paidAmount && invoice.paidAmount > 0) {
       y += 8;
@@ -1005,7 +1009,14 @@ Precision. Protection. Perfection.`;
                   <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto">
                     <div className="text-right">
                       <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
-                      <div className="text-xl font-bold text-white">${invoice.total.toFixed(2)}</div>
+                      <div className="flex flex-col items-end">
+                        {invoice.discount && invoice.discount.amount > 0 && (
+                          <span className="text-[10px] text-zinc-500 line-through decoration-zinc-700">
+                            ${(invoice.total + invoice.discount.amount).toFixed(2)}
+                          </span>
+                        )}
+                        <div className="text-xl font-bold text-white">${invoice.total.toFixed(2)}</div>
+                      </div>
                     </div>
 
                     <div className="text-right min-w-[100px]">

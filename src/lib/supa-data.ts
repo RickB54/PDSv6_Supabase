@@ -1149,7 +1149,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             invoiceNumber: i.invoice_number,
             customerId: i.customer_id,
             customerName: i.customers?.full_name || 'Unknown',
-            vehicle: i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : 'Unknown',
+            vehicle: i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : 'Unknown'),
             services: i.services || [],
             total: i.total,
             discount: i.discount, // Include discount object
