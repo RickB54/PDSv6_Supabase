@@ -176,20 +176,18 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
         try {
             const [maps, chems] = await Promise.all([
                 getStepChemicalMappings(stepId),
-                isAdmin ? getChemicals() : Promise.resolve([])
+                getChemicals()  // Always load chemicals so Auto-Suggest and Add Chemical work
             ]);
             setMappings(maps);
-            if (isAdmin) {
-                setAllChemicals(chems);
+            setAllChemicals(chems);
 
-                // Auto-Trigger Suggestions if empty
-                if (maps.length === 0) {
-                    const results = suggestChemicalsForStep(stepName, chems, stepId);
-                    if (results.onHand.length > 0 || results.alternatives.length > 0) {
-                        setSuggestions(results);
-                        setIsEditing(true); // Enter edit mode to show suggestions
-                        toast({ title: "AI Suggestions Ready", description: "Review suggested chemicals for this step." });
-                    }
+            // Auto-Trigger Suggestions if empty and admin
+            if (isAdmin && maps.length === 0) {
+                const results = suggestChemicalsForStep(stepName, chems, stepId);
+                if (results.onHand.length > 0 || results.alternatives.length > 0) {
+                    setSuggestions(results);
+                    setIsEditing(true);
+                    toast({ title: "Auto-Suggest Ready", description: "Review suggested chemicals for this step." });
                 }
             }
         } catch (e) {
@@ -417,14 +415,14 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                                     ))}
                                 </div>
 
-                                {/* Actions */}
+                                {/* Actions - always visible */}
                                 <div className="flex gap-2">
-                                    <Button onClick={addNewMapping} variant="outline" className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800">
+                                    <Button onClick={() => { addNewMapping(); setIsEditing(true); }} variant="outline" className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800">
                                         <Plus className="w-4 h-4 mr-2" /> Add Chemical
                                     </Button>
                                     <Button
                                         onClick={handleAutoSuggest}
-                                        disabled={isSuggesting}
+                                        disabled={isSuggesting || allChemicals.length === 0}
                                         className="bg-purple-900/30 text-purple-400 border border-purple-500/50 hover:bg-purple-900/50"
                                     >
                                         {isSuggesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
@@ -481,7 +479,25 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                                 )}
                             </div>
                         ) : (
-                            <ReadOnlyView />
+                            <>
+                                <ReadOnlyView />
+                                {/* Show action buttons even in read-only mode */}
+                                {isAdmin && (
+                                    <div className="flex gap-2 mt-4 pt-4 border-t border-zinc-800">
+                                        <Button onClick={() => { addNewMapping(); setIsEditing(true); }} variant="outline" className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800">
+                                            <Plus className="w-4 h-4 mr-2" /> Add Chemical
+                                        </Button>
+                                        <Button
+                                            onClick={() => { setIsEditing(true); handleAutoSuggest(); }}
+                                            disabled={isSuggesting || allChemicals.length === 0}
+                                            className="bg-purple-900/30 text-purple-400 border border-purple-500/50 hover:bg-purple-900/50"
+                                        >
+                                            {isSuggesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                            Auto-Suggest
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </DialogContent>

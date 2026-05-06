@@ -212,19 +212,42 @@ export interface SuggestionItem {
 export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical[], stepId: string): ChemicalSuggestionResults => {
     const normalizedStep = stepName.toLowerCase();
 
-    // Keyword Map
+    // Keyword Map — step keyword → chemical name/usage keywords that match
     const keywords: Record<string, string[]> = {
-        'wheel': ['wheel', 'rim', 'tire', 'iron', 'brake'],
-        'tire': ['tire', 'rubber', 'dressing'],
-        'glass': ['glass', 'window', 'mirror'],
-        'interior': ['interior', 'leather', 'fabric', 'carpet', 'plastic', 'dash'],
-        'leather': ['leather', 'conditioner'],
-        'wash': ['shampoo', 'soap', 'wash', 'foam'],
-        'wax': ['wax', 'sealant', 'ceramic', 'coating'],
-        'polish': ['polish', 'compound', 'cut'],
-        'clay': ['clay', 'lubricant'],
-        'bug': ['bug', 'tar', 'sap'],
-        'prep': ['apc', 'cleaner', 'degreaser', 'prep'],
+        'wheel': ['wheel', 'rim', 'tire', 'iron', 'brake', 'fallout'],
+        'tire': ['tire', 'rubber', 'dressing', 'wheel'],
+        'glass': ['glass', 'window', 'mirror', 'clarity', 'streak'],
+        'interior': ['interior', 'leather', 'fabric', 'carpet', 'plastic', 'dash', 'apc', 'cleaner'],
+        'leather': ['leather', 'conditioner', 'protection'],
+        'wash': ['shampoo', 'soap', 'wash', 'foam', 'car wash'],
+        'foam': ['foam', 'shampoo', 'soap', 'cannon', 'snow', 'pre-wash', 'wash'],
+        'rinse': ['rinse', 'wash', 'shampoo', 'soap'],
+        'dry': ['dry', 'detailer', 'spray', 'quick detail', 'towel'],
+        'wax': ['wax', 'sealant', 'ceramic', 'coating', 'protect'],
+        'sealant': ['sealant', 'wax', 'protect', 'ceramic', 'coat'],
+        'polish': ['polish', 'compound', 'cut', 'correction', 'swirl'],
+        'compound': ['compound', 'polish', 'cut', 'correction'],
+        'clay': ['clay', 'lubricant', 'detailer', 'spray'],
+        'decontamin': ['iron', 'fallout', 'tar', 'clay', 'decon'],
+        'bug': ['bug', 'tar', 'sap', 'remover'],
+        'tar': ['tar', 'bug', 'remover', 'solvent'],
+        'prep': ['apc', 'cleaner', 'degreaser', 'prep', 'all purpose'],
+        'engine': ['engine', 'degreaser', 'apc', 'all purpose'],
+        'trim': ['trim', 'plastic', 'dressing', 'restore'],
+        'plastic': ['plastic', 'trim', 'dressing', 'protectant'],
+        'dashboard': ['interior', 'plastic', 'dash', 'protectant', 'cleaner', 'apc'],
+        'console': ['interior', 'plastic', 'cleaner', 'apc'],
+        'door': ['apc', 'cleaner', 'interior', 'all purpose'],
+        'headlight': ['polish', 'restore', 'compound', 'clarity'],
+        'carpet': ['carpet', 'fabric', 'shampoo', 'extractor', 'cleaner'],
+        'vacuum': ['carpet', 'fabric', 'interior', 'cleaner'],
+        'shampoo': ['shampoo', 'carpet', 'fabric', 'upholstery', 'cleaner'],
+        'upholstery': ['upholstery', 'fabric', 'carpet', 'shampoo'],
+        'seat': ['leather', 'fabric', 'upholstery', 'shampoo', 'cleaner'],
+        'final': ['detailer', 'spray', 'quick', 'wax', 'gloss'],
+        'inspect': ['detailer', 'spray', 'gloss'],
+        'pre-rinse': ['foam', 'pre-wash', 'snow', 'shampoo'],
+        'pre rinse': ['foam', 'pre-wash', 'snow', 'shampoo'],
     };
 
     const scoreChemical = (chem: Chemical): { score: number; reason: string } => {
@@ -232,6 +255,7 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
         const reasons: string[] = [];
         const normName = chem.name.toLowerCase();
         const normUsedFor = (chem.used_for || []).map(u => u.toLowerCase());
+        const normCategory = (chem.category || '').toLowerCase();
 
         // 1. Exact Step Name Match in Chemical Name
         if (normName.includes(normalizedStep)) {
@@ -239,54 +263,58 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
             reasons.push("Name matches step");
         }
 
-        // 2. Keyword Matching
+        // 2. Keyword Matching — check each keyword against the step name
         for (const [key, terms] of Object.entries(keywords)) {
             if (normalizedStep.includes(key)) {
-                // Step has key, does Chem have terms?
                 const hasTerm = terms.some(t => normName.includes(t) || normUsedFor.some(u => u.includes(t)));
                 if (hasTerm) {
                     score += 10;
-                    reasons.push(`Matches keyword category: ${key}`);
-                    break; // Count category once
+                    reasons.push(`Matches: ${key}`);
+                    break;
                 }
             }
         }
 
         // 3. Category Heuristic
-        if ((normalizedStep.includes('interior') || normalizedStep.includes('vacuum') || normalizedStep.includes('mat')) && chem.category === 'Interior') {
-            score += 5;
-            reasons.push("Category matches interior task");
-        } else if ((normalizedStep.includes('wheel') || normalizedStep.includes('paint') || normalizedStep.includes('wash')) && chem.category === 'Exterior') {
-            score += 5;
-            reasons.push("Category matches exterior task");
-        }
+        const isInteriorStep = ['interior', 'vacuum', 'mat', 'leather', 'carpet', 'seat', 'console', 'dashboard', 'door', 'headliner'].some(k => normalizedStep.includes(k));
+        const isExteriorStep = ['wheel', 'paint', 'wash', 'foam', 'rinse', 'dry', 'wax', 'polish', 'clay', 'tire', 'glass', 'engine', 'trim'].some(k => normalizedStep.includes(k));
+        if (isInteriorStep && normCategory === 'interior') { score += 5; reasons.push('Interior category match'); }
+        if (isExteriorStep && normCategory === 'exterior') { score += 5; reasons.push('Exterior category match'); }
 
-        return { score, reason: reasons.join(', ') };
+        return { score, reason: reasons.join(', ') || 'General use chemical' };
     };
 
-    const results: SuggestionItem[] = [];
+    const onHand: SuggestionItem[] = [];
+    const alternatives: SuggestionItem[] = [];
 
     allChemicals.forEach(chem => {
         const { score, reason } = scoreChemical(chem);
-        if (score > 5) {
-            results.push({
+        if (score > 3) {  // Lowered threshold from 5 to 3 to catch more matches
+            const item: SuggestionItem = {
                 chem,
                 score,
                 reason,
                 suggestedMapping: {
-                    id: crypto.randomUUID(),
+                    id: `suggest_${chem.id}_${Date.now()}`,
                     step_id: stepId,
                     chemical_id: chem.id,
-                    dilution_ratio_id: chem.dilution_ratios?.[0]?.ratio || 'RTU',
-                    notes: reason
+                    dilution_override: chem.dilution_ratios?.[0]?.ratio || '',
+                    include_in_prep: true,
+                    notes: reason,
+                    updated_at: new Date().toISOString()
                 }
-            });
+            };
+            if (chem.is_on_hand !== false) {
+                onHand.push(item);
+            } else {
+                alternatives.push(item);
+            }
         }
     });
 
     return {
-        onHand: results.sort((a, b) => b.score - a.score),
-        alternatives: [] 
+        onHand: onHand.sort((a, b) => b.score - a.score),
+        alternatives: alternatives.sort((a, b) => b.score - a.score)
     };
 };
 
