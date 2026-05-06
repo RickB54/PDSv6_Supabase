@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -392,8 +392,9 @@ const ServiceChecklist = () => {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
-  type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'final'; checked: boolean; instructions?: string };
+  type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'final'; checked: boolean; instructions?: string; stepChemicals?: string[] };
   const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([]);
+  const isRestoringDraft = useRef(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   // Timer State
@@ -1006,6 +1007,10 @@ const ServiceChecklist = () => {
     const vkey = toBuiltInVehKey(vehicleType);
     const selected = [selectedPackage, ...selectedAddOns].filter(Boolean);
     setSelectedServices(selected);
+
+    // Skip regeneration if we are in the middle of restoring a draft
+    // The restore logic will directly apply the saved steps
+    if (isRestoringDraft.current) return;
     
     // Auto-reset timer if everything is unchecked and we're switching
     if (checklistSteps.length > 0 && checklistSteps.every(s => !s.checked) && jobStartTime) {
@@ -1091,6 +1096,9 @@ const ServiceChecklist = () => {
         const state = JSON.parse(saved);
         console.log("Restoring checklist draft:", state);
 
+        // Signal the regeneration effect to skip rebuilding steps
+        isRestoringDraft.current = true;
+
         if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
         if (state.selectedPackage) setSelectedPackage(state.selectedPackage);
         if (state.vehicleType) setVehicleType(state.vehicleType);
@@ -1100,7 +1108,7 @@ const ServiceChecklist = () => {
         if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
         if (state.discountValue) setDiscountValue(state.discountValue);
         if (state.discountType) setDiscountType(state.discountType);
-        
+
         if (urlId) setChecklistId(urlId);
         else if (state.checklistId) setChecklistId(state.checklistId);
 
@@ -1116,14 +1124,18 @@ const ServiceChecklist = () => {
         if (state.odometerStart) setOdometerStart(state.odometerStart);
         if (state.odometerEnd) setOdometerEnd(state.odometerEnd);
 
-        // Save dirty steps to be reapplied after regeneration
-        if (state.checklistSteps) {
-          window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
+        // Directly apply saved steps — no regeneration needed
+        if (state.checklistSteps && state.checklistSteps.length > 0) {
+          setChecklistSteps(state.checklistSteps);
         }
+
+        // Release the restoration lock after React processes the state updates
+        setTimeout(() => { isRestoringDraft.current = false; }, 300);
 
         toast({ title: "Draft Restored", description: `Resumed job for ${state.customerName || 'Generic Customer'}.` });
       } catch (e) {
         console.error("Failed to restore draft", e);
+        isRestoringDraft.current = false;
       }
     }
   }, []); // Run once on mount
@@ -2736,6 +2748,49 @@ const ServiceChecklist = () => {
                                           )}
                                         </div>
                                       )}
+
+                                      {/* ─── Per-Step Chemical Selector ─── */}
+                                      <div className="mt-3 pt-3 border-t border-zinc-800/60">
+                                        <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                          <span>🧪</span> Chemicals for this step
+                                        </p>
+                                        {chemicalsList.length === 0 ? (
+                                          <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
+                                        ) : (
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {chemicalsList.map((chem: any) => {
+                                              const isSelected = (step.stepChemicals || []).includes(chem.id);
+                                              return (
+                                                <button
+                                                  key={chem.id}
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setChecklistSteps(prev => prev.map(s => {
+                                                      if (s.id !== step.id) return s;
+                                                      const current = s.stepChemicals || [];
+                                                      const next = isSelected
+                                                        ? current.filter(id => id !== chem.id)
+                                                        : [...current, chem.id];
+                                                      return { ...s, stepChemicals: next };
+                                                    }));
+                                                  }}
+                                                  title={chem.dilution ? `Dilution: ${chem.dilution}` : chem.name}
+                                                  className={`inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border transition-all cursor-pointer ${
+                                                    isSelected
+                                                      ? 'bg-primary/20 border-primary text-primary'
+                                                      : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                                                  }`}
+                                                >
+                                                  <span className="font-semibold leading-tight">{chem.name}</span>
+                                                  {chem.dilution && (
+                                                    <span className="text-[9px] opacity-70 leading-tight">Dilution: {chem.dilution}</span>
+                                                  )}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
