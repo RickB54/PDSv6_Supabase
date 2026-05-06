@@ -426,7 +426,12 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-white">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-zinc-500 hover:text-white"
+                                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-chemicals' }))}
+                                        >
                                             <HelpCircle className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>

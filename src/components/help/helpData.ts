@@ -179,6 +179,33 @@ export const chemicalDocsV3Topic: HelpTopic = {
   section: 'chemicals',
 };
 
+export const inventoryChemicalsTopic: HelpTopic = {
+  id: 'inventory-chemicals',
+  title: 'Checklist Chemical Management',
+  summary: 'Learn how to manage chemicals for each service step with auto-save and AI suggestions.',
+  content: [
+    '**Service Checklist Chemicals**: You can now precisely manage which chemicals are used for every single step of your service. This ensures consistency and better tracking.',
+    '',
+    '➕ **1. Adding Chemicals**',
+    'Inside the "Step Chemicals" modal (click the **Chem** button), click **+ Add Chemical** to add a new chemical entry for that step.',
+    '',
+    '💾 **2. Auto-Save Workflow**',
+    'There is no "Save" button to hunt for when adding new chemicals. Simply select a chemical from the dropdown, and it will **automatically save** to your job checklist. You can then refine the dilution ratio, tools, or application notes if needed.',
+    '',
+    '✨ **3. Auto-Suggest (AI)**',
+    'Don\'t want to browse the full inventory? Click **Auto-Suggest**. The system analyzes the name of the service step (like "Foam Bath" or "Wheel Clean") and recommends the best chemicals from your shelf.',
+    '• **Fallback**: If no specific match is found, the system will show your **Full Inventory** as a convenient fallback list.',
+    '',
+    '📋 **4. Overrides & Prep**',
+    'For each chemical assigned, you can override:',
+    '• **Dilution**: Specify a custom ratio for this specific job.',
+    '• **Tools**: Pick a specific tool (Pressure Washer, Foam Cannon, etc.).',
+    '• **Application**: Add short notes for your technicians.',
+    '• **Include in Prep**: Toggle this to include the chemical in the "Prep Summary" PDF for quick gathering.',
+  ],
+  section: 'chemicals',
+};
+
 export const chemicalAiTopic: HelpTopic = {
   id: 'ai-chemical-assistant',
   title: 'AI Chemical Assistant',
@@ -312,6 +339,7 @@ export const adminMenuTopics: HelpTopic[] = [
   contactMediaUploadTopic,
   mobileSetupTopic,
   chemicalAiTopic,
+  inventoryChemicalsTopic,
   multiVehicleBookingHelpTopic,
   prospectVsCustomerTopic,
   {
@@ -2603,6 +2631,7 @@ export const employeeMenuTopics: HelpTopic[] = [
   },
   inventoryCleanupTopic,
   checklistToolsGuide,
+  inventoryChemicalsTopic,
   {
     id: 'website',
     title: 'Website',

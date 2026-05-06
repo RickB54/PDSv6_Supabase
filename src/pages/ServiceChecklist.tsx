@@ -2250,6 +2250,12 @@ const ServiceChecklist = () => {
                       : 'bg-zinc-900/50 border-white/5 hover:border-white/20 hover:bg-zinc-800'
                   }`}
                   onClick={() => {
+                    if (checklistId && checklistId !== draft.id) {
+                      if (!confirm(`You have an active job for ${recentDrafts.find(d => d.id === checklistId)?.customerName || 'someone else'}. \n\nSwitching will save your current progress but change your active checklist. Continue?`)) {
+                        return;
+                      }
+                    }
+
                     // Restore this draft
                     const saved = localStorage.getItem(`${CHECKLIST_DRAFT_KEY}_${draft.id}`);
                     if (saved) {
@@ -2271,6 +2277,14 @@ const ServiceChecklist = () => {
                       if (state.checklistSteps) {
                         window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
                       }
+                      
+                      // Derive and set selectedServices so the UI checkmarks appear
+                      const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
+                      setSelectedServices(services);
+                      
+                      // Scroll to top so the user sees the restored checklist
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      
                       toast({ title: "Switched Job", description: `Resumed job for ${draft.customerName}.` });
                     }
                   }}
@@ -2297,18 +2311,6 @@ const ServiceChecklist = () => {
                     size="sm" 
                     variant="ghost" 
                     className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full hover:bg-red-500/20 hover:text-red-400"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (checklistId && checklistId !== draft.id) {
-                        if (!confirm(`You have an active job for ${recentDrafts.find(d => d.id === checklistId)?.customerName || 'someone else'}. \n\nSwitching will save your current progress but change your active checklist. Continue?`)) {
-                          return;
-                        }
-                      }
-                      
-                      // Trigger the main restore logic (which is on the parent div click)
-                      const parentDiv = e.currentTarget.parentElement;
-                      if (parentDiv) parentDiv.click();
-                    }}
                   >
                     <Play className="h-4 w-4" />
                   </Button>
@@ -2674,35 +2676,20 @@ const ServiceChecklist = () => {
                                   {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
                                 </Button>
 
-                                <div className="flex items-center">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md rounded-r-none shrink-0 border border-transparent hover:border-purple-500/30"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleOpenChemicals(step.id, step.name);
-                                    }}
-                                    title="Chemical Reference"
-                                  >
-                                    <FlaskConical className="h-4 w-4 mr-1 sm:mr-1.5" />
-                                    <span className="text-[10px] sm:text-xs font-bold">Chem</span>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-6 text-zinc-600 hover:text-white hover:bg-zinc-800 rounded-md rounded-l-none border-l border-zinc-800 shrink-0"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-chemicals' }));
-                                    }}
-                                    title="How to use chemicals"
-                                  >
-                                    <HelpCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleOpenChemicals(step.id, step.name);
+                                  }}
+                                  title="Chemical Reference"
+                                >
+                                  <FlaskConical className="h-4 w-4 mr-1.5" />
+                                  <span className="text-xs font-bold">Chem</span>
+                                </Button>
                               </div>
                             </div>
 
