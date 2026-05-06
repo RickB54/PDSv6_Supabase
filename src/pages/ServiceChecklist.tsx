@@ -2403,24 +2403,58 @@ const ServiceChecklist = () => {
                 const now = Date.now();
                 const anyUnchecked = checklistSteps.some(s => !s.checked);
                 const targetState = anyUnchecked;
-                
+
+                // Industry-average times (ms) keyed by keywords in step name
+                // Based on professional auto detailing benchmarks
+                const AVG_TIMES: Array<{ keywords: string[]; ms: number }> = [
+                  { keywords: ['inspect', 'walkaround', 'expectation'], ms: 120000 },     // 2 min
+                  { keywords: ['gather', 'prep', 'setup', 'tools', 'chemicals'], ms: 180000 }, // 3 min
+                  { keywords: ['pre-rinse', 'rinse', 'foam'], ms: 300000 },               // 5 min
+                  { keywords: ['wheels', 'tires', 'wheel'], ms: 600000 },                 // 10 min
+                  { keywords: ['wash', 'soap', 'scrub', 'hand wash'], ms: 900000 },       // 15 min
+                  { keywords: ['dry', 'blow', 'towel'], ms: 480000 },                     // 8 min
+                  { keywords: ['clay', 'decontaminate', 'iron'], ms: 900000 },            // 15 min
+                  { keywords: ['polish', 'compound', 'machine'], ms: 1800000 },           // 30 min
+                  { keywords: ['wax', 'sealant', 'coating', 'ceramic'], ms: 1200000 },   // 20 min
+                  { keywords: ['glass', 'window', 'windshield'], ms: 480000 },            // 8 min
+                  { keywords: ['vacuum', 'vacuuming'], ms: 900000 },                      // 15 min
+                  { keywords: ['shampoo', 'steam', 'carpet', 'upholstery', 'fabric'], ms: 1200000 }, // 20 min
+                  { keywords: ['leather', 'condition'], ms: 600000 },                     // 10 min
+                  { keywords: ['dashboard', 'console', 'interior', 'panel', 'steering'], ms: 600000 }, // 10 min
+                  { keywords: ['door', 'jamb', 'sill'], ms: 300000 },                     // 5 min
+                  { keywords: ['engine', 'bay', 'hood'], ms: 900000 },                    // 15 min
+                  { keywords: ['trim', 'plastic', 'dressing'], ms: 300000 },              // 5 min
+                  { keywords: ['final', 'inspect', 'quality', 'check'], ms: 180000 },    // 3 min
+                  { keywords: ['exhaust', 'chrome', 'metal'], ms: 300000 },              // 5 min
+                  { keywords: ['headlight', 'light', 'restore'], ms: 600000 },           // 10 min
+                ];
+
+                const getAvgTime = (stepName: string): number => {
+                  const lower = stepName.toLowerCase();
+                  for (const entry of AVG_TIMES) {
+                    if (entry.keywords.some(k => lower.includes(k))) return entry.ms;
+                  }
+                  return 300000; // default 5 min for anything unmatched
+                };
+
                 setChecklistSteps(prev => prev.map(s => ({ ...s, checked: targetState })));
-                
-                if (targetState && jobStartTime) {
+
+                if (targetState) {
+                  // Auto-fill average times for items that were unchecked
                   const unchecked = checklistSteps.filter(s => !s.checked);
                   if (unchecked.length > 0) {
-                    const totalDiff = now - lastActionTime;
-                    const perItemDiff = totalDiff / unchecked.length;
-                    
                     setItemDurations(prev => {
                       const next = { ...prev };
                       unchecked.forEach(s => {
-                        next[s.id] = (next[s.id] || 0) + perItemDiff;
+                        // Only fill if no time has been set yet (don't overwrite existing)
+                        if (!next[s.id] || next[s.id] === 0) {
+                          next[s.id] = getAvgTime(s.name);
+                        }
                       });
                       return next;
                     });
-                    setLastActionTime(now);
                   }
+                  if (jobStartTime) setLastActionTime(now);
                 }
               }}>
                 {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
@@ -2539,6 +2573,16 @@ const ServiceChecklist = () => {
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>1 min</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 300000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>5 min</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                            const ms = 600000;
+                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                            setEditingDurationId(null);
+                                          }}>10 min</DropdownMenuItem>
                                           <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
                                             const ms = 900000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
