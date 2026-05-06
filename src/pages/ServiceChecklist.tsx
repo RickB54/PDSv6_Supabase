@@ -1019,30 +1019,36 @@ const ServiceChecklist = () => {
     const prevNamesChecked = new Map(checklistSteps.map(s => [s.name, s.checked]));
 
     // Build new steps
-    const pkg = servicePackages.find(p => p.id === selectedPackage) || (getCustomPackages().find((p: any) => p.id === selectedPackage) as any);
+    const pkg = servicePackages.find(p => p.id === selectedPackage) || 
+                (getCustomPackages().find((p: any) => p.id === selectedPackage) as any) ||
+                servicePackages.find(p => p.name === selectedPackage); // fallback to name for old drafts
     const globalOverrides = JSON.parse(localStorage.getItem('packageStepOverrides') || '{}');
     
+    // Build core preparation and final steps that always exist
+    const prep: ChecklistStep[] = [
+      { id: 'prep-inspect', name: 'Inspect vehicle (exterior & interior)', category: 'preparation', checked: false },
+      { id: 'prep-tools', name: 'Gather tools & chemicals', category: 'preparation', checked: false },
+      { id: 'prep-walkaround', name: 'Customer walkaround & expectations', category: 'preparation', checked: false },
+    ];
+    const final: ChecklistStep[] = [
+      { id: 'final-personal', name: 'Remove personal items & trash', category: 'final', checked: false },
+      { id: 'final-inspect', name: 'Final inspection & touch-ups', category: 'final', checked: false },
+      { id: 'final-walkaround', name: 'Final customer walkaround', category: 'final', checked: false },
+    ];
+
     let nextSteps: ChecklistStep[] = [];
     if (selectedPackage && globalOverrides[selectedPackage]) {
-      nextSteps = [...globalOverrides[selectedPackage], ...selectedAddOns.map(aid => {
+      // Overrides for this package
+      const addonSteps = selectedAddOns.map(aid => {
         const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
         return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
-      })];
+      });
+      nextSteps = [...prep, ...globalOverrides[selectedPackage], ...addonSteps, ...final];
     } else {
       let baseSteps: ChecklistStep[] = [];
       if (pkg && (pkg as any).steps) {
         baseSteps = (pkg as any).steps.map((s: any) => ({ id: s.id || s, name: s.name || s, category: (s.category || 'exterior'), checked: false }));
       }
-      const prep: ChecklistStep[] = [
-        { id: 'prep-inspect', name: 'Inspect vehicle (exterior & interior)', category: 'preparation', checked: false },
-        { id: 'prep-tools', name: 'Gather tools & chemicals', category: 'preparation', checked: false },
-        { id: 'prep-walkaround', name: 'Customer walkaround & expectations', category: 'preparation', checked: false },
-      ];
-      const final: ChecklistStep[] = [
-        { id: 'final-personal', name: 'Remove personal items & trash', category: 'final', checked: false },
-        { id: 'final-inspect', name: 'Final inspection & touch-ups', category: 'final', checked: false },
-        { id: 'final-walkaround', name: 'Final customer walkaround', category: 'final', checked: false },
-      ];
       const addonSteps = selectedAddOns.map(aid => {
         const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
         return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
@@ -1173,7 +1179,10 @@ const ServiceChecklist = () => {
 
     const currentCustomer = customers.find(c => c.id === selectedCustomer);
     const customerName = currentCustomer?.name || genericCustomerName || 'Generic Customer';
-    const packageName = servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package';
+    const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 
+                   getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 
+                   'Custom Package';
+    const packageName = pkgName;
 
     const state = {
       checklistId,
@@ -2679,7 +2688,7 @@ const ServiceChecklist = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                  className="h-8 w-8 text-zinc-400 active:text-purple-400 active:bg-purple-900/20 rounded-md shrink-0 border border-transparent border-zinc-800/30"
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
