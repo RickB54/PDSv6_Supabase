@@ -264,6 +264,7 @@ const ServiceChecklist = () => {
   const [discountExpanded, setDiscountExpanded] = useState(false);
   const [destinationExpanded, setDestinationExpanded] = useState(false);
   const [jobSetupExpanded, setJobSetupExpanded] = useState(true);
+  const [checklistExpanded, setChecklistExpanded] = useState(true);
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
@@ -1986,40 +1987,42 @@ const ServiceChecklist = () => {
               </Button>
             </div>
           )}
-          {/* Job Setup - Generic, no forced customer link */}
-          <Card className="p-3 sm:p-6 bg-gradient-card border-border overflow-hidden">
+          {/* Job Setup - Sticky header for mobile efficiency */}
+          <Card className={`bg-gradient-card border-border overflow-hidden sticky top-0 z-40 transition-all duration-300 ${!jobSetupExpanded ? 'p-2 shadow-xl shadow-black/50 border-white/20 bg-black/90 backdrop-blur-md' : 'p-3 sm:p-6 mb-4'}`}>
             <div 
-              className="flex items-center justify-between cursor-pointer group"
+              className={`flex items-center justify-between cursor-pointer group ${!jobSetupExpanded ? 'h-10' : ''}`}
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
             >
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-600/20 flex items-center justify-center">
-                  <Settings2 className="h-5 w-5 text-blue-500" />
+                <div className={`rounded-full bg-blue-600/20 flex items-center justify-center transition-all ${!jobSetupExpanded ? 'h-7 w-7' : 'h-10 w-10'}`}>
+                  <Settings2 className={`${!jobSetupExpanded ? 'h-3.5 w-3.5' : 'h-5 w-5'} text-blue-500`} />
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-white">Job Setup</h2>
-                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Customer, Vehicle & Services</p>
+                  <h2 className={`${!jobSetupExpanded ? 'text-sm' : 'text-xl md:text-2xl'} font-bold text-white transition-all`}>Job Setup</h2>
+                  {jobSetupExpanded && <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest animate-in fade-in">Customer, Vehicle & Services</p>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
-                      resetForm();
-                      toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
-                    }
-                  }}
-                  className="flex border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2 px-2 md:px-3"
-                  title="Reset Job Setup"
-                >
-                  <RotateCcw className="h-4 w-4" /> 
-                  <span className="hidden md:inline">Reset</span>
-                </Button>
+                {jobSetupExpanded && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm("Are you sure you want to RESET the entire form? This will wipe all customer, vehicle, and service data from the screen for a new entry.")) {
+                        resetForm();
+                        toast({ title: 'Form Reset', description: 'The screen has been cleared for a new entry.' });
+                      }
+                    }}
+                    className="flex border-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 gap-2 px-2 md:px-3 animate-in fade-in"
+                    title="Reset Job Setup"
+                  >
+                    <RotateCcw className="h-4 w-4" /> 
+                    <span className="hidden md:inline">Reset</span>
+                  </Button>
+                )}
                 <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
-                  {jobSetupExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-6 w-6 text-zinc-500" />}
+                  {jobSetupExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                 </div>
               </div>
             </div>
@@ -2330,17 +2333,22 @@ const ServiceChecklist = () => {
         )}
 
       <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
-        <div className="px-4 md:px-6 py-4 border-b border-white/10 space-y-4">
-          <div className="flex items-center justify-between gap-2 md:gap-4">
-            <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
-                <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
-                <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
-              </div>
+        <div 
+          className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group"
+          onClick={() => setChecklistExpanded(!checklistExpanded)}
+        >
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0 group-hover:bg-red-600/30 transition-colors">
+              <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
             </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
+                {checklistExpanded ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
+              </div>
+              <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
+            </div>
+          </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
               {getCurrentUser()?.role === 'admin' && (
@@ -2385,506 +2393,482 @@ const ServiceChecklist = () => {
                 <Save className="h-3.5 w-3.5 md:h-3 md:w-3" />
                 <span className="hidden md:inline text-[10px]">Archive</span>
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to clear this checklist? This will reset all Interior/Exterior progress steps, but will keep your Customer, Vehicle, and Job Setup info intact.")) {
-                    setChecklistSteps(prev => prev.map(s => ({ ...s, checked: false })));
-                    setChemRows([]);
-                    setMatRows([]);
-                    setToolRows([]);
-                    setJobStartTime(null);
-                    setItemDurations({});
-                    localStorage.removeItem('service_checklist_draft');
-                    toast({ title: 'Checklist Steps Cleared', description: 'Progress has been reset.' });
-                  }
-                }}
-                className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 md:border-transparent"
-                title="Clear Checklist"
-              >
-                <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
-              </Button>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-white/5">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="ghost" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none border border-white/5 hover:bg-white/5" onClick={() => {
-                const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
-                const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
-                setExpandedHelp(next);
-              }}>
-                {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
-              </Button>
-              <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
-                const now = Date.now();
-                const anyUnchecked = checklistSteps.some(s => !s.checked);
-                const targetState = anyUnchecked;
+        {checklistExpanded && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-white/5 px-6 pb-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button variant="ghost" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none border border-white/5 hover:bg-white/5" onClick={() => {
+                  const allExpanded = checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]);
+                  const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
+                  setExpandedHelp(next);
+                }}>
+                  {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
+                </Button>
+                <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
+                  const now = Date.now();
+                  const anyUnchecked = checklistSteps.some(s => !s.checked);
+                  const targetState = anyUnchecked;
 
-                // Industry-average times (ms) keyed by keywords in step name
-                // Based on professional auto detailing benchmarks
-                const AVG_TIMES: Array<{ keywords: string[]; ms: number }> = [
-                  { keywords: ['inspect', 'walkaround', 'expectation'], ms: 120000 },     // 2 min
-                  { keywords: ['gather', 'prep', 'setup', 'tools', 'chemicals'], ms: 180000 }, // 3 min
-                  { keywords: ['pre-rinse', 'rinse', 'foam'], ms: 300000 },               // 5 min
-                  { keywords: ['wheels', 'tires', 'wheel'], ms: 600000 },                 // 10 min
-                  { keywords: ['wash', 'soap', 'scrub', 'hand wash'], ms: 900000 },       // 15 min
-                  { keywords: ['dry', 'blow', 'towel'], ms: 480000 },                     // 8 min
-                  { keywords: ['clay', 'decontaminate', 'iron'], ms: 900000 },            // 15 min
-                  { keywords: ['polish', 'compound', 'machine'], ms: 1800000 },           // 30 min
-                  { keywords: ['wax', 'sealant', 'coating', 'ceramic'], ms: 1200000 },   // 20 min
-                  { keywords: ['glass', 'window', 'windshield'], ms: 480000 },            // 8 min
-                  { keywords: ['vacuum', 'vacuuming'], ms: 900000 },                      // 15 min
-                  { keywords: ['shampoo', 'steam', 'carpet', 'upholstery', 'fabric'], ms: 1200000 }, // 20 min
-                  { keywords: ['leather', 'condition'], ms: 600000 },                     // 10 min
-                  { keywords: ['dashboard', 'console', 'interior', 'panel', 'steering'], ms: 600000 }, // 10 min
-                  { keywords: ['door', 'jamb', 'sill'], ms: 300000 },                     // 5 min
-                  { keywords: ['engine', 'bay', 'hood'], ms: 900000 },                    // 15 min
-                  { keywords: ['trim', 'plastic', 'dressing'], ms: 300000 },              // 5 min
-                  { keywords: ['final', 'inspect', 'quality', 'check'], ms: 180000 },    // 3 min
-                  { keywords: ['exhaust', 'chrome', 'metal'], ms: 300000 },              // 5 min
-                  { keywords: ['headlight', 'light', 'restore'], ms: 600000 },           // 10 min
-                ];
+                  const AVG_TIMES: Array<{ keywords: string[]; ms: number }> = [
+                    { keywords: ['inspect', 'walkaround', 'expectation'], ms: 120000 },
+                    { keywords: ['gather', 'prep', 'setup', 'tools', 'chemicals'], ms: 180000 },
+                    { keywords: ['pre-rinse', 'rinse', 'foam'], ms: 300000 },
+                    { keywords: ['wheels', 'tires', 'wheel'], ms: 600000 },
+                    { keywords: ['wash', 'soap', 'scrub', 'hand wash'], ms: 900000 },
+                    { keywords: ['dry', 'blow', 'towel'], ms: 480000 },
+                    { keywords: ['clay', 'decontaminate', 'iron'], ms: 900000 },
+                    { keywords: ['polish', 'compound', 'machine'], ms: 1800000 },
+                    { keywords: ['wax', 'sealant', 'coating', 'ceramic'], ms: 1200000 },
+                    { keywords: ['glass', 'window', 'windshield'], ms: 480000 },
+                    { keywords: ['vacuum', 'vacuuming'], ms: 900000 },
+                    { keywords: ['shampoo', 'steam', 'carpet', 'upholstery', 'fabric'], ms: 1200000 },
+                    { keywords: ['leather', 'condition'], ms: 600000 },
+                    { keywords: ['dashboard', 'console', 'interior', 'panel', 'steering'], ms: 600000 },
+                    { keywords: ['door', 'jamb', 'sill'], ms: 300000 },
+                    { keywords: ['engine', 'bay', 'hood'], ms: 900000 },
+                    { keywords: ['trim', 'plastic', 'dressing'], ms: 300000 },
+                    { keywords: ['final', 'inspect', 'quality', 'check'], ms: 180000 },
+                    { keywords: ['exhaust', 'chrome', 'metal'], ms: 300000 },
+                    { keywords: ['headlight', 'light', 'restore'], ms: 600000 },
+                  ];
 
-                const getAvgTime = (stepName: string): number => {
-                  const lower = stepName.toLowerCase();
-                  for (const entry of AVG_TIMES) {
-                    if (entry.keywords.some(k => lower.includes(k))) return entry.ms;
-                  }
-                  return 300000; // default 5 min for anything unmatched
-                };
+                  const getAvgTime = (stepName: string): number => {
+                    const lower = stepName.toLowerCase();
+                    for (const entry of AVG_TIMES) {
+                      if (entry.keywords.some(k => lower.includes(k))) return entry.ms;
+                    }
+                    return 300000;
+                  };
 
-                setChecklistSteps(prev => prev.map(s => ({ ...s, checked: targetState })));
+                  setChecklistSteps(prev => prev.map(s => ({ ...s, checked: targetState })));
 
-                if (targetState) {
-                  // Auto-fill average times for items that were unchecked
-                  const unchecked = checklistSteps.filter(s => !s.checked);
-                  if (unchecked.length > 0) {
-                    setItemDurations(prev => {
-                      const next = { ...prev };
-                      unchecked.forEach(s => {
-                        // Only fill if no time has been set yet (don't overwrite existing)
-                        if (!next[s.id] || next[s.id] === 0) {
-                          next[s.id] = getAvgTime(s.name);
-                        }
+                  if (targetState) {
+                    const unchecked = checklistSteps.filter(s => !s.checked);
+                    if (unchecked.length > 0) {
+                      setItemDurations(prev => {
+                        const next = { ...prev };
+                        unchecked.forEach(s => {
+                          if (!next[s.id] || next[s.id] === 0) {
+                            next[s.id] = getAvgTime(s.name);
+                          }
+                        });
+                        return next;
                       });
-                      return next;
-                    });
+                    }
+                    if (jobStartTime) setLastActionTime(now);
                   }
-                  if (jobStartTime) setLastActionTime(now);
-                }
-              }}>
-                {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3 w-full sm:w-auto bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-              <div className="flex flex-col items-end">
-                <span className="text-[8px] text-zinc-500 uppercase font-black">Progress</span>
-                <span className="text-sm font-black text-white">{progressPercent}%</span>
+                }}>
+                  {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
+                </Button>
               </div>
-              <Progress value={progressPercent} className="h-2 w-20 md:w-32 bg-zinc-800" />
+
+              <div className="flex items-center gap-3 w-full sm:w-auto bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
+                <div className="flex flex-col items-end">
+                  <span className="text-[8px] text-zinc-500 uppercase font-black">Progress</span>
+                  <span className="text-sm font-black text-white">{progressPercent}%</span>
+                </div>
+                <Progress value={progressPercent} className="h-2 w-20 md:w-32 bg-zinc-800" />
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="p-3 md:p-6">
-          {selectedPackage && (
-            <div className="space-y-6 pr-2">
-              {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
-                <div key={section} className="space-y-3">
-                  <button
-                    type="button"
-                    className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
-                    onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                      <span className="group-hover:text-primary transition-colors truncate">
-                        {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
-                      </span>
-                      {section !== 'preparation' && jobStartTime && (
-                        <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-                          {formatDuration(
-                            checklistSteps
-                              .filter(s => s.category === section && s.checked)
-                              .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+            <div className="p-3 md:p-6">
+              {selectedPackage && (
+                <div className="space-y-6 pr-2">
+                  {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
+                    <div key={section} className="space-y-3">
+                      <button
+                        type="button"
+                        className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
+                        onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                          <span className="group-hover:text-primary transition-colors truncate">
+                            {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
+                          </span>
+                          {section !== 'preparation' && jobStartTime && (
+                            <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                              {formatDuration(
+                                checklistSteps
+                                  .filter(s => s.category === section && s.checked)
+                                  .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                              )}
+                            </span>
                           )}
-                        </span>
-                      )}
-                    </div>
-                    {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
-                  </button>
+                        </div>
+                        {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
+                      </button>
 
-{!collapsedSections[section] && (
-                    <div className="space-y-2">
-                      {checklistSteps.filter(s => s.category === section).map((step) => {
-                        const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
-                        return (
-                          <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg transition-colors">
-                            <div className="flex items-center justify-between py-2 gap-2">
-                              <label className="flex items-center gap-3 text-sm flex-1 py-1 group/item cursor-pointer min-w-0">
-                                <input
-                                  type="checkbox"
-                                  checked={step.checked}
-                                  onChange={(e) => handleToggleStep(step.id, e.target.checked)}
-                                  className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0 cursor-pointer"
-                                />
-                                <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                  {editingStepNameId === step.id ? (
-                                    <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-1">
-                                      <Input 
-                                        value={editStepNameText}
-                                        onChange={(e) => setEditStepNameText(e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="h-8 bg-black text-white border-blue-500/50 flex-1 text-sm"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') handleSaveStepName(step.id);
-                                          if (e.key === 'Escape') setEditingStepNameId(null);
-                                        }}
-                                      />
-                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); handleSaveStepName(step.id); }}>
-                                        <Check className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); setEditingStepNameId(null); }}>
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <span 
-                                      className={`whitespace-normal break-words flex-1 py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
-                                      onClick={(e) => {
-                                        if (isAdminEditMode) {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setEditingStepNameId(step.id);
-                                          setEditStepNameText(step.name);
-                                        }
-                                      }}
-                                    >
-                                      {step.name}
-                                      {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
-                                    </span>
-                                  )}
-                                </div>
-                              </label>
-                              
-                              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                                {(itemDurations[step.id] !== undefined || step.checked || editingDurationId === step.id) ? (
-                                  editingDurationId === step.id ? (
-                                    <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button size="sm" variant="outline" className="h-6 px-1.5 text-[10px] bg-black border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
-                                            Presets
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 30000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>30 sec</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 60000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>1 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 300000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>5 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 600000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>10 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 900000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>15 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 1200000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>20 mins</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
-                                            const ms = 1800000;
-                                            setItemDurations(prev => ({ ...prev, [step.id]: ms }));
-                                            setEditingDurationId(null);
-                                          }}>30 mins</DropdownMenuItem>
-                                          <DropdownMenuSeparator className="bg-zinc-800" />
-                                          <DropdownMenuItem className="text-xs font-bold text-blue-400 focus:text-blue-300">Custom (Below)</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-
-                                      <Input
-                                        value={editDurationValue}
-                                        onChange={(e) => setEditDurationValue(e.target.value)}
-                                        className="h-6 w-16 bg-black text-[10px] px-1 border-yellow-500/50 text-white font-mono"
-                                        placeholder="mm:ss"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') handleSaveItemDuration(step.id);
-                                          if (e.key === 'Escape') setEditingDurationId(null);
-                                        }}
-                                      />
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="h-6 w-6 p-0 text-green-500 hover:bg-green-500/10"
-                                        onClick={() => handleSaveItemDuration(step.id)}
-                                      >
-                                        <Check className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <span 
-                                      className={`text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300 ${getCurrentUser()?.role === 'admin' ? 'cursor-pointer hover:bg-yellow-300 hover:scale-105 transition-all' : ''}`}
-                                      onClick={() => {
-                                        if (getCurrentUser()?.role === 'admin') {
-                                          setEditingDurationId(step.id);
-                                          const totalSecs = Math.floor((itemDurations[step.id] || 0) / 1000);
-                                          const m = Math.floor(totalSecs / 60);
-                                          const s = totalSecs % 60;
-                                          setEditDurationValue(`${m}:${s.toString().padStart(2, '0')}`);
-                                        }
-                                      }}
-                                      title={getCurrentUser()?.role === 'admin' ? "Click to edit duration" : ""}
-                                    >
-                                      {formatDuration(itemDurations[step.id])}
-                                    </span>
-                                  )
-                                ) : null}
-
-                                {isAdminEditMode && !step.id.startsWith('addon-') && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full shrink-0"
-                                    onClick={() => handleDeleteStep(step.id)}
-                                    title="Remove Step"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-                                  }}
-                                >
-                                  {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
-                                </Button>
-
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-zinc-400 active:text-purple-400 active:bg-purple-900/20 rounded-md shrink-0 border border-transparent border-zinc-800/30"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleOpenChemicals(step.id, step.name);
-                                  }}
-                                  title="Chemical Reference"
-                                >
-                                  <FlaskConical className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {expandedHelp[step.id] && (
-                              <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
-                                <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
-                                  <div className="flex items-start gap-2">
-                                    <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                    <div className="flex flex-col gap-2 flex-1">
-                                      {editingStepId === step.id ? (
-                                        <div className="space-y-2 animate-in fade-in">
-                                          <Textarea 
-                                            value={editInstructionText}
-                                            onChange={(e) => setEditInstructionText(e.target.value)}
-                                            className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
-                                            placeholder="Enter custom process details..."
+                      {!collapsedSections[section] && (
+                        <div className="space-y-2">
+                          {checklistSteps.filter(s => s.category === section).map((step) => {
+                            const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
+                            return (
+                              <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg transition-colors">
+                                <div className="flex items-center justify-between py-2 gap-2">
+                                  <label className="flex items-center gap-3 text-sm flex-1 py-1 group/item cursor-pointer min-w-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={step.checked}
+                                      onChange={(e) => handleToggleStep(step.id, e.target.checked)}
+                                      className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0 cursor-pointer"
+                                    />
+                                    <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                      {editingStepNameId === step.id ? (
+                                        <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-1">
+                                          <Input 
+                                            value={editStepNameText}
+                                            onChange={(e) => setEditStepNameText(e.target.value)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-8 bg-black text-white border-blue-500/50 flex-1 text-sm"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') handleSaveStepName(step.id);
+                                              if (e.key === 'Escape') setEditingStepNameId(null);
+                                            }}
                                           />
-                                          <div className="flex gap-2">
-                                            <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
-                                              <Save className="h-3 w-3 mr-1" /> Save Process
-                                            </Button>
-                                            <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
-                                              Cancel
-                                            </Button>
-                                          </div>
+                                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-500 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); handleSaveStepName(step.id); }}>
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); setEditingStepNameId(null); }}>
+                                            <X className="h-4 w-4" />
+                                          </Button>
                                         </div>
                                       ) : (
-                                        <div className="leading-relaxed space-y-1">
-                                          {instructionText.split('. ').map((sentence, idx) => {
-                                            const parts = sentence.split(': ');
-                                            if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
-                                              return (
-                                                <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
-                                                  <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
-                                                  <span>{parts[1]}</span>
-                                                </div>
-                                              );
+                                        <span 
+                                          className={`whitespace-normal break-words flex-1 py-1 ${step.checked ? "text-muted-foreground line-through decoration-red-500/50" : "text-foreground font-medium"}`}
+                                          onClick={(e) => {
+                                            if (isAdminEditMode) {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              setEditingStepNameId(step.id);
+                                              setEditStepNameText(step.name);
                                             }
-                                            return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
-                                          })}
-                                          {getCurrentUser()?.role === 'admin' && (
-                                            <Button 
-                                              variant="ghost" 
-                                              size="sm" 
-                                              className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50 shrink-0"
-                                              onClick={() => {
-                                                setEditingStepId(step.id);
-                                                setEditInstructionText(instructionText);
-                                              }}
-                                            >
-                                              <FileText className="h-3 w-3" /> Edit Process
-                                            </Button>
-                                          )}
-                                        </div>
+                                          }}
+                                        >
+                                          {step.name}
+                                          {isAdminEditMode && <FileText className="inline h-3 w-3 ml-2 text-blue-500 opacity-50 group-hover/item:opacity-100 transition-opacity" />}
+                                        </span>
                                       )}
+                                    </div>
+                                  </label>
+                                  
+                                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                                    {(itemDurations[step.id] !== undefined || step.checked || editingDurationId === step.id) ? (
+                                      editingDurationId === step.id ? (
+                                        <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button size="sm" variant="outline" className="h-6 px-1.5 text-[10px] bg-black border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                                                Presets
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 30000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>30 sec</DropdownMenuItem>
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 60000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>1 min</DropdownMenuItem>
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 300000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>5 min</DropdownMenuItem>
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 600000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>10 min</DropdownMenuItem>
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 900000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>15 min</DropdownMenuItem>
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 1200000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>20 mins</DropdownMenuItem>
+                                              <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
+                                                const ms = 1800000;
+                                                setItemDurations(prev => ({ ...prev, [step.id]: ms }));
+                                                setEditingDurationId(null);
+                                              }}>30 mins</DropdownMenuItem>
+                                              <DropdownMenuSeparator className="bg-zinc-800" />
+                                              <DropdownMenuItem className="text-xs font-bold text-blue-400 focus:text-blue-300">Custom (Below)</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
 
-                                      {/* ─── Per-Step Chemical Selector ─── */}
-                                      <div className="mt-3 pt-3 border-t border-zinc-800/60">
-                                        <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                          <span>🧪</span> Chemicals for this step
-                                        </p>
-                                        {chemicalsList.length === 0 ? (
-                                          <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
-                                        ) : (
-                                          <div className="flex flex-wrap gap-1.5">
-                                            {chemicalsList.map((chem: any) => {
-                                              const isSelected = (step.stepChemicals || []).includes(chem.id);
-                                              return (
-                                                <button
-                                                  key={chem.id}
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setChecklistSteps(prev => prev.map(s => {
-                                                      if (s.id !== step.id) return s;
-                                                      const current = s.stepChemicals || [];
-                                                      const next = isSelected
-                                                        ? current.filter(id => id !== chem.id)
-                                                        : [...current, chem.id];
-                                                      return { ...s, stepChemicals: next };
-                                                    }));
-                                                  }}
-                                                  title={chem.dilution ? `Dilution: ${chem.dilution}` : chem.name}
-                                                  className={`inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border transition-all cursor-pointer ${
-                                                    isSelected
-                                                      ? 'bg-primary/20 border-primary text-primary'
-                                                      : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                                                  }`}
-                                                >
-                                                  <span className="font-semibold leading-tight">{chem.name}</span>
-                                                  {chem.dilution && (
-                                                    <span className="text-[9px] opacity-70 leading-tight">Dilution: {chem.dilution}</span>
-                                                  )}
-                                                </button>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
+                                          <Input
+                                            value={editDurationValue}
+                                            onChange={(e) => setEditDurationValue(e.target.value)}
+                                            className="h-6 w-16 bg-black text-[10px] px-1 border-yellow-500/50 text-white font-mono"
+                                            placeholder="mm:ss"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') handleSaveItemDuration(step.id);
+                                              if (e.key === 'Escape') setEditingDurationId(null);
+                                            }}
+                                          />
+                                          <Button 
+                                            size="sm" 
+                                            variant="ghost" 
+                                            className="h-6 w-6 p-0 text-green-500 hover:bg-green-500/10"
+                                            onClick={() => handleSaveItemDuration(step.id)}
+                                          >
+                                            <Check className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <span 
+                                          className={`text-[10px] md:text-[11px] text-black font-black font-mono shrink-0 whitespace-nowrap bg-yellow-400 px-2 py-0.5 rounded shadow-sm border border-yellow-600 animate-in fade-in zoom-in-95 duration-300 ${getCurrentUser()?.role === 'admin' ? 'cursor-pointer hover:bg-yellow-300 hover:scale-105 transition-all' : ''}`}
+                                          onClick={() => {
+                                            if (getCurrentUser()?.role === 'admin') {
+                                              setEditingDurationId(step.id);
+                                              const totalSecs = Math.floor((itemDurations[step.id] || 0) / 1000);
+                                              const m = Math.floor(totalSecs / 60);
+                                              const s = totalSecs % 60;
+                                              setEditDurationValue(`${m}:${s.toString().padStart(2, '0')}`);
+                                            }
+                                          }}
+                                          title={getCurrentUser()?.role === 'admin' ? "Click to edit duration" : ""}
+                                        >
+                                          {formatDuration(itemDurations[step.id])}
+                                        </span>
+                                      )
+                                    ) : null}
 
-                                        {/* ─── Inline Add New Chemical ─── */}
-                                        {(() => {
-                                          const addKey = `adding_chem_${step.id}`;
-                                          const isAdding = !!(window as any)[addKey];
-                                          return isAdding ? (
-                                            <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-                                              <Input
-                                                id={`new-chem-name-${step.id}`}
-                                                placeholder="Chemical name"
-                                                className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-32 px-2"
-                                                autoFocus
+                                    {isAdminEditMode && !step.id.startsWith('addon-') && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full shrink-0"
+                                        onClick={() => handleDeleteStep(step.id)}
+                                        title="Remove Step"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full shrink-0"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setExpandedHelp(prev => ({ ...prev, [step.id]: !prev[step.id] }));
+                                      }}
+                                    >
+                                      {expandedHelp[step.id] ? <ChevronUp className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
+                                    </Button>
+
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-zinc-400 active:text-purple-400 active:bg-purple-900/20 rounded-md shrink-0 border border-transparent border-zinc-800/30"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleOpenChemicals(step.id, step.name);
+                                      }}
+                                      title="Chemical Reference"
+                                    >
+                                      <FlaskConical className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {expandedHelp[step.id] && (
+                                  <div className="pb-3 pl-8 sm:pl-10 text-sm text-zinc-300 animate-in slide-in-from-top-2 fade-in duration-200">
+                                    <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
+                                      <div className="flex items-start gap-2">
+                                        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                        <div className="flex flex-col gap-2 flex-1">
+                                          {editingStepId === step.id ? (
+                                            <div className="space-y-2 animate-in fade-in">
+                                              <Textarea 
+                                                value={editInstructionText}
+                                                onChange={(e) => setEditInstructionText(e.target.value)}
+                                                className="min-h-[150px] bg-black text-white border-primary/50 text-sm leading-relaxed"
+                                                placeholder="Enter custom process details..."
                                               />
-                                              <Input
-                                                id={`new-chem-dilution-${step.id}`}
-                                                placeholder="Dilution (e.g. 4:1)"
-                                                className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-28 px-2"
-                                              />
-                                              <button
-                                                type="button"
-                                                className="h-6 px-2 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
-                                                onClick={async () => {
-                                                  const nameEl = document.getElementById(`new-chem-name-${step.id}`) as HTMLInputElement;
-                                                  const dilEl = document.getElementById(`new-chem-dilution-${step.id}`) as HTMLInputElement;
-                                                  const name = nameEl?.value?.trim();
-                                                  if (!name) return;
-                                                  const newChem = { id: `chem-${Date.now()}`, name, dilution: dilEl?.value?.trim() || '' };
-                                                  try {
-                                                    await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(newChem) });
-                                                  } catch { /* save best-effort */ }
-                                                  setChemicalsList((prev: any[]) => [...prev, newChem]);
-                                                  setChecklistSteps(prev => prev.map(s => {
-                                                    if (s.id !== step.id) return s;
-                                                    return { ...s, stepChemicals: [...(s.stepChemicals || []), newChem.id] };
-                                                  }));
-                                                  (window as any)[addKey] = false;
-                                                  // Force re-render by toggling a dummy state — use existing mechanism
-                                                  setExpandedHelp(prev => ({ ...prev }));
-                                                }}
-                                              >Save</button>
-                                              <button
-                                                type="button"
-                                                className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white rounded border border-zinc-700 transition-colors"
-                                                onClick={() => { (window as any)[addKey] = false; setExpandedHelp(prev => ({ ...prev })); }}
-                                              >Cancel</button>
+                                              <div className="flex gap-2">
+                                                <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => handleSaveInstruction(step.id, step.name)}>
+                                                  <Save className="h-3 w-3 mr-1" /> Save Process
+                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={() => setEditingStepId(null)}>
+                                                  Cancel
+                                                </Button>
+                                              </div>
                                             </div>
                                           ) : (
-                                            <button
-                                              type="button"
-                                              className="mt-2 inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-primary transition-colors cursor-pointer"
-                                              onClick={() => { (window as any)[addKey] = true; setExpandedHelp(prev => ({ ...prev })); }}
-                                            >
-                                              <Plus className="h-3 w-3" /> Add new chemical
-                                            </button>
-                                          );
-                                        })()}
+                                            <div className="leading-relaxed space-y-1">
+                                              {instructionText.split('. ').map((sentence, idx) => {
+                                                const parts = sentence.split(': ');
+                                                if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
+                                                  return (
+                                                    <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
+                                                      <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
+                                                      <span>{parts[1]}</span>
+                                                    </div>
+                                                  );
+                                                }
+                                                return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
+                                              })}
+                                              {getCurrentUser()?.role === 'admin' && (
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50 shrink-0"
+                                                  onClick={() => {
+                                                    setEditingStepId(step.id);
+                                                    setEditInstructionText(instructionText);
+                                                  }}
+                                                >
+                                                  <FileText className="h-3 w-3" /> Edit Process
+                                                </Button>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          <div className="mt-3 pt-3 border-t border-zinc-800/60">
+                                            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                              <span>🧪</span> Chemicals for this step
+                                            </p>
+                                            {chemicalsList.length === 0 ? (
+                                              <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
+                                            ) : (
+                                              <div className="flex flex-wrap gap-1.5">
+                                                {chemicalsList.map((chem: any) => {
+                                                  const isSelected = (step.stepChemicals || []).includes(chem.id);
+                                                  return (
+                                                    <button
+                                                      key={chem.id}
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setChecklistSteps(prev => prev.map(s => {
+                                                          if (s.id !== step.id) return s;
+                                                          const current = s.stepChemicals || [];
+                                                          const next = isSelected
+                                                            ? current.filter(id => id !== chem.id)
+                                                            : [...current, chem.id];
+                                                          return { ...s, stepChemicals: next };
+                                                        }));
+                                                      }}
+                                                      title={chem.dilution ? `Dilution: ${chem.dilution}` : chem.name}
+                                                      className={`inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border transition-all cursor-pointer ${
+                                                        isSelected
+                                                          ? 'bg-primary/20 border-primary text-primary'
+                                                          : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                                                      }`}
+                                                    >
+                                                      <span className="font-semibold leading-tight">{chem.name}</span>
+                                                      {chem.dilution && (
+                                                        <span className="text-[9px] opacity-70 leading-tight">Dilution: {chem.dilution}</span>
+                                                      )}
+                                                    </button>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+
+                                            {(() => {
+                                              const addKey = `adding_chem_${step.id}`;
+                                              const isAdding = !!(window as any)[addKey];
+                                              return isAdding ? (
+                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                                                  <Input
+                                                    id={`new-chem-name-${step.id}`}
+                                                    placeholder="Chemical name"
+                                                    className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-32 px-2"
+                                                    autoFocus
+                                                  />
+                                                  <Input
+                                                    id={`new-chem-dilution-${step.id}`}
+                                                    placeholder="Dilution (e.g. 4:1)"
+                                                    className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-28 px-2"
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    className="h-6 px-2 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
+                                                    onClick={async () => {
+                                                      const nameEl = document.getElementById(`new-chem-name-${step.id}`) as HTMLInputElement;
+                                                      const dilEl = document.getElementById(`new-chem-dilution-${step.id}`) as HTMLInputElement;
+                                                      const name = nameEl?.value?.trim();
+                                                      if (!name) return;
+                                                      const newChem = { id: `chem-${Date.now()}`, name, dilution: dilEl?.value?.trim() || '' };
+                                                      try {
+                                                        await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(newChem) });
+                                                      } catch { /* save best-effort */ }
+                                                      setChemicalsList((prev: any[]) => [...prev, newChem]);
+                                                      setChecklistSteps(prev => prev.map(s => {
+                                                        if (s.id !== step.id) return s;
+                                                        return { ...s, stepChemicals: [...(s.stepChemicals || []), newChem.id] };
+                                                      }));
+                                                      (window as any)[addKey] = false;
+                                                      setExpandedHelp(prev => ({ ...prev }));
+                                                    }}
+                                                  >Save</button>
+                                                  <button
+                                                    type="button"
+                                                    className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white rounded border border-zinc-700 transition-colors"
+                                                    onClick={() => { (window as any)[addKey] = false; setExpandedHelp(prev => ({ ...prev })); }}
+                                                  >Cancel</button>
+                                                </div>
+                                              ) : (
+                                                <button
+                                                  type="button"
+                                                  className="mt-2 inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-primary transition-colors cursor-pointer"
+                                                  onClick={() => { (window as any)[addKey] = true; setExpandedHelp(prev => ({ ...prev })); }}
+                                                >
+                                                  <Plus className="h-3 w-3" /> Add new chemical
+                                                </button>
+                                              );
+                                            })()}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {isAdminEditMode && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleAddStep(section)}
-                          className="w-full justify-start text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 border border-dashed border-zinc-800 mt-2 h-9 group"
-                        >
-                          <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
-                          Add {section === 'final' ? 'Inspection' : section} Step
-                        </Button>
+                            );
+                          })}
+                          {isAdminEditMode && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleAddStep(section)}
+                              className="w-full justify-start text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 border border-dashed border-zinc-800 mt-2 h-9 group"
+                            >
+                              <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
+                              Add {section === 'final' ? 'Inspection' : section} Step
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
+              {(!selectedPackage || !vehicleType || vehicleType === 'choose') && (
+                <div className="flex flex-col items-center justify-center py-12 text-zinc-500 animate-in fade-in duration-500">
+                  <ClipboardList className="h-16 w-16 mb-4 opacity-20" />
+                  <p className="text-lg font-medium">Select a package and vehicle type above</p>
+                  <p className="text-sm">to load the Prime Standard checklist for this job.</p>
+                </div>
+              )}
             </div>
-          )}
-          {(!selectedPackage || !vehicleType || vehicleType === 'choose') && (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500 animate-in fade-in duration-500">
-              <ClipboardList className="h-16 w-16 mb-4 opacity-20" />
-              <p className="text-lg font-medium">Select a package and vehicle type above</p>
-              <p className="text-sm">to load the Prime Standard checklist for this job.</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </Card>
 
       {/* Materials Used */}
