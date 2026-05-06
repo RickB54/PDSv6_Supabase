@@ -1312,59 +1312,22 @@ const ServiceChecklist = () => {
       return mockId;
     }
 
-    // --- FROM HERE DOWN: REAL CUSTOMER PERSISTENCE ---
+    // --- FROM HERE DOWN: LOCAL CHECKLIST TRACKING ONLY ---
+    // Note: The Service Checklist does NOT create booking records.
+    // Bookings are managed exclusively via the Bookings page or the public BookNow page.
     
-    // 1. Save to Supabase Bookings (Job History)
-    const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package';
-    const jobDetails = {
-      checklist: checklistSteps.map(s => ({ n: s.name, c: s.checked })),
-      chemicals: chemRows,
-      materials: matRows,
-      stats: { progress: progressPercent, time: elapsedTime }
-    };
+    const localId = checklistId || `checklist-${Date.now()}`;
+    setChecklistId(localId);
 
-    const bookingPayload = {
-      id: checklistId || undefined,
-      title: pkgName,
-      customerId: targetCustomerId,
-      date: new Date().toISOString(),
-      status: status,
-      vehicle_info: { type: vehicleType, other: vehicleType === 'Other' ? vehicleTypeOther : undefined },
-      notes: `Job Details: ${JSON.stringify(jobDetails)} \n\n User Notes: ${notes}`,
-      price: calculateTotal(),
-      addons: selectedAddOns
-    };
+    toast({ title: 'Progress Saved', description: 'Checklist progress saved.' });
 
     try {
-      const savedBooking = await upsertSupabaseBooking(bookingPayload);
-      if (!savedBooking || !savedBooking.id) {
-        throw new Error("Database returned no record ID.");
-      }
-      
-      const newId = savedBooking.id;
-      setChecklistId(newId);
-      
-      toast({ title: 'Progress Saved', description: 'Checklist saved to Job History.' });
-      
-      try {
-        await postChecklistMaterials(newId, false);
-      } catch (err) {
-        console.warn("Materials Sync Delayed:", err);
-      }
-      
-      return newId;
-    } catch (err: any) {
-      console.error("Failed to save Supabase Booking", err);
-      const errorMsg = err.message || 'The checklist could not be saved to your job history.';
-      toast({ 
-        title: 'Database Save Failed', 
-        description: errorMsg, 
-        variant: 'destructive' 
-      });
-      // Rethrow if we are in 'completed' mode so finishJob knows it failed
-      if (status === 'completed') throw err;
-      return undefined;
+      await postChecklistMaterials(localId, false);
+    } catch (err) {
+      console.warn("Materials Sync Delayed:", err);
     }
+
+    return localId;
   };
 
   // Link job to customer

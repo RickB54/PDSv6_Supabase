@@ -3108,18 +3108,21 @@ export default function BookingsPage() {
                                                 className="h-6 text-[10px] gap-1"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  const booking = items.find(i => i.id === event.id);
-                                                  if (!booking) return;
+                                                  // Fall back to the event object if the booking isn't in the local store
+                                                  const booking = items.find(i => i.id === event.id) || event as any;
                                                   const params = new URLSearchParams();
                                                   if (customer.name) params.set('customerName', customer.name);
-                                                  if (booking.title) {
-                                                    const svc = allServices.find(s => s.name === booking.title);
+                                                  const title = booking.title || (booking as any).service_package || '';
+                                                  if (title) {
+                                                    const svc = allServices.find(s => s.name === title);
                                                     if (svc) params.set('package', svc.id);
                                                   }
-                                                  if (booking.vehicle) params.set('vehicleType', booking.vehicle);
-                                                  if (booking.addons?.length) {
-                                                    const aids = booking.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
-                                                    params.set('addons', aids.join(','));
+                                                  const vehicleType = booking.vehicle || (booking as any).vehicleType || '';
+                                                  if (vehicleType) params.set('vehicleType', vehicleType);
+                                                  const addons = booking.addons || (booking as any).add_ons || [];
+                                                  if (Array.isArray(addons) && addons.length) {
+                                                    const aids = addons.map((name: string) => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+                                                    if (aids.length) params.set('addons', aids.join(','));
                                                   }
                                                   navigate(`/service-checklist?${params.toString()}`);
                                                 }}
@@ -3150,6 +3153,22 @@ export default function BookingsPage() {
                                               >
                                                 <Copy className="h-2.5 w-2.5" /> Duplicate
                                               </Button>
+                                              {isAdmin && (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="h-6 text-[10px] gap-1 ml-1 text-red-500 hover:text-red-400 hover:bg-red-950/20"
+                                                  onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`⚠️ Delete this history record for "${customer.name}"?\n\nThis action cannot be undone.`)) {
+                                                      await remove(event.id);
+                                                      toast.success("History record deleted");
+                                                    }
+                                                  }}
+                                                >
+                                                  <Trash2 className="h-2.5 w-2.5" /> Delete
+                                                </Button>
+                                              )}
                                             </>
                                           ) : (
                                             <Button
