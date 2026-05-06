@@ -2678,8 +2678,8 @@ const ServiceChecklist = () => {
 
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  className="h-8 px-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
+                                  size="icon"
+                                  className="h-8 w-8 text-zinc-400 hover:text-purple-400 hover:bg-purple-900/20 rounded-md shrink-0 border border-transparent hover:border-purple-500/30"
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
@@ -2687,8 +2687,7 @@ const ServiceChecklist = () => {
                                   }}
                                   title="Chemical Reference"
                                 >
-                                  <FlaskConical className="h-4 w-4 mr-1.5" />
-                                  <span className="text-xs font-bold">Chem</span>
+                                  <FlaskConical className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
