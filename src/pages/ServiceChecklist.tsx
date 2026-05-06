@@ -1008,10 +1008,6 @@ const ServiceChecklist = () => {
     const selected = [selectedPackage, ...selectedAddOns].filter(Boolean);
     setSelectedServices(selected);
 
-    // Skip regeneration if we are in the middle of restoring a draft
-    // The restore logic will directly apply the saved steps
-    if (isRestoringDraft.current) return;
-    
     // Auto-reset timer if everything is unchecked and we're switching
     if (checklistSteps.length > 0 && checklistSteps.every(s => !s.checked) && jobStartTime) {
       setJobStartTime(null);
@@ -1096,9 +1092,6 @@ const ServiceChecklist = () => {
         const state = JSON.parse(saved);
         console.log("Restoring checklist draft:", state);
 
-        // Signal the regeneration effect to skip rebuilding steps
-        isRestoringDraft.current = true;
-
         if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
         if (state.selectedPackage) setSelectedPackage(state.selectedPackage);
         if (state.vehicleType) setVehicleType(state.vehicleType);
@@ -1124,18 +1117,15 @@ const ServiceChecklist = () => {
         if (state.odometerStart) setOdometerStart(state.odometerStart);
         if (state.odometerEnd) setOdometerEnd(state.odometerEnd);
 
-        // Directly apply saved steps — no regeneration needed
-        if (state.checklistSteps && state.checklistSteps.length > 0) {
-          setChecklistSteps(state.checklistSteps);
+        // Store saved steps so the merge effect can apply checked states
+        // after the regeneration effect builds the full step list (with exterior/interior)
+        if (state.checklistSteps) {
+          window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
         }
-
-        // Release the restoration lock after React processes the state updates
-        setTimeout(() => { isRestoringDraft.current = false; }, 300);
 
         toast({ title: "Draft Restored", description: `Resumed job for ${state.customerName || 'Generic Customer'}.` });
       } catch (e) {
         console.error("Failed to restore draft", e);
-        isRestoringDraft.current = false;
       }
     }
   }, []); // Run once on mount
@@ -1147,29 +1137,34 @@ const ServiceChecklist = () => {
   }, [checklistSteps]);
 
   // 2. Re-apply steps checked status after regeneration
+  // Matches by ID first, then falls back to step name — handles old drafts
+  // that may not have exterior/interior steps (they're regenerated fresh each time)
   useEffect(() => {
     const pending = window.sessionStorage.getItem('pending_draft_steps');
     if (pending && checklistSteps.length > 0) {
       try {
         const savedSteps = JSON.parse(pending) as ChecklistStep[];
-        // Only apply if they look compatible (e.g. at least one matching ID)
-        const hasMatch = savedSteps.some(s => checklistSteps.some(curr => curr.id === s.id));
+        if (!savedSteps || savedSteps.length === 0) return;
 
-        if (hasMatch) {
-          const merged = checklistSteps.map(current => {
-            const saved = savedSteps.find(s => s.id === current.id);
-            return saved ? { ...current, checked: saved.checked } : current;
-          });
-          // Check if actually different to avoid loop
-          const isDifferent = JSON.stringify(merged) !== JSON.stringify(checklistSteps);
-          if (isDifferent) {
-            setChecklistSteps(merged);
-            window.sessionStorage.removeItem('pending_draft_steps'); // Clear trigger
-          }
+        const merged = checklistSteps.map(current => {
+          // Priority 1: match by ID
+          const byId = savedSteps.find(s => s.id === current.id);
+          if (byId) return { ...current, checked: byId.checked, stepChemicals: byId.stepChemicals || current.stepChemicals };
+          // Priority 2: match by name (catches exterior/interior steps from package)
+          const byName = savedSteps.find(s => s.name.trim().toLowerCase() === current.name.trim().toLowerCase());
+          if (byName) return { ...current, checked: byName.checked, stepChemicals: byName.stepChemicals || current.stepChemicals };
+          return current;
+        });
+
+        const isDifferent = JSON.stringify(merged) !== JSON.stringify(checklistSteps);
+        if (isDifferent) {
+          setChecklistSteps(merged);
+          window.sessionStorage.removeItem('pending_draft_steps');
         }
       } catch { }
     }
   }, [checklistSteps]);
+
 
   // 3. Save State on Change
   useEffect(() => {
