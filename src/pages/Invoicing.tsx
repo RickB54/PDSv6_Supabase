@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -16,6 +16,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import supabase from "@/lib/supabase";
 import {
   Select,
   SelectContent,
@@ -41,6 +51,7 @@ import { generateInvoiceNumber } from "@/lib/utils";
 import logo from "@/assets/pds-final-logo.png";
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as LibVehicleType } from "@/lib/services";
 import { getCustomPackages } from "@/lib/servicesMeta";
+import qrCode from "@/assets/review-qr.png";
 
 interface Invoice {
   id?: string;
@@ -79,6 +90,14 @@ const Invoicing = () => {
   const [serviceCategory, setServiceCategory] = useState<"package" | "addon" | "custom">("custom");
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
   const [editServices, setEditServices] = useState<{ name: string; price: number }[]>([]);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailInvoiceId, setEmailInvoiceId] = useState<string | null>(null);
+  const [emailRecipient, setEmailRecipient] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -104,16 +123,58 @@ const Invoicing = () => {
       return;
     }
     const [invs, custs] = await Promise.all([getSupabaseInvoices(), getSupabaseCustomers()]);
-    // Ensure all invoices have numbers and safe data
-    const invoicesWithNumbers = (invs as Invoice[] || []).map((inv, idx) => ({
-      ...inv,
-      invoiceNumber: inv.invoiceNumber || (100 + idx),
-      total: inv.total || 0,
-      paymentStatus: inv.paymentStatus || 'unpaid',
-      date: inv.date || new Date().toLocaleDateString()
-    }));
-    setInvoices(invoicesWithNumbers);
-    setCustomers(custs as Customer[] || []);
+    // 1. Process and format invoices
+    const processedInvoices = (invs as Invoice[] || []).map((inv, idx) => {
+      let finalNumber = inv.invoiceNumber || (100 + idx);
+      const numStr = String(finalNumber);
+      
+      // If it's an "old" number (starts with 17) and we have a date, re-format it to look "new"
+      // New format: YMMDDHHmm (9 digits, starts with 6 for 2026)
+      if (numStr.startsWith('17') || numStr.length > 9) {
+        try {
+          const d = new Date(inv.createdAt || inv.date);
+          if (!isNaN(d.getTime())) {
+            const y = String(d.getFullYear()).slice(-1);
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const h = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            finalNumber = parseInt(`${y}${m}${day}${h}${min}`);
+          }
+        } catch (e) {
+          console.warn("Failed to re-format old invoice number", e);
+        }
+      }
+
+      return {
+        ...inv,
+        invoiceNumber: finalNumber,
+        total: inv.total || 0,
+        paymentStatus: inv.paymentStatus || 'unpaid',
+        date: inv.date || new Date().toLocaleDateString()
+      };
+    });
+
+    // 2. Deduplicate and Filter Archived
+    const activeCustomers = (custs as Customer[] || []).filter(c => !c.is_archived);
+    const activeCustomerIds = new Set(activeCustomers.map(c => c.id));
+
+    const seen = new Map<string, Invoice>();
+    processedInvoices.forEach(inv => {
+      // Skip if customer is archived
+      if (!activeCustomerIds.has(inv.customerId)) return;
+
+      const day = new Date(inv.createdAt || inv.date).toDateString();
+      const key = `${inv.customerId}_${inv.total.toFixed(2)}_${day}`;
+      const existing = seen.get(key);
+      
+      if (!existing || (inv.id && existing.id && inv.id > existing.id)) {
+        seen.set(key, inv);
+      }
+    });
+
+    setInvoices(Array.from(seen.values()));
+    setCustomers(activeCustomers);
   };
 
   const addService = () => {
@@ -132,6 +193,24 @@ const Invoicing = () => {
   const createInvoice = async () => {
     if (!selectedCustomer || services.length === 0) {
       toast({ title: "Error", description: "Please select a customer and add services", variant: "destructive" });
+      return;
+    }
+
+    if (isCreating) return;
+    setIsCreating(true);
+
+    // Simple Duplicate Check: Check if an invoice with same customer and total was created today
+    const potentialDuplicate = invoices.find(inv => {
+      const invDateStr = inv.createdAt || inv.date;
+      if (!invDateStr) return false;
+      const invDate = new Date(invDateStr);
+      return inv.customerId === selectedCustomer && 
+             Math.abs(inv.total - calculateTotal()) < 0.01 &&
+             invDate.toDateString() === new Date().toDateString();
+    });
+
+    if (potentialDuplicate && !window.confirm("A similar invoice for this customer already exists for today. Create anyway?")) {
+      setIsCreating(false);
       return;
     }
 
@@ -195,6 +274,8 @@ const Invoicing = () => {
         description: err.message || "Unknown error occurred",
         variant: "destructive"
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -395,11 +476,223 @@ const Invoicing = () => {
     else window.open(doc.output('bloburl'), '_blank');
   };
 
+  const openEmailModal = (invoiceId: string) => {
+    const selectedInv = invoices.find(inv => inv.id === invoiceId);
+    const customer = customers.find(c => c.id === selectedInv?.customerId);
+    const firstName = customer?.name?.split(' ')[0] || 'Customer';
+
+    const draft = `Hi ${firstName}!
+
+Thank you for trusting Prime Auto Detail with your vehicle. It was a pleasure working on your car, and I truly appreciate your business.
+
+Attached is your paid invoice/receipt for your records.
+
+If you were happy with the service, I would greatly appreciate it if you could take a moment to leave a review. Your feedback not only helps my business grow, but also helps others feel confident choosing Prime Auto Detail.
+
+You can leave a review here: https://g.page/r/CUaXyAfwdcv1EBM/review
+
+Thank you again for your support, and I look forward to working with you again in the future. 
+
+Best regards,
+Rick Berube
+Prime Auto Detail
+Precision. Protection. Perfection.`;
+
+    setEmailSubject(`Invoice #${selectedInv?.invoiceNumber} from Prime Auto Detail`);
+    setEmailRecipient(customer?.email || "");
+    setEmailBody(draft);
+    setEmailInvoiceId(invoiceId);
+    setIsEmailModalOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailInvoiceId) return;
+    setIsSendingEmail(true);
+
+    try {
+      const selectedInv = invoices.find(inv => inv.id === emailInvoiceId);
+      const toEmail = emailRecipient.trim();
+
+      if (!toEmail) {
+        throw new Error("Please provide a recipient email address.");
+      }
+
+      // Convert body to simple HTML (replace newlines with <br>)
+      const htmlBody = emailBody.replace(/\n/g, '<br/>');
+
+      const { data, error } = await supabase.functions.invoke('send-booking-email', {
+        body: {
+          to: toEmail,
+          subject: emailSubject,
+          html: `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+              <div style="background: #000; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+                <h1 style="color: #fff; margin: 0; font-size: 24px;">Prime Auto Detail</h1>
+              </div>
+              <div style="padding: 30px; border: 1px solid #eee; border-top: none; border-radius: 0 0 10px 10px; background: #fff;">
+                ${htmlBody}
+              </div>
+              <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #888;">
+                &copy; ${new Date().getFullYear()} Prime Auto Detail. All rights reserved.
+              </div>
+            </div>
+          `,
+          customerName: customer?.name || 'Customer',
+          price: selectedInv?.total || 0,
+          date: selectedInv?.date || new Date().toLocaleDateString(),
+          service: 'Detailing Service'
+        }
+      });
+
+      if (error) throw error;
+      
+      toast({ title: "Email Sent", description: `Invoice successfully emailed to ${toEmail}` });
+      setIsEmailModalOpen(false);
+    } catch (err: any) {
+      console.error("Email send failed:", err);
+      toast({ 
+        title: "Failed to send email", 
+        description: err.message || "Unknown error occurred", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Invoicing" />
+      <div className="flex items-center gap-3">
+        <PageHeader title="Invoicing" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="mt-6 -ml-4 text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
+          onClick={() => setIsHelpModalOpen(true)}
+        >
+          <HelpCircle className="h-5 w-5" />
+        </Button>
+      </div>
 
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
+        {/* Help Modal */}
+        <Dialog open={isHelpModalOpen} onOpenChange={setIsHelpModalOpen}>
+          <DialogContent className="bg-zinc-950 border-zinc-800 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-emerald-500" />
+                Invoice Numbering System
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Understanding your professional invoice numbering logic.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4 text-sm text-zinc-300 leading-relaxed">
+              <p>
+                To maintain professional records, all invoices use a chronological 9-digit numbering system: 
+                <span className="text-emerald-400 font-mono ml-1">YMMDDHHmm</span>
+              </p>
+              
+              <div className="bg-zinc-900/50 p-4 rounded-lg border border-zinc-800 space-y-2 font-mono text-xs">
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Y</span>
+                  <span>Year Digit (e.g., 6 for 2026)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">MM</span>
+                  <span>Month (01-12)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">DD</span>
+                  <span>Day (01-31)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">HH</span>
+                  <span>Hour (00-23)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">mm</span>
+                  <span>Minute (00-59)</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded bg-emerald-500/5 border border-emerald-500/10 text-emerald-500/90 text-xs italic">
+                Example: May 6, 2026, at 6:49 PM becomes <span className="font-bold underline">605061849</span>
+              </div>
+
+              <p>
+                This system ensures every invoice number is unique, sortable, and provides instant context on when the service occurred without needing to open the file.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+        {/* Email Invoice Modal */}
+        <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+          <DialogContent className="bg-zinc-950 border-zinc-800 max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <Mail className="h-5 w-5 text-emerald-500" />
+                Send Invoice Email
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Personalize the message before sending it to the customer.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Recipient Email</Label>
+                <Input 
+                  value={emailRecipient}
+                  onChange={e => setEmailRecipient(e.target.value)}
+                  placeholder="customer@example.com"
+                  className="bg-zinc-900 border-zinc-800 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Subject</Label>
+                <Input 
+                  value={emailSubject}
+                  onChange={e => setEmailSubject(e.target.value)}
+                  className="bg-zinc-900 border-zinc-800 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Message Body</Label>
+                <Textarea 
+                  value={emailBody}
+                  onChange={e => setEmailBody(e.target.value)}
+                  className="bg-zinc-900 border-zinc-800 text-white min-h-[200px] text-sm leading-relaxed"
+                />
+              </div>
+
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4">
+              <Button variant="ghost" onClick={() => setEmailModalOpen(false)} className="text-zinc-400 hover:text-white">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSendEmail} 
+                disabled={isSendingEmail}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold min-w-[120px]"
+              >
+                {isSendingEmail ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Email
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats Card */}
         <Card className="p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 border-zinc-700 shadow-lg relative overflow-hidden">
@@ -613,8 +906,12 @@ const Invoicing = () => {
                     <div className="text-center py-4 text-zinc-600 italic text-sm">No items added yet</div>
                   )}
 
-                  <Button onClick={createInvoice} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={services.length === 0 || !selectedCustomer}>
-                    Generate Invoice
+                  <Button onClick={createInvoice} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={services.length === 0 || !selectedCustomer || isCreating}>
+                    {isCreating ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</>
+                    ) : (
+                      "Generate Invoice"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -795,27 +1092,37 @@ const Invoicing = () => {
                       </Button>
                     </div>
                     <div className="flex gap-2 pt-4 border-t border-zinc-800">
+                      <Button size="sm" variant="outline" className="flex-1 border-zinc-700 text-zinc-400" onClick={() => openEmailModal(selectedInvoice)}>
+                        <Mail className="h-4 w-4 mr-2" /> Email Invoice
+                      </Button>
                       <Button size="sm" variant="ghost" className="flex-1 text-zinc-500" onClick={() => setIsEditingInvoice(false)}>Cancel</Button>
                       <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={saveEditedInvoice}>Save Changes</Button>
                     </div>
                   </div>
                 ) : (
-                  <>
+                  <div className="space-y-4">
                     {selectedInvoice.services.map((s, i) => (
-                      <div key={i} className="flex justify-between items-center text-sm">
+                      <div key={i} className="flex justify-between items-center text-sm py-1">
                         <span className="text-zinc-300">{s.name}</span>
-                        <span className="font-mono text-zinc-200">${s.price.toFixed(2)}</span>
+                        <span className="font-mono text-zinc-400">${s.price.toFixed(2)}</span>
                       </div>
                     ))}
-                    <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
-                      <span className="text-lg font-bold text-white">Total</span>
-                      <span className="text-2xl font-bold text-emerald-400">
-                        ${selectedInvoice.total.toFixed(2)}
-                      </span>
+                    <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
+                      <span className="font-bold text-zinc-400">Total Amount</span>
+                      <span className="font-bold text-2xl text-white">${selectedInvoice.total.toFixed(2)}</span>
                     </div>
-                  </>
+
+                    <div className="flex gap-2 pt-6">
+                      <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => generatePDF(selectedInvoice, true)}>
+                        <Save className="h-4 w-4 mr-2" /> Download PDF
+                      </Button>
+                      <Button variant="outline" className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => openEmailModal(selectedInvoice.id)}>
+                        <Mail className="h-4 w-4 mr-2" /> Email Invoice
+                      </Button>
+                    </div>
+                  </div>
                 )}
-                {(selectedInvoice.paidAmount || 0) >= 0 && ( /* Always show if editing possibility exists, usually > 0 but we might want to edit 0 too. But let's keep logic simple for now: if paid > 0 OR editing */
+                {(selectedInvoice.paidAmount || 0) >= 0 && (
                   <div className="flex justify-between items-center text-sm text-zinc-400 h-9">
                     <span>Amount Paid</span>
                     {isEditingPaid ? (

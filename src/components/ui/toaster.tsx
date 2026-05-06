@@ -1,8 +1,11 @@
 import { useToast } from "@/hooks/use-toast";
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast";
+import { useLocation } from "react-router-dom";
 
 export function Toaster() {
   const { toasts } = useToast();
+  const location = useLocation();
+  const isChecklistPage = location.pathname === "/service-checklist";
 
   return (
     <ToastProvider>

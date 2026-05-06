@@ -189,6 +189,7 @@ const ServiceChecklist = () => {
   const [customerSearchResults, setCustomerSearchResults] = useState<CustomerType[]>([]);
   const [vehicleTypeOther, setVehicleTypeOther] = useState<string>("");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
+  const [hasCreatedInvoice, setHasCreatedInvoice] = useState(false);
 
   // Mileage State
   const [odometerStart, setOdometerStart] = useState<string>("");
@@ -1758,6 +1759,7 @@ const ServiceChecklist = () => {
 
       // DO NOT clear draft here - let the final "Complete" or "Close" button decide when to clear.
 
+      setHasCreatedInvoice(true);
       toast({ title: "Invoice Created", description: "Invoice saved to Supabase and PDF downloaded." });
 
     } catch (e: any) {
@@ -1814,27 +1816,32 @@ const ServiceChecklist = () => {
       const customer = customers.find(c => c.id === selectedCustomer);
       const customerName = customer?.name || genericCustomerName || 'Generic Customer';
       
-      // AUTO-CREATE INVOICE
-      try {
-        step = 'create_invoice';
-        const invoiceData = {
-          invoiceNumber: generateInvoiceNumber(),
-          customerId: selectedCustomer || idToUse, // Fallback to booking ID if no customer
-          customerName: customerName,
-          vehicle: `${vYear} ${vMake} ${vModel}`.trim() || "Unknown Vehicle",
-          services: buildSelectedItemsForSummary(),
-          total: calculateTotal(),
-          date: new Date().toLocaleDateString(),
-          createdAt: new Date().toISOString(),
-          paymentStatus: 'unpaid',
-          paidAmount: 0
-        };
-        await upsertSupabaseInvoice(invoiceData);
-        console.log("✅ Auto-invoice created for job:", idToUse);
-      } catch (invErr) {
-        console.error("Auto-invoice creation failed:", invErr);
-        // Don't fail the whole job finish if just invoice creation fails, 
-        // but alert the user if possible.
+      // AUTO-CREATE INVOICE (ONLY IF NOT ALREADY CREATED)
+      if (!hasCreatedInvoice) {
+        try {
+          step = 'create_invoice';
+          const invoiceData = {
+            invoiceNumber: generateInvoiceNumber(),
+            customerId: selectedCustomer || idToUse, // Fallback to booking ID if no customer
+            customerName: customerName,
+            vehicle: `${vYear} ${vMake} ${vModel}`.trim() || "Unknown Vehicle",
+            services: buildSelectedItemsForSummary(),
+            total: calculateTotal(),
+            date: new Date().toLocaleDateString(),
+            createdAt: new Date().toISOString(),
+            paymentStatus: 'unpaid',
+            paidAmount: 0
+          };
+          await upsertSupabaseInvoice(invoiceData);
+          setHasCreatedInvoice(true);
+          console.log("✅ Auto-invoice created for job:", idToUse);
+        } catch (invErr) {
+          console.error("Auto-invoice creation failed:", invErr);
+          // Don't fail the whole job finish if just invoice creation fails, 
+          // but alert the user if possible.
+        }
+      } else {
+        console.log("ℹ️ Invoice already created manually, skipping auto-invoice.");
       }
 
       pushAdminAlert('job_completed', `Job completed for ${customerName}`, 'system', { checklistId: idToUse, customerId: selectedCustomer });
@@ -2021,20 +2028,24 @@ const ServiceChecklist = () => {
             </div>
           )}
           {/* Job Setup - Sticky header for mobile efficiency - Offset below fixed PageHeader (64px) */}
-          <Card className={`bg-gradient-card border-border overflow-hidden p-3 sm:p-6 mb-4 transition-all duration-300`}>
+          <Card className={`bg-gradient-card border-border overflow-visible mb-4 transition-all duration-300`}>
             <div 
-              className="flex items-center justify-between cursor-pointer group"
+              style={{ top: 'var(--header-total-height, 64px)' }}
+              className="sticky z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
             >
-              <div className="flex items-center gap-3">
-                <div className="rounded-full h-10 w-10 bg-blue-600/20 flex items-center justify-center transition-all">
-                  <Settings2 className="h-5 w-5 text-blue-500" />
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                <div className="rounded-full h-8 w-8 md:h-10 md:w-10 bg-blue-600/20 flex items-center justify-center shrink-0 group-hover:bg-blue-600/30 transition-all">
+                  <Settings2 className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
                 </div>
-                <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-white transition-all">
-                    Job Setup
-                  </h2>
-                  {jobSetupExpanded && <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest animate-in fade-in">Customer, Vehicle & Services</p>}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg md:text-2xl font-bold text-white truncate transition-all">
+                      Job Setup
+                    </h2>
+                    {jobSetupExpanded ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
+                  </div>
+                  {jobSetupExpanded && <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest animate-in fade-in truncate">Customer, Vehicle & Services</p>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -2405,7 +2416,8 @@ const ServiceChecklist = () => {
 
       <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
         <div 
-          className="sticky top-[64px] z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/90 backdrop-blur-md transition-all rounded-t-xl"
+          style={{ top: 'var(--header-total-height, 64px)' }}
+          className="sticky z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
           onClick={() => setChecklistExpanded(!checklistExpanded)}
         >
           <div className="flex items-center gap-2 md:gap-3 min-w-0">

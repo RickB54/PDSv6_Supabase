@@ -76,6 +76,11 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
 
   return (
     <>
+      <style>{`
+        :root {
+          --header-total-height: ${64 + bannerOffset}px;
+        }
+      `}</style>
       {hasBanner && (
         <div 
           style={{ top: isDemoMode ? '40px' : '0' }}
@@ -232,8 +237,8 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
           </div>
         </div>
       </header>
-      {/* Spacer to prevent fixed header from cutting off content */}
       {/* Dynamic spacer to prevent fixed header/banner from cutting off content */}
+      <div style={{ height: `${64 + bannerOffset}px` }} aria-hidden="true" />
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </>
   );
