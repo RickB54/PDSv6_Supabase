@@ -66,6 +66,11 @@ interface Invoice {
   paymentStatus?: "unpaid" | "partially-paid" | "paid";
   paidAmount?: number;
   paidDate?: string;
+  discount?: {
+    type: "fixed" | "percent";
+    value: number;
+    amount: number;
+  };
 }
 
 const Invoicing = () => {
@@ -98,10 +103,11 @@ const Invoicing = () => {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     loadData();
-  }, [isDemoMode]);
+  }, [isDemoMode, showArchived]);
 
   const toBuiltInVehKey = (key: string): LibVehicleType => {
     const k = key?.toLowerCase();
@@ -156,13 +162,15 @@ const Invoicing = () => {
     });
 
     // 2. Deduplicate and Filter Archived
-    const activeCustomers = (custs as Customer[] || []).filter(c => !c.is_archived);
-    const activeCustomerIds = new Set(activeCustomers.map(c => c.id));
+    const allCustomers = (custs as Customer[] || []);
+    const activeCustomers = allCustomers.filter(c => !c.is_archived);
+    const displayedCustomers = showArchived ? allCustomers : activeCustomers;
+    const displayedCustomerIds = new Set(displayedCustomers.map(c => c.id));
 
     const seen = new Map<string, Invoice>();
     processedInvoices.forEach(inv => {
-      // Skip if customer is archived
-      if (!activeCustomerIds.has(inv.customerId)) return;
+      // Skip if customer is archived and we're not showing archived
+      if (!displayedCustomerIds.has(inv.customerId)) return;
 
       const day = new Date(inv.createdAt || inv.date).toDateString();
       const key = `${inv.customerId}_${inv.total.toFixed(2)}_${day}`;
@@ -174,7 +182,7 @@ const Invoicing = () => {
     });
 
     setInvoices(Array.from(seen.values()));
-    setCustomers(activeCustomers);
+    setCustomers(displayedCustomers);
   };
 
   const addService = () => {
@@ -455,6 +463,20 @@ const Invoicing = () => {
     y += 10;
 
     doc.setFontSize(14);
+    
+    if (invoice.discount && invoice.discount.amount > 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      const discountLabel = invoice.discount.type === 'percent' 
+        ? `Discount (${invoice.discount.value}%):` 
+        : `Discount (Fixed):`;
+      doc.text(discountLabel, 140, y);
+      doc.text(`-$${invoice.discount.amount.toFixed(2)}`, 180, y, { align: "right" });
+      y += 8;
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+    }
+
     doc.text("Total:", 140, y);
     doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
 
@@ -537,7 +559,7 @@ Precision. Protection. Perfection.`;
               </div>
             </div>
           `,
-          customerName: customer?.name || 'Customer',
+          customerName: customers.find(c => c.id === selectedInv?.customerId)?.name || 'Customer',
           price: selectedInv?.total || 0,
           date: selectedInv?.date || new Date().toLocaleDateString(),
           service: 'Detailing Service'
@@ -562,15 +584,15 @@ Precision. Protection. Perfection.`;
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="flex items-center gap-3">
-        <PageHeader title="Invoicing" />
+      <div className="flex items-center gap-2 mb-6 pt-6 px-4 max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold text-white tracking-tight">Invoicing & Payments</h1>
         <Button 
           variant="ghost" 
           size="icon" 
-          className="mt-6 -ml-4 text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
+          className="text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all rounded-full h-8 w-8"
           onClick={() => setIsHelpModalOpen(true)}
         >
-          <HelpCircle className="h-5 w-5" />
+          <HelpCircle className="h-4 w-4" />
         </Button>
       </div>
 
@@ -742,6 +764,16 @@ Precision. Protection. Perfection.`;
                 {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2 bg-zinc-950/50 px-3 py-1.5 rounded-md border border-zinc-800/50">
+              <input 
+                id="show-archived-main"
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-zinc-800 bg-zinc-950 accent-emerald-500 cursor-pointer"
+              />
+              <Label htmlFor="show-archived-main" className="text-[10px] uppercase font-bold text-zinc-500 cursor-pointer tracking-wider">Show Archived</Label>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto justify-end">

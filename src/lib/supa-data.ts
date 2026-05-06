@@ -253,11 +253,10 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             sampleData: crmData?.slice(0, 3).map(c => ({ id: c.id, name: c.full_name, type: c.type }))
         });
 
-        // 2. Fetch Auth Users (App Users) with role = customer
+        // 2. Fetch Auth Users (App Users) - includes all potential clients
         const { data: authData, error: authError } = await supabase
             .from('app_users')
-            .select('*')
-            .eq('role', 'customer');
+            .select('*');
 
         if (authError) {
             console.error('⚠️ getSupabaseCustomers auth fetch error:', authError);
@@ -1153,6 +1152,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             vehicle: i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : 'Unknown',
             services: i.services || [],
             total: i.total,
+            discount: i.discount, // Include discount object
             date: i.date,
             paymentStatus: i.status || 'unpaid',
             createdAt: i.created_at,
@@ -1181,6 +1181,7 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
         // services is JSONB
         services: invoice.services,
         total: invoice.total,
+        discount: invoice.discount, // JSONB or text
         date: invoice.date,
         status: invoice.paymentStatus,
         paid_amount: invoice.paidAmount,
