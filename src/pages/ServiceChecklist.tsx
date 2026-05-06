@@ -1932,15 +1932,15 @@ const ServiceChecklist = () => {
 
       <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8">
         {/* Premium Header Block */}
-        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-8 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">Service Checklist</h1>
+        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-6 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight truncate">Service Checklist</h1>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                  className="h-7 w-7 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 shrink-0"
                   onClick={() => {
                     window.dispatchEvent(new CustomEvent('open-help', { 
                       detail: { topicId: 'service-checklist', role: getCurrentUser()?.role } 
@@ -1948,34 +1948,42 @@ const ServiceChecklist = () => {
                   }}
                   title="SOP & Procedure Guide"
                 >
-                  <HelpCircle className="h-5 w-5" />
+                  <HelpCircle className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-zinc-400 text-sm md:text-base max-w-xl">Track job progress, manage materials, and generate estimates.</p>
+              <p className="text-zinc-500 text-[10px] md:text-xs max-w-xl hidden sm:block">Quality control & estimation workflow</p>
             </div>
-            <div className="flex flex-col md:flex-row items-center gap-3">
-              {/* Decision Buttons moved to header */}
-              <div className="flex flex-wrap items-center gap-1.5">
+
+            <div className="flex items-center gap-4 shrink-0">
+              {/* Progress Indicator moved to far right top row */}
+              <div className="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-full border border-white/5 shadow-inner">
+                <div className="text-right flex items-center gap-2">
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-tighter font-black">Progress</span>
+                  <span className="text-lg font-bold text-white leading-none">{progressPercent}%</span>
+                </div>
+              </div>
+              
+              <div className="hidden md:flex items-center gap-1.5">
                 <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-7 text-[10px] px-2 font-bold">
                   Tips
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-7 text-[10px] px-2">
                   Prep
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-7 text-[10px] px-2">
-                  Decision
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/chemical-training')} className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 h-7 text-[10px] px-2 font-bold">
-                  Training
-                </Button>
-              </div>
-              <div className="flex flex-row items-center gap-4 bg-black/40 p-2 md:p-3 rounded-xl border border-white/5">
-                <div className="text-right">
-                  <div className="text-lg md:text-2xl font-bold text-white mb-0.5">{progressPercent}%</div>
-                  <div className="text-[8px] md:text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Completion</div>
-                </div>
               </div>
             </div>
+          </div>
+          {/* Mobile Buttons Row - hidden to save space if needed, or keep minimal */}
+          <div className="flex md:hidden items-center gap-1.5 mt-3 pt-3 border-t border-white/5">
+            <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-6 text-[9px] px-2 font-bold flex-1">
+              Tips
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setPrepSummaryOpen(true)} className="bg-blue-700 text-white hover:bg-blue-800 h-6 text-[9px] px-2 flex-1">
+              Prep
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setDecisionModalOpen(true)} className="bg-teal-700 text-white hover:bg-teal-800 h-6 text-[9px] px-2 flex-1">
+              Decision
+            </Button>
           </div>
           {/* Decorative background element */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
@@ -2054,7 +2062,8 @@ const ServiceChecklist = () => {
             </div>
 
             {jobSetupExpanded && (
-              <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
+              <>
+                <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
             {/* Customer selection restored — includes Generic option */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
@@ -2155,6 +2164,7 @@ const ServiceChecklist = () => {
                 <Label className="text-[10px] uppercase text-zinc-500">Model</Label>
                 <Input placeholder="" value={vModel} onChange={(e) => setVModel(e.target.value)} className="h-10 bg-black text-sm border-zinc-800" />
               </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -2252,8 +2262,42 @@ const ServiceChecklist = () => {
                   ))}
                 </select>
               </div>
-            </div>
-            </div>
+              </div>
+
+              {/* Job Notes & Professional AI Assistant — MOVED INSIDE JOB SETUP */}
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-indigo-400" />
+                    <h2 className="text-xl font-bold text-white">Job Notes & Communication</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {prevNotes && (
+                      <Button variant="ghost" size="sm" onClick={handleRevertNotes} className="h-8 text-[10px] text-zinc-500 hover:text-white gap-1 uppercase font-black">
+                        <RotateCcw className="h-3 w-3" /> Revert
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleModifyWithAI} 
+                      disabled={aiProcessing || !notes}
+                      className="h-8 text-xs bg-indigo-600/10 border-indigo-500/50 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all rounded-lg"
+                    >
+                      {aiProcessing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                      Modify Using AI
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">These notes will appear on the customer's PDF estimate and invoice.</p>
+                <Textarea
+                  placeholder="e.g. Surface scratches on hood were deeper than expected. Recommended a 2-step correction for best results."
+                  className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-200 focus:border-indigo-500/50"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+            </>
           )}
         </Card>
 
@@ -3216,39 +3260,7 @@ const ServiceChecklist = () => {
 
           {/* Complete & Save controls moved to bottom Actions */}
 
-          {/* Job Notes & Professional AI Assistant */}
-          <Card className="p-6 bg-gradient-card border-border space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-indigo-400" />
-                <h2 className="text-xl font-bold text-white">Job Notes & Communication</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                {prevNotes && (
-                  <Button variant="ghost" size="sm" onClick={handleRevertNotes} className="h-8 text-[10px] text-zinc-500 hover:text-white gap-1 uppercase font-black">
-                    <RotateCcw className="h-3 w-3" /> Revert
-                  </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleModifyWithAI} 
-                  disabled={aiProcessing || !notes}
-                  className="h-8 text-xs bg-indigo-600/10 border-indigo-500/50 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all rounded-lg"
-                >
-                  {aiProcessing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                  Modify Using AI
-                </Button>
-              </div>
-            </div>
-            <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">These notes will appear on the customer's PDF estimate and invoice.</p>
-            <Textarea
-              placeholder="e.g. Surface scratches on hood were deeper than expected. Recommended a 2-step correction for best results."
-              className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-200 focus:border-indigo-500/50"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </Card>
+
 
           {/* Discount & Total */}
           <Card className="p-6 bg-gradient-card border-border">
@@ -3541,14 +3553,14 @@ const ServiceChecklist = () => {
 
       {/* Floating Timer Bar - Always Onscreen (Relocated and refactored for perfect centering on mobile) */}
       {selectedPackage && (
-        <div className="fixed bottom-8 left-0 right-0 z-[100] flex justify-center px-4 pointer-events-none">
+        <div className="fixed bottom-4 left-0 right-0 z-[50] flex justify-center px-4 pointer-events-none">
           <div className="w-full max-w-md pointer-events-auto animate-in slide-in-from-bottom-10 duration-500">
-            <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-3 sm:px-6 py-3 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+            <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-full px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)]">
               <div className="flex items-center gap-1.5 sm:gap-3 border-r border-white/10 pr-3 sm:pr-6">
                 <div className={`h-2 w-2 sm:h-3 sm:w-3 rounded-full ${isTimerRunning ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
                 <div className="flex flex-col">
                   <span className="text-[7px] sm:text-[10px] text-zinc-500 uppercase tracking-tight sm:tracking-widest font-bold">Time</span>
-                  <span className="text-lg sm:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
+                  <span className="text-base sm:text-2xl font-mono font-bold text-white tracking-tighter leading-none">{elapsedTime}</span>
                 </div>
               </div>
 
@@ -3557,9 +3569,9 @@ const ServiceChecklist = () => {
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <Button 
                       onClick={handleStartTimer} 
-                      className="bg-green-600 hover:bg-green-500 text-white rounded-full h-10 px-4 sm:px-6 font-bold shadow-lg shadow-green-900/20 text-xs sm:text-base"
+                      className="bg-green-600 hover:bg-green-500 text-white rounded-full h-9 px-4 sm:px-6 font-bold shadow-lg shadow-green-900/20 text-xs sm:text-base"
                     >
-                      <Play className="h-4 w-4 mr-1 sm:mr-2" /> 
+                      <Play className="h-3.5 w-3.5 mr-1 sm:mr-2" /> 
                       {totalElapsedMs > 0 ? "Resume" : "Start"}
                     </Button>
                     
@@ -3567,7 +3579,7 @@ const ServiceChecklist = () => {
                       <Button 
                         onClick={handleResetTimer}
                         variant="ghost"
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full h-10 w-10 p-0"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full h-9 w-9 p-0"
                         title="Reset Timer"
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -3587,13 +3599,24 @@ const ServiceChecklist = () => {
               <div className="flex flex-col border-l border-white/10 pl-2">
                 <span className="text-[7px] text-zinc-500 uppercase font-bold">Progress</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-white leading-none">{progressPercent}%</span>
+                  <span className="text-xs sm:text-lg font-bold text-white">{progressPercent}%</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Scroll to Top Button - Icon Only */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="fixed bottom-20 right-4 z-[60] h-10 w-10 rounded-full bg-black/80 backdrop-blur-md border-white/10 text-white shadow-2xl hover:bg-white/10"
+        title="Scroll to Top"
+      >
+        <ArrowUp className="h-5 w-5" />
+      </Button>
 
       {/* Floating Global Job Timer - Always visible in top right corner (except on payment screen) */}
       {jobStartTime && !showTipScreen && (
