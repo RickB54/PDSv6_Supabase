@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Save, Beaker, AlertTriangle, Info, BookOpen, ExternalLink, ShieldAlert, Sparkles, Check, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Save, Beaker, AlertTriangle, Info, BookOpen, ExternalLink, ShieldAlert, Sparkles, Check, X, HelpCircle } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { Chemical } from "@/types/chemicals";
 import { StepChemicalMapping, getStepChemicalMappings, upsertStepChemicalMapping, deleteStepChemicalMapping, getChemicals } from "@/lib/chemicals";
@@ -35,34 +36,56 @@ const EditableMappingCard = ({ mapping, allChemicals, onSave, onDelete }: Editab
     const { toast } = useToast();
     const [localMap, setLocalMap] = useState(mapping);
     const [isDirty, setIsDirty] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const isTemp = mapping.id.startsWith('temp_');
     const isSuggestion = mapping.id.startsWith('suggest_');
+    const isNew = isTemp || isSuggestion;
 
     const handleChange = (field: keyof StepChemicalMapping, value: any) => {
         setLocalMap(prev => ({ ...prev, [field]: value }));
         setIsDirty(true);
     };
 
-    const save = async () => {
-        if (!localMap.chemical_id) return toast({ title: "Select a chemical", variant: "destructive" });
-        await onSave(localMap);
+    const save = async (mapToSave = localMap) => {
+        if (!mapToSave.chemical_id) return toast({ title: "Select a chemical first", variant: "destructive" });
+        setIsSaving(true);
+        await onSave(mapToSave);
         setIsDirty(false);
+        setIsSaving(false);
+    };
+
+    const handleChemicalSelect = (val: string) => {
+        const updated = { ...localMap, chemical_id: val };
+        setLocalMap(updated);
+        setIsDirty(true);
+        // Auto-save immediately on new/temp cards when a chemical is picked
+        if (isNew) {
+            save(updated);
+        }
     };
 
     return (
-        <div className={`border rounded-lg p-4 mb-4 space-y-4 ${isSuggestion ? 'bg-purple-900/10 border-purple-500/50' : 'bg-zinc-900/50 border-zinc-800'}`}>
+        <div className={`border rounded-lg p-4 mb-4 space-y-4 ${isSuggestion ? 'bg-purple-900/10 border-purple-500/50' : isTemp ? 'bg-zinc-900 border-zinc-600 border-dashed' : 'bg-zinc-900/50 border-zinc-800'}`}>
+            {/* Helper hint for new cards */}
+            {isNew && !localMap.chemical_id && (
+                <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5">
+                    <span>👇</span> Pick a chemical from the list below — it saves automatically
+                </div>
+            )}
+
             <div className="flex justify-between items-start">
                 <div className="flex-1 mr-4">
                     <Label className="text-xs text-zinc-500 uppercase flex items-center gap-2">
                         Chemical {isSuggestion && <Badge className="bg-purple-600 text-white text-[10px] h-4 px-1">Suggestion</Badge>}
+                        {isTemp && !localMap.chemical_id && <Badge className="bg-amber-600 text-white text-[10px] h-4 px-1">New — select below</Badge>}
                     </Label>
                     <Select
                         value={localMap.chemical_id}
-                        onValueChange={(val) => handleChange('chemical_id', val)}
-                        disabled={!isTemp && !isSuggestion}
+                        onValueChange={handleChemicalSelect}
+                        disabled={!isNew}
                     >
-                        <SelectTrigger className="bg-black border-zinc-700 mt-1">
-                            <SelectValue placeholder="Select Chemical..." />
+                        <SelectTrigger className={`mt-1 ${!localMap.chemical_id ? 'bg-black border-amber-600/50' : 'bg-black border-zinc-700'}`}>
+                            <SelectValue placeholder="⬇ Select Chemical to save..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px] bg-zinc-900 border-zinc-800 text-white">
                             {allChemicals.map(c => (
@@ -75,7 +98,7 @@ const EditableMappingCard = ({ mapping, allChemicals, onSave, onDelete }: Editab
                         </SelectContent>
                     </Select>
                 </div>
-                <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-900/20" onClick={() => onDelete(mapping.id, isTemp || isSuggestion)}>
+                <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-900/20" onClick={() => onDelete(mapping.id, isNew)}>
                     <Trash2 className="w-4 h-4" />
                 </Button>
             </div>
@@ -92,7 +115,6 @@ const EditableMappingCard = ({ mapping, allChemicals, onSave, onDelete }: Editab
                 </div>
                 <div>
                     <Label className="text-xs text-zinc-500 uppercase">Tool Override</Label>
-
                     <Select
                         value={localMap.tool_override || ''}
                         onValueChange={(val) => handleChange('tool_override', val)}
@@ -138,15 +160,22 @@ const EditableMappingCard = ({ mapping, allChemicals, onSave, onDelete }: Editab
                     />
                     <Label htmlFor={`prep-${mapping.id}`} className="text-xs text-zinc-400">Include in Prep Summary</Label>
                 </div>
-                {isDirty && (
-                    <Button size="sm" onClick={save} className="bg-green-600 hover:bg-green-700 text-white h-7">
-                        <Save className="w-3 h-3 mr-2" /> Save Changes
+                {/* Always show Save button if dirty (for existing saved cards after editing) */}
+                {isDirty && !isNew && (
+                    <Button size="sm" onClick={() => save()} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white h-7">
+                        {isSaving ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Save className="w-3 h-3 mr-2" />} Save Changes
+                    </Button>
+                )}
+                {isDirty && isNew && localMap.chemical_id && (
+                    <Button size="sm" onClick={() => save()} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white h-7">
+                        {isSaving ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Save className="w-3 h-3 mr-2" />} Save Changes
                     </Button>
                 )}
             </div>
         </div>
     );
 };
+
 
 export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmin }: ChemicalStepModalProps) {
     const { toast } = useToast();
@@ -392,8 +421,28 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                                 </Button>
                             )}
                         </DialogTitle>
-                        <DialogDescription>
-                            Chemicals for: <span className="font-bold text-white">{stepName}</span>
+                        <DialogDescription className="flex items-center justify-between">
+                            <span>Chemicals for: <span className="font-bold text-white">{stepName}</span></span>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-white">
+                                            <HelpCircle className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 max-w-xs p-3">
+                                        <div className="space-y-2">
+                                            <p className="font-bold text-white text-sm">How to add chemicals:</p>
+                                            <ul className="list-disc pl-4 space-y-1 text-xs">
+                                                <li>Click <span className="text-white">+ Add Chemical</span> to create a new slot.</li>
+                                                <li>Select a chemical from the dropdown — it <span className="text-green-400 font-bold">saves automatically</span>.</li>
+                                                <li>Use <span className="text-purple-400 font-bold">Auto-Suggest</span> to find chemicals based on the step name.</li>
+                                                <li>You can override dilution, tools, and application notes for this specific step.</li>
+                                            </ul>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </DialogDescription>
                     </DialogHeader>
 
