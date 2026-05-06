@@ -2571,44 +2571,44 @@ const ServiceChecklist = () => {
                                             Presets
                                           </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800">
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                        <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 30000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>30 sec</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 60000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>1 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 300000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>5 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 600000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>10 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 900000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>15 min</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 1200000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>20 mins</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800" onClick={() => {
+                                          <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white" onClick={() => {
                                             const ms = 1800000;
                                             setItemDurations(prev => ({ ...prev, [step.id]: ms }));
                                             setEditingDurationId(null);
                                           }}>30 mins</DropdownMenuItem>
                                           <DropdownMenuSeparator className="bg-zinc-800" />
-                                          <DropdownMenuItem className="text-xs font-bold text-blue-400">Custom (Below)</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs font-bold text-blue-400 focus:text-blue-300">Custom (Below)</DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
 
