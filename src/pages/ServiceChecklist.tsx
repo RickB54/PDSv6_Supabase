@@ -2562,7 +2562,7 @@ const ServiceChecklist = () => {
                               </label>
                               
                               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                                {itemDurations[step.id] ? (
+                                {(itemDurations[step.id] !== undefined || step.checked || editingDurationId === step.id) ? (
                                   editingDurationId === step.id ? (
                                     <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
                                       <DropdownMenu>
