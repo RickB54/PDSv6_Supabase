@@ -442,13 +442,14 @@ const Invoicing = () => {
     doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 38, { align: "center" });
 
     doc.setFontSize(10);
-    doc.text(`Date: ${invoice.date}`, 20, 50);
-    doc.text(`Customer: ${invoice.customerName}`, 20, 56);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 62);
+    doc.text(`Service Date: ${invoice.date}`, 20, 50);
+    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 56);
+    doc.text(`Customer: ${invoice.customerName}`, 20, 62);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 68);
 
     let y = 80;
     doc.setFontSize(12);
-    doc.text("Services:", 20, y);
+    doc.text("Services Provided:", 20, y);
     y += 8;
 
     doc.setFontSize(10);
@@ -477,7 +478,7 @@ const Invoicing = () => {
       doc.setTextColor(0, 0, 0);
     }
 
-    doc.text("Total:", 140, y);
+    doc.text("Total Amount:", 140, y);
     doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
 
     if (invoice.paidAmount && invoice.paidAmount > 0) {
@@ -487,12 +488,31 @@ const Invoicing = () => {
       doc.text(`Paid: $${invoice.paidAmount.toFixed(2)}`, 180, y, { align: "right" });
 
       const balance = invoice.total - invoice.paidAmount;
-      if (balance > 0) {
+      if (balance <= 0) {
+        y += 8;
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("PAID IN FULL", 180, y, { align: "right" });
+        doc.setFont("helvetica", "normal");
+      } else {
         y += 6;
         doc.setTextColor(239, 68, 68);
         doc.text(`Balance Due: $${balance.toFixed(2)}`, 180, y, { align: "right" });
       }
+    } else if (invoice.total === 0) {
+      y += 8;
+      doc.setFontSize(14);
+      doc.setTextColor(16, 185, 129);
+      doc.setFont("helvetica", "bold");
+      doc.text("PAID IN FULL", 180, y, { align: "right" });
+      doc.setFont("helvetica", "normal");
     }
+
+    y += 20;
+    doc.setTextColor(100);
+    doc.setFontSize(10);
+    doc.text("Thank you for trusting Prime Auto Detail with your vehicle!", 105, y, { align: "center" });
+    doc.text("We truly appreciate your business and look forward to serving you again.", 105, y + 6, { align: "center" });
 
     if (download) doc.save(`Invoice_${invoice.invoiceNumber}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
@@ -1124,8 +1144,8 @@ Precision. Protection. Perfection.`;
                       </Button>
                     </div>
                     <div className="flex gap-2 pt-4 border-t border-zinc-800">
-                      <Button size="sm" variant="outline" className="flex-1 border-zinc-700 text-zinc-400" onClick={() => openEmailModal(selectedInvoice)}>
-                        <Mail className="h-4 w-4 mr-2" /> Email Invoice
+                      <Button size="sm" variant="outline" className="flex-1 border-zinc-700 text-zinc-400" onClick={() => openEmailModal(selectedInvoice.id)}>
+                        <Mail className="h-4 w-4 mr-2" /> Preview Email
                       </Button>
                       <Button size="sm" variant="ghost" className="flex-1 text-zinc-500" onClick={() => setIsEditingInvoice(false)}>Cancel</Button>
                       <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={saveEditedInvoice}>Save Changes</Button>
@@ -1139,8 +1159,19 @@ Precision. Protection. Perfection.`;
                         <span className="font-mono text-zinc-400">${s.price.toFixed(2)}</span>
                       </div>
                     ))}
+                    {selectedInvoice.discount && selectedInvoice.discount.amount > 0 && (
+                      <div className="flex justify-between items-center text-sm py-1 text-zinc-500 italic">
+                        <span>Discount ({selectedInvoice.discount.type === 'percent' ? `${selectedInvoice.discount.value}%` : 'Fixed'})</span>
+                        <span>-${selectedInvoice.discount.amount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
-                      <span className="font-bold text-zinc-400">Total Amount</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-400">Total Amount</span>
+                        {(selectedInvoice.paymentStatus === 'paid' || selectedInvoice.total === 0) && (
+                          <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Paid In Full</span>
+                        )}
+                      </div>
                       <span className="font-bold text-2xl text-white">${selectedInvoice.total.toFixed(2)}</span>
                     </div>
 
@@ -1149,7 +1180,7 @@ Precision. Protection. Perfection.`;
                         <Save className="h-4 w-4 mr-2" /> Download PDF
                       </Button>
                       <Button variant="outline" className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => openEmailModal(selectedInvoice.id)}>
-                        <Mail className="h-4 w-4 mr-2" /> Email Invoice
+                        <Mail className="h-4 w-4 mr-2" /> Preview Email
                       </Button>
                     </div>
                   </div>
