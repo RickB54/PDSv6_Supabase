@@ -481,7 +481,7 @@ const Invoicing = () => {
       doc.setTextColor(0, 0, 0);
     }
 
-    doc.text("Total Amount:", 140, y);
+    doc.text("Total Amount:", 125, y);
     doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
     y += 10;
 

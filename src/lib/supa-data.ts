@@ -1185,7 +1185,10 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
         date: invoice.date,
         status: invoice.paymentStatus,
         paid_amount: invoice.paidAmount,
-        paid_date: invoice.paidDate
+        paid_date: invoice.paidDate,
+        vehicle: invoice.vehicle,
+        customer_id: invoice.customerId,
+        invoice_number: invoice.invoiceNumber
     };
 
     if (invoice.id) {
