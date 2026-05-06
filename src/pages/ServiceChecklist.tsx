@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Lock } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -266,17 +266,7 @@ const ServiceChecklist = () => {
   const [jobSetupExpanded, setJobSetupExpanded] = useState(true);
   const [checklistExpanded, setChecklistExpanded] = useState(true);
 
-  // Auto-collapse Job Setup when scrolling down
-  useEffect(() => {
-    const handleScroll = () => {
-      // Only auto-collapse if we have the minimum data needed for the sticky summary
-      if (window.scrollY > 300 && jobSetupExpanded && selectedPackage && vehicleType !== 'choose') {
-        setJobSetupExpanded(false);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [jobSetupExpanded, selectedPackage, vehicleType]);
+
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
@@ -451,7 +441,30 @@ const ServiceChecklist = () => {
       setIsTimerRunning(true);
       setLastActionTime(now);
       updateElapsedTime(now, now, totalElapsedMs); // Immediate UI update
-      toast({ title: "Timer Started", description: "Detaling clock is now running." });
+      // toast({ title: "Timer Started", description: "Detaling clock is now running." });
+
+      // Auto-scroll to where i left off
+      setTimeout(() => {
+        const firstUnchecked = checklistSteps.find(s => !s.checked);
+        if (firstUnchecked) {
+          // Expand the section if it's collapsed
+          setCollapsedSections(prev => ({ ...prev, [firstUnchecked.category]: false }));
+          
+          // Small delay to allow expansion before scrolling
+          setTimeout(() => {
+            const el = document.getElementById(`step-${firstUnchecked.id}`);
+            if (el) {
+              const headerOffset = 150; // Account for sticky headers
+              const elementPosition = el.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth"
+              });
+            }
+          }, 300);
+        }
+      }, 100);
     }
   };
 
@@ -463,7 +476,7 @@ const ServiceChecklist = () => {
       setIsTimerRunning(false);
       setJobStartTime(null);
       updateElapsedTime(now, null, totalElapsedMs + sessionDiff); // Immediate UI update
-      toast({ title: "Timer Paused", description: "Clock stopped." });
+      // toast({ title: "Timer Paused", description: "Clock stopped." });
     }
   };
 
@@ -474,7 +487,7 @@ const ServiceChecklist = () => {
       setTotalElapsedMs(0);
       setElapsedTime("00:00:00");
       setItemDurations({});
-      toast({ title: "Timer Reset", description: "Clock and task times have been cleared." });
+      // toast({ title: "Timer Reset", description: "Clock and task times have been cleared." });
     }
   };
 
@@ -1348,7 +1361,7 @@ const ServiceChecklist = () => {
     const localId = checklistId || `checklist-${Date.now()}`;
     setChecklistId(localId);
 
-    toast({ title: 'Progress Saved', description: 'Checklist progress saved.' });
+    // toast({ title: 'Progress Saved', description: 'Checklist progress saved.' });
 
     try {
       await postChecklistMaterials(localId, false);
@@ -1552,7 +1565,7 @@ const ServiceChecklist = () => {
       status: 'open'
     });
 
-    toast({ title: "Estimate Saved", description: "Service checklist saved to local storage." });
+    // toast({ title: "Estimate Saved", description: "Service checklist saved to local storage." });
   };
 
   const handleCreateInvoice = async () => {
@@ -2008,30 +2021,18 @@ const ServiceChecklist = () => {
             </div>
           )}
           {/* Job Setup - Sticky header for mobile efficiency - Offset below fixed PageHeader (64px) */}
-          <Card className={`bg-gradient-card border-border overflow-hidden sticky top-[64px] z-50 transition-all duration-300 ${!jobSetupExpanded ? 'p-2 shadow-xl shadow-black/50 border-white/20 bg-black/95 backdrop-blur-md rounded-none md:rounded-xl' : 'p-3 sm:p-6 mb-4'}`}>
+          <Card className={`bg-gradient-card border-border overflow-hidden p-3 sm:p-6 mb-4 transition-all duration-300`}>
             <div 
-              className={`flex items-center justify-between cursor-pointer group ${!jobSetupExpanded ? 'h-10' : ''}`}
+              className="flex items-center justify-between cursor-pointer group"
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
             >
               <div className="flex items-center gap-3">
-                <div className={`rounded-full bg-blue-600/20 flex items-center justify-center transition-all ${!jobSetupExpanded ? 'h-7 w-7' : 'h-10 w-10'}`}>
-                  <Settings2 className={`${!jobSetupExpanded ? 'h-3.5 w-3.5' : 'h-5 w-5'} text-blue-500`} />
+                <div className="rounded-full h-10 w-10 bg-blue-600/20 flex items-center justify-center transition-all">
+                  <Settings2 className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                  <h2 className={`${!jobSetupExpanded ? 'text-xs sm:text-sm' : 'text-xl md:text-2xl'} font-bold text-white transition-all`}>
-                    {!jobSetupExpanded && selectedPackage ? (
-                      <span className="flex items-center gap-2">
-                        <span className="text-blue-400 truncate max-w-[120px] sm:max-w-none">
-                          {servicePackages.find(p => p.id === selectedPackage)?.name || 'Custom Package'}
-                        </span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-zinc-300">
-                          {vehicleLabels[vehicleType] || vehicleType}
-                        </span>
-                      </span>
-                    ) : (
-                      "Job Setup"
-                    )}
+                  <h2 className="text-xl md:text-2xl font-bold text-white transition-all">
+                    Job Setup
                   </h2>
                   {jobSetupExpanded && <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest animate-in fade-in">Customer, Vehicle & Services</p>}
                 </div>
@@ -2364,8 +2365,8 @@ const ServiceChecklist = () => {
                       const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
                       setSelectedServices(services);
                       
-                      // Scroll to top so the user sees the restored checklist
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      // Switched Job toast will provide feedback instead of scrolling
+                      // window.scrollTo({ top: 0, behavior: 'smooth' });
                       
                       toast({ title: "Switched Job", description: `Resumed job for ${draft.customerName}.` });
                     }
@@ -2404,7 +2405,7 @@ const ServiceChecklist = () => {
 
       <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
         <div 
-          className="sticky top-[110px] md:top-[128px] z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/90 backdrop-blur-md transition-all rounded-t-xl"
+          className="sticky top-[64px] z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/90 backdrop-blur-md transition-all rounded-t-xl"
           onClick={() => setChecklistExpanded(!checklistExpanded)}
         >
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -2547,36 +2548,62 @@ const ServiceChecklist = () => {
             <div className="p-3 md:p-6">
               {selectedPackage && (
                 <div className="space-y-6 pr-2">
-                  {(['preparation', 'exterior', 'interior', 'final'] as const).map(section => (
-                    <div key={section} className="space-y-3">
-                      <button
-                        type="button"
-                        className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
-                        onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                          <span className="group-hover:text-primary transition-colors truncate">
-                            {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
-                          </span>
-                          {section !== 'preparation' && jobStartTime && (
-                            <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-                              {formatDuration(
-                                checklistSteps
-                                  .filter(s => s.category === section && s.checked)
-                                  .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
-                              )}
-                            </span>
-                          )}
-                        </div>
-                        {collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />}
-                      </button>
+                  {(() => {
+                    const checklistOrder = ['preparation', 'exterior', 'interior', 'final'] as const;
+                    return checklistOrder.map((section, idx) => {
+                      const steps = checklistSteps.filter(s => s.category === section);
+                      if (steps.length === 0) return null;
 
-                      {!collapsedSections[section] && (
-                        <div className="space-y-2">
-                          {checklistSteps.filter(s => s.category === section).map((step) => {
+                      // Locking logic: Lock if running AND previous section is incomplete
+                      let isLocked = false;
+                      if (isTimerRunning && idx > 0) {
+                        for (let i = 0; i < idx; i++) {
+                          const prevSteps = checklistSteps.filter(s => s.category === checklistOrder[i]);
+                          if (prevSteps.length > 0 && !prevSteps.every(s => s.checked)) {
+                            isLocked = true;
+                            break;
+                          }
+                        }
+                      }
+
+                      const isCompleted = steps.every(s => s.checked);
+
+                      return (
+                        <div key={section} className={`space-y-3 transition-opacity duration-500 ${isLocked ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+                          <button
+                            type="button"
+                            disabled={isLocked}
+                            className={`w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group ${isLocked ? 'cursor-not-allowed' : ''}`}
+                            onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                              <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : 'group-hover:text-primary'}`}>
+                                {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
+                              </span>
+                              {isLocked ? (
+                                <Lock className="h-3 w-3 text-zinc-600" />
+                              ) : isCompleted ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-500 animate-in zoom-in" />
+                              ) : null}
+                              {!isLocked && section !== 'preparation' && jobStartTime && (
+                                <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                                  {formatDuration(
+                                    steps
+                                      .filter(s => s.checked)
+                                      .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            {!isLocked && (collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />)}
+                          </button>
+
+                          {!isLocked && !collapsedSections[section] && (
+                            <div className="space-y-2 animate-in slide-in-from-top-1 duration-300">
+                              {steps.map((step) => {
                             const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
                             return (
-                              <div key={step.id} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg transition-colors">
+                              <div key={step.id} id={`step-${step.id}`} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg transition-colors">
                                 <div className="flex items-center justify-between py-2 gap-2">
                                   <label className="flex items-center gap-3 text-sm flex-1 py-1 group/item cursor-pointer min-w-0">
                                     <input
@@ -2924,9 +2951,9 @@ const ServiceChecklist = () => {
                             </Button>
                           )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      )
+                    })
+                  })()}
                 </div>
               )}
               {(!selectedPackage || !vehicleType || vehicleType === 'choose') && (
@@ -2937,6 +2964,23 @@ const ServiceChecklist = () => {
                 </div>
               )}
             </div>
+
+            {/* Toast Position Override for Checklist Page */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              [data-radix-toast-viewport] {
+                top: 0 !important;
+                bottom: auto !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                flex-direction: column-reverse !important;
+                padding: 1rem !important;
+                width: 100% !important;
+                max-width: 420px !important;
+              }
+              .fixed.top-0.z-\\[100\\] {
+                top: 0 !important;
+              }
+            `}} />
           </div>
         )}
       </Card>
