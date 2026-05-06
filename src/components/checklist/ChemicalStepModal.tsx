@@ -431,14 +431,53 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                                 </div>
 
                                 {/* Suggestions UI */}
-                                {suggestions && (suggestions.onHand.length > 0 || suggestions.alternatives.length > 0) && (
+                                {suggestions && (
                                     <div className="mt-6 pt-6 border-t border-purple-900/30 space-y-4">
                                         <div className="flex justify-between items-center">
                                             <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
-                                                <Sparkles className="w-4 h-4" /> AI Suggestions
+                                                <Sparkles className="w-4 h-4" />
+                                                {(suggestions.onHand.length > 0 || suggestions.alternatives.length > 0)
+                                                    ? 'Auto-Suggestions'
+                                                    : 'All Inventory Chemicals'}
                                             </h4>
                                             <Button variant="ghost" size="sm" onClick={() => setSuggestions(null)} className="h-6 text-xs text-zinc-500 hover:text-white">Clear</Button>
                                         </div>
+
+                                        {/* No matches — show full inventory as fallback */}
+                                        {suggestions.onHand.length === 0 && suggestions.alternatives.length === 0 && (
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-zinc-500 italic pl-1">No specific matches found. Showing all chemicals — pick what applies:</p>
+                                                {allChemicals.map(chem => (
+                                                    <div key={chem.id} className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-lg">
+                                                        <div>
+                                                            <div className="font-bold text-white text-sm">{chem.name}</div>
+                                                            {chem.dilution_ratios?.[0] && (
+                                                                <div className="text-xs text-purple-400 font-mono">Dilution: {chem.dilution_ratios[0].ratio}</div>
+                                                            )}
+                                                            {chem.is_on_hand === false && (
+                                                                <div className="text-xs text-zinc-500 italic">Not in stock</div>
+                                                            )}
+                                                        </div>
+                                                        <Button size="sm" onClick={() => acceptSuggestion({
+                                                            chem,
+                                                            score: 0,
+                                                            reason: 'Manually selected',
+                                                            suggestedMapping: {
+                                                                id: `suggest_${chem.id}_${Date.now()}`,
+                                                                step_id: stepId,
+                                                                chemical_id: chem.id,
+                                                                dilution_override: chem.dilution_ratios?.[0]?.ratio || '',
+                                                                include_in_prep: true,
+                                                                notes: '',
+                                                                updated_at: new Date().toISOString()
+                                                            }
+                                                        })} className="h-7 text-xs bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700">
+                                                            <Plus className="w-3 h-3 mr-1" /> Use
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {/* On Hand Group */}
                                         {suggestions.onHand.length > 0 && (
@@ -449,6 +488,9 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                                                         <div>
                                                             <div className="font-bold text-white text-sm">{item.chem.name}</div>
                                                             <div className="text-xs text-zinc-400">{item.reason}</div>
+                                                            {item.chem.dilution_ratios?.[0] && (
+                                                                <div className="text-xs text-purple-400 font-mono">Dilution: {item.chem.dilution_ratios[0].ratio}</div>
+                                                            )}
                                                         </div>
                                                         <Button size="sm" onClick={() => acceptSuggestion(item)} className="h-7 text-xs bg-green-900/50 text-green-300 hover:bg-green-800 border border-green-700/50">
                                                             <Check className="w-3 h-3 mr-1" /> Use
@@ -466,7 +508,7 @@ export function ChemicalStepModal({ open, onOpenChange, stepId, stepName, isAdmi
                                                     <div key={item.chem.id} className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 border-dashed opacity-75 hover:opacity-100 rounded-lg">
                                                         <div>
                                                             <div className="font-bold text-zinc-300 text-sm">{item.chem.name}</div>
-                                                            <div className="text-xs text-zinc-100 italic">{item.reason}</div>
+                                                            <div className="text-xs text-zinc-500 italic">{item.reason}</div>
                                                         </div>
                                                         <Button size="sm" variant="ghost" onClick={() => acceptSuggestion(item)} className="h-7 text-xs text-zinc-400 hover:text-white">
                                                             <Plus className="w-3 h-3 mr-1" /> Add

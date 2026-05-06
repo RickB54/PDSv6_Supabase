@@ -229,9 +229,15 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
         'compound': ['compound', 'polish', 'cut', 'correction'],
         'clay': ['clay', 'lubricant', 'detailer', 'spray'],
         'decontamin': ['iron', 'fallout', 'tar', 'clay', 'decon'],
-        'bug': ['bug', 'tar', 'sap', 'remover'],
+        'bug': ['bug', 'tar', 'sap', 'remover', 'buster', 'degreaser', 'apc', 'all purpose', 'cleaner'],
         'tar': ['tar', 'bug', 'remover', 'solvent'],
+        'grime': ['degreaser', 'apc', 'all purpose', 'cleaner', 'buster', 'wash'],
+        'heavy': ['degreaser', 'apc', 'all purpose', 'buster', 'remover', 'cleaner'],
+        'pre-treat': ['degreaser', 'apc', 'all purpose', 'buster', 'cleaner', 'remover', 'bug'],
+        'pre treat': ['degreaser', 'apc', 'all purpose', 'buster', 'cleaner', 'remover'],
         'prep': ['apc', 'cleaner', 'degreaser', 'prep', 'all purpose'],
+        'pre': ['apc', 'cleaner', 'degreaser', 'all purpose', 'buster', 'wash', 'foam'],
+        'degreaser': ['degreaser', 'apc', 'all purpose', 'cleaner', 'engine', 'heavy'],
         'engine': ['engine', 'degreaser', 'apc', 'all purpose'],
         'trim': ['trim', 'plastic', 'dressing', 'restore'],
         'plastic': ['plastic', 'trim', 'dressing', 'protectant'],
@@ -246,6 +252,9 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
         'seat': ['leather', 'fabric', 'upholstery', 'shampoo', 'cleaner'],
         'final': ['detailer', 'spray', 'quick', 'wax', 'gloss'],
         'inspect': ['detailer', 'spray', 'gloss'],
+        'protect': ['wax', 'sealant', 'ceramic', 'coating', 'protect'],
+        'coat': ['ceramic', 'coating', 'wax', 'sealant', 'protect'],
+        'detail': ['detailer', 'spray', 'gloss', 'quick'],
         'pre-rinse': ['foam', 'pre-wash', 'snow', 'shampoo'],
         'pre rinse': ['foam', 'pre-wash', 'snow', 'shampoo'],
     };
@@ -314,8 +323,10 @@ export const suggestChemicalsForStep = (stepName: string, allChemicals: Chemical
 
     return {
         onHand: onHand.sort((a, b) => b.score - a.score),
-        alternatives: alternatives.sort((a, b) => b.score - a.score)
-    };
+        alternatives: alternatives.sort((a, b) => b.score - a.score),
+        // If nothing matched, caller can check allChemicals directly
+        hasResults: onHand.length > 0 || alternatives.length > 0
+    } as any;
 };
 
 // --- VISION / OCR SIMULATION ---
