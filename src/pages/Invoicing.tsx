@@ -659,7 +659,7 @@ const Invoicing = () => {
     const splitStatement = doc.splitTextToSize(reviewStatement, 160);
     doc.text(splitStatement, 105, y, { align: "center" });
     
-    y += (splitStatement.length * 5) + 3;
+    y += (splitStatement.length * 5) + 1;
     
     // QR Code
     try {
@@ -680,7 +680,7 @@ const Invoicing = () => {
     doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 5, { align: "center" });
     doc.setFont("helvetica", "normal");
 
-    y += 12;
+    y += 18; // Added space below URL for a cleaner look
     doc.setTextColor(100);
     doc.setFontSize(10);
     doc.text("Thank you for trusting Prime Auto Detail with your vehicle!", 105, y, { align: "center" });
