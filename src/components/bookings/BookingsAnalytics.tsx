@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
