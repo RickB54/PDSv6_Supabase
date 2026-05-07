@@ -555,10 +555,12 @@ const Invoicing = () => {
     doc.setFontSize(10);
     doc.text(`Service Date: ${invoice.date}`, 20, 80);
     doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 86);
-    doc.text(`Customer: ${invoice.customerName}`, 20, 92);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 20, 98);
+    
+    // Move Customer and Vehicle to the right to save space
+    doc.text(`Customer: ${invoice.customerName}`, 120, 80);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 120, 86);
 
-    let y = 110;
+    let y = 98;
     doc.setFontSize(12);
     doc.text("Services Provided:", 20, y);
     y += 8;
@@ -625,7 +627,7 @@ const Invoicing = () => {
         doc.addPage();
         y = 20;
       }
-      y += 15;
+      y += 12;
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60); // Darker grey
       doc.setFont("helvetica", "bold");
@@ -637,12 +639,12 @@ const Invoicing = () => {
       y += (splitNotes.length * 5) + 5;
     }
 
-    // Google Review Section
-    if (y > 210) {
+    // Google Review Section - Compact Layout
+    if (y > 200) {
       doc.addPage();
       y = 30;
     } else {
-      y += 10;
+      y += 8;
     }
 
     doc.setFontSize(11);
@@ -650,22 +652,22 @@ const Invoicing = () => {
     doc.setFont("helvetica", "bold");
     doc.text("Help Us Grow!", 105, y, { align: "center" });
     
-    y += 7;
+    y += 6;
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
     const reviewStatement = "Your feedback is extremely valuable and plays a vital role in helping small businesses like mine continue to grow and reach new customers.";
-    const splitStatement = doc.splitTextToSize(reviewStatement, 160);
+    const splitStatement = doc.splitTextToSize(reviewStatement, 150);
     doc.text(splitStatement, 105, y, { align: "center" });
     
-    y += (splitStatement.length * 5) + 5;
+    y += (splitStatement.length * 5) + 4;
     
     // QR Code
     try {
-      const qrWidth = 35;
-      const qrHeight = 35;
+      const qrWidth = 32;
+      const qrHeight = 32;
       const qrX = (210 - qrWidth) / 2;
       doc.addImage(qrCode, 'PNG', qrX, y, qrWidth, qrHeight);
-      y += qrHeight + 6;
+      y += qrHeight + 5;
     } catch (e) {
       console.warn("QR Code failed to load for PDF", e);
     }
@@ -678,7 +680,7 @@ const Invoicing = () => {
     doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 5, { align: "center" });
     doc.setFont("helvetica", "normal");
 
-    y += 20;
+    y += 18;
     doc.setTextColor(100);
     doc.setFontSize(10);
     doc.text("Thank you for trusting Prime Auto Detail with your vehicle!", 105, y, { align: "center" });
