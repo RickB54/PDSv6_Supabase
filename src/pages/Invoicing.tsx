@@ -213,7 +213,10 @@ const Invoicing = () => {
     setSelectedCustomer(cid);
     const c = customers.find(x => x.id === cid);
     if (c) {
-      setCustomVehicle(`${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`.trim());
+      const primaryVehicle = c.vehicles && c.vehicles.length > 0 
+        ? `${c.vehicles[0].year || ''} ${c.vehicles[0].make} ${c.vehicles[0].model}`.trim()
+        : `${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`.trim();
+      setCustomVehicle(primaryVehicle);
     }
   };
 
@@ -931,14 +934,44 @@ Precision. Protection. Perfection.`;
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Vehicle Info</Label>
-                  <Input 
-                    placeholder="e.g. 2023 Tesla Model 3"
-                    value={customVehicle}
-                    onChange={(e) => setCustomVehicle(e.target.value)}
-                    className="bg-zinc-950 border-zinc-800"
-                  />
-                  <p className="text-[10px] text-zinc-500 italic">Leave blank to use customer's default vehicle.</p>
+                  <Label className="text-zinc-400">Vehicle Selection</Label>
+                  {(() => {
+                    const cust = customers.find(c => c.id === selectedCustomer);
+                    const vels = cust?.vehicles || [];
+                    if (vels.length > 0) {
+                      return (
+                        <Select 
+                          value={vels.some(v => `${v.year || ''} ${v.make} ${v.model}`.trim() === customVehicle) ? customVehicle : "custom"} 
+                          onValueChange={(val) => {
+                            if (val !== "custom") setCustomVehicle(val);
+                            else setCustomVehicle("");
+                          }}
+                        >
+                          <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200">
+                            <SelectValue placeholder="Choose Vehicle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vels.map((v, idx) => {
+                              const label = `${v.year || ''} ${v.make} ${v.model}`.trim();
+                              return <SelectItem key={v.id || idx} value={label}>{label}</SelectItem>;
+                            })}
+                            <SelectItem value="custom">Manual / Other...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      );
+                    }
+                    return null;
+                  })()}
+                  
+                  {(!selectedCustomer || !customers.find(c => c.id === selectedCustomer)?.vehicles?.length || !customers.find(c => c.id === selectedCustomer)?.vehicles?.some(v => `${v.year || ''} ${v.make} ${v.model}`.trim() === customVehicle)) && (
+                    <Input 
+                      placeholder="e.g. 2023 Tesla Model 3"
+                      value={customVehicle}
+                      onChange={(e) => setCustomVehicle(e.target.value)}
+                      className="bg-zinc-950 border-zinc-800 mt-2"
+                    />
+                  )}
+                  <p className="text-[10px] text-zinc-500 italic">Select from customer's vehicles or enter manually.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -1331,12 +1364,47 @@ Precision. Protection. Perfection.`;
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Vehicle Details</Label>
-                    <Input 
-                      value={editVehicle}
-                      onChange={(e) => setEditVehicle(e.target.value)}
-                      placeholder="Year Make Model"
-                      className="bg-zinc-900 border-zinc-800 text-white"
-                    />
+                    {(() => {
+                      const cust = customers.find(c => c.id === selectedInvoice.customerId);
+                      const vels = cust?.vehicles || [];
+                      const currentVehLabel = editVehicle;
+                      const isInList = vels.some(v => `${v.year || ''} ${v.make} ${v.model}`.trim() === currentVehLabel);
+                      
+                      return (
+                        <div className="space-y-2">
+                          {vels.length > 0 && (
+                            <Select 
+                              value={isInList ? currentVehLabel : "custom"} 
+                              onValueChange={(val) => {
+                                if (val !== "custom") setEditVehicle(val);
+                                // If custom, we keep the current editVehicle or clear it? 
+                                // Better to keep it so they can edit it.
+                              }}
+                            >
+                              <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white">
+                                <SelectValue placeholder="Select from CRM" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {vels.map((v, idx) => {
+                                  const label = `${v.year || ''} ${v.make} ${v.model}`.trim();
+                                  return <SelectItem key={v.id || idx} value={label}>{label}</SelectItem>;
+                                })}
+                                <SelectItem value="custom">Custom / Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          
+                          {(!isInList || vels.length === 0) && (
+                            <Input 
+                              value={editVehicle}
+                              onChange={(e) => setEditVehicle(e.target.value)}
+                              placeholder="Year Make Model"
+                              className="bg-zinc-900 border-zinc-800 text-white"
+                            />
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-2">
