@@ -546,7 +546,10 @@ const Accounting = () => {
             <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
           </Card>
 
-          <Card className="p-6 bg-gradient-card border-border">
+          <Card className="p-6 bg-gradient-card border-border relative overflow-hidden">
+            <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-emerald-500 font-bold uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              <CheckCircle className="h-3 w-3" /> Auto-Sync Active
+            </div>
             <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-primary" />
               Revenue Tracking (Invoices + Income)
@@ -565,6 +568,10 @@ const Accounting = () => {
                 <p className="text-3xl font-bold text-foreground mt-2">${monthlyRevenue.toFixed(2)}</p>
               </div>
             </div>
+            <p className="mt-4 text-[10px] text-zinc-500 flex items-center gap-2 italic">
+              <HelpCircle className="h-3 w-3 text-emerald-500" />
+              Tip: Payments recorded in the "Invoicing" page are added here automatically. Do not manually add them as income to avoid double-counting.
+            </p>
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
