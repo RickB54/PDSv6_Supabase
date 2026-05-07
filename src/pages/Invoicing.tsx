@@ -556,11 +556,13 @@ const Invoicing = () => {
     doc.text(`Service Date: ${invoice.date}`, 20, 80);
     doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 86);
     
-    // Move Customer and Vehicle to the right to save space
-    doc.text(`Customer: ${invoice.customerName}`, 120, 80);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 120, 86);
+    // Move Customer and Vehicle to the right side to save vertical space
+    doc.setFont("helvetica", "bold");
+    doc.text(`Customer: ${invoice.customerName}`, 130, 80);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 130, 86);
+    doc.setFont("helvetica", "normal");
 
-    let y = 98;
+    let y = 96;
     doc.setFontSize(12);
     doc.text("Services Provided:", 20, y);
     y += 8;
