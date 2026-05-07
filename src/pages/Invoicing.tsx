@@ -647,7 +647,7 @@ const Invoicing = () => {
       y += 6;
     }
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(16, 185, 129); // Emerald
     doc.setFont("helvetica", "bold");
     doc.text("Help Us Grow!", 105, y, { align: "center" });
@@ -672,7 +672,7 @@ const Invoicing = () => {
       console.warn("QR Code failed to load for PDF", e);
     }
 
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     doc.text("Scan with your phone to leave a Google Review", 105, y, { align: "center" });
     doc.setTextColor(16, 185, 129);
