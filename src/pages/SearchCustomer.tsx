@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
