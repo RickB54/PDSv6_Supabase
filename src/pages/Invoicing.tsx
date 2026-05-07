@@ -363,22 +363,27 @@ const Invoicing = () => {
     const amt = parseFloat(paymentAmount);
     if (Number.isNaN(amt) || amt <= 0) return;
 
-    if (isDemoMode) {
-      toast({ title: "Simulation Mode", description: "Payment recorded in local state." });
+    try {
+      if (isDemoMode) {
+        toast({ title: "Simulation Mode", description: "Payment recorded in local state." });
+        setPaymentDialogOpen(false);
+        setPaymentAmount("");
+        return;
+      }
+
+      const newPaid = (selectedInvoice.paidAmount || 0) + amt;
+      const status = newPaid >= selectedInvoice.total ? "paid" : "partially-paid";
+      const updated: Invoice = { ...selectedInvoice, paidAmount: newPaid, paymentStatus: status, paidDate: new Date().toISOString() };
+      await upsertSupabaseInvoice(updated);
       setPaymentDialogOpen(false);
       setPaymentAmount("");
-      return;
+      setSelectedInvoice(updated);
+      await loadData();
+      toast({ title: "Payment recorded", description: `Added $${amt.toFixed(2)} to invoice #${updated.invoiceNumber}` });
+    } catch (err: any) {
+      console.error("Payment Error:", err);
+      toast({ title: "Failed to record payment", description: err.message, variant: "destructive" });
     }
-
-    const newPaid = (selectedInvoice.paidAmount || 0) + amt;
-    const status = newPaid >= selectedInvoice.total ? "paid" : "partially-paid";
-    const updated: Invoice = { ...selectedInvoice, paidAmount: newPaid, paymentStatus: status, paidDate: new Date().toISOString() };
-    await upsertSupabaseInvoice(updated);
-    setPaymentDialogOpen(false);
-    setPaymentAmount("");
-    setSelectedInvoice(updated);
-    loadData();
-    toast({ title: "Payment recorded", description: `Added $${amt.toFixed(2)} to invoice #${updated.invoiceNumber}` });
   };
 
   const saveEditedPaid = async () => {
@@ -431,15 +436,32 @@ const Invoicing = () => {
       updated.paymentStatus = "paid";
     } else if (updated.paidAmount && updated.paidAmount > 0) {
       updated.paymentStatus = "partially-paid";
+    } else if (newTotal === 0) {
+      updated.paymentStatus = "paid";
     } else {
       updated.paymentStatus = "unpaid";
     }
 
-    await upsertSupabaseInvoice(updated);
-    setSelectedInvoice(updated);
-    setIsEditingInvoice(false);
-    loadData();
-    toast({ title: "Invoice Updated", description: "Changes saved successfully" });
+    try {
+      await upsertSupabaseInvoice(updated);
+      setSelectedInvoice(updated);
+      setIsEditingInvoice(false);
+      await loadData();
+      toast({ title: "Invoice Updated", description: "Changes saved successfully" });
+    } catch (err: any) {
+      console.error("Save Edit Failed:", err);
+      toast({ title: "Failed to save changes", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleAddEditItem = (category: string, id: string) => {
+    if (category === 'package') {
+      const p = servicePackages.find(x => x.id === id);
+      if (p) setEditServices([...editServices, { name: p.name, price: p.basePrice }]);
+    } else if (category === 'addon') {
+      const a = addOns.find(x => x.id === id);
+      if (a) setEditServices([...editServices, { name: a.name, price: a.basePrice }]);
+    }
   };
 
   const generatePDF = (invoice: Invoice, download = false) => {
@@ -1185,65 +1207,123 @@ Precision. Protection. Perfection.`;
                 </div>
 
                 {isEditingInvoice ? (
-                  <div className="space-y-3">
-                    {editServices.map((s, i) => (
-                      <div key={i} className="flex gap-2 items-center">
-                        <Input 
-                          value={s.name} 
-                          onChange={e => {
-                            const newS = [...editServices];
-                            newS[i].name = e.target.value;
-                            setEditServices(newS);
-                          }}
-                          className="flex-1 bg-zinc-900 border-zinc-800 text-sm h-9"
-                        />
-                        <Input 
-                          type="number"
-                          value={s.price} 
-                          onChange={e => {
-                            const newS = [...editServices];
-                            newS[i].price = parseFloat(e.target.value) || 0;
-                            setEditServices(newS);
-                          }}
-                          className="w-24 bg-zinc-900 border-zinc-800 text-sm h-9"
-                        />
-                        <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-500 hover:text-red-400" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                      <Label className="text-emerald-500 uppercase tracking-widest font-bold text-[10px] block mb-4">Line Items</Label>
+                      
+                      <div className="space-y-2 mb-6 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                        {editServices.map((s, i) => (
+                          <div key={i} className="flex gap-2 items-center bg-zinc-950 p-2 rounded-md border border-zinc-800 group">
+                            <div className="flex-1">
+                              <Input 
+                                value={s.name} 
+                                onChange={e => {
+                                  const newS = [...editServices];
+                                  newS[i].name = e.target.value;
+                                  setEditServices(newS);
+                                }}
+                                className="bg-transparent border-0 text-sm h-8 font-medium text-white focus-visible:ring-0 px-1"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-zinc-500 text-xs">$</span>
+                              <Input 
+                                type="number"
+                                value={s.price} 
+                                onChange={e => {
+                                  const newS = [...editServices];
+                                  newS[i].price = parseFloat(e.target.value) || 0;
+                                  setEditServices(newS);
+                                }}
+                                className="w-20 bg-transparent border-0 text-sm h-8 text-right font-mono focus-visible:ring-0 px-1"
+                              />
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
 
-                    <div className="space-y-2 pt-2 pb-4">
-                      <Label className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Vehicle Information</Label>
-                      <Input 
-                        value={editVehicle}
-                        onChange={(e) => setEditVehicle(e.target.value)}
-                        placeholder="Year Make Model"
-                        className="bg-zinc-900 border-zinc-800 text-sm h-9"
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4 border-b border-zinc-800/50 mb-4">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-zinc-500 uppercase font-bold ml-1">Category</Label>
+                          <Select value={serviceCategory} onValueChange={(val: any) => setServiceCategory(val)}>
+                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="package">Packages</SelectItem>
+                              <SelectItem value="addon">Add-ons</SelectItem>
+                              <SelectItem value="custom">Custom Line</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-zinc-500 uppercase font-bold ml-1">Selection</Label>
+                          {serviceCategory === "package" ? (
+                            <Select onValueChange={(val) => handleAddEditItem('package', val)}>
+                              <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                                <SelectValue placeholder="Add Package..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {servicePackages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          ) : serviceCategory === "addon" ? (
+                            <Select onValueChange={(val) => handleAddEditItem('addon', val)}>
+                              <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                                <SelectValue placeholder="Add Add-on..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {addOns.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Button variant="outline" className="w-full border-dashed border-zinc-700 text-zinc-400 h-9" onClick={() => setEditServices([...editServices, { name: "Custom Service", price: 0 }])}>
+                              <Plus className="h-4 w-4 mr-2" /> Custom Item
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center px-2">
+                         <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">New Total</span>
+                         <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
+                      </div>
                     </div>
 
-                    <div className="space-y-2 pb-4">
-                      <Label className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Notes</Label>
-                      <Textarea 
-                        value={editNotes}
-                        onChange={(e) => setEditNotes(e.target.value)}
-                        placeholder="Invoice notes..."
-                        className="bg-zinc-900 border-zinc-800 text-sm min-h-[60px]"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Vehicle Details</Label>
+                        <Input 
+                          value={editVehicle}
+                          onChange={(e) => setEditVehicle(e.target.value)}
+                          placeholder="Year Make Model"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Invoice Notes</Label>
+                        <Textarea 
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                          placeholder="Add notes for the customer..."
+                          className="bg-zinc-900 border-zinc-800 text-white min-h-[40px] h-9 resize-none"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1 border-dashed border-zinc-700" onClick={() => setEditServices([...editServices, { name: "", price: 0 }])}>
-                        <Plus className="h-3 w-3 mr-1" /> Add Line Item
-                      </Button>
-                    </div>
                     <div className="flex gap-2 pt-4 border-t border-zinc-800">
                       <Button size="sm" variant="outline" className="flex-1 border-zinc-700 text-zinc-400" onClick={() => openEmailModal(selectedInvoice.id)}>
                         <Mail className="h-4 w-4 mr-2" /> Preview Email
                       </Button>
                       <Button size="sm" variant="ghost" className="flex-1 text-zinc-500" onClick={() => setIsEditingInvoice(false)}>Cancel</Button>
-                      <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={saveEditedInvoice}>Save Changes</Button>
+                      <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20" onClick={saveEditedInvoice}>
+                        <CheckCircle className="h-4 w-4 mr-2" /> Update Invoice
+                      </Button>
                     </div>
                   </div>
                 ) : (
