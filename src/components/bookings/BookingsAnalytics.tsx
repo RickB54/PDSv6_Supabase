@@ -142,10 +142,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
     }, [filteredBookings, customers]);
 
     const addonsData = useMemo(() => {
-        const addons: Record<string, { name: string, count: number, revenue: number }> = {};
+        const details: { name: string, customer: string, date: string, revenue: number, id: string }[] = [];
         
         invoices.forEach(inv => {
-            (inv.services || []).forEach((s: any) => {
+            (inv.services || []).forEach((s: any, idx: number) => {
                 const sName = (s.name || '').toLowerCase();
                 const isAddon = s.isAddon || 
                                 s.type === 'addon' || 
@@ -153,17 +153,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                 addOns.some(a => a.name.toLowerCase() === sName);
                                 
                 if (isAddon) {
-                    const name = s.name;
-                    if (!addons[name]) {
-                        addons[name] = { name, count: 0, revenue: 0 };
-                    }
-                    addons[name].count += 1;
-                    addons[name].revenue += Number(s.price || 0);
+                    details.push({
+                        id: `${inv.id}-${idx}`,
+                        name: s.name,
+                        customer: inv.customerName || "Unknown",
+                        date: inv.date || inv.createdAt?.split('T')[0] || "",
+                        revenue: Number(s.price || 0)
+                    });
                 }
             });
         });
         
-        return Object.values(addons).sort((a, b) => b.revenue - a.revenue);
+        return details.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [invoices]);
 
     const handleCreateReminder = async () => {
@@ -373,23 +374,27 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                         <Table>
                             <TableHeader className="bg-zinc-950">
                                 <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Customer</TableHead>
                                     <TableHead>Add-on Item</TableHead>
-                                    <TableHead className="text-center">Quantity Sold</TableHead>
-                                    <TableHead className="text-right">Total Revenue</TableHead>
+                                    <TableHead className="text-right">Revenue</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {addonsData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-zinc-500 py-10 italic">
+                                        <TableCell colSpan={4} className="text-center text-zinc-500 py-10 italic">
                                             No add-on revenue recorded yet.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     addonsData.map((addon) => (
-                                        <TableRow key={addon.name} className="hover:bg-zinc-950/50">
-                                            <TableCell className="font-medium text-zinc-200">{addon.name}</TableCell>
-                                            <TableCell className="text-center text-zinc-400">{addon.count}</TableCell>
+                                        <TableRow key={addon.id} className="hover:bg-zinc-950/50">
+                                            <TableCell className="text-zinc-400 text-xs">
+                                                {addon.date ? format(parseISO(addon.date), "MMM d, yyyy") : "N/A"}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-zinc-300">{addon.customer}</TableCell>
+                                            <TableCell className="text-emerald-400/80">{addon.name}</TableCell>
                                             <TableCell className="text-right text-emerald-400 font-mono">
                                                 ${addon.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </TableCell>
@@ -428,7 +433,50 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                     <Switch checked={showArchived} onCheckedChange={setShowArchived} />
                                 </div>
                                 <div className="space-y-2">
-                                    <span className="text-sm font-medium">Date Range</span>
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Quick Filters</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            onClick={() => setDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Custom Range</Label>
                                     <div className="grid gap-2">
                                         <Calendar
                                             mode="range"
