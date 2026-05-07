@@ -87,17 +87,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
         });
     }, [filteredBookings]);
 
-    const pieData = useMemo(() => {
-        const counts: Record<string, number> = {};
-        filteredBookings.forEach(b => {
-            const svc = b.title || "Unknown";
-            counts[svc] = (counts[svc] || 0) + 1;
-        });
-        return Object.entries(counts)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5);
-    }, [filteredBookings]);
+    const serviceDetailsData = useMemo(() => {
+        return filteredBookings.map(b => {
+            const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
+            const address = b.address || customer?.address || "N/A";
+            const isShop = !address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail");
+            
+            return {
+                id: b.id,
+                date: b.date,
+                customer: b.customer,
+                address: address,
+                locationType: isShop ? "Shop" : "Onsite",
+                service: b.title,
+                revenue: b.price || 0
+            };
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredBookings, customers]);
 
     // --- Reminder Frequency Data ---
     const frequencyData = useMemo(() => {
@@ -308,55 +314,83 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </Accordion>
             </Card>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                    <CardHeader>
-                        <CardTitle>Booking Volume</CardTitle>
-                        <CardDescription>Monthly bookings for the last 6 months</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={barData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                                <XAxis dataKey="name" stroke="#888" />
-                                <YAxis stroke="#888" />
-                                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a' }} />
-                                <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+            {/* Booking Volume Chart */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
+                <CardHeader>
+                    <CardTitle>Booking Volume</CardTitle>
+                    <CardDescription>Monthly bookings for the last 6 months</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={barData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                            <XAxis dataKey="name" stroke="#888" fontSize={12} />
+                            <YAxis stroke="#888" fontSize={12} />
+                            <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a' }} />
+                            <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
 
-                <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                    <CardHeader>
-                        <CardTitle>Service Distribution</CardTitle>
-                        <CardDescription>Most popular packages</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a' }} />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Service Distribution / Performance Log */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-blue-400" />
+                        <div>
+                            <CardTitle>Service Performance Detail</CardTitle>
+                            <CardDescription>Detailed breakdown of all services performed</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950">
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Address</TableHead>
+                                    <TableHead>Service Package</TableHead>
+                                    <TableHead className="text-right">Revenue</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {serviceDetailsData.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-10 italic">
+                                            No service data found for the selected filters.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    serviceDetailsData.map((svc) => (
+                                        <TableRow key={svc.id} className="hover:bg-zinc-950/50">
+                                            <TableCell className="text-zinc-400 text-xs">
+                                                {format(parseISO(svc.date), "MMM d, yyyy")}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-zinc-200">{svc.customer}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"}>
+                                                    {svc.locationType}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-zinc-500 max-w-[200px] truncate" title={svc.address}>
+                                                {svc.address}
+                                            </TableCell>
+                                            <TableCell className="text-zinc-300">{svc.service}</TableCell>
+                                            <TableCell className="text-right text-emerald-400 font-mono">
+                                                ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Add-on Performance Section */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
