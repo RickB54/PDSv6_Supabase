@@ -1144,17 +1144,25 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             return [];
         }
 
-        return (data || []).map(i => {
         // Unpack virtualized fields from services if they exist
         let notes = i.notes || "";
         let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "Unknown");
+        let discount = i.discount || null;
+        
         const filteredServices = (i.services || []).filter((s: any) => {
+          if (!s || !s.name) return true;
           if (s.name.startsWith("VIRTUAL_VEHICLE:")) {
             vehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
             return false;
           }
           if (s.name.startsWith("VIRTUAL_NOTES:")) {
             notes = s.name.replace("VIRTUAL_NOTES:", "").trim();
+            return false;
+          }
+          if (s.name.startsWith("VIRTUAL_DISCOUNT:")) {
+            try {
+              discount = JSON.parse(s.name.replace("VIRTUAL_DISCOUNT:", "").trim());
+            } catch (e) { console.error("Failed to parse virtual discount", e); }
             return false;
           }
           return true;
@@ -1167,12 +1175,13 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
           customerName: i.customers?.full_name || i.customerName || "Unknown",
           vehicle: vehicle,
           date: i.date || i.created_at?.split('T')[0],
-          total: i.total || i.total_amount || 0,
+          total: i.total || 0,
           services: filteredServices,
           paymentStatus: i.status || "unpaid",
           paidAmount: i.paid_amount || 0,
           paidDate: i.paid_date,
           notes: notes,
+          discount: discount,
           createdAt: i.created_at
         };
       });
@@ -1188,10 +1197,10 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
     const virtualServices = [...(invoice.services || [])];
     if (invoice.vehicle) virtualServices.push({ name: `VIRTUAL_VEHICLE:${invoice.vehicle}`, price: 0 });
     if (invoice.notes) virtualServices.push({ name: `VIRTUAL_NOTES:${invoice.notes}`, price: 0 });
+    if (invoice.discount) virtualServices.push({ name: `VIRTUAL_DISCOUNT:${JSON.stringify(invoice.discount)}`, price: 0 });
 
     const payload = {
         total: invoice.total,
-        total_amount: invoice.total,
         date: invoice.date,
         status: invoice.paymentStatus,
         paid_amount: invoice.paidAmount,
