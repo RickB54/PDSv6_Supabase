@@ -24,6 +24,8 @@ import { addOns } from "@/lib/services";
 import { cn } from "@/lib/utils";
 import { getPriceChangeHistory, PriceChangeRecord } from "@/lib/servicesMeta";
 import { LineChart, Line } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -48,17 +50,122 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     // Operational Review State
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [selectedBookingForReview, setSelectedBookingForReview] = useState<any>(null);
+    const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
+    useEffect(() => {
+        setPriceHistory(getPriceChangeHistory());
+    }, []);
+
+    const generatePriceHistoryPDF = () => {
+        const doc = new jsPDF();
+        const history = [...priceHistory].reverse(); // Oldest to newest
+        
+        if (history.length === 0) {
+            toast.error("No price history data available to export.");
+            return;
+        }
+
+        // Find all unique item keys across all snapshots
+        const itemKeys = new Set<string>();
+        history.forEach(h => {
+            if (h.snapshot) {
+                Object.keys(h.snapshot).forEach(k => itemKeys.add(k));
+            }
+        });
+
+        const sortedKeys = Array.from(itemKeys).sort();
+        const packageKeys = sortedKeys.filter(k => k.startsWith('package:'));
+        const addonKeys = sortedKeys.filter(k => k.startsWith('addon:'));
+
+        const getRowData = (keys: string[]) => {
+            return keys.map(key => {
+                const snapshots = history.filter(h => h.snapshot && h.snapshot[key]);
+                if (snapshots.length === 0) return null;
+
+                let label = key;
+                if (key.startsWith('package:')) {
+                    const parts = key.split(':');
+                    const pkgName = parts[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    label = `${pkgName} (${parts[2].toUpperCase()})`;
+                } else if (key.startsWith('addon:')) {
+                    label = key.replace('addon:', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                }
+
+                const evolution = snapshots.map(h => `$${h.snapshot![key]}`).join(' → ');
+                const original = `$${snapshots[0].snapshot![key]}`;
+                const current = `$${snapshots[snapshots.length - 1].snapshot![key]}`;
+
+                return [label, original, current, evolution];
+            }).filter(Boolean) as any[][];
+        };
+
+        // Header
+        doc.setFillColor(16, 185, 129); // Emerald
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setFontSize(22);
+        doc.setTextColor(255);
+        doc.text("PRIME AUTO DETAIL", 14, 20);
+        doc.setFontSize(14);
+        doc.text("Historical Price Evolution Report", 14, 30);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(200);
+        doc.text(`Generated: ${format(new Date(), "PPpp")}`, 14, 36);
+
+        let currentY = 50;
+
+        if (packageKeys.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(31, 41, 55);
+            doc.text("SERVICE PACKAGES", 14, currentY);
+            
+            autoTable(doc, {
+                startY: currentY + 5,
+                head: [['Package Name', 'Initial', 'Current', 'Price Influx / Timeline']],
+                body: getRowData(packageKeys),
+                headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 50 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 20, fontStyle: 'bold' },
+                    3: { cellWidth: 'auto' }
+                },
+                margin: { left: 14, right: 14 },
+                theme: 'striped'
+            });
+            currentY = (doc as any).lastAutoTable.finalY + 20;
+        }
+
+        if (addonKeys.length > 0) {
+            if (currentY > 250) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(14);
+            doc.setTextColor(31, 41, 55);
+            doc.text("ADD-ONS & UPGRADES", 14, currentY);
+
+            autoTable(doc, {
+                startY: currentY + 5,
+                head: [['Add-on Item', 'Initial', 'Current', 'Price Influx / Timeline']],
+                body: getRowData(addonKeys),
+                headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' }, // Blue
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 50 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 20, fontStyle: 'bold' },
+                    3: { cellWidth: 'auto' }
+                },
+                margin: { left: 14, right: 14 },
+                theme: 'striped'
+            });
+        }
+
+        doc.save(`Prime_Price_Evolution_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+        toast.success("Price evolution report downloaded.");
+    };
+
     const [bookingReviews, setBookingReviews] = useState<Record<string, any>>(() => {
         try {
             return JSON.parse(localStorage.getItem('prime_booking_reviews') || '{}');
         } catch { return {}; }
     });
-
-    // Price History State
-    const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
-    useEffect(() => {
-        setPriceHistory(getPriceChangeHistory());
-    }, []);
 
     const [reviewForm, setReviewForm] = useState({
         performance: "",
@@ -1361,6 +1468,26 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardTitle className="text-zinc-100 uppercase tracking-tighter">Price Fluctuation History</CardTitle>
                             <CardDescription className="text-zinc-400">Track how your pricing strategy has evolved over time</CardDescription>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                            onClick={() => window.print()}
+                        >
+                            <Printer className="w-4 h-4 mr-2" />
+                            Print
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-all font-bold"
+                            onClick={generatePriceHistoryPDF}
+                        >
+                            <Save className="w-4 h-4 mr-2" />
+                            Save PDF Report
+                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">

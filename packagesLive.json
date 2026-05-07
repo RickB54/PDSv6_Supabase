@@ -112,7 +112,7 @@
       "package:prime-elite-exterior:compact": "160",
       "package:prime-elite-interior:compact": "390",
       "package:prime-elite-full:compact": "495",
-      "package:prime-essential-exterior:compact": "99",
+      "package:prime-essential-exterior:compact": "90",
       "addon:ceramic-protection-1yr:compact": "79",
       "addon:ceramic-protection-1yr:midsize": "109",
       "addon:ceramic-protection-1yr:truck": "129",
@@ -133,7 +133,7 @@
       "package:prime-essential-exterior:midsize": "110",
       "package:prime-essential-exterior:truck": "120",
       "package:prime-essential-exterior:luxury": "130",
-      "package:prime-essential-full:compact": "230",
+      "package:prime-essential-full:compact": "260",
       "package:prime-essential-full:midsize": "270",
       "package:prime-essential-full:truck": "290",
       "package:prime-essential-full:luxury": "320",
@@ -298,7 +298,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1778169406259
+    "version": 1778171538472
   },
   "vehicleTypesLive": [
     {
