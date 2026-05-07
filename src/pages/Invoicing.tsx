@@ -621,7 +621,7 @@ const Invoicing = () => {
     }
 
     if (invoice.notes) {
-      if (y > 240) {
+      if (y > 220) {
         doc.addPage();
         y = 20;
       }
@@ -636,6 +636,47 @@ const Invoicing = () => {
       doc.text(splitNotes, 20, y + 6);
       y += (splitNotes.length * 5) + 5;
     }
+
+    // Google Review Section
+    if (y > 210) {
+      doc.addPage();
+      y = 30;
+    } else {
+      y += 10;
+    }
+
+    doc.setFontSize(11);
+    doc.setTextColor(16, 185, 129); // Emerald
+    doc.setFont("helvetica", "bold");
+    doc.text("Help Us Grow!", 105, y, { align: "center" });
+    
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    const reviewStatement = "Your feedback is extremely valuable and plays a vital role in helping small businesses like mine continue to grow and reach new customers.";
+    const splitStatement = doc.splitTextToSize(reviewStatement, 160);
+    doc.text(splitStatement, 105, y, { align: "center" });
+    
+    y += (splitStatement.length * 5) + 5;
+    
+    // QR Code
+    try {
+      const qrWidth = 35;
+      const qrHeight = 35;
+      const qrX = (210 - qrWidth) / 2;
+      doc.addImage(qrCode, 'PNG', qrX, y, qrWidth, qrHeight);
+      y += qrHeight + 6;
+    } catch (e) {
+      console.warn("QR Code failed to load for PDF", e);
+    }
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Scan with your phone to leave a Google Review", 105, y, { align: "center" });
+    doc.setTextColor(16, 185, 129);
+    doc.setFont("helvetica", "bold");
+    doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 5, { align: "center" });
+    doc.setFont("helvetica", "normal");
 
     y += 20;
     doc.setTextColor(100);

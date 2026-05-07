@@ -1073,14 +1073,27 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="h-8 text-[10px] uppercase font-black tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
-                                                    onClick={() => navigate(`/invoicing?customerId=${inv.customerId}`)}
-                                                >
-                                                    View Invoice
-                                                </Button>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 text-[9px] uppercase font-bold tracking-widest text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText("https://g.page/r/CUaXyAfwdcv1EBM/review");
+                                                            toast.success("Review link copied to clipboard!");
+                                                        }}
+                                                    >
+                                                        Review Link
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 text-[9px] uppercase font-black tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                                                        onClick={() => navigate(`/invoicing?customerId=${inv.customerId}`)}
+                                                    >
+                                                        View Invoice
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
