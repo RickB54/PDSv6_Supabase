@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,6 +30,7 @@ interface BookingsAnalyticsProps {
 }
 
 export function BookingsAnalytics({ bookings, customers, invoices = [], defaultOpenAccordion }: BookingsAnalyticsProps) {
+    const navigate = useNavigate();
     const { add } = useTasksStore();
     const { update } = useBookingsStore();
     const user = getCurrentUser();
@@ -770,17 +772,47 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
 
             {/* Reminder Dialog */}
             <Dialog open={reminderOpen} onOpenChange={(open) => { setReminderOpen(open); if (!open) setEditingBookingId(null); }}>
-                <DialogContent className="bg-zinc-950 border-zinc-800">
+                <DialogContent className="bg-zinc-950 border-zinc-800 sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>{editingBookingId ? 'Edit Reminder Coverage' : 'Set Follow-up Reminder'}</DialogTitle>
+                        <DialogTitle className="text-xl font-bold text-zinc-100">{editingBookingId ? 'Edit Follow-up Task' : 'Set Follow-up Reminder'}</DialogTitle>
+                        <CardDescription className="text-zinc-400 mt-2">
+                            This creates an <strong>internal follow-up task</strong> for you to contact the customer. 
+                            Reminders are for your internal records and will not send automated messages to the client.
+                        </CardDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    
+                    <div className="flex gap-2 mb-4">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1 text-[10px] bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                            onClick={() => {
+                                const name = selectedCustomerForReminder?.name;
+                                if (name) navigate(`/bookings?customer=${encodeURIComponent(name)}`);
+                            }}
+                        >
+                            View Booking History
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1 text-[10px] bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                            onClick={() => {
+                                const id = selectedCustomerForReminder?.id;
+                                if (id) navigate(`/invoicing?customerId=${id}`);
+                            }}
+                        >
+                            Customer Profile
+                        </Button>
+                    </div>
+
+                    <div className="grid gap-6 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Customer</Label>
-                            <Input value={selectedCustomerForReminder?.name || ''} disabled className="col-span-3 bg-zinc-900 border-zinc-800" />
+                            <Label className="text-right text-zinc-300 font-medium">Customer</Label>
+                            <Input value={selectedCustomerForReminder?.name || ''} disabled className="col-span-3 bg-zinc-900 border-zinc-800 text-zinc-100 opacity-80" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Frequency</Label>
+                            <Label className="text-right text-zinc-300 font-medium">Frequency</Label>
                             <Select value={reminderFrequency} onValueChange={(val) => {
                                 setReminderFrequency(val);
                                 if (val !== 'custom') {
@@ -791,10 +823,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                     }
                                 }
                             }}>
-                                <SelectTrigger className="col-span-3 bg-zinc-900 border-zinc-800">
+                                <SelectTrigger className="col-span-3 bg-zinc-900 border-zinc-800 text-zinc-100">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-zinc-900 border-zinc-800">
                                     <SelectItem value="1">1 Month</SelectItem>
                                     <SelectItem value="3">3 Months (Standard)</SelectItem>
                                     <SelectItem value="4">4 Months</SelectItem>
@@ -804,28 +836,28 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                             </Select>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Due Date</Label>
+                            <Label className="text-right text-zinc-300 font-medium">Due Date</Label>
                             <Input
                                 type="date"
                                 value={reminderDate}
                                 onChange={(e) => { setReminderDate(e.target.value); setReminderFrequency('custom'); }}
-                                className="col-span-3 bg-zinc-900 border-zinc-800"
+                                className="col-span-3 bg-zinc-900 border-zinc-800 text-zinc-100"
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Notes</Label>
+                            <Label className="text-right text-zinc-300 font-medium">Notes</Label>
                             <Input
                                 value={reminderNote}
                                 onChange={(e) => setReminderNote(e.target.value)}
                                 placeholder="e.g. Call to schedule maintenance wash"
-                                className="col-span-3 bg-zinc-900 border-zinc-800"
+                                className="col-span-3 bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
                             />
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setReminderOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateReminder} className="bg-primary hover:bg-primary/90">
-                            {editingBookingId ? 'Update Reminder' : 'Set Reminder'}
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button variant="ghost" onClick={() => setReminderOpen(false)} className="text-zinc-400 hover:text-white">Cancel</Button>
+                        <Button onClick={handleCreateReminder} className="bg-primary hover:bg-primary/90 text-white font-bold px-6">
+                            {editingBookingId ? 'Update Task' : 'Set Follow-up Task'}
                         </Button>
                     </div>
                 </DialogContent>
