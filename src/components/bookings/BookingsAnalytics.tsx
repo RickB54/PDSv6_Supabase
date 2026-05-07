@@ -623,16 +623,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Show Archived</span>
+                                    <span className="text-sm font-medium text-zinc-200">Show Archived</span>
                                     <Switch checked={showArchived} onCheckedChange={setShowArchived} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Quick Filters</Label>
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
                                     <div className="grid grid-cols-2 gap-2">
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
-                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => setDateFilter({ start: undefined, end: undefined })}
                                         >
                                             All Time
@@ -640,7 +640,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
-                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => setDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
                                         >
                                             Today
@@ -648,7 +648,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
-                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
                                                 setDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
@@ -659,7 +659,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
-                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800"
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
                                                 setDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
@@ -670,8 +670,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Custom Range</Label>
-                                    <div className="grid gap-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                    <div className="grid gap-2 text-zinc-200">
                                         <Calendar
                                             mode="range"
                                             selected={{ from: dateFilter.start, to: dateFilter.end }}
