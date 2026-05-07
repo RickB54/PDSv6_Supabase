@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,9 +111,27 @@ const Invoicing = () => {
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
+  const location = useLocation();
+
   useEffect(() => {
     loadData();
   }, [isDemoMode, showArchived]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cid = params.get('customerId');
+    if (cid) {
+      setFilterCustomerId(cid);
+      // Also try to pre-fill search term with customer name if we have it
+      const cust = customers.find(c => c.id === cid);
+      if (cust) {
+        setSearchTerm(cust.name);
+      }
+    } else {
+      // If no customerId in URL, reset the filter
+      setFilterCustomerId("");
+    }
+  }, [location.search, customers]);
 
   const toBuiltInVehKey = (key: string): LibVehicleType => {
     const k = key?.toLowerCase();
