@@ -88,25 +88,32 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     label = `${pkgName} (${parts[2].toUpperCase()})`;
                 } else if (key.startsWith('addon:')) {
                     label = key.replace('addon:', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                    // Grouping fix: if it ends with :compact etc, let's make it cleaner
                     if (label.includes(':')) {
                         const lparts = label.split(':');
-                        label = `${lparts[0]} (${lparts[1].toUpperCase()})`;
+                        label = `${lparts[0].trim()} (${lparts[1].trim().toUpperCase()})`;
                     }
                 }
 
-                // Filter consecutive duplicate prices to clean up the timeline
-                const uniquePrices: string[] = [];
+                // Filter consecutive duplicate prices and capture change dates
+                const changes: {price: string, date: string}[] = [];
                 snapshots.forEach(h => {
                     const price = `$${h.snapshot![key]}`;
-                    if (uniquePrices.length === 0 || uniquePrices[uniquePrices.length - 1] !== price) {
-                        uniquePrices.push(price);
+                    const dateStr = format(parseISO(h.date), "MMM d, h:mm a");
+                    if (changes.length === 0 || changes[changes.length - 1].price !== price) {
+                        changes.push({ price, date: dateStr });
                     }
                 });
 
-                const evolution = uniquePrices.join(' → ');
-                const original = uniquePrices[0];
-                const current = uniquePrices[uniquePrices.length - 1];
+                const original = changes[0].price;
+                const current = changes[changes.length - 1].price;
+                
+                let evolution = "";
+                if (changes.length <= 1) {
+                    evolution = "Stable (No changes recorded)";
+                } else {
+                    // Show full timeline with dates
+                    evolution = changes.map(c => `${c.price} (${c.date})`).join(' → ');
+                }
 
                 return [label, original, current, evolution];
             }).filter(Boolean) as any[][];
@@ -114,18 +121,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         // Header
         doc.setFillColor(16, 185, 129); // Emerald
-        doc.rect(0, 0, 210, 40, 'F');
-        doc.setFontSize(22);
+        doc.rect(0, 0, 210, 45, 'F');
+        doc.setFontSize(24);
         doc.setTextColor(255);
-        doc.text("PRIME AUTO DETAIL", 14, 20);
+        doc.text("PRIME AUTO DETAIL", 14, 22);
         doc.setFontSize(14);
-        doc.text("Historical Price Evolution Report", 14, 30);
+        doc.text("Official Price Evolution Audit Trail", 14, 32);
         
         doc.setFontSize(10);
         doc.setTextColor(200);
-        doc.text(`Generated: ${format(new Date(), "PPpp")}`, 14, 36);
+        doc.text(`Report Generated: ${format(new Date(), "PPpp")}`, 14, 40);
 
-        let currentY = 50;
+        let currentY = 55;
 
         if (packageKeys.length > 0) {
             doc.setFontSize(14);
