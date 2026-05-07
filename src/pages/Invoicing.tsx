@@ -122,10 +122,11 @@ const Invoicing = () => {
     const cid = params.get('customerId');
     if (cid) {
       setFilterCustomerId(cid);
-      // Also try to pre-fill search term with customer name if we have it
+      // Also try to pre-fill search term with customer name + vehicle if we have it
       const cust = customers.find(c => c.id === cid);
       if (cust) {
-        setSearchTerm(cust.name);
+        const vehicleInfo = `${cust.vehicle || ''} ${cust.model || ''}`.trim();
+        setSearchTerm(`${cust.name}${vehicleInfo ? ' - ' + vehicleInfo : ''}`);
       }
     } else {
       // If no customerId in URL, reset the filter
@@ -1197,7 +1198,17 @@ Precision. Protection. Perfection.`;
                   </h2>
                   <p className="text-zinc-400">Prime Auto Detail</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 h-9"
+                    onClick={() => navigate(`/search-customer?customerId=${selectedInvoice.customerId}&search=${encodeURIComponent(selectedInvoice.customerName)}`)}
+                  >
+                    <Users className="h-4 w-4 mr-2" /> Customer Info
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-8 py-6 border-t border-b border-zinc-800">

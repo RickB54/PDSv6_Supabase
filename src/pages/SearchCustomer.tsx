@@ -186,6 +186,18 @@ const SearchCustomer = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const cid = params.get('customerId');
+    if (cid && customers.length > 0) {
+      // Small delay to ensure list is rendered
+      setTimeout(() => {
+        setExpandedCustomers(prev => prev.includes(cid) ? prev : [...prev, cid]);
+        const el = document.getElementById(`customer-${cid}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+    }
+
     const flag = params.get("add");
     const shouldOpen = flag === "true" || flag === "1" || (flag === null && params.has("add"));
     if (shouldOpen && !autoOpenedAdd) {
@@ -193,7 +205,7 @@ const SearchCustomer = () => {
       setModalOpen(true);
       setAutoOpenedAdd(true);
     }
-  }, [location.search, autoOpenedAdd]);
+  }, [location.search, customers, autoOpenedAdd]);
 
   const filterByDate = (customer: Customer) => {
     const now = new Date();

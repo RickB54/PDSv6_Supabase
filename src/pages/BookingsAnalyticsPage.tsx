@@ -8,18 +8,23 @@ import { PageHeader } from "@/components/PageHeader";
 export default function BookingsAnalyticsPage() {
     const { items, refresh } = useBookingsStore();
     const [customers, setCustomers] = useState<any[]>([]);
+    const [invoices, setInvoices] = useState<any[]>([]);
 
     useEffect(() => {
         refresh();
-        const fetchCustomers = async () => {
+        const fetchData = async () => {
             try {
-                const custs = await getUnifiedCustomers();
+                const [custs, invs] = await Promise.all([
+                    getUnifiedCustomers(),
+                    import("@/lib/supa-data").then(m => m.getSupabaseInvoices())
+                ]);
                 setCustomers(custs);
+                setInvoices(invs);
             } catch (err) {
-                console.error('Failed to fetch customers:', err);
+                console.error('Failed to fetch analytics data:', err);
             }
         };
-        fetchCustomers();
+        fetchData();
     }, [refresh]);
 
     return (
@@ -27,7 +32,7 @@ export default function BookingsAnalyticsPage() {
             <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
             <div className="p-4 sm:p-6 space-y-6">
 
-                <BookingsAnalytics bookings={items} customers={customers} />
+                <BookingsAnalytics bookings={items} customers={customers} invoices={invoices} />
             </div>
         </div>
     );
