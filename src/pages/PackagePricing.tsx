@@ -142,6 +142,7 @@ export default function PackagePricing() {
   });
 
   const [comparisonMatrixOpen, setComparisonMatrixOpen] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -1235,7 +1236,9 @@ export default function PackagePricing() {
     sizes.forEach(size => {
       const key = getKey("package", id, size);
       const base = parseFloat(savedPrices[key]) || 0;
-      updated[key] = String(Math.round(base * factor));
+      // Fix Javascript floating point errors (e.g. 90 * 1.1 = 99.00000000000001) before ceiling
+      const preciseValue = Math.round(base * factor * 100) / 100;
+      updated[key] = String(Math.ceil(preciseValue));
     });
     setCurrentPrices(updated);
   };
@@ -1264,7 +1267,8 @@ export default function PackagePricing() {
     Object.keys(savedPrices).forEach(key => {
       if (shouldUpdate(key, target)) {
         const oldVal = parseFloat(savedPrices[key]) || 0;
-        updated[key] = String(Math.round(oldVal * factor));
+        const preciseValue = Math.round(oldVal * factor * 100) / 100;
+        updated[key] = String(Math.ceil(preciseValue));
       }
     });
     setCurrentPrices(updated);
@@ -1279,7 +1283,8 @@ export default function PackagePricing() {
     const updated: PriceMap = { ...currentPrices };
     Object.keys(savedPrices).forEach(key => {
       const oldVal = parseFloat(savedPrices[key]) || 0;
-      updated[key] = String(Math.round(oldVal * factor));
+      const preciseValue = Math.round(oldVal * factor * 100) / 100;
+      updated[key] = String(Math.ceil(preciseValue));
     });
     setCurrentPrices(updated);
     setGlobalPct('');
@@ -1753,6 +1758,16 @@ export default function PackagePricing() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setHelpModalOpen(true)}
+              className="border-red-500 text-red-500 hover:bg-red-500/10 font-black uppercase tracking-widest text-[10px] px-2 sm:px-3 h-8 sm:h-9"
+              title="Package Pricing Help"
+            >
+              <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" /> 
+              <span className="hidden sm:inline">Help</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={async () => {
                 if (confirm("Sync all data fresh from the cloud? This will resolve any discrepancies between your browser and the database.")) {
                   window.location.reload();
@@ -1806,10 +1821,22 @@ export default function PackagePricing() {
 
         {/* Pricing Controls Card */}
         <div className="bg-gradient-card border border-border rounded-xl p-6 shadow-sm">
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <span className="w-1 h-8 bg-red-600 rounded-full"></span>
-            Edit Pricing
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span className="w-1 h-8 bg-red-600 rounded-full"></span>
+              Edit Pricing
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHelpModalOpen(true)}
+              className="text-zinc-500 hover:text-white hover:bg-zinc-800"
+              title="Pricing Help"
+            >
+              <HelpCircle className="w-5 h-5 mr-2" />
+              Help
+            </Button>
+          </div>
           <p className="text-zinc-400 mb-6 ml-3">Changes apply everywhere, including the live website.</p>
 
           {isDemoActive() && (
@@ -1925,62 +1952,18 @@ export default function PackagePricing() {
                   </span>
                   
                   {/* Help Button & Dialog moved here */}
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-500 hover:text-white h-8 w-8 p-0"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Proper Procedure Help"
-                      >
-                        <HelpCircle className="w-5 h-5" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white">
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tight text-red-500">Proper Procedure: Managing Services</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-6 py-4 overflow-y-auto max-h-[70vh] pr-4">
-                        <section className="space-y-2">
-                          <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">1. Management Workflow</h3>
-                          <p className="text-zinc-400 text-sm leading-relaxed">
-                            You can manage your pricing and visibility from <span className="text-white font-bold underline">ANY environment</span> (local computer or live website) as long as you are logged in as an <strong>Admin</strong>.
-                          </p>
-                          <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
-                            <li>Toggle <strong>"Live"</strong> to show or hide a package.</li>
-                            <li>Your choice is saved <strong>instantly</strong> to the cloud database.</li>
-                            <li className="text-red-400 font-bold underline">You do NOT need to hit the red "Save" button for visibility changes!</li>
-                          </ul>
-                        </section>
-
-                        <section className="space-y-2">
-                          <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">2. Synchronization & Caching</h3>
-                          <p className="text-zinc-400 text-sm leading-relaxed">
-                            The public Services page automatically checks for updates every 2 minutes. 
-                          </p>
-                          <p className="text-zinc-400 text-sm leading-relaxed">
-                            <strong>Pro Tip:</strong> If your changes don't appear immediately on the website, click the <span className="text-blue-400 font-bold">"Sync with Cloud"</span> button located at the top of the Services page to force a refresh.
-                          </p>
-                        </section>
-
-                        <section className="space-y-2">
-                          <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">3. How to Test Correctly</h3>
-                          <p className="text-zinc-400 text-sm leading-relaxed font-bold text-red-400">
-                            IMPORTANT: Always use an "Incognito" or "Private" browser window when testing as a customer.
-                          </p>
-                          <p className="text-zinc-400 text-sm leading-relaxed">
-                            Because you are an Admin, your browser might remember your settings or show you "hidden" items that a regular customer cannot see. Testing in Incognito ensures you see exactly what a non-logged-in visitor sees.
-                          </p>
-                        </section>
-                      </div>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button className="bg-red-600 hover:bg-red-700 font-bold">Understood</Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-zinc-500 hover:text-white h-8 w-8 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHelpModalOpen(true);
+                    }}
+                    title="Proper Procedure Help"
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                  </Button>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
@@ -3050,6 +3033,103 @@ export default function PackagePricing() {
         </Dialog>
         <ServiceComparisonModal open={comparisonMatrixOpen} onOpenChange={setComparisonMatrixOpen} />
       </main>
+
+      {/* Global Package Pricing Help Modal */}
+      <Dialog open={helpModalOpen} onOpenChange={setHelpModalOpen}>
+        <DialogContent className="sm:max-w-3xl bg-zinc-950 border-zinc-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight text-red-500">Package Pricing Help & Procedure</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-8 py-4 overflow-y-auto max-h-[75vh] pr-4 custom-scrollbar">
+            
+            {/* NEW PRICING SECTIONS */}
+            <div className="space-y-6">
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1 flex items-center gap-2">
+                  <span className="text-red-500">⚙️</span> 1. How Pricing Architecture Works
+                </h3>
+                <ul className="list-disc list-inside text-zinc-400 text-sm space-y-2 ml-2 leading-relaxed">
+                  <li><strong>Centralized Base Prices:</strong> The system relies on hardcoded base prices. This page acts as an "Override Manager".</li>
+                  <li><strong>Overrides:</strong> When you set a new price here and hit "Save," it creates an "override" in your local browser and cloud storage. The application will ALWAYS prioritize your overrides over the default code.</li>
+                  <li><strong>The Reset Button:</strong> "Reset" is NOT a factory reset. It simply acts as an "Undo" button, returning any unsaved numbers in the boxes back to your last official Save Point.</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1 flex items-center gap-2">
+                  <span className="text-red-500">🧮</span> 2. Percentage Adjustments (5% & 10%)
+                </h3>
+                <ul className="list-disc list-inside text-zinc-400 text-sm space-y-2 ml-2 leading-relaxed">
+                  <li><strong>Independent Adjustments:</strong> You can use the "Apply 5%" or "Apply 10%" buttons to quickly increase prices for a specific package.</li>
+                  <li><strong>Rounding Logic:</strong> The system uses a strict "Ceiling Rounding" formula (<code className="text-red-400 bg-red-950/50 px-1 py-0.5 rounded">Math.ceil</code>). This guarantees that any calculation producing change (e.g., $255.50) will instantly jump up to the next whole dollar (e.g., $256). <strong>No loose change!</strong></li>
+                  <li><strong>Sequential Compounding:</strong> The percentage increases calculate based on whatever price is <em>currently saved</em>. If you raise a price and save it, the next time you hit "Apply 10%", it will calculate 10% from the new, higher baseline.</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1 flex items-center gap-2">
+                  <span className="text-red-500">✍️</span> 3. Manual Overrides
+                </h3>
+                <ul className="list-disc list-inside text-zinc-400 text-sm space-y-2 ml-2 leading-relaxed">
+                  <li><strong>Total Independence:</strong> You are never forced to use percentages. Every box is independent. You can manually type $99 in Compact, $500 in Truck, lower a different package to $50, and leave everything else untouched.</li>
+                  <li><strong>Zero Interruption:</strong> Changing one price manually will <em>never</em> break or recalculate the other packages unless you explicitly tell the system to do so.</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1 flex items-center gap-2">
+                  <span className="text-red-500">💾</span> 4. Saving and Restoring
+                </h3>
+                <ul className="list-disc list-inside text-zinc-400 text-sm space-y-2 ml-2 leading-relaxed">
+                  <li><strong>Saving:</strong> Once you are satisfied with your edits, click "Save" on the individual package, or "Save All" at the top right. This locks the prices in permanently.</li>
+                  <li><strong>Restore Pricing from JSON:</strong> If you ever want to revert everything back to a previous state, use the "Backup as JSON" button before you make big changes. You can then use "Restore Pricing from JSON" to instantly load those old prices back into the system.</li>
+                </ul>
+              </section>
+            </div>
+
+            {/* PRE-EXISTING PROCEDURE SECTIONS */}
+            <div className="space-y-6 pt-6 border-t border-zinc-800/50">
+              <h2 className="text-xl font-black uppercase text-zinc-500 tracking-wider">Additional Procedures</h2>
+              
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">5. Management Workflow</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  You can manage your pricing and visibility from <span className="text-white font-bold underline">ANY environment</span> (local computer or live website) as long as you are logged in as an <strong>Admin</strong>.
+                </p>
+                <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1 ml-2">
+                  <li>Toggle <strong>"Live"</strong> to show or hide a package.</li>
+                  <li>Your choice is saved <strong>instantly</strong> to the cloud database.</li>
+                  <li className="text-red-400 font-bold underline">You do NOT need to hit the red "Save" button for visibility changes!</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">6. Synchronization & Caching</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  The public Services page automatically checks for updates every 2 minutes. 
+                </p>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  <strong>Pro Tip:</strong> If your changes don't appear immediately on the website, click the <span className="text-blue-400 font-bold">"Sync with Cloud"</span> button located at the top of the Services page to force a refresh.
+                </p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-1">7. How to Test Correctly</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed font-bold text-red-400">
+                  IMPORTANT: Always use an "Incognito" or "Private" browser window when testing as a customer.
+                </p>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  Because you are an Admin, your browser might remember your settings or show you "hidden" items that a regular customer cannot see. Testing in Incognito ensures you see exactly what a non-logged-in visitor sees.
+                </p>
+              </section>
+            </div>
+
+          </div>
+          <DialogFooter className="mt-4 pt-4 border-t border-zinc-800">
+            <Button className="bg-red-600 hover:bg-red-700 font-bold px-8" onClick={() => setHelpModalOpen(false)}>Understood</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
