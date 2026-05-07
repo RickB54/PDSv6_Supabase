@@ -431,11 +431,11 @@ const Invoicing = () => {
     toast({ title: "Payment updated", description: `Payment amount manually updated to $${amt.toFixed(2)}` });
   };
 
-  const handleEditInvoice = () => {
-    if (!selectedInvoice) return;
-    setEditServices([...selectedInvoice.services]);
-    setEditVehicle(selectedInvoice.vehicle);
-    setEditNotes(selectedInvoice.notes || "");
+  const handleEditInvoice = (inv: Invoice) => {
+    setSelectedInvoice(inv);
+    setEditServices(inv.services ? [...inv.services] : []);
+    setEditVehicle(inv.vehicle || "");
+    setEditNotes(inv.notes || "");
     setIsEditingInvoice(true);
   };
 
@@ -580,13 +580,17 @@ const Invoicing = () => {
     }
 
     if (invoice.notes) {
+      if (y > 240) {
+        doc.addPage();
+        y = 20;
+      }
       y += 15;
       doc.setFontSize(10);
-      doc.setTextColor(100);
+      doc.setTextColor(60, 60, 60); // Darker grey
       doc.setFont("helvetica", "bold");
       doc.text("Notes:", 20, y);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(120);
+      doc.setTextColor(80, 80, 80);
       const splitNotes = doc.splitTextToSize(invoice.notes, 170);
       doc.text(splitNotes, 20, y + 6);
       y += (splitNotes.length * 5) + 5;
@@ -602,15 +606,20 @@ const Invoicing = () => {
     else window.open(doc.output('bloburl'), '_blank');
   };
 
-  const openEmailModal = (invoiceId: string) => {
-    const selectedInv = invoices.find(inv => inv.id === invoiceId);
-    const customer = customers.find(c => c.id === selectedInv?.customerId);
+  const openEmailModal = (inv: Invoice) => {
+    const customer = customers.find(c => c.id === inv.customerId);
     const firstName = customer?.name?.split(' ')[0] || 'Customer';
+    const subtotal = inv.services.reduce((sum, s) => sum + s.price, 0);
 
-    let summaryText = `Total: $${selectedInv?.total.toFixed(2)}`;
-    if (selectedInv?.discount && selectedInv.discount.amount > 0) {
-      const subtotal = selectedInv.total + selectedInv.discount.amount;
-      summaryText = `Subtotal: $${subtotal.toFixed(2)}\nDiscount: -$${selectedInv.discount.amount.toFixed(2)}\nTotal: $${selectedInv.total.toFixed(2)}`;
+    let summaryText = `Total: $${inv.total.toFixed(2)}`;
+    if (inv.discount && inv.discount.amount > 0) {
+      const discountSub = inv.total + inv.discount.amount;
+      summaryText = `Subtotal: $${discountSub.toFixed(2)}\nDiscount: -$${inv.discount.amount.toFixed(2)}\nTotal: $${inv.total.toFixed(2)}`;
+    }
+
+    let notesText = "";
+    if (inv.notes) {
+      notesText = `\nNotes:\n${inv.notes}\n`;
     }
 
     const draft = `Hi ${firstName}!
@@ -619,7 +628,8 @@ Thank you for trusting Prime Auto Detail with your vehicle. It was a pleasure wo
 
 Service Summary:
 ${summaryText}
-${(selectedInv?.paymentStatus === 'paid' || selectedInv?.total === 0) ? 'Status: PAID IN FULL\n' : ''}
+${notesText}
+${(inv.paymentStatus === 'paid' || inv.total === 0) ? 'Status: PAID IN FULL\n' : ''}
 Attached is your invoice/receipt for your records.
 
 If you were happy with the service, I would greatly appreciate it if you could take a moment to leave a review. Your feedback not only helps my business grow, but also helps others feel confident choosing Prime Auto Detail.
@@ -633,10 +643,10 @@ Rick Berube
 Prime Auto Detail
 Precision. Protection. Perfection.`;
 
-    setEmailSubject(`Invoice #${selectedInv?.invoiceNumber} from Prime Auto Detail`);
+    setEmailSubject(`Invoice #${inv.invoiceNumber} from Prime Auto Detail`);
     setEmailRecipient(customer?.email || "");
     setEmailBody(draft);
-    setEmailInvoiceId(invoiceId);
+    setEmailInvoiceId(inv.id || null);
     setIsEmailModalOpen(true);
   };
 
@@ -1088,7 +1098,11 @@ Precision. Protection. Perfection.`;
           {sortedInvoices.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {sortedInvoices.map(invoice => (
-                <div key={invoice.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
+                <div 
+                  key={invoice.id} 
+                  className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer" 
+                  onClick={() => handleEditInvoice(invoice)}
+                >
                   <div className="flex items-center gap-4 mb-4 md:mb-0">
                     <div className={`h-12 w-12 rounded-full flex items-center justify-center border ${(invoice.paymentStatus === 'paid')
                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
@@ -1106,7 +1120,7 @@ Precision. Protection. Perfection.`;
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto">
+                  <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto" onClick={e => e.stopPropagation()}>
                     <div className="text-right">
                       <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
                       <div className="flex flex-col items-end">
@@ -1128,8 +1142,8 @@ Precision. Protection. Perfection.`;
                       </div>
                     </div>
 
-                    <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => { setSelectedInvoice(invoice); handleEditInvoice(); }}>
+                    <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleEditInvoice(invoice)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(invoice, true)}>
@@ -1326,10 +1340,40 @@ Precision. Protection. Perfection.`;
 
                 <div className="flex gap-2 justify-between pt-4 border-t border-zinc-800">
                   <div className="flex gap-2">
-                    <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedInvoice, false)}>
+                    <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
+                      const currentInv = {
+                        ...selectedInvoice,
+                        services: editServices,
+                        vehicle: editVehicle,
+                        notes: editNotes,
+                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
+                      };
+                      generatePDF(currentInv as Invoice, false);
+                    }}>
                       <Printer className="h-4 w-4 mr-2" /> Print
                     </Button>
-                    <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => openEmailModal(selectedInvoice.id)}>
+                    <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
+                      const currentInv = {
+                        ...selectedInvoice,
+                        services: editServices,
+                        vehicle: editVehicle,
+                        notes: editNotes,
+                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
+                      };
+                      generatePDF(currentInv as Invoice, true);
+                    }}>
+                      <Save className="h-4 w-4 mr-2" /> Save to PDF
+                    </Button>
+                    <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => {
+                       const currentInv = {
+                        ...selectedInvoice,
+                        services: editServices,
+                        vehicle: editVehicle,
+                        notes: editNotes,
+                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
+                      };
+                      openEmailModal(currentInv as Invoice);
+                    }}>
                       <Mail className="h-4 w-4 mr-2" /> Preview Email
                     </Button>
                   </div>
