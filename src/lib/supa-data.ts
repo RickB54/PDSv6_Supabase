@@ -1144,7 +1144,8 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             return [];
         }
 
-        console.log('📦 Processing invoice from DB:', i.id, 'with services:', i.services?.length);
+        return (data || []).map(i => {
+            console.log('📦 Processing invoice from DB:', i.id, 'with services:', i.services?.length);
         
         // Unpack virtualized fields from services if they exist
         let notes = i.notes || "";
