@@ -441,7 +441,13 @@ const Invoicing = () => {
 
   const saveEditedInvoice = async () => {
     if (!selectedInvoice) return;
-    const newTotal = editServices.reduce((sum, s) => sum + s.price, 0);
+    const subtotal = editServices.reduce((sum, s) => sum + s.price, 0);
+    let newTotal = subtotal;
+    if (selectedInvoice.discount) {
+      newTotal -= selectedInvoice.discount.amount;
+    }
+    if (newTotal < 0) newTotal = 0;
+
     const updated: Invoice = { 
       ...selectedInvoice, 
       services: editServices, 

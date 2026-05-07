@@ -1144,9 +1144,12 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             return [];
         }
 
+        console.log('📦 Processing invoice from DB:', i.id, 'with services:', i.services?.length);
+        
         // Unpack virtualized fields from services if they exist
         let notes = i.notes || "";
-        let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "Unknown");
+        let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "");
+        if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
         let discount = i.discount || null;
         
         const filteredServices = (i.services || []).filter((s: any) => {
